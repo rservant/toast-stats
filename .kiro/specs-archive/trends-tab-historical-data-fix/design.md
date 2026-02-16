@@ -63,12 +63,16 @@ graph TD
 ```typescript
 // Current: single query with user-provided date range
 const timeSeriesData = await timeSeriesIndexService.getTrendData(
-  districtId, effectiveStartDate, effectiveEndDate
+  districtId,
+  effectiveStartDate,
+  effectiveEndDate
 )
 
 // Fixed: fallback to full program year if empty
 let timeSeriesData = await timeSeriesIndexService.getTrendData(
-  districtId, effectiveStartDate, effectiveEndDate
+  districtId,
+  effectiveStartDate,
+  effectiveEndDate
 )
 
 if (timeSeriesData.length === 0) {
@@ -76,7 +80,9 @@ if (timeSeriesData.length === 0) {
   const programYearStart = getProgramYearStartDate(effectiveEndDate)
   const programYearEnd = getProgramYearEndDate(effectiveEndDate)
   timeSeriesData = await timeSeriesIndexService.getTrendData(
-    districtId, programYearStart, programYearEnd
+    districtId,
+    programYearStart,
+    programYearEnd
   )
 }
 ```
@@ -111,10 +117,13 @@ export function usePaymentsTrend(
 ```
 
 Inside the hook, replace:
+
 ```typescript
 const currentProgramYear = getCurrentProgramYear()
 ```
+
 with:
+
 ```typescript
 const currentProgramYear = selectedProgramYear ?? getCurrentProgramYear()
 ```
@@ -122,6 +131,7 @@ const currentProgramYear = selectedProgramYear ?? getCurrentProgramYear()
 **File:** `frontend/src/pages/DistrictDetailPage.tsx`
 
 **Change:** Pass `effectiveProgramYear` to `usePaymentsTrend`:
+
 ```typescript
 const { data: paymentsTrendData, isLoading: isLoadingPaymentsTrend } =
   usePaymentsTrend(
@@ -129,7 +139,7 @@ const { data: paymentsTrendData, isLoading: isLoadingPaymentsTrend } =
     undefined,
     effectiveEndDate ?? undefined,
     aggregatedAnalytics?.trends?.payments,
-    effectiveProgramYear ?? undefined  // NEW: pass selected program year
+    effectiveProgramYear ?? undefined // NEW: pass selected program year
   )
 ```
 
@@ -140,6 +150,7 @@ const { data: paymentsTrendData, isLoading: isLoadingPaymentsTrend } =
 **Change:** In `computeDistrictAnalytics`, after loading the current snapshot, attempt to load the previous program year's snapshot for the same district. Pass both snapshots to `AnalyticsComputer.computeDistrictAnalytics`.
 
 The previous year's snapshot date is determined by:
+
 1. Parse the current snapshot date to find its program year
 2. Find the equivalent date one year prior (using `findPreviousProgramYearDate`)
 3. Look for a snapshot directory matching that date
@@ -148,19 +159,19 @@ The previous year's snapshot date is determined by:
 ```typescript
 // In computeDistrictAnalytics, after loading current snapshot:
 const previousYearDate = findPreviousProgramYearDate(date)
-const previousSnapshot = await this.loadDistrictSnapshot(previousYearDate, districtId)
+const previousSnapshot = await this.loadDistrictSnapshot(
+  previousYearDate,
+  districtId
+)
 
 // Pass both snapshots (or just current if previous not found)
-const snapshots = previousSnapshot
-  ? [previousSnapshot, snapshot]
-  : [snapshot]
+const snapshots = previousSnapshot ? [previousSnapshot, snapshot] : [snapshot]
 
-const computationResult =
-  await this.analyticsComputer.computeDistrictAnalytics(
-    districtId,
-    snapshots,
-    { allDistrictsRankings: allDistrictsRankings ?? undefined }
-  )
+const computationResult = await this.analyticsComputer.computeDistrictAnalytics(
+  districtId,
+  snapshots,
+  { allDistrictsRankings: allDistrictsRankings ?? undefined }
+)
 ```
 
 The `findPreviousProgramYearDate` function already exists in `AnalyticsUtils.ts` and simply subtracts one year from the date string.
@@ -184,8 +195,10 @@ yearOverYear = {
 // Fixed (sends percentage change)
 yearOverYear = {
   membershipChange: yoyComparison.metrics.membership.percentageChange,
-  distinguishedChange: yoyComparison.metrics.distinguishedClubs.percentageChange,
-  clubHealthChange: yoyComparison.metrics.clubHealth.thrivingClubs.percentageChange,
+  distinguishedChange:
+    yoyComparison.metrics.distinguishedClubs.percentageChange,
+  clubHealthChange:
+    yoyComparison.metrics.clubHealth.thrivingClubs.percentageChange,
 }
 ```
 
@@ -200,40 +213,42 @@ No new data models are introduced. The existing types are sufficient:
 - **`ProgramYear`** (frontend/utils/programYear.ts): Already exists and is used throughout the frontend. The `usePaymentsTrend` hook just needs to accept it as a parameter.
 - **`AggregatedAnalyticsResponse`** (analyticsSummary.ts): The `yearOverYear` field shape doesn't change — it still has `membershipChange`, `distinguishedChange`, `clubHealthChange` as numbers. The semantic meaning changes from absolute to percentage, which aligns with how the frontend already interprets them.
 
-
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 Based on the prework analysis, four properties emerge after eliminating redundancies:
 
 Property 1: Response dateRange preserves original request
-*For any* analytics-summary request with startDate and endDate parameters, the response `dateRange` field SHALL equal the originally requested date range, regardless of whether the backend expanded the time-series query internally.
+_For any_ analytics-summary request with startDate and endDate parameters, the response `dateRange` field SHALL equal the originally requested date range, regardless of whether the backend expanded the time-series query internally.
 **Validates: Requirements 1.2**
 
 Property 2: Selected program year determines current trend
-*For any* set of payment trend data spanning multiple program years and any selected program year, the `currentYearTrend` returned by `usePaymentsTrend` SHALL contain only data points belonging to the selected program year, and `multiYearData.currentYear.label` SHALL equal the selected program year's label.
+_For any_ set of payment trend data spanning multiple program years and any selected program year, the `currentYearTrend` returned by `usePaymentsTrend` SHALL contain only data points belonging to the selected program year, and `multiYearData.currentYear.label` SHALL equal the selected program year's label.
 **Validates: Requirements 2.1, 2.2**
 
 Property 3: Two-snapshot YoY produces distinct metrics
-*For any* two distinct `DistrictStatistics` snapshots (current and previous) with different membership totals, `computeYearOverYear` SHALL produce a `MetricComparison` where `metrics.membership.current` equals the current snapshot's total membership and `metrics.membership.previous` equals the previous snapshot's total membership, and `change` equals `current - previous`.
+_For any_ two distinct `DistrictStatistics` snapshots (current and previous) with different membership totals, `computeYearOverYear` SHALL produce a `MetricComparison` where `metrics.membership.current` equals the current snapshot's total membership and `metrics.membership.previous` equals the previous snapshot's total membership, and `change` equals `current - previous`.
 **Validates: Requirements 3.2**
 
 Property 4: Route sends percentageChange values
-*For any* pre-computed `YearOverYearData` with `dataAvailable: true`, the analytics-summary route's `yearOverYear` response field SHALL contain `membershipChange` equal to `metrics.membership.percentageChange`, `distinguishedChange` equal to `metrics.distinguishedClubs.percentageChange`, and `clubHealthChange` equal to `metrics.clubHealth.thrivingClubs.percentageChange`.
+_For any_ pre-computed `YearOverYearData` with `dataAvailable: true`, the analytics-summary route's `yearOverYear` response field SHALL contain `membershipChange` equal to `metrics.membership.percentageChange`, `distinguishedChange` equal to `metrics.distinguishedClubs.percentageChange`, and `clubHealthChange` equal to `metrics.clubHealth.thrivingClubs.percentageChange`.
 **Validates: Requirements 4.1**
 
 ## Error Handling
 
 ### Bug 1: Sparse Trend Data Fallback
+
 - If the initial time-series query returns empty, the route retries with the full program year range. If that also returns empty, an empty `trends.membership` array is returned — no error.
 - The `try/catch` around `timeSeriesIndexService.getTrendData()` already handles read failures gracefully (logs warning, continues with empty trend data).
 
 ### Bug 3a: Previous Year Snapshot Loading
+
 - If `loadDistrictSnapshot` returns `null` for the previous year date (file doesn't exist), the service falls back to passing only the current snapshot. The `computeYearOverYear` method then produces `dataAvailable: false`.
 - If `loadDistrictSnapshot` throws (e.g., corrupted JSON), the existing `try/catch` in `computeDistrictAnalytics` catches it. To be more granular, the previous year load is wrapped in its own try/catch so a failure there doesn't abort the entire analytics computation.
 
 ### Bug 3b: YoY Contract
+
 - When `yoyComparison.metrics` is undefined (dataAvailable is false), the existing guard `if (yoyComparison && yoyComparison.dataAvailable && yoyComparison.metrics)` prevents accessing undefined fields. No change needed.
 
 ## Testing Strategy
@@ -243,21 +258,25 @@ Per the testing steering document: "Prefer the simplest test that provides confi
 ### Unit Tests (Vitest)
 
 **Bug 1 — analyticsSummary sparse data fallback:**
+
 - Test that when `getTrendData` returns empty for the original range but non-empty for the full program year, the route returns the expanded data. (Example test, mocked TimeSeriesIndexService)
 - Test that the response `dateRange` always reflects the original request, not the expanded range.
 - Edge case: both original and expanded queries return empty — verify empty array, no error.
 
 **Bug 2 — usePaymentsTrend selected program year:**
+
 - Test that passing `selectedProgramYear` for 2024-2025 extracts data under the "2024-2025" label as `currentYearTrend`.
 - Test that when no `selectedProgramYear` is passed, the hook falls back to `getCurrentProgramYear()`.
 - Edge case: selected program year has no data — verify empty `currentYearTrend` and null `multiYearData`.
 
 **Bug 3a — AnalyticsComputeService previous snapshot loading:**
+
 - Test that when a previous year snapshot exists, `computeDistrictAnalytics` passes 2 snapshots to `AnalyticsComputer`.
 - Test that when no previous year snapshot exists, it falls back to 1 snapshot.
 - Test that a read error on the previous year snapshot is caught and doesn't abort computation.
 
 **Bug 3b — YoY contract alignment:**
+
 - Test that the route maps `percentageChange` (not `change`) to the response `yearOverYear` fields.
 
 ### Property-Based Tests

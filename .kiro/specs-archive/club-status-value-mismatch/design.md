@@ -14,26 +14,26 @@ graph TB
         SC[ClubHealthStatus Type<br/>'thriving' | 'stable' | 'vulnerable' | 'intervention-required']
         ZS[ClubHealthStatusSchema<br/>Zod validation]
     end
-    
+
     subgraph "analytics-core"
         AC[ClubHealthAnalyticsModule]
         AT[types.ts re-export]
     end
-    
+
     subgraph "scraper-cli"
         CLI[Computes analytics<br/>Writes pre-computed files]
     end
-    
+
     subgraph "backend"
         BE[Serves pre-computed data]
         BT[types/analytics.ts]
     end
-    
+
     subgraph "frontend"
         FE[useDistrictAnalytics]
         CT[ClubsTable]
     end
-    
+
     SC --> AT
     SC --> BT
     SC --> FE
@@ -54,7 +54,7 @@ graph TB
 ```typescript
 /**
  * Club health status classification.
- * 
+ *
  * - 'thriving': Club meets all health requirements
  * - 'stable': Club is maintaining adequate performance
  * - 'vulnerable': Club has some but not all requirements met
@@ -133,26 +133,25 @@ export type { ClubHealthStatus }
 
 ### ClubHealthStatus Type
 
-| Value | Description | Criteria |
-|-------|-------------|----------|
-| `'thriving'` | Club meets all health requirements | Membership ≥ 20 (or net growth ≥ 3) AND DCP checkpoint met AND CSP submitted |
-| `'stable'` | Club is maintaining adequate performance | Reserved for future use |
-| `'vulnerable'` | Club has some but not all requirements met | Some requirements not met, but not intervention-required |
-| `'intervention-required'` | Club needs immediate attention | Membership < 12 AND net growth < 3 |
+| Value                     | Description                                | Criteria                                                                     |
+| ------------------------- | ------------------------------------------ | ---------------------------------------------------------------------------- |
+| `'thriving'`              | Club meets all health requirements         | Membership ≥ 20 (or net growth ≥ 3) AND DCP checkpoint met AND CSP submitted |
+| `'stable'`                | Club is maintaining adequate performance   | Reserved for future use                                                      |
+| `'vulnerable'`            | Club has some but not all requirements met | Some requirements not met, but not intervention-required                     |
+| `'intervention-required'` | Club needs immediate attention             | Membership < 12 AND net growth < 3                                           |
 
 ### Impact on Existing Types
 
 The `ClubTrend` interface in all packages uses `currentStatus: ClubHealthStatus`. This change ensures the value assigned to `currentStatus` uses the hyphenated format consistently.
 
-
-
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property Test Applicability Assessment
 
 Per the testing steering document, property-based testing should only be used when:
+
 1. Mathematical invariants exist
 2. Complex input spaces with non-obvious edge cases
 3. Business rules with universal properties
@@ -161,11 +160,13 @@ Per the testing steering document, property-based testing should only be used wh
 **Assessment for this feature:**
 
 This fix addresses a simple string value mismatch ('intervention_required' vs 'intervention-required'). The requirements are:
+
 - Type definition with 4 fixed values
 - String literal assignment in one location
 - UI display of known values
 
 **Conclusion:** Property-based testing is **NOT warranted** for this feature because:
+
 - The input space is trivial (4 fixed string values)
 - 3-5 specific examples fully cover the behavior
 - No mathematical invariants or complex transformations
@@ -176,21 +177,25 @@ This fix addresses a simple string value mismatch ('intervention_required' vs 'i
 The following examples provide sufficient confidence:
 
 **Example 1: Schema accepts valid values**
+
 - Input: 'intervention-required'
 - Expected: Schema validation passes
 - **Validates: Requirements 1.2, 1.3**
 
 **Example 2: Schema rejects underscore variant**
+
 - Input: 'intervention_required'
 - Expected: Schema validation fails
 - **Validates: Requirements 1.3**
 
 **Example 3: ClubHealthAnalyticsModule assigns hyphen format**
+
 - Input: Club with membership=10, membershipBase=8 (net growth=2)
 - Expected: currentStatus === 'intervention-required'
 - **Validates: Requirements 2.2**
 
 **Example 4: ClubsTable displays correct styling**
+
 - Input: Club with currentStatus='intervention-required'
 - Expected: Row has 'bg-red-50' class, badge has 'bg-red-100' class
 - **Validates: Requirements 3.3, 5.1**
@@ -208,6 +213,7 @@ If a status value is encountered that doesn't match the `ClubHealthStatusSchema`
 ### Type Safety
 
 TypeScript's type system will catch mismatches at compile time when:
+
 - A component tries to use an invalid status value
 - A function returns an incorrect status type
 
@@ -218,6 +224,7 @@ TypeScript's type system will catch mismatches at compile time when:
 Per the testing steering document: "Prefer the simplest test that provides confidence" and "Property tests are for invariants, not for everything."
 
 This feature uses **unit tests with well-chosen examples** rather than property-based tests because:
+
 - The fix is a simple string literal change
 - The input space is bounded (4 fixed values)
 - Examples fully cover the behavior
@@ -226,16 +233,16 @@ This feature uses **unit tests with well-chosen examples** rather than property-
 
 Unit tests should cover:
 
-1. **shared-contracts**: 
+1. **shared-contracts**:
    - Verify `ClubHealthStatusSchema` accepts all 4 valid values
    - Verify `ClubHealthStatusSchema` rejects 'intervention_required' (underscore)
    - Verify `ClubHealthStatusSchema` rejects arbitrary invalid strings
 
-2. **analytics-core**: 
+2. **analytics-core**:
    - Verify `ClubHealthAnalyticsModule.assessClubHealth()` assigns 'intervention-required' (hyphen) for clubs meeting intervention criteria
    - Verify the string literal is exactly 'intervention-required', not 'intervention_required'
 
-3. **frontend**: 
+3. **frontend**:
    - Verify `getStatusBadge('intervention-required')` returns correct CSS classes
    - Verify `getRowColor('intervention-required')` returns correct CSS classes
    - Verify `getStatusLabel('intervention-required')` returns 'Intervention Required'

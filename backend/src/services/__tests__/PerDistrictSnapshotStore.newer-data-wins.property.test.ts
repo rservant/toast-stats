@@ -11,9 +11,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as fc from 'fast-check'
 import fs from 'fs/promises'
 import path from 'path'
-import {
-  FileSnapshotStore,
-} from '../SnapshotStore.js'
+import { FileSnapshotStore } from '../SnapshotStore.js'
 import type { Snapshot, NormalizedData } from '../../types/snapshots.js'
 
 // Test configuration

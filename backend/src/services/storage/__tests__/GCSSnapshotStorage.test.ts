@@ -23,12 +23,8 @@ vi.mock('../../../utils/logger.js', () => ({
 
 // Mock CircuitBreaker to pass operations through directly
 vi.mock('../../../utils/CircuitBreaker.js', () => {
-  const MockCircuitBreaker = function (
-    this: Record<string, unknown>
-  ) {
-    this.execute = vi.fn(
-      async <T>(operation: () => Promise<T>) => operation()
-    )
+  const MockCircuitBreaker = function (this: Record<string, unknown>) {
+    this.execute = vi.fn(async <T>(operation: () => Promise<T>) => operation())
     this.getStats = vi.fn(() => ({
       state: 'CLOSED',
       failureCount: 0,
@@ -423,7 +419,9 @@ describe('GCSSnapshotStorage — Task 3', () => {
       const storage = createStorage(mockBucket)
 
       try {
-        await storage.writeSnapshot({} as import('../../../types/snapshots.js').Snapshot)
+        await storage.writeSnapshot(
+          {} as import('../../../types/snapshots.js').Snapshot
+        )
         expect.fail('Should have thrown')
       } catch (error) {
         expect(error).toBeInstanceOf(StorageOperationError)

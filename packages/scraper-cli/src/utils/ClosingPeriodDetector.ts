@@ -52,7 +52,10 @@ export class ClosingPeriodDetector {
    * @param metadata - Cache metadata containing isClosingPeriod and dataMonth fields
    * @returns ClosingPeriodInfo with appropriate snapshot date
    */
-  detect(requestedDate: string, metadata: CacheMetadata | null): ClosingPeriodInfo {
+  detect(
+    requestedDate: string,
+    metadata: CacheMetadata | null
+  ): ClosingPeriodInfo {
     // If no metadata or not a closing period, use requested date as-is
     if (!metadata || !metadata.isClosingPeriod || !metadata.dataMonth) {
       return this.createNonClosingPeriodResult(requestedDate)
@@ -185,7 +188,9 @@ export class ClosingPeriodDetector {
    * @param requestedDate - The requested date to use as snapshot date
    * @returns A ClosingPeriodInfo indicating no closing period
    */
-  private createNonClosingPeriodResult(requestedDate: string): ClosingPeriodInfo {
+  private createNonClosingPeriodResult(
+    requestedDate: string
+  ): ClosingPeriodInfo {
     // Extract YYYY-MM from the requested date for dataMonth
     const dataMonth = requestedDate.substring(0, 7)
 

@@ -18,31 +18,34 @@ No architectural changes. The two-process architecture (scraper-cli for computat
 
 ### Affected Files Summary
 
-| Item | Files Modified | Files Deleted | Category |
-|------|---------------|---------------|----------|
-| 4 | `SnapshotStore.ts` + 8 test files | — | Backend alias + test updates |
-| 5 | `DivisionAreaProgressSummary.tsx`, `components/index.ts`, `AreaProgressSummary.test.tsx` | — | Frontend alias + test updates |
-| 6 | `DivisionAreaRecognitionPanel.tsx`, `components/index.ts` | — | Frontend pure alias removal |
-| 7 | `ProductionServiceFactory.ts`, `TestServiceFactory.ts`, `snapshot-debug.ts` + ~10 test files | — | Backend method + consumer updates |
-| 8 | `AvailableProgramYearsService.ts` | — | Backend pure alias removal |
-| 9 | `backend/src/index.ts` | `backend/src/routes/admin.ts` | Backend indirection removal |
+| Item | Files Modified                                                                               | Files Deleted                 | Category                          |
+| ---- | -------------------------------------------------------------------------------------------- | ----------------------------- | --------------------------------- |
+| 4    | `SnapshotStore.ts` + 8 test files                                                            | —                             | Backend alias + test updates      |
+| 5    | `DivisionAreaProgressSummary.tsx`, `components/index.ts`, `AreaProgressSummary.test.tsx`     | —                             | Frontend alias + test updates     |
+| 6    | `DivisionAreaRecognitionPanel.tsx`, `components/index.ts`                                    | —                             | Frontend pure alias removal       |
+| 7    | `ProductionServiceFactory.ts`, `TestServiceFactory.ts`, `snapshot-debug.ts` + ~10 test files | —                             | Backend method + consumer updates |
+| 8    | `AvailableProgramYearsService.ts`                                                            | —                             | Backend pure alias removal        |
+| 9    | `backend/src/index.ts`                                                                       | `backend/src/routes/admin.ts` | Backend indirection removal       |
 
 ## Components and Interfaces
 
 ### Item 4: `PerDistrictFileSnapshotStore` alias in `SnapshotStore.ts`
 
 **Remove:**
+
 ```typescript
 // Remove from backend/src/services/SnapshotStore.ts:
 export const PerDistrictFileSnapshotStore = FileSnapshotStore
 ```
 
 **Update consumers** — 8 test files import `PerDistrictFileSnapshotStore` alongside `FileSnapshotStore`. In each file:
+
 - Remove `PerDistrictFileSnapshotStore` from the import
 - Replace all type annotations `PerDistrictFileSnapshotStore` → `FileSnapshotStore`
 - Replace all constructor calls `new PerDistrictFileSnapshotStore(` → `new FileSnapshotStore(`
 
 Affected test files:
+
 - `SnapshotBuilder.property.test.ts` — mock function return type + `as unknown as` cast
 - `RefreshService.rankings.test.ts` — variable type annotation + `as unknown as` cast
 - `RefreshService.precomputed-analytics.test.ts` — variable type annotation + constructor call
@@ -58,18 +61,22 @@ Affected test files:
 ### Item 5: `AreaProgressSummary` / `AreaProgressSummaryProps` / `AreaWithDivision` in `DivisionAreaProgressSummary.tsx`
 
 **Remove from `DivisionAreaProgressSummary.tsx`:**
+
 - The `AreaProgressSummaryProps` interface (deprecated alias)
 - The `AreaProgressSummary` component (backward-compat wrapper that converts `AreaWithDivision[]` to `DivisionPerformance[]`)
 
 **Keep in `DivisionAreaProgressSummary.tsx`:**
+
 - The `AreaWithDivision` interface — still actively used internally by the component and by `areaProgressText.ts`. The `@deprecated` annotation can remain as a signal that new code should prefer `DivisionPerformance[]`, but the interface itself is not dead code.
 
 **Remove from `components/index.ts`:**
+
 - `AreaProgressSummary` re-export
 - `AreaProgressSummaryProps` re-export
 - `AreaWithDivision` re-export (nobody imports it from the barrel; `areaProgressText.ts` imports directly from the module)
 
 **Update `AreaProgressSummary.test.tsx`:**
+
 - Rename import from `AreaProgressSummary` → `DivisionAreaProgressSummary`
 - Update component usage in test renders
 - The test already imports `AreaWithDivision` directly from `DivisionAreaProgressSummary` module, so that import stays
@@ -78,6 +85,7 @@ Affected test files:
 ### Item 6: `AreaRecognitionPanel` / `AreaRecognitionPanelProps` in `DivisionAreaRecognitionPanel.tsx`
 
 **Remove from `DivisionAreaRecognitionPanel.tsx`:**
+
 ```typescript
 // Remove:
 export const AreaRecognitionPanel = DivisionAreaRecognitionPanel
@@ -85,6 +93,7 @@ export type AreaRecognitionPanelProps = DivisionAreaRecognitionPanelProps
 ```
 
 **Remove from `components/index.ts`:**
+
 - `AreaRecognitionPanel` re-export
 - `AreaRecognitionPanelProps` re-export
 
@@ -93,19 +102,23 @@ No consumer updates needed — no production code or test file imports these ali
 ### Item 7: `createSnapshotStore()` on `ProductionServiceFactory`
 
 **Remove from `ProductionServiceFactory.ts`:**
+
 - `createSnapshotStore` method from the `ProductionServiceFactory` interface
 - `createSnapshotStore` method implementation from `DefaultProductionServiceFactory`
 
 **Remove from `TestServiceFactory.ts`:**
+
 - `createSnapshotStore` method from the test factory interface
 - `createSnapshotStore` method implementation
 - Update internal callers within `TestServiceFactory` that call `this.createSnapshotStore()` to call `this.createSnapshotStorage()` instead (need to verify return type compatibility)
 
 **Update `snapshot-debug.ts`:**
+
 - Replace all 5 occurrences of `factory.createSnapshotStore()` with `factory.createSnapshotStorage()`
 - Note: `createSnapshotStorage()` returns `ISnapshotStorage` while `createSnapshotStore()` returns `SnapshotStore` (which is `FileSnapshotStore`). The script uses methods like `getSnapshot`, `listSnapshots`, `isReady`, `validateIntegrity` — need to verify these exist on `ISnapshotStorage`. If not, the script may need to cast or use a different approach.
 
 **Update test mock objects:**
+
 - ~10 test files provide `createSnapshotStore` in mock factory objects
 - Each needs to be renamed to `createSnapshotStorage`
 - The mock return values stay the same (mock snapshot store objects)
@@ -113,6 +126,7 @@ No consumer updates needed — no production code or test file imports these ali
 ### Item 8: `AvailableProgramYearsResult` type alias
 
 **Remove from `AvailableProgramYearsService.ts`:**
+
 ```typescript
 // Remove:
 export type AvailableProgramYearsResult = AvailableRankingYearsResponse
@@ -125,6 +139,7 @@ No consumer updates needed — the type is not imported anywhere outside its def
 **Delete:** `backend/src/routes/admin.ts`
 
 **Update `backend/src/index.ts`:**
+
 ```typescript
 // Before:
 import adminRoutes from './routes/admin.js'
@@ -139,10 +154,9 @@ The shim also re-exports named utilities (`logAdminAccess`, `generateOperationId
 
 No data model changes. This is purely a code removal and renaming operation.
 
-
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 This cleanup is purely subtractive — removing deprecated aliases, unused types, and unnecessary indirection. After prework analysis of all 30 acceptance criteria across 7 requirements, every testable criterion is a specific absence check (does symbol X still exist? does file Y still exist?) rather than a universal property over generated inputs.
 
@@ -161,19 +175,20 @@ No testable properties identified.
 No new error handling is introduced. The cleanup removes deprecated code that was already orphaned or only consumed by tests.
 
 The only error scenario is accidental removal of code that is still referenced. This is caught by:
+
 1. TypeScript compilation (dangling imports/references produce compile errors)
 2. Existing test suite execution (behavioral regressions cause test failures)
 
 ### Risk Assessment per Item
 
-| Item | Risk | Rationale |
-|------|------|-----------|
-| 4 | Low | Mechanical rename in test files; `FileSnapshotStore` is the canonical name already imported alongside the alias |
-| 5 | Medium | `AreaProgressSummary.test.tsx` uses the old wrapper API (`areas` prop); needs conversion to new API (`divisions` prop) |
-| 6 | Low | Zero consumers outside the definition file; one test block to remove |
-| 7 | Medium | Touches ~10 test mock objects and a CLI script; `createSnapshotStorage()` returns `ISnapshotStorage` (different type than `createSnapshotStore()`'s `SnapshotStore`) — need to verify API compatibility in `snapshot-debug.ts` |
-| 8 | Low | Zero consumers; single line removal |
-| 9 | Low | Single import path change in `backend/src/index.ts` |
+| Item | Risk   | Rationale                                                                                                                                                                                                                      |
+| ---- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 4    | Low    | Mechanical rename in test files; `FileSnapshotStore` is the canonical name already imported alongside the alias                                                                                                                |
+| 5    | Medium | `AreaProgressSummary.test.tsx` uses the old wrapper API (`areas` prop); needs conversion to new API (`divisions` prop)                                                                                                         |
+| 6    | Low    | Zero consumers outside the definition file; one test block to remove                                                                                                                                                           |
+| 7    | Medium | Touches ~10 test mock objects and a CLI script; `createSnapshotStorage()` returns `ISnapshotStorage` (different type than `createSnapshotStore()`'s `SnapshotStore`) — need to verify API compatibility in `snapshot-debug.ts` |
+| 8    | Low    | Zero consumers; single line removal                                                                                                                                                                                            |
+| 9    | Low    | Single import path change in `backend/src/index.ts`                                                                                                                                                                            |
 
 ## Testing Strategy
 

@@ -262,7 +262,10 @@ describe('TransformService', () => {
       await fs.mkdir(rawCsvDir, { recursive: true })
 
       // Write a JSON array instead of object
-      await fs.writeFile(path.join(rawCsvDir, 'metadata.json'), '["not", "an", "object"]')
+      await fs.writeFile(
+        path.join(rawCsvDir, 'metadata.json'),
+        '["not", "an", "object"]'
+      )
 
       const result = await transformService.readCacheMetadata(date)
 
@@ -784,7 +787,6 @@ describe('TransformService', () => {
   })
 })
 
-
 /**
  * Unit tests for determineSnapshotDate method
  *
@@ -827,7 +829,10 @@ describe('determineSnapshotDate', () => {
       dataMonth: '2024-12',
     }
 
-    const result = transformService.determineSnapshotDate(requestedDate, metadata)
+    const result = transformService.determineSnapshotDate(
+      requestedDate,
+      metadata
+    )
 
     expect(result.isClosingPeriod).toBe(true)
     expect(result.snapshotDate).toBe('2024-12-31')
@@ -848,7 +853,10 @@ describe('determineSnapshotDate', () => {
       dataMonth: '2024-06',
     }
 
-    const result = transformService.determineSnapshotDate(requestedDate, metadata)
+    const result = transformService.determineSnapshotDate(
+      requestedDate,
+      metadata
+    )
 
     expect(result.isClosingPeriod).toBe(true)
     expect(result.snapshotDate).toBe('2024-06-30')
@@ -869,7 +877,10 @@ describe('determineSnapshotDate', () => {
       dataMonth: '2023-02',
     }
 
-    const result = transformService.determineSnapshotDate(requestedDate, metadata)
+    const result = transformService.determineSnapshotDate(
+      requestedDate,
+      metadata
+    )
 
     expect(result.isClosingPeriod).toBe(true)
     expect(result.snapshotDate).toBe('2023-02-28')
@@ -888,7 +899,10 @@ describe('determineSnapshotDate', () => {
       dataMonth: '2024-02',
     }
 
-    const result = transformService.determineSnapshotDate(requestedDate, metadata)
+    const result = transformService.determineSnapshotDate(
+      requestedDate,
+      metadata
+    )
 
     expect(result.isClosingPeriod).toBe(true)
     expect(result.snapshotDate).toBe('2024-02-29')
@@ -905,7 +919,10 @@ describe('determineSnapshotDate', () => {
       isClosingPeriod: false,
     }
 
-    const result = transformService.determineSnapshotDate(requestedDate, metadata)
+    const result = transformService.determineSnapshotDate(
+      requestedDate,
+      metadata
+    )
 
     expect(result.isClosingPeriod).toBe(false)
     expect(result.snapshotDate).toBe('2024-06-15')
@@ -923,7 +940,10 @@ describe('determineSnapshotDate', () => {
       // isClosingPeriod is undefined
     }
 
-    const result = transformService.determineSnapshotDate(requestedDate, metadata)
+    const result = transformService.determineSnapshotDate(
+      requestedDate,
+      metadata
+    )
 
     expect(result.isClosingPeriod).toBe(false)
     expect(result.snapshotDate).toBe('2024-06-15')
@@ -957,7 +977,10 @@ describe('determineSnapshotDate', () => {
       dataMonth: '2024-12',
     }
 
-    const result = transformService.determineSnapshotDate(requestedDate, metadata)
+    const result = transformService.determineSnapshotDate(
+      requestedDate,
+      metadata
+    )
 
     expect(result.isClosingPeriod).toBe(true)
     expect(result.snapshotDate).toBe('2024-12-31')
@@ -980,7 +1003,10 @@ describe('determineSnapshotDate', () => {
       dataMonth: '12', // MM format without year
     }
 
-    const result = transformService.determineSnapshotDate(requestedDate, metadata)
+    const result = transformService.determineSnapshotDate(
+      requestedDate,
+      metadata
+    )
 
     expect(result.isClosingPeriod).toBe(true)
     expect(result.snapshotDate).toBe('2024-12-31')
@@ -999,7 +1025,10 @@ describe('determineSnapshotDate', () => {
       // dataMonth is missing
     }
 
-    const result = transformService.determineSnapshotDate(requestedDate, metadata)
+    const result = transformService.determineSnapshotDate(
+      requestedDate,
+      metadata
+    )
 
     // Without dataMonth, cannot determine closing period date, falls back to non-closing behavior
     expect(result.isClosingPeriod).toBe(false)
@@ -1019,15 +1048,16 @@ describe('determineSnapshotDate', () => {
       dataMonth: '2024-07',
     }
 
-    const result = transformService.determineSnapshotDate(requestedDate, metadata)
+    const result = transformService.determineSnapshotDate(
+      requestedDate,
+      metadata
+    )
 
     expect(result.isClosingPeriod).toBe(true)
     expect(result.snapshotDate).toBe('2024-07-31')
     expect(result.logicalDate).toBe('2024-07-31')
   })
 })
-
-
 
 /**
  * Unit tests for shouldUpdateSnapshot method
@@ -1370,7 +1400,6 @@ describe('shouldUpdateSnapshot', () => {
   })
 })
 
-
 /**
  * Unit tests for closing period metadata in snapshots
  *
@@ -1583,7 +1612,11 @@ describe('closing period metadata in snapshots', () => {
     expect(result.success).toBe(true)
 
     // Verify snapshot was created at December 31, 2024 (prior year)
-    const snapshotDir = path.join(testCache.path, 'snapshots', expectedSnapshotDate)
+    const snapshotDir = path.join(
+      testCache.path,
+      'snapshots',
+      expectedSnapshotDate
+    )
     const files = await fs.readdir(snapshotDir)
     expect(files).toContain('metadata.json')
     expect(files).toContain('district_1.json')
@@ -1643,7 +1676,6 @@ describe('closing period metadata in snapshots', () => {
     expect(metadata.dataAsOfDate).toBe(expectedSnapshotDate)
   })
 })
-
 
 /**
  * Integration tests for full transform flow with closing period
@@ -1718,7 +1750,11 @@ describe('Integration: full transform flow with closing period', () => {
     expect(result.districtsSucceeded).toContain('42')
 
     // Verify: Snapshot created at expected date (last day of data month)
-    const snapshotDir = path.join(testCache.path, 'snapshots', expectedSnapshotDate)
+    const snapshotDir = path.join(
+      testCache.path,
+      'snapshots',
+      expectedSnapshotDate
+    )
     const snapshotFiles = await fs.readdir(snapshotDir)
 
     expect(snapshotFiles).toContain('metadata.json')
@@ -1838,7 +1874,11 @@ describe('Integration: full transform flow with closing period', () => {
     expect(result.success).toBe(true)
 
     // Snapshot should be at December 31, 2024 (prior year)
-    const snapshotDir = path.join(testCache.path, 'snapshots', expectedSnapshotDate)
+    const snapshotDir = path.join(
+      testCache.path,
+      'snapshots',
+      expectedSnapshotDate
+    )
     const metadata = JSON.parse(
       await fs.readFile(path.join(snapshotDir, 'metadata.json'), 'utf-8')
     )
@@ -1929,7 +1969,9 @@ describe('Integration: newer data wins', () => {
     await setupRawCsvData(testCache.path, newerCollectionDate, '2024-12', true)
 
     // Execute: Run transform with newer data
-    const result = await transformService.transform({ date: newerCollectionDate })
+    const result = await transformService.transform({
+      date: newerCollectionDate,
+    })
 
     // Verify: Transform succeeded and snapshot was updated
     expect(result.success).toBe(true)
@@ -2012,7 +2054,9 @@ describe('Integration: newer data wins', () => {
     await setupRawCsvData(testCache.path, olderCollectionDate, '2024-12', true)
 
     // Execute: Run transform with older data
-    const result = await transformService.transform({ date: olderCollectionDate })
+    const result = await transformService.transform({
+      date: olderCollectionDate,
+    })
 
     // Verify: Transform succeeded but entire operation was skipped early
     // (shouldUpdateSnapshot returned false, so no districts were processed)

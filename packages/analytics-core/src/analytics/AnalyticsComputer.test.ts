@@ -117,10 +117,20 @@ describe('AnalyticsComputer', () => {
       const computer = new AnalyticsComputer()
 
       const snapshot1 = createMockSnapshot('D101', '2024-01-01', [
-        createMockClub({ clubId: '1', membershipCount: 20, paymentsCount: 18, membershipBase: 15 }),
+        createMockClub({
+          clubId: '1',
+          membershipCount: 20,
+          paymentsCount: 18,
+          membershipBase: 15,
+        }),
       ])
       const snapshot2 = createMockSnapshot('D101', '2024-02-01', [
-        createMockClub({ clubId: '1', membershipCount: 25, paymentsCount: 22, membershipBase: 15 }),
+        createMockClub({
+          clubId: '1',
+          membershipCount: 25,
+          paymentsCount: 22,
+          membershipBase: 15,
+        }),
       ])
 
       const result = await computer.computeDistrictAnalytics('D101', [
@@ -139,10 +149,20 @@ describe('AnalyticsComputer', () => {
 
       // Provide snapshots out of order
       const snapshot2 = createMockSnapshot('D101', '2024-02-01', [
-        createMockClub({ clubId: '1', membershipCount: 30, paymentsCount: 28, membershipBase: 18 }),
+        createMockClub({
+          clubId: '1',
+          membershipCount: 30,
+          paymentsCount: 28,
+          membershipBase: 18,
+        }),
       ])
       const snapshot1 = createMockSnapshot('D101', '2024-01-01', [
-        createMockClub({ clubId: '1', membershipCount: 20, paymentsCount: 18, membershipBase: 18 }),
+        createMockClub({
+          clubId: '1',
+          membershipCount: 20,
+          paymentsCount: 18,
+          membershipBase: 18,
+        }),
       ])
 
       const result = await computer.computeDistrictAnalytics('D101', [
@@ -385,12 +405,32 @@ describe('AnalyticsComputer', () => {
       const computer = new AnalyticsComputer()
 
       const snapshot1 = createMockSnapshot('D101', '2024-01-01', [
-        createMockClub({ clubId: '1', membershipCount: 20, paymentsCount: 18, membershipBase: 15 }),
-        createMockClub({ clubId: '2', membershipCount: 30, paymentsCount: 25, membershipBase: 20 }),
+        createMockClub({
+          clubId: '1',
+          membershipCount: 20,
+          paymentsCount: 18,
+          membershipBase: 15,
+        }),
+        createMockClub({
+          clubId: '2',
+          membershipCount: 30,
+          paymentsCount: 25,
+          membershipBase: 20,
+        }),
       ])
       const snapshot2 = createMockSnapshot('D101', '2024-02-01', [
-        createMockClub({ clubId: '1', membershipCount: 25, paymentsCount: 22, membershipBase: 15 }),
-        createMockClub({ clubId: '2', membershipCount: 35, paymentsCount: 30, membershipBase: 20 }),
+        createMockClub({
+          clubId: '1',
+          membershipCount: 25,
+          paymentsCount: 22,
+          membershipBase: 15,
+        }),
+        createMockClub({
+          clubId: '2',
+          membershipCount: 35,
+          paymentsCount: 30,
+          membershipBase: 20,
+        }),
       ])
 
       const result = await computer.computeDistrictAnalytics('D101', [
@@ -421,10 +461,20 @@ describe('AnalyticsComputer', () => {
       const computer = new AnalyticsComputer()
 
       const snapshot1 = createMockSnapshot('D101', '2024-01-01', [
-        createMockClub({ clubId: '1', membershipCount: 20, paymentsCount: 18, membershipBase: 15 }),
+        createMockClub({
+          clubId: '1',
+          membershipCount: 20,
+          paymentsCount: 18,
+          membershipBase: 15,
+        }),
       ])
       const snapshot2 = createMockSnapshot('D101', '2024-02-01', [
-        createMockClub({ clubId: '1', membershipCount: 28, paymentsCount: 24, membershipBase: 15 }),
+        createMockClub({
+          clubId: '1',
+          membershipCount: 28,
+          paymentsCount: 24,
+          membershipBase: 15,
+        }),
       ])
 
       const result = await computer.computeDistrictAnalytics('D101', [
@@ -2301,7 +2351,6 @@ describe('buildClubTrendsIndex', () => {
   })
 })
 
-
 /**
  * Membership Change Calculation Unit Tests
  *
@@ -2478,7 +2527,9 @@ describe('calculateMembershipChangeWithBase (via computeDistrictAnalytics)', () 
     ])
     // Override paymentBase to null to simulate the runtime scenario
     // The DistrictRanking type says number, but runtime data may have null
-    ;(rankings.rankings[0] as DistrictRanking & { paymentBase: number | null }).paymentBase = null as unknown as number
+    ;(
+      rankings.rankings[0] as DistrictRanking & { paymentBase: number | null }
+    ).paymentBase = null as unknown as number
 
     const result = await computer.computeDistrictAnalytics('42', [snapshot], {
       allDistrictsRankings: rankings,

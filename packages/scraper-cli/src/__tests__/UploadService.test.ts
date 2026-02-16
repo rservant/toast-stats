@@ -1310,7 +1310,10 @@ describe('formatUploadSummary', () => {
 //
 // Requirements: 4.6, 4.7, 4.8, 4.9, 4.10
 
-import { UploadService, type UploadManifest } from '../services/UploadService.js'
+import {
+  UploadService,
+  type UploadManifest,
+} from '../services/UploadService.js'
 import {
   FakeFileSystem,
   FakeBucketClient,
@@ -1414,7 +1417,10 @@ describe('UploadService manifest edge cases', () => {
           },
         },
       }
-      fakeFs.addFile('/cache/.upload-manifest.json', JSON.stringify(validManifest))
+      fakeFs.addFile(
+        '/cache/.upload-manifest.json',
+        JSON.stringify(validManifest)
+      )
       const { service } = createManifestTestService(fakeFs)
 
       const manifest = await service.loadManifest()
@@ -1452,10 +1458,14 @@ describe('UploadService manifest edge cases', () => {
       expect(result).toBe(true)
       // Verify writeFile was called with the .tmp path
       expect(fakeFs.writeFileCalls.length).toBe(1)
-      expect(fakeFs.writeFileCalls[0]?.path).toContain('.upload-manifest.json.tmp')
+      expect(fakeFs.writeFileCalls[0]?.path).toContain(
+        '.upload-manifest.json.tmp'
+      )
       // Verify the final file is readable and correct
       const saved = await service.loadManifest()
-      expect(saved.entries['snapshots/2024-01-15/file.json']?.checksum).toBe('abc')
+      expect(saved.entries['snapshots/2024-01-15/file.json']?.checksum).toBe(
+        'abc'
+      )
     })
 
     it('should include schemaVersion in saved manifest (Requirement 4.10)', async () => {
@@ -1506,7 +1516,11 @@ describe('UploadService manifest edge cases', () => {
     it('should set manifestWriteError when manifest flush fails after retry (Requirement 4.9)', async () => {
       const fakeFs = new FakeFileSystem()
       fakeFs.addDirectory('/cache/snapshots/2024-01-15')
-      fakeFs.addFile('/cache/snapshots/2024-01-15/data.json', '{"test":true}', 1000)
+      fakeFs.addFile(
+        '/cache/snapshots/2024-01-15/data.json',
+        '{"test":true}',
+        1000
+      )
       // Make manifest writes fail permanently
       fakeFs.setWriteFileFailure('/cache/.upload-manifest.json.tmp', 100)
       const { service } = createManifestTestService(fakeFs)
@@ -1583,7 +1597,7 @@ describe('isAuthError — deterministic code-based detection', () => {
 describe('runWithConcurrency', () => {
   it('runs all tasks when no abort', async () => {
     const results: number[] = []
-    const tasks = [1, 2, 3].map((n) => async () => {
+    const tasks = [1, 2, 3].map(n => async () => {
       results.push(n)
       return n
     })
@@ -1591,7 +1605,7 @@ describe('runWithConcurrency', () => {
     const settled = await runWithConcurrency(tasks, 2, { aborted: false })
 
     expect(settled.length).toBe(3)
-    expect(settled.every((r) => r.status === 'fulfilled')).toBe(true)
+    expect(settled.every(r => r.status === 'fulfilled')).toBe(true)
   })
 
   it('respects concurrency limit', async () => {
@@ -1602,7 +1616,7 @@ describe('runWithConcurrency', () => {
       currentConcurrent++
       maxConcurrent = Math.max(maxConcurrent, currentConcurrent)
       // Simulate async work
-      await new Promise((resolve) => setTimeout(resolve, 10))
+      await new Promise(resolve => setTimeout(resolve, 10))
       currentConcurrent--
       return i
     })
@@ -1635,7 +1649,9 @@ describe('runWithConcurrency', () => {
   it('collects both fulfilled and rejected results', async () => {
     const tasks = [
       async () => 'ok',
-      async () => { throw new Error('fail') },
+      async () => {
+        throw new Error('fail')
+      },
       async () => 'also ok',
     ]
 
@@ -1677,7 +1693,11 @@ describe('Auth error cancellation in concurrent upload pool', () => {
 
     // Add several files
     for (let i = 0; i < 10; i++) {
-      fakeFs.addFile(`/cache/snapshots/2024-01-15/file${i}.json`, `{"i":${i}}`, 1000)
+      fakeFs.addFile(
+        `/cache/snapshots/2024-01-15/file${i}.json`,
+        `{"i":${i}}`,
+        1000
+      )
     }
 
     // Set auth error on one of the early files
@@ -1695,7 +1715,8 @@ describe('Auth error cancellation in concurrent upload pool', () => {
     // Not all 10 files should have been attempted due to abort
     expect(result.filesProcessed.length).toBe(10) // all are processed (collected)
     // But uploaded + failed should be less than 10 (some skipped by abort)
-    const attemptedCount = result.filesUploaded.length + result.filesFailed.length
+    const attemptedCount =
+      result.filesUploaded.length + result.filesFailed.length
     expect(attemptedCount).toBeLessThanOrEqual(10)
     expect(result.filesFailed.length).toBeGreaterThanOrEqual(1) // at least the auth error file
   })
@@ -1732,7 +1753,11 @@ describe('Auth error cancellation in concurrent upload pool', () => {
 
     // Add 5 files
     for (let i = 0; i < 5; i++) {
-      fakeFs.addFile(`/cache/snapshots/2024-01-15/file${i}.json`, `{"i":${i}}`, 1000)
+      fakeFs.addFile(
+        `/cache/snapshots/2024-01-15/file${i}.json`,
+        `{"i":${i}}`,
+        1000
+      )
     }
 
     // Auth error on file2
@@ -1747,11 +1772,15 @@ describe('Auth error cancellation in concurrent upload pool', () => {
 
     // Summary count invariant must hold
     expect(result.filesProcessed.length).toBe(
-      result.filesUploaded.length + result.filesFailed.length + result.filesSkipped.length
+      result.filesUploaded.length +
+        result.filesFailed.length +
+        result.filesSkipped.length
     )
     expect(result.authError).toBe(true)
     // Errors array should contain the auth error
-    expect(result.errors.some((e) => e.error.includes('authentication'))).toBe(true)
+    expect(result.errors.some(e => e.error.includes('authentication'))).toBe(
+      true
+    )
   })
 })
 
@@ -1790,7 +1819,9 @@ describe('Preflight auth check', () => {
   it('fails fast with authError when preflight check detects auth failure', async () => {
     const { service, fakeBucket } = createPreflightTestService()
 
-    const authErr = new Error('invalid_grant: reauth related error (invalid_rapt)') as Error & { code: number }
+    const authErr = new Error(
+      'invalid_grant: reauth related error (invalid_rapt)'
+    ) as Error & { code: number }
     authErr.code = 16 // UNAUTHENTICATED
     fakeBucket.setAuthError(authErr)
 
@@ -1800,7 +1831,9 @@ describe('Preflight auth check', () => {
     expect(result.authError).toBe(true)
     expect(result.errors).toHaveLength(1)
     expect(result.errors[0]!.error).toContain('GCS preflight check failed')
-    expect(result.errors[0]!.error).toContain('gcloud auth application-default login')
+    expect(result.errors[0]!.error).toContain(
+      'gcloud auth application-default login'
+    )
     // No files should have been processed at all
     expect(result.filesProcessed).toHaveLength(0)
     expect(result.filesUploaded).toHaveLength(0)
@@ -1966,7 +1999,7 @@ describe('Progress reporter behavior', () => {
 
       expect(progressReporter.fileUploadedCalls).toHaveLength(2)
       expect(
-        progressReporter.fileUploadedCalls.every((c) => c.status === 'uploaded')
+        progressReporter.fileUploadedCalls.every(c => c.status === 'uploaded')
       ).toBe(true)
     })
 
@@ -1997,7 +2030,7 @@ describe('Progress reporter behavior', () => {
 
       await service.upload({ date: '2024-01-15', verbose: true })
 
-      const statuses = progressReporter.fileUploadedCalls.map((c) => c.status)
+      const statuses = progressReporter.fileUploadedCalls.map(c => c.status)
       expect(statuses).toContain('uploaded')
       expect(statuses).toContain('failed')
     })
@@ -2047,7 +2080,9 @@ describe('Progress reporter behavior', () => {
       expect(progressReporter.completeCalls[0]!.uploaded).toBe(2)
       expect(progressReporter.completeCalls[0]!.skipped).toBe(0)
       expect(progressReporter.completeCalls[0]!.failed).toBe(0)
-      expect(progressReporter.completeCalls[0]!.duration_ms).toBeGreaterThanOrEqual(0)
+      expect(
+        progressReporter.completeCalls[0]!.duration_ms
+      ).toBeGreaterThanOrEqual(0)
     })
 
     it('emits onComplete even when upload has errors', async () => {

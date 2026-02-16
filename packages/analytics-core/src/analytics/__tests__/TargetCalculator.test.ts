@@ -681,7 +681,7 @@ describe('TargetCalculator Property Tests', () => {
      */
     it('should satisfy ceiling rounding invariant for all growth targets', () => {
       fc.assert(
-        fc.property(positiveBaseArb, (base) => {
+        fc.property(positiveBaseArb, base => {
           const targets = calculateGrowthTargets(base)
 
           // Verify each growth target satisfies the ceiling invariant
@@ -728,7 +728,7 @@ describe('TargetCalculator Property Tests', () => {
      */
     it('should satisfy ceiling rounding invariant for all percentage targets', () => {
       fc.assert(
-        fc.property(positiveBaseArb, (base) => {
+        fc.property(positiveBaseArb, base => {
           const targets = calculatePercentageTargets(base)
 
           // Verify each percentage target satisfies the ceiling invariant
@@ -773,7 +773,7 @@ describe('TargetCalculator Property Tests', () => {
      */
     it('should produce positive integer targets for all positive base values', () => {
       fc.assert(
-        fc.property(positiveBaseArb, (base) => {
+        fc.property(positiveBaseArb, base => {
           const growthTargets = calculateGrowthTargets(base)
           const percentageTargets = calculatePercentageTargets(base)
 
@@ -815,7 +815,7 @@ describe('TargetCalculator Property Tests', () => {
      */
     it('should produce growth targets that are always >= base value', () => {
       fc.assert(
-        fc.property(positiveBaseArb, (base) => {
+        fc.property(positiveBaseArb, base => {
           const targets = calculateGrowthTargets(base)
 
           // All growth targets must be >= base (since we're adding a percentage)
@@ -840,16 +840,28 @@ describe('TargetCalculator Property Tests', () => {
      */
     it('should never produce targets more than 1 above the mathematical result', () => {
       fc.assert(
-        fc.property(positiveBaseArb, (base) => {
+        fc.property(positiveBaseArb, base => {
           const growthTargets = calculateGrowthTargets(base)
           const percentageTargets = calculatePercentageTargets(base)
 
           // Check growth targets
           const growthPercentages = [
-            { target: growthTargets.distinguished, pct: 1 + GROWTH_PERCENTAGES.distinguished },
-            { target: growthTargets.select, pct: 1 + GROWTH_PERCENTAGES.select },
-            { target: growthTargets.presidents, pct: 1 + GROWTH_PERCENTAGES.presidents },
-            { target: growthTargets.smedley, pct: 1 + GROWTH_PERCENTAGES.smedley },
+            {
+              target: growthTargets.distinguished,
+              pct: 1 + GROWTH_PERCENTAGES.distinguished,
+            },
+            {
+              target: growthTargets.select,
+              pct: 1 + GROWTH_PERCENTAGES.select,
+            },
+            {
+              target: growthTargets.presidents,
+              pct: 1 + GROWTH_PERCENTAGES.presidents,
+            },
+            {
+              target: growthTargets.smedley,
+              pct: 1 + GROWTH_PERCENTAGES.smedley,
+            },
           ]
 
           for (const { target, pct } of growthPercentages) {
@@ -861,10 +873,22 @@ describe('TargetCalculator Property Tests', () => {
 
           // Check percentage targets
           const distinguishedPercentages = [
-            { target: percentageTargets.distinguished, pct: DISTINGUISHED_PERCENTAGES.distinguished },
-            { target: percentageTargets.select, pct: DISTINGUISHED_PERCENTAGES.select },
-            { target: percentageTargets.presidents, pct: DISTINGUISHED_PERCENTAGES.presidents },
-            { target: percentageTargets.smedley, pct: DISTINGUISHED_PERCENTAGES.smedley },
+            {
+              target: percentageTargets.distinguished,
+              pct: DISTINGUISHED_PERCENTAGES.distinguished,
+            },
+            {
+              target: percentageTargets.select,
+              pct: DISTINGUISHED_PERCENTAGES.select,
+            },
+            {
+              target: percentageTargets.presidents,
+              pct: DISTINGUISHED_PERCENTAGES.presidents,
+            },
+            {
+              target: percentageTargets.smedley,
+              pct: DISTINGUISHED_PERCENTAGES.smedley,
+            },
           ]
 
           for (const { target, pct } of distinguishedPercentages) {
@@ -968,12 +992,15 @@ describe('TargetCalculator Property Tests', () => {
      */
     it('should return smedley when current >= smedley target', () => {
       fc.assert(
-        fc.property(validTargetsArb, (targets) => {
+        fc.property(validTargetsArb, targets => {
           // Test at exactly smedley target
-          expect(determineAchievedLevel(targets.smedley, targets)).toBe('smedley')
+          expect(determineAchievedLevel(targets.smedley, targets)).toBe(
+            'smedley'
+          )
 
           // Test above smedley target
-          const aboveSmedley = targets.smedley + fc.sample(fc.integer({ min: 1, max: 1000 }), 1)[0]
+          const aboveSmedley =
+            targets.smedley + fc.sample(fc.integer({ min: 1, max: 1000 }), 1)[0]
           expect(determineAchievedLevel(aboveSmedley, targets)).toBe('smedley')
 
           return true
@@ -990,21 +1017,27 @@ describe('TargetCalculator Property Tests', () => {
     it('should return presidents when presidents <= current < smedley', () => {
       fc.assert(
         fc.property(
-          validTargetsArb.filter((t) => t.presidents < t.smedley),
-          (targets) => {
+          validTargetsArb.filter(t => t.presidents < t.smedley),
+          targets => {
             // Test at exactly presidents target
-            expect(determineAchievedLevel(targets.presidents, targets)).toBe('presidents')
+            expect(determineAchievedLevel(targets.presidents, targets)).toBe(
+              'presidents'
+            )
 
             // Test between presidents and smedley (if there's room)
             if (targets.smedley - targets.presidents > 1) {
               const between = targets.presidents + 1
-              expect(determineAchievedLevel(between, targets)).toBe('presidents')
+              expect(determineAchievedLevel(between, targets)).toBe(
+                'presidents'
+              )
             }
 
             // Test just below smedley
             const justBelowSmedley = targets.smedley - 1
             if (justBelowSmedley >= targets.presidents) {
-              expect(determineAchievedLevel(justBelowSmedley, targets)).toBe('presidents')
+              expect(determineAchievedLevel(justBelowSmedley, targets)).toBe(
+                'presidents'
+              )
             }
 
             return true
@@ -1022,10 +1055,12 @@ describe('TargetCalculator Property Tests', () => {
     it('should return select when select <= current < presidents', () => {
       fc.assert(
         fc.property(
-          validTargetsArb.filter((t) => t.select < t.presidents),
-          (targets) => {
+          validTargetsArb.filter(t => t.select < t.presidents),
+          targets => {
             // Test at exactly select target
-            expect(determineAchievedLevel(targets.select, targets)).toBe('select')
+            expect(determineAchievedLevel(targets.select, targets)).toBe(
+              'select'
+            )
 
             // Test between select and presidents (if there's room)
             if (targets.presidents - targets.select > 1) {
@@ -1036,7 +1071,9 @@ describe('TargetCalculator Property Tests', () => {
             // Test just below presidents
             const justBelowPresidents = targets.presidents - 1
             if (justBelowPresidents >= targets.select) {
-              expect(determineAchievedLevel(justBelowPresidents, targets)).toBe('select')
+              expect(determineAchievedLevel(justBelowPresidents, targets)).toBe(
+                'select'
+              )
             }
 
             return true
@@ -1054,21 +1091,27 @@ describe('TargetCalculator Property Tests', () => {
     it('should return distinguished when distinguished <= current < select', () => {
       fc.assert(
         fc.property(
-          validTargetsArb.filter((t) => t.distinguished < t.select),
-          (targets) => {
+          validTargetsArb.filter(t => t.distinguished < t.select),
+          targets => {
             // Test at exactly distinguished target
-            expect(determineAchievedLevel(targets.distinguished, targets)).toBe('distinguished')
+            expect(determineAchievedLevel(targets.distinguished, targets)).toBe(
+              'distinguished'
+            )
 
             // Test between distinguished and select (if there's room)
             if (targets.select - targets.distinguished > 1) {
               const between = targets.distinguished + 1
-              expect(determineAchievedLevel(between, targets)).toBe('distinguished')
+              expect(determineAchievedLevel(between, targets)).toBe(
+                'distinguished'
+              )
             }
 
             // Test just below select
             const justBelowSelect = targets.select - 1
             if (justBelowSelect >= targets.distinguished) {
-              expect(determineAchievedLevel(justBelowSelect, targets)).toBe('distinguished')
+              expect(determineAchievedLevel(justBelowSelect, targets)).toBe(
+                'distinguished'
+              )
             }
 
             return true
@@ -1086,8 +1129,8 @@ describe('TargetCalculator Property Tests', () => {
     it('should return null when current < distinguished target', () => {
       fc.assert(
         fc.property(
-          validTargetsArb.filter((t) => t.distinguished > 0),
-          (targets) => {
+          validTargetsArb.filter(t => t.distinguished > 0),
+          targets => {
             // Test at zero
             if (targets.distinguished > 0) {
               expect(determineAchievedLevel(0, targets)).toBeNull()
@@ -1096,7 +1139,9 @@ describe('TargetCalculator Property Tests', () => {
             // Test just below distinguished
             const justBelowDistinguished = targets.distinguished - 1
             if (justBelowDistinguished >= 0) {
-              expect(determineAchievedLevel(justBelowDistinguished, targets)).toBeNull()
+              expect(
+                determineAchievedLevel(justBelowDistinguished, targets)
+              ).toBeNull()
             }
 
             return true
@@ -1113,7 +1158,7 @@ describe('TargetCalculator Property Tests', () => {
      */
     it('should return null when targets are null', () => {
       fc.assert(
-        fc.property(currentValueArb, (current) => {
+        fc.property(currentValueArb, current => {
           expect(determineAchievedLevel(current, null)).toBeNull()
           return true
         }),

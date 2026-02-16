@@ -5,5 +5,5 @@
  *
  * @module @toastmasters/analytics-core/rankings
  */
-export { BordaCountRankingCalculator, } from './BordaCountRankingCalculator.js';
-export { MetricRankingsCalculator, } from './MetricRankingsCalculator.js';
+export { BordaCountRankingCalculator } from './BordaCountRankingCalculator.js'
+export { MetricRankingsCalculator } from './MetricRankingsCalculator.js'

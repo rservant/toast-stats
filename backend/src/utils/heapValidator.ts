@@ -87,7 +87,9 @@ export function validateHeapConfiguration(): HeapValidationResult {
     }
   } catch (error: unknown) {
     const message =
-      error instanceof Error ? error.message : 'Unknown error reading V8 heap statistics'
+      error instanceof Error
+        ? error.message
+        : 'Unknown error reading V8 heap statistics'
 
     logger.error('Failed to validate heap configuration', {
       component: 'HeapValidator',

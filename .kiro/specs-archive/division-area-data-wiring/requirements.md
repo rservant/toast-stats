@@ -5,6 +5,7 @@
 This feature addresses a data format mismatch between the scraper-cli pipeline and the frontend's Divisions & Areas tab on the District Detail page. Currently, the "Divisions & Areas" tab shows empty data ("No Divisions Found") because the `DataTransformer` class discards raw CSV arrays during transformation, but the frontend's `extractDivisionPerformance` function requires these raw arrays to calculate division/area status and recognition levels.
 
 The frontend implementation (from archived specs `division-area-performance-cards`, `division-area-performance-fixes`, `area-distinguished-criteria`, and `division-distinguished-criteria`) expects the district statistics API response to include:
+
 - `divisionPerformance`: Raw CSV records from Division.aspx scrape containing club-level data with Division, Area, Club Base fields, and visit award fields
 - `clubPerformance`: Raw CSV records from Club.aspx scrape containing Club Status and Club Distinguished Status fields
 

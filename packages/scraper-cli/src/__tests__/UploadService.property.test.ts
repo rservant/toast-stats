@@ -12,8 +12,17 @@
 
 import { describe, it, expect } from 'vitest'
 import fc from 'fast-check'
-import { UploadService, type UploadManifestEntry } from '../services/UploadService.js'
-import { FakeFileSystem, FakeBucketClient, FakeClock, FakeHasher, FakeProgressReporter } from './fakes/index.js'
+import {
+  UploadService,
+  type UploadManifestEntry,
+} from '../services/UploadService.js'
+import {
+  FakeFileSystem,
+  FakeBucketClient,
+  FakeClock,
+  FakeHasher,
+  FakeProgressReporter,
+} from './fakes/index.js'
 
 /**
  * Arbitrary for valid YYYY-MM-DD date strings.
@@ -33,7 +42,10 @@ const arbDateString = fc
 /**
  * Arbitrary for a list of unique date strings (simulating snapshot dates).
  */
-const arbDateList = fc.uniqueArray(arbDateString, { minLength: 0, maxLength: 50 })
+const arbDateList = fc.uniqueArray(arbDateString, {
+  minLength: 0,
+  maxLength: 50,
+})
 
 /**
  * Arbitrary for a since/until pair where since <= until (lexicographic).
@@ -147,7 +159,7 @@ describe('UploadService Property Tests', () => {
       const service = createUploadService()
 
       fc.assert(
-        fc.property(arbDateList, (dates) => {
+        fc.property(arbDateList, dates => {
           const result = service.filterDatesByRange(dates, undefined, undefined)
           expect(result).toEqual(dates)
         }),
@@ -156,7 +168,6 @@ describe('UploadService Property Tests', () => {
     })
   })
 })
-
 
 /**
  * Property 5: File collector completeness
@@ -175,9 +186,7 @@ describe('UploadService Property Tests', () => {
 /**
  * Arbitrary for a valid filename segment (no slashes, no empty strings).
  */
-const arbFileName = fc
-  .stringMatching(/^[a-z0-9_-]{1,8}$/)
-  .map((s) => s + '.json') // ensure a file extension
+const arbFileName = fc.stringMatching(/^[a-z0-9_-]{1,8}$/).map(s => s + '.json') // ensure a file extension
 
 /**
  * Arbitrary for a directory name segment.
@@ -198,13 +207,10 @@ interface TreeFile {
  */
 const arbDirectoryTree: fc.Arbitrary<TreeFile[]> = fc
   .array(
-    fc.tuple(
-      fc.array(arbDirName, { minLength: 0, maxLength: 3 }),
-      arbFileName
-    ),
+    fc.tuple(fc.array(arbDirName, { minLength: 0, maxLength: 3 }), arbFileName),
     { minLength: 1, maxLength: 20 }
   )
-  .map((entries) => {
+  .map(entries => {
     // Deduplicate by full path string to ensure unique files
     const seen = new Set<string>()
     const files: TreeFile[] = []
@@ -218,14 +224,14 @@ const arbDirectoryTree: fc.Arbitrary<TreeFile[]> = fc
     }
     return files
   })
-  .filter((files) => files.length > 0)
+  .filter(files => files.length > 0)
 
 describe('Property 5: File collector completeness', () => {
   it('yields exactly one FileInfo per regular file — no duplicates, no omissions', async () => {
     const snapshotDate = '2024-01-15'
 
     await fc.assert(
-      fc.asyncProperty(arbDirectoryTree, async (treeFiles) => {
+      fc.asyncProperty(arbDirectoryTree, async treeFiles => {
         // Build a FakeFileSystem with the generated tree under a snapshot date
         const fs = new FakeFileSystem()
         const basePath = `/cache/snapshots/${snapshotDate}`
@@ -249,12 +255,15 @@ describe('Property 5: File collector completeness', () => {
         })
 
         // Run upload in dry-run mode to exercise collectFiles
-        const result = await service.upload({ date: snapshotDate, dryRun: true })
+        const result = await service.upload({
+          date: snapshotDate,
+          dryRun: true,
+        })
 
         // Build expected set of remote paths
         const expectedPaths = new Set(
           treeFiles.map(
-            (f) => `snapshots/${snapshotDate}/${f.segments.join('/')}`
+            f => `snapshots/${snapshotDate}/${f.segments.join('/')}`
           )
         )
 
@@ -277,7 +286,6 @@ describe('Property 5: File collector completeness', () => {
     )
   })
 })
-
 
 /**
  * Property 3: Manifest fast-path correctness
@@ -302,7 +310,9 @@ const arbFileMetadata = fc.record({
  * Arbitrary for a manifest entry with all required fields.
  */
 const arbManifestEntry: fc.Arbitrary<UploadManifestEntry> = fc.record({
-  checksum: fc.string({ minLength: 64, maxLength: 64 }).map((s) => s.replace(/[^a-f0-9]/g, 'a').padEnd(64, '0')),
+  checksum: fc
+    .string({ minLength: 64, maxLength: 64 })
+    .map(s => s.replace(/[^a-f0-9]/g, 'a').padEnd(64, '0')),
   size: fc.integer({ min: 0, max: 10_000_000 }),
   mtimeMs: fc.integer({ min: 0, max: 2_000_000_000_000 }),
   uploadedAt: fc.constant('2024-01-15T10:30:00.000Z'),
@@ -313,7 +323,7 @@ describe('Property 3: Manifest fast-path correctness', () => {
 
   it('returns true when size and mtimeMs both match the manifest entry', () => {
     fc.assert(
-      fc.property(arbManifestEntry, (entry) => {
+      fc.property(arbManifestEntry, entry => {
         const fileInfo = { size: entry.size, mtimeMs: entry.mtimeMs }
         expect(service.shouldSkipFastPath(fileInfo, entry)).toBe(true)
       }),
@@ -356,31 +366,31 @@ describe('Property 3: Manifest fast-path correctness', () => {
 
   it('returns false when both size and mtimeMs differ', () => {
     fc.assert(
-      fc.property(
-        arbManifestEntry,
-        arbFileMetadata,
-        (entry, fileInfo) => {
-          fc.pre(fileInfo.size !== entry.size || fileInfo.mtimeMs !== entry.mtimeMs)
-          // At least one differs, so should not skip
-          if (fileInfo.size !== entry.size || fileInfo.mtimeMs !== entry.mtimeMs) {
-            expect(service.shouldSkipFastPath(fileInfo, entry)).toBe(false)
-          }
+      fc.property(arbManifestEntry, arbFileMetadata, (entry, fileInfo) => {
+        fc.pre(
+          fileInfo.size !== entry.size || fileInfo.mtimeMs !== entry.mtimeMs
+        )
+        // At least one differs, so should not skip
+        if (
+          fileInfo.size !== entry.size ||
+          fileInfo.mtimeMs !== entry.mtimeMs
+        ) {
+          expect(service.shouldSkipFastPath(fileInfo, entry)).toBe(false)
         }
-      ),
+      }),
       { numRuns: 200 }
     )
   })
 
   it('returns false when no manifest entry exists (undefined)', () => {
     fc.assert(
-      fc.property(arbFileMetadata, (fileInfo) => {
+      fc.property(arbFileMetadata, fileInfo => {
         expect(service.shouldSkipFastPath(fileInfo, undefined)).toBe(false)
       }),
       { numRuns: 200 }
     )
   })
 })
-
 
 /**
  * Property 4: Summary count invariant
@@ -398,19 +408,18 @@ describe('Property 3: Manifest fast-path correctness', () => {
  * Arbitrary for a file configuration: name and whether it should fail on upload.
  */
 const arbFileConfig = fc.record({
-  name: fc.stringMatching(/^[a-z][a-z0-9]{0,7}$/).map((s) => s + '.json'),
+  name: fc.stringMatching(/^[a-z][a-z0-9]{0,7}$/).map(s => s + '.json'),
   shouldFail: fc.boolean(),
 })
 
 /**
  * Arbitrary for a set of unique file configs for a single snapshot date.
  */
-const arbFileConfigs = fc
-  .uniqueArray(arbFileConfig, {
-    minLength: 1,
-    maxLength: 15,
-    selector: (c) => c.name,
-  })
+const arbFileConfigs = fc.uniqueArray(arbFileConfig, {
+  minLength: 1,
+  maxLength: 15,
+  selector: c => c.name,
+})
 
 /**
  * Arbitrary for whether incremental mode is enabled.
@@ -423,50 +432,63 @@ describe('Property 4: Summary count invariant', () => {
     const snapshotDate = '2024-06-15'
 
     await fc.assert(
-      fc.asyncProperty(arbFileConfigs, arbIncremental, async (fileConfigs, incremental) => {
-        const fakeFs = new FakeFileSystem()
-        const basePath = `/cache/snapshots/${snapshotDate}`
-        fakeFs.addDirectory(basePath)
-        fakeFs.addDirectory('/cache')
+      fc.asyncProperty(
+        arbFileConfigs,
+        arbIncremental,
+        async (fileConfigs, incremental) => {
+          const fakeFs = new FakeFileSystem()
+          const basePath = `/cache/snapshots/${snapshotDate}`
+          fakeFs.addDirectory(basePath)
+          fakeFs.addDirectory('/cache')
 
-        // Add files to the fake filesystem
-        for (const config of fileConfigs) {
-          fakeFs.addFile(`${basePath}/${config.name}`, `content-${config.name}`, 1000000)
-        }
-
-        const fakeBucket = new FakeBucketClient()
-
-        // Configure failures for files that should fail (non-auth errors)
-        for (const config of fileConfigs) {
-          if (config.shouldFail) {
-            const remotePath = `snapshots/${snapshotDate}/${config.name}`
-            fakeBucket.setFailure(remotePath, new Error(`Upload failed: ${config.name}`))
+          // Add files to the fake filesystem
+          for (const config of fileConfigs) {
+            fakeFs.addFile(
+              `${basePath}/${config.name}`,
+              `content-${config.name}`,
+              1000000
+            )
           }
+
+          const fakeBucket = new FakeBucketClient()
+
+          // Configure failures for files that should fail (non-auth errors)
+          for (const config of fileConfigs) {
+            if (config.shouldFail) {
+              const remotePath = `snapshots/${snapshotDate}/${config.name}`
+              fakeBucket.setFailure(
+                remotePath,
+                new Error(`Upload failed: ${config.name}`)
+              )
+            }
+          }
+
+          const service = new UploadService({
+            cacheDir: '/cache',
+            bucket: 'test-bucket',
+            prefix: 'snapshots',
+            fs: fakeFs,
+            hasher: new FakeHasher(),
+            bucketClient: fakeBucket,
+            clock: new FakeClock(),
+            progressReporter: new FakeProgressReporter(),
+          })
+
+          const result = await service.upload({
+            date: snapshotDate,
+            incremental,
+            dryRun: false,
+            concurrency: 5,
+          })
+
+          // Property 4: Summary count invariant
+          expect(result.filesProcessed.length).toBe(
+            result.filesUploaded.length +
+              result.filesFailed.length +
+              result.filesSkipped.length
+          )
         }
-
-        const service = new UploadService({
-          cacheDir: '/cache',
-          bucket: 'test-bucket',
-          prefix: 'snapshots',
-          fs: fakeFs,
-          hasher: new FakeHasher(),
-          bucketClient: fakeBucket,
-          clock: new FakeClock(),
-          progressReporter: new FakeProgressReporter(),
-        })
-
-        const result = await service.upload({
-          date: snapshotDate,
-          incremental,
-          dryRun: false,
-          concurrency: 5,
-        })
-
-        // Property 4: Summary count invariant
-        expect(result.filesProcessed.length).toBe(
-          result.filesUploaded.length + result.filesFailed.length + result.filesSkipped.length
-        )
-      }),
+      ),
       { numRuns: 100 }
     )
   })
@@ -477,7 +499,7 @@ describe('Property 4: Summary count invariant', () => {
     await fc.assert(
       fc.asyncProperty(
         fc.uniqueArray(
-          fc.stringMatching(/^[a-z][a-z0-9]{0,5}$/).map((s) => s + '.json'),
+          fc.stringMatching(/^[a-z][a-z0-9]{0,5}$/).map(s => s + '.json'),
           { minLength: 3, maxLength: 15 }
         ),
         fc.integer({ min: 0, max: 14 }),
@@ -498,7 +520,9 @@ describe('Property 4: Summary count invariant', () => {
           // Set auth error on one file (deterministic code-based)
           const authFileName = fileNames[safeIndex]!
           const authRemotePath = `snapshots/${snapshotDate}/${authFileName}`
-          const authErr = new Error('UNAUTHENTICATED') as Error & { code: string }
+          const authErr = new Error('UNAUTHENTICATED') as Error & {
+            code: string
+          }
           authErr.code = 'UNAUTHENTICATED'
           fakeBucket.setFailure(authRemotePath, authErr)
 
@@ -521,7 +545,9 @@ describe('Property 4: Summary count invariant', () => {
 
           // Property 4 must hold even on auth abort
           expect(result.filesProcessed.length).toBe(
-            result.filesUploaded.length + result.filesFailed.length + result.filesSkipped.length
+            result.filesUploaded.length +
+              result.filesFailed.length +
+              result.filesSkipped.length
           )
 
           // Auth error must be flagged

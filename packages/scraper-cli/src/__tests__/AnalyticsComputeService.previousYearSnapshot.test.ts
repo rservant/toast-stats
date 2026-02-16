@@ -334,10 +334,7 @@ describe('AnalyticsComputeService - Previous Year Snapshot Loading', () => {
     const districtId = '1'
 
     // Only create the current snapshot — no previous year snapshot
-    const currentStats = createSampleDistrictStatistics(
-      districtId,
-      currentDate
-    )
+    const currentStats = createSampleDistrictStatistics(districtId, currentDate)
 
     await writeDistrictSnapshot(
       testCache.path,
@@ -387,10 +384,7 @@ describe('AnalyticsComputeService - Previous Year Snapshot Loading', () => {
     const districtId = '1'
 
     // Create valid current snapshot
-    const currentStats = createSampleDistrictStatistics(
-      districtId,
-      currentDate
-    )
+    const currentStats = createSampleDistrictStatistics(districtId, currentDate)
     await writeDistrictSnapshot(
       testCache.path,
       currentDate,

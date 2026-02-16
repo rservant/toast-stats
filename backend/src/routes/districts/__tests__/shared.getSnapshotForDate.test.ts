@@ -140,7 +140,10 @@ describe('getSnapshotForDate', () => {
       vi.mocked(mockSnapshotStore.getSnapshot).mockResolvedValue(mockSnapshot)
 
       // Act
-      const result = await getSnapshotForDateWithStore(mockSnapshotStore, requestedDate)
+      const result = await getSnapshotForDateWithStore(
+        mockSnapshotStore,
+        requestedDate
+      )
 
       // Assert
       expect(mockSnapshotStore.getSnapshot).toHaveBeenCalledWith(requestedDate)
@@ -170,10 +173,15 @@ describe('getSnapshotForDate', () => {
       // Arrange
       const latestSnapshotId = '2024-02-20'
       const mockLatestSnapshot = createMockSnapshot(latestSnapshotId)
-      vi.mocked(mockSnapshotStore.getLatestSuccessful).mockResolvedValue(mockLatestSnapshot)
+      vi.mocked(mockSnapshotStore.getLatestSuccessful).mockResolvedValue(
+        mockLatestSnapshot
+      )
 
       // Act
-      const result = await getSnapshotForDateWithStore(mockSnapshotStore, undefined)
+      const result = await getSnapshotForDateWithStore(
+        mockSnapshotStore,
+        undefined
+      )
 
       // Assert
       expect(mockSnapshotStore.getLatestSuccessful).toHaveBeenCalledTimes(1)
@@ -188,7 +196,10 @@ describe('getSnapshotForDate', () => {
       vi.mocked(mockSnapshotStore.getLatestSuccessful).mockResolvedValue(null)
 
       // Act
-      const result = await getSnapshotForDateWithStore(mockSnapshotStore, undefined)
+      const result = await getSnapshotForDateWithStore(
+        mockSnapshotStore,
+        undefined
+      )
 
       // Assert
       expect(mockSnapshotStore.getLatestSuccessful).toHaveBeenCalledTimes(1)
@@ -201,7 +212,9 @@ describe('getSnapshotForDate', () => {
       // Arrange - empty string should be treated as "no date provided"
       const latestSnapshotId = '2024-03-10'
       const mockLatestSnapshot = createMockSnapshot(latestSnapshotId)
-      vi.mocked(mockSnapshotStore.getLatestSuccessful).mockResolvedValue(mockLatestSnapshot)
+      vi.mocked(mockSnapshotStore.getLatestSuccessful).mockResolvedValue(
+        mockLatestSnapshot
+      )
 
       // Act
       const result = await getSnapshotForDateWithStore(mockSnapshotStore, '')
@@ -221,7 +234,10 @@ describe('getSnapshotForDate', () => {
       vi.mocked(mockSnapshotStore.getSnapshot).mockResolvedValue(null)
 
       // Act
-      const result = await getSnapshotForDateWithStore(mockSnapshotStore, requestedDate)
+      const result = await getSnapshotForDateWithStore(
+        mockSnapshotStore,
+        requestedDate
+      )
 
       // Assert - Requirement 6.2: error code is SNAPSHOT_NOT_FOUND
       expect(result.snapshot).toBeNull()
@@ -236,11 +252,16 @@ describe('getSnapshotForDate', () => {
       vi.mocked(mockSnapshotStore.getSnapshot).mockResolvedValue(null)
 
       // Act
-      const result = await getSnapshotForDateWithStore(mockSnapshotStore, requestedDate)
+      const result = await getSnapshotForDateWithStore(
+        mockSnapshotStore,
+        requestedDate
+      )
 
       // Assert - Requirement 6.3: message contains the requested date
       expect(result.error?.message).toContain(requestedDate)
-      expect(result.error?.message).toBe(`Snapshot not found for date ${requestedDate}`)
+      expect(result.error?.message).toBe(
+        `Snapshot not found for date ${requestedDate}`
+      )
     })
 
     it('should include guidance in error details (Requirement 6.4)', async () => {
@@ -249,7 +270,10 @@ describe('getSnapshotForDate', () => {
       vi.mocked(mockSnapshotStore.getSnapshot).mockResolvedValue(null)
 
       // Act
-      const result = await getSnapshotForDateWithStore(mockSnapshotStore, requestedDate)
+      const result = await getSnapshotForDateWithStore(
+        mockSnapshotStore,
+        requestedDate
+      )
 
       // Assert - Requirement 6.4: details suggest trying a different date
       expect(result.error?.details).toBeDefined()
@@ -263,7 +287,10 @@ describe('getSnapshotForDate', () => {
       vi.mocked(mockSnapshotStore.getSnapshot).mockResolvedValue(null)
 
       // Act
-      const result = await getSnapshotForDateWithStore(mockSnapshotStore, requestedDate)
+      const result = await getSnapshotForDateWithStore(
+        mockSnapshotStore,
+        requestedDate
+      )
 
       // Assert - verify complete error structure
       expect(result).toEqual({
@@ -272,7 +299,8 @@ describe('getSnapshotForDate', () => {
         error: {
           code: 'SNAPSHOT_NOT_FOUND',
           message: `Snapshot not found for date ${requestedDate}`,
-          details: 'The requested snapshot does not exist. Try a different date or check available snapshots.',
+          details:
+            'The requested snapshot does not exist. Try a different date or check available snapshots.',
         },
       })
     })
@@ -319,7 +347,10 @@ describe('getSnapshotForDate', () => {
       vi.mocked(mockSnapshotStore.getSnapshot).mockResolvedValue(mockSnapshot)
 
       // Act
-      const result = await getSnapshotForDateWithStore(mockSnapshotStore, requestedDate)
+      const result = await getSnapshotForDateWithStore(
+        mockSnapshotStore,
+        requestedDate
+      )
 
       // Assert - snapshotDate should match the snapshot's snapshot_id
       expect(result.snapshotDate).toBe(mockSnapshot.snapshot_id)

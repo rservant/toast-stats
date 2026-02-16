@@ -3,6 +3,7 @@
 ## Overview
 
 This implementation fixes the `ClubHealthStatus` type mismatch by establishing a canonical type in `shared-contracts` and updating all consumers to use the hyphenated format ('intervention-required'). The review revealed additional issues:
+
 1. analytics-core uses `intervention_required` (underscore) in multiple files
 2. Frontend property tests use outdated status values ('healthy', 'at-risk', 'critical')
 
@@ -13,16 +14,13 @@ This implementation fixes the `ClubHealthStatus` type mismatch by establishing a
     - Create `packages/shared-contracts/src/types/club-health-status.ts`
     - Define `ClubHealthStatus` type with values: 'thriving', 'stable', 'vulnerable', 'intervention-required'
     - _Requirements: 1.1, 1.3_
-  
   - [x] 1.2 Create Zod schema file
     - Create `packages/shared-contracts/src/schemas/club-health-status.schema.ts`
     - Define `ClubHealthStatusSchema` using `z.enum()`
     - _Requirements: 1.2_
-  
   - [x] 1.3 Export from shared-contracts index
     - Update `packages/shared-contracts/src/index.ts` to export type and schema
     - _Requirements: 1.1, 1.2_
-  
   - [x] 1.4 Write unit tests for ClubHealthStatusSchema
     - Test schema accepts all 4 valid values
     - Test schema rejects 'intervention_required' (underscore variant)
@@ -34,21 +32,17 @@ This implementation fixes the `ClubHealthStatus` type mismatch by establishing a
     - Import and re-export `ClubHealthStatus` from `@toastmasters/shared-contracts`
     - Remove local `ClubHealthStatus` type definition
     - _Requirements: 2.3_
-  
   - [x] 2.2 Update ClubHealthAnalyticsModule.ts
     - Change `'intervention_required'` to `'intervention-required'` in assessClubHealth()
     - Change `'intervention_required'` to `'intervention-required'` in generateClubHealthData()
     - _Requirements: 2.2_
-  
   - [x] 2.3 Update ClubHealthAnalyticsModule.backend.ts
     - Change `'intervention_required'` to `'intervention-required'` in assessClubHealth()
     - Update ClubTrendInternal interface to use hyphen format
     - _Requirements: 2.2_
-  
   - [x] 2.4 Update MembershipAnalyticsModule.backend.ts
     - Update ClubTrendInternal interface to use 'intervention-required'
     - _Requirements: 2.2_
-  
   - [x] 2.5 Update analytics-core test files to use hyphen format
     - Update `ClubHealthAnalyticsModule.test.ts`
     - Update `AnalyticsComputer.test.ts`
@@ -77,13 +71,11 @@ This implementation fixes the `ClubHealthStatus` type mismatch by establishing a
     - Remove local `ClubHealthStatus` type definition
     - Re-export for backward compatibility with existing imports
     - _Requirements: 3.1_
-  
   - [x] 6.2 Update useClubTrends.ts
     - Import `ClubHealthStatus` from `@toastmasters/shared-contracts`
     - Remove local `ClubHealthStatus` type definition
     - Re-export for backward compatibility
     - _Requirements: 3.2_
-  
   - [x] 6.3 Fix useColumnFilters.property.test.ts
     - Change outdated status values ('healthy', 'at-risk', 'critical') to current values ('thriving', 'vulnerable', 'intervention-required')
     - Update all occurrences in the file

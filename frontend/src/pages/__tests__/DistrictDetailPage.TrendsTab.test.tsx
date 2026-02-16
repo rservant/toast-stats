@@ -61,10 +61,7 @@ class MockIntersectionObserver implements IntersectionObserver {
   ) {
     // Immediately trigger with isIntersecting: true so LazyChart renders children
     setTimeout(() => {
-      callback(
-        [{ isIntersecting: true } as IntersectionObserverEntry],
-        this
-      )
+      callback([{ isIntersecting: true } as IntersectionObserverEntry], this)
     }, 0)
   }
 
@@ -170,7 +167,10 @@ const mockUseAggregatedAnalytics = vi.mocked(useAggregatedAnalytics)
 
 vi.mock('../../components/MembershipTrendChart', () => ({
   MembershipTrendChart: vi.fn(
-    (props: { membershipTrend: Array<{ date: string; count: number }>; isLoading?: boolean }) => (
+    (props: {
+      membershipTrend: Array<{ date: string; count: number }>
+      isLoading?: boolean
+    }) => (
       <div data-testid="membership-trend-chart">
         <span data-testid="membership-trend-count">
           {props.membershipTrend.length}
@@ -186,8 +186,17 @@ vi.mock('../../components/MembershipTrendChart', () => ({
 vi.mock('../../components/YearOverYearComparison', () => ({
   YearOverYearComparison: vi.fn(
     (props: {
-      yearOverYear?: { membershipChange: number; distinguishedChange: number; clubHealthChange: number }
-      currentYear: { totalMembership: number; distinguishedClubs: number; thrivingClubs: number; totalClubs: number }
+      yearOverYear?: {
+        membershipChange: number
+        distinguishedChange: number
+        clubHealthChange: number
+      }
+      currentYear: {
+        totalMembership: number
+        distinguishedClubs: number
+        thrivingClubs: number
+        totalClubs: number
+      }
       isLoading?: boolean
     }) => (
       <div data-testid="year-over-year-comparison">
@@ -344,12 +353,15 @@ describe('DistrictDetailPage - Trends Tab Data Source Wiring', () => {
       })
 
       // Verify MembershipTrendChart received the aggregated data (4 points, not 1)
-      expect(screen.getByTestId('membership-trend-count')).toHaveTextContent('4')
+      expect(screen.getByTestId('membership-trend-count')).toHaveTextContent(
+        '4'
+      )
 
       // Verify via mock call args that the exact aggregated data was passed
-      const lastCall = mockMembershipTrendChart.mock.calls[
-        mockMembershipTrendChart.mock.calls.length - 1
-      ]
+      const lastCall =
+        mockMembershipTrendChart.mock.calls[
+          mockMembershipTrendChart.mock.calls.length - 1
+        ]
       expect(lastCall).toBeDefined()
       const props = lastCall![0]
       expect(props.membershipTrend).toEqual(mockData.trends.membership)
@@ -402,9 +414,10 @@ describe('DistrictDetailPage - Trends Tab Data Source Wiring', () => {
       expect(screen.getByTestId('yoy-total-clubs')).toHaveTextContent('120')
 
       // Verify via mock call args that the exact data was passed
-      const lastCall = mockYearOverYearComparison.mock.calls[
-        mockYearOverYearComparison.mock.calls.length - 1
-      ]
+      const lastCall =
+        mockYearOverYearComparison.mock.calls[
+          mockYearOverYearComparison.mock.calls.length - 1
+        ]
       expect(lastCall).toBeDefined()
       const props = lastCall![0]
       expect(props.yearOverYear).toEqual(mockData.yearOverYear)

@@ -23,7 +23,10 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { DivisionAreaProgressSummary } from '../DivisionAreaProgressSummary'
-import type { DivisionPerformance, AreaPerformance } from '../../utils/divisionStatus'
+import type {
+  DivisionPerformance,
+  AreaPerformance,
+} from '../../utils/divisionStatus'
 import {
   renderWithProviders,
   cleanupAllResources,
@@ -76,17 +79,29 @@ function buildDivisions(
   return Array.from(grouped.entries()).map(([divisionId, divAreas]) => {
     const clubBase = divAreas.reduce((sum, a) => sum + a.clubBase, 0)
     const paidClubs = divAreas.reduce((sum, a) => sum + a.paidClubs, 0)
-    const distinguishedClubs = divAreas.reduce((sum, a) => sum + a.distinguishedClubs, 0)
+    const distinguishedClubs = divAreas.reduce(
+      (sum, a) => sum + a.distinguishedClubs,
+      0
+    )
     const netGrowth = paidClubs - clubBase
     const requiredDistinguishedClubs = Math.ceil(clubBase * 0.5)
 
     // Compute division status using same logic as calculateDivisionStatus
     let status: DivisionPerformance['status'] = 'not-distinguished'
-    if (distinguishedClubs >= requiredDistinguishedClubs + 1 && netGrowth >= 1) {
+    if (
+      distinguishedClubs >= requiredDistinguishedClubs + 1 &&
+      netGrowth >= 1
+    ) {
       status = 'presidents-distinguished'
-    } else if (distinguishedClubs >= requiredDistinguishedClubs + 1 && paidClubs >= clubBase) {
+    } else if (
+      distinguishedClubs >= requiredDistinguishedClubs + 1 &&
+      paidClubs >= clubBase
+    ) {
       status = 'select-distinguished'
-    } else if (distinguishedClubs >= requiredDistinguishedClubs && paidClubs >= clubBase) {
+    } else if (
+      distinguishedClubs >= requiredDistinguishedClubs &&
+      paidClubs >= clubBase
+    ) {
       status = 'distinguished'
     }
 
@@ -353,7 +368,9 @@ describe('AreaProgressSummary', () => {
      * Tests loading state display
      */
     it('should display loading skeleton when isLoading is true', () => {
-      renderWithProviders(<DivisionAreaProgressSummary divisions={[]} isLoading={true} />)
+      renderWithProviders(
+        <DivisionAreaProgressSummary divisions={[]} isLoading={true} />
+      )
 
       // Loading state should have role="status" and aria-label
       expect(
@@ -367,7 +384,9 @@ describe('AreaProgressSummary', () => {
      * Tests aria-busy attribute during loading
      */
     it('should set aria-busy attribute when loading', () => {
-      renderWithProviders(<DivisionAreaProgressSummary divisions={[]} isLoading={true} />)
+      renderWithProviders(
+        <DivisionAreaProgressSummary divisions={[]} isLoading={true} />
+      )
 
       const loadingContainer = screen.getByRole('status', {
         name: /loading division and area progress summaries/i,
@@ -395,7 +414,9 @@ describe('AreaProgressSummary', () => {
      * Tests that empty state is not shown during loading
      */
     it('should not show empty state during loading', () => {
-      renderWithProviders(<DivisionAreaProgressSummary divisions={[]} isLoading={true} />)
+      renderWithProviders(
+        <DivisionAreaProgressSummary divisions={[]} isLoading={true} />
+      )
 
       expect(screen.queryByText('No Division Data')).not.toBeInTheDocument()
     })
@@ -404,7 +425,9 @@ describe('AreaProgressSummary', () => {
      * Tests loading skeleton has screen reader text
      */
     it('should have screen reader text during loading', () => {
-      renderWithProviders(<DivisionAreaProgressSummary divisions={[]} isLoading={true} />)
+      renderWithProviders(
+        <DivisionAreaProgressSummary divisions={[]} isLoading={true} />
+      )
 
       expect(
         screen.getByText('Loading division and area progress summaries...')
@@ -418,9 +441,7 @@ describe('AreaProgressSummary', () => {
      * THE Criteria_Display SHALL use semantic HTML with appropriate ARIA labels
      */
     it('should have proper role="region" on main section', () => {
-      const divisions = buildDivisions([
-        { ...createArea(), divisionId: 'A' },
-      ])
+      const divisions = buildDivisions([{ ...createArea(), divisionId: 'A' }])
 
       renderWithProviders(<DivisionAreaProgressSummary divisions={divisions} />)
 
@@ -502,9 +523,7 @@ describe('AreaProgressSummary', () => {
      * Section should use semantic header element
      */
     it('should use semantic header element', () => {
-      const divisions = buildDivisions([
-        { ...createArea(), divisionId: 'A' },
-      ])
+      const divisions = buildDivisions([{ ...createArea(), divisionId: 'A' }])
 
       const { container } = renderWithProviders(
         <DivisionAreaProgressSummary divisions={divisions} />
@@ -519,9 +538,7 @@ describe('AreaProgressSummary', () => {
      * Section should use semantic footer element
      */
     it('should use semantic footer element', () => {
-      const divisions = buildDivisions([
-        { ...createArea(), divisionId: 'A' },
-      ])
+      const divisions = buildDivisions([{ ...createArea(), divisionId: 'A' }])
 
       const { container } = renderWithProviders(
         <DivisionAreaProgressSummary divisions={divisions} />

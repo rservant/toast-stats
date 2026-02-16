@@ -29,7 +29,11 @@ import { getProgramYear } from '../../utils/programYear'
 /**
  * Helper: create a PaymentTrendDataPoint for a given date and payment value.
  */
-function makePoint(date: string, payments: number, programYearDay: number): PaymentTrendDataPoint {
+function makePoint(
+  date: string,
+  payments: number,
+  programYearDay: number
+): PaymentTrendDataPoint {
   return { date, payments, programYearDay }
 }
 

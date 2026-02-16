@@ -19,16 +19,16 @@ flowchart TD
     A[analytics-core: AnalyticsComputer] -->|computes memberCountChange| B[scraper-cli: AnalyticsComputeService]
     B -->|writes pre-computed JSON| C[backend: serves read-only]
     C -->|returns memberCountChange in response| D[frontend: DistrictOverview badge]
-    
+
     subgraph "Computation Layer (scraper-cli pipeline)"
         A
         B
     end
-    
+
     subgraph "Serving Layer (read-only)"
         C
     end
-    
+
     subgraph "Display Layer"
         D
     end
@@ -45,8 +45,8 @@ Add `memberCountChange` field:
 ```typescript
 interface DistrictAnalytics {
   // ... existing fields ...
-  membershipChange: number    // payment-based change (existing, preserved)
-  memberCountChange: number   // actual member count change (new)
+  membershipChange: number // payment-based change (existing, preserved)
+  memberCountChange: number // actual member count change (new)
   // ... rest of fields ...
 }
 ```
@@ -58,11 +58,14 @@ After computing `membershipChange` (payment-based), also compute `memberCountCha
 ```typescript
 // Existing: payment-based change
 const membershipChange = this.calculateMembershipChangeWithBase(
-  sortedSnapshots, options?.allDistrictsRankings, districtId
+  sortedSnapshots,
+  options?.allDistrictsRankings,
+  districtId
 )
 
 // New: actual member count change
-const memberCountChange = this.membershipModule.calculateMembershipChange(sortedSnapshots)
+const memberCountChange =
+  this.membershipModule.calculateMembershipChange(sortedSnapshots)
 ```
 
 This reuses `MembershipAnalyticsModule.calculateMembershipChange()` which computes `getTotalMembership(last) - getTotalMembership(first)`. For a single snapshot it returns 0, which is correct (no baseline to compare against).
@@ -78,8 +81,8 @@ Add `memberCountChange` field:
 ```typescript
 interface PreComputedAnalyticsSummary {
   // ... existing fields ...
-  membershipChange: number     // payment-based (existing)
-  memberCountChange: number    // actual member count change (new)
+  membershipChange: number // payment-based (existing)
+  memberCountChange: number // actual member count change (new)
   // ...
 }
 ```
@@ -105,7 +108,7 @@ Add `memberCountChange` field:
 interface AnalyticsSummary {
   totalMembership: number
   membershipChange: number
-  memberCountChange: number  // new
+  memberCountChange: number // new
   // ...
 }
 ```
@@ -119,11 +122,13 @@ Add `memberCountChange` field.
 Change the badge to use `memberCountChange` instead of `membershipChange`:
 
 ```tsx
-<span className={`text-xs px-2 py-1 rounded ${
-  (analytics.memberCountChange ?? analytics.membershipChange) >= 0
-    ? 'text-green-700 bg-green-100'
-    : 'text-red-700 bg-red-100'
-}`}>
+<span
+  className={`text-xs px-2 py-1 rounded ${
+    (analytics.memberCountChange ?? analytics.membershipChange) >= 0
+      ? 'text-green-700 bg-green-100'
+      : 'text-red-700 bg-red-100'
+  }`}
+>
   {(analytics.memberCountChange ?? analytics.membershipChange) >= 0 ? '+' : ''}
   {analytics.memberCountChange ?? analytics.membershipChange} members
 </span>
@@ -148,36 +153,35 @@ summary: {
 
 ### New field additions (no schema changes, just field additions)
 
-| Layer | Type | Field | Type | Description |
-|-------|------|-------|------|-------------|
-| analytics-core | `DistrictAnalytics` | `memberCountChange` | `number` | Actual member count change |
-| backend | `DistrictAnalytics` | `memberCountChange` | `number` | Actual member count change |
-| backend | `PreComputedAnalyticsSummary` | `memberCountChange` | `number` | Actual member count change |
-| backend | `AggregatedAnalyticsResponse.summary` | `memberCountChange` | `number` | Actual member count change |
-| frontend | `DistrictAnalytics` | `memberCountChange` | `number` | Actual member count change |
-| frontend | `AnalyticsSummary` | `memberCountChange` | `number` | Actual member count change |
+| Layer          | Type                                  | Field               | Type     | Description                |
+| -------------- | ------------------------------------- | ------------------- | -------- | -------------------------- |
+| analytics-core | `DistrictAnalytics`                   | `memberCountChange` | `number` | Actual member count change |
+| backend        | `DistrictAnalytics`                   | `memberCountChange` | `number` | Actual member count change |
+| backend        | `PreComputedAnalyticsSummary`         | `memberCountChange` | `number` | Actual member count change |
+| backend        | `AggregatedAnalyticsResponse.summary` | `memberCountChange` | `number` | Actual member count change |
+| frontend       | `DistrictAnalytics`                   | `memberCountChange` | `number` | Actual member count change |
+| frontend       | `AnalyticsSummary`                    | `memberCountChange` | `number` | Actual member count change |
 
 The existing `membershipChange` field is preserved in all types for backward compatibility.
 
-
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Existing Properties (from Bug 1 fix — Requirements 1–3)
 
 These properties were validated by the completed Bug 1 work and remain in effect:
 
 **Property 1: Rankings-based payment change calculation**
-*For any* district and any All_Districts_Rankings data where the district has a matching entry with valid `paymentBase` and `totalPayments`, `calculateMembershipChangeWithBase` should return `totalPayments - paymentBase`.
+_For any_ district and any All_Districts_Rankings data where the district has a matching entry with valid `paymentBase` and `totalPayments`, `calculateMembershipChangeWithBase` should return `totalPayments - paymentBase`.
 **Validates: Requirements 2.1**
 
 **Property 2: Normalized districtId lookup finds format variants**
-*For any* districtId string and any rankings entry whose numeric portion matches, the normalized lookup should find the ranking entry regardless of prefix formatting (e.g., "D42" matches "42", "42" matches "D42").
+_For any_ districtId string and any rankings entry whose numeric portion matches, the normalized lookup should find the ranking entry regardless of prefix formatting (e.g., "D42" matches "42", "42" matches "D42").
 **Validates: Requirements 2.2**
 
 **Property 3: Snapshot-based fallback uses membershipBase**
-*For any* single snapshot with no available rankings data, `calculateMembershipChangeWithBase` should return `sum(club.paymentsCount) - sum(club.membershipBase)` across all clubs in the snapshot.
+_For any_ single snapshot with no available rankings data, `calculateMembershipChangeWithBase` should return `sum(club.paymentsCount) - sum(club.membershipBase)` across all clubs in the snapshot.
 **Validates: Requirements 2.3**
 
 ### New Properties (Bug 2 fix — Requirements 4–6)

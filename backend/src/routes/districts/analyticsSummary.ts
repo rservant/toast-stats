@@ -266,11 +266,10 @@ analyticsSummaryRouter.get(
       // Read summary data from per-district analytics file (single call for all per-district data)
       // Requirement 1.1: Read summary data from PreComputedAnalyticsReader.readDistrictAnalytics()
       // Requirement 3.1: Single call for summary, distinguished projection, and all per-district data
-      const summary =
-        await preComputedAnalyticsReader.readDistrictAnalytics(
-          latestSnapshot.snapshot_id,
-          districtId
-        )
+      const summary = await preComputedAnalyticsReader.readDistrictAnalytics(
+        latestSnapshot.snapshot_id,
+        districtId
+      )
 
       // Requirement 3.3: Extract distinguishedProjection from the single readDistrictAnalytics() result
       const distinguishedProjectionValue =
@@ -290,18 +289,23 @@ analyticsSummaryRouter.get(
         // Requirement 1.1: If the initial query returns zero data points,
         // expand to the full program year range for the requested end date
         if (timeSeriesData.length === 0) {
-          const programYearStart = getProgramYearStartDate(effectiveEndDate ?? '')
+          const programYearStart = getProgramYearStartDate(
+            effectiveEndDate ?? ''
+          )
           const programYearEnd = getProgramYearEndDate(effectiveEndDate ?? '')
 
-          logger.debug('Initial trend query returned empty, expanding to full program year', {
-            operation: 'getAnalyticsSummary',
-            operationId,
-            districtId,
-            originalStart: effectiveStartDate,
-            originalEnd: effectiveEndDate,
-            expandedStart: programYearStart,
-            expandedEnd: programYearEnd,
-          })
+          logger.debug(
+            'Initial trend query returned empty, expanding to full program year',
+            {
+              operation: 'getAnalyticsSummary',
+              operationId,
+              districtId,
+              originalStart: effectiveStartDate,
+              originalEnd: effectiveEndDate,
+              expandedStart: programYearStart,
+              expandedEnd: programYearEnd,
+            }
+          )
 
           timeSeriesData = await timeSeriesIndexService.getTrendData(
             districtId,
@@ -363,8 +367,7 @@ analyticsSummaryRouter.get(
               distinguishedChange:
                 yoyComparison.metrics.distinguishedClubs.percentageChange,
               clubHealthChange:
-                yoyComparison.metrics.clubHealth.thrivingClubs
-                  .percentageChange,
+                yoyComparison.metrics.clubHealth.thrivingClubs.percentageChange,
             }
           }
         }
@@ -579,4 +582,3 @@ function getProgramYearEndDate(dateStr: string): string {
     return `${year}-06-30`
   }
 }
-

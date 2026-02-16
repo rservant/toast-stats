@@ -287,7 +287,9 @@ describe('Analytics Date Selection Integration Tests', () => {
           .expect(200)
 
         // Assert
-        expect(mockSnapshotStore.getSnapshot).toHaveBeenCalledWith(requestedDate)
+        expect(mockSnapshotStore.getSnapshot).toHaveBeenCalledWith(
+          requestedDate
+        )
         expect(mockReadDistrictAnalytics).toHaveBeenCalledWith(
           requestedDate,
           '42'
@@ -330,7 +332,9 @@ describe('Analytics Date Selection Integration Tests', () => {
         const mockLatestSnapshot = createMockSnapshot(latestSnapshotDate)
         const mockAnalytics = createMockDistrictAnalytics(latestSnapshotDate)
 
-        mockSnapshotStore.getLatestSuccessful.mockResolvedValue(mockLatestSnapshot)
+        mockSnapshotStore.getLatestSuccessful.mockResolvedValue(
+          mockLatestSnapshot
+        )
         mockReadDistrictAnalytics.mockResolvedValue(mockAnalytics)
 
         // Act
@@ -424,7 +428,9 @@ describe('Analytics Date Selection Integration Tests', () => {
 
         // Assert - getLatestSuccessful should NOT be called when endDate is provided
         expect(mockSnapshotStore.getLatestSuccessful).not.toHaveBeenCalled()
-        expect(mockSnapshotStore.getSnapshot).toHaveBeenCalledWith(nonExistentDate)
+        expect(mockSnapshotStore.getSnapshot).toHaveBeenCalledWith(
+          nonExistentDate
+        )
       })
     })
   })
@@ -480,7 +486,9 @@ describe('Analytics Date Selection Integration Tests', () => {
         renewals: 110,
       }
 
-      mockSnapshotStore.getLatestSuccessful.mockResolvedValue(mockLatestSnapshot)
+      mockSnapshotStore.getLatestSuccessful.mockResolvedValue(
+        mockLatestSnapshot
+      )
       mockReadMembershipAnalytics.mockResolvedValue(mockMembershipAnalytics)
 
       // Act

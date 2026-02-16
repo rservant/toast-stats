@@ -99,7 +99,7 @@ describe('Feature: latest-snapshot-symlink, Property 2: Snapshot pointer schema 
    */
   it('should preserve SnapshotPointer data through JSON serialization and Zod schema parsing', () => {
     fc.assert(
-      fc.property(snapshotPointerArb, (original) => {
+      fc.property(snapshotPointerArb, original => {
         // Step 1: Serialize to JSON string
         const jsonString = JSON.stringify(original)
 
@@ -132,7 +132,7 @@ describe('Feature: latest-snapshot-symlink, Property 2: Snapshot pointer schema 
    */
   it('should preserve SnapshotPointer data through JSON round-trip via validateSnapshotPointer', () => {
     fc.assert(
-      fc.property(snapshotPointerArb, (original) => {
+      fc.property(snapshotPointerArb, original => {
         // Step 1: Serialize to JSON string
         const jsonString = JSON.stringify(original)
 

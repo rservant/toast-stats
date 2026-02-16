@@ -251,7 +251,14 @@ describe('AreaDivisionRecognitionModule Property Tests', () => {
           fc.integer({ min: 0, max: 4 }), // Goals below threshold
           fc.integer({ min: 0, max: 100 }), // Any membership
           fc.integer({ min: 0, max: 100 }), // Any membership base
-          (clubId, areaId, divisionId, dcpGoals, membershipCount, membershipBase) => {
+          (
+            clubId,
+            areaId,
+            divisionId,
+            dcpGoals,
+            membershipCount,
+            membershipBase
+          ) => {
             const module = new AreaDivisionRecognitionModule()
 
             const club = createClubFromTestData(clubId, areaId, divisionId, {
@@ -292,7 +299,14 @@ describe('AreaDivisionRecognitionModule Property Tests', () => {
           fc.integer({ min: 10, max: 10 }), // Exactly 10 goals (max)
           fc.integer({ min: 25, max: 100 }), // 25+ members
           fc.integer({ min: 0, max: 100 }), // Any membership base
-          (clubId, areaId, divisionId, dcpGoals, membershipCount, membershipBase) => {
+          (
+            clubId,
+            areaId,
+            divisionId,
+            dcpGoals,
+            membershipCount,
+            membershipBase
+          ) => {
             const module = new AreaDivisionRecognitionModule()
 
             const club = createClubFromTestData(clubId, areaId, divisionId, {
@@ -432,7 +446,14 @@ describe('AreaDivisionRecognitionModule Property Tests', () => {
           fc.integer({ min: 7, max: 8 }), // 7-8 goals (Select level, not President's)
           fc.integer({ min: 0, max: 19 }), // < 20 members
           fc.boolean(), // Whether to meet net growth threshold
-          (clubId, areaId, divisionId, dcpGoals, membershipCount, meetsNetGrowth) => {
+          (
+            clubId,
+            areaId,
+            divisionId,
+            dcpGoals,
+            membershipCount,
+            meetsNetGrowth
+          ) => {
             const module = new AreaDivisionRecognitionModule()
 
             // For Select: need net growth >= 5 when membership < 20

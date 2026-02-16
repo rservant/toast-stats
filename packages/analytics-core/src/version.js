@@ -6,8 +6,8 @@
  * Minor version changes are backward compatible additions.
  * Patch version changes are bug fixes that don't affect structure.
  */
-export const ANALYTICS_SCHEMA_VERSION = '1.0.0';
-export const COMPUTATION_VERSION = '1.0.0';
+export const ANALYTICS_SCHEMA_VERSION = '1.0.0'
+export const COMPUTATION_VERSION = '1.0.0'
 /**
  * Checks if a file's schema version is compatible with the current version.
  * Compatibility is determined by major version matching.
@@ -16,9 +16,9 @@ export const COMPUTATION_VERSION = '1.0.0';
  * @returns true if the file version is compatible with the current version
  */
 export function isCompatibleVersion(fileVersion) {
-    const fileParts = fileVersion.split('.');
-    const currentParts = ANALYTICS_SCHEMA_VERSION.split('.');
-    const fileMajor = fileParts[0];
-    const currentMajor = currentParts[0];
-    return fileMajor === currentMajor;
+  const fileParts = fileVersion.split('.')
+  const currentParts = ANALYTICS_SCHEMA_VERSION.split('.')
+  const fileMajor = fileParts[0]
+  const currentMajor = currentParts[0]
+  return fileMajor === currentMajor
 }

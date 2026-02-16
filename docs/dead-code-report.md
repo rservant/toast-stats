@@ -7,8 +7,8 @@
 
 ## Summary
 
-| Priority | Items | Description |
-| -------- | ----- | ----------- |
+| Priority | Items | Description                                |
+| -------- | ----- | ------------------------------------------ |
 | —        | 0     | All identified dead code has been resolved |
 
 ---

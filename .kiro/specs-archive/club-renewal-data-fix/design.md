@@ -30,10 +30,12 @@ flowchart TD
 ### Data Flow Change
 
 **Before (current):**
+
 - `transformRawCSV()` calls `extractClubs(clubPerformance)` — only club-performance records
 - `districtPerformance` is parsed but only passed to `calculateTotals()` and stored as raw data
 
 **After (fixed):**
+
 - `transformRawCSV()` calls `extractClubs(clubPerformance, districtPerformance)` — both record sets
 - `extractClubs()` builds a lookup map from `districtPerformance` and merges payment fields
 
@@ -42,11 +44,13 @@ flowchart TD
 ### Modified Method: `extractClubs`
 
 **Current signature:**
+
 ```typescript
 private extractClubs(clubPerformance: ParsedRecord[]): ClubStatistics[]
 ```
 
 **New signature:**
+
 ```typescript
 private extractClubs(
   clubPerformance: ParsedRecord[],
@@ -75,10 +79,13 @@ Strips leading zeros from a club ID string. Returns the original value if the re
 ### Modified Call Site: `transformRawCSV`
 
 The call to `extractClubs` changes from:
+
 ```typescript
 const clubs = this.extractClubs(clubPerformance)
 ```
+
 to:
+
 ```typescript
 const clubs = this.extractClubs(clubPerformance, districtPerformance)
 ```
@@ -87,40 +94,39 @@ const clubs = this.extractClubs(clubPerformance, districtPerformance)
 
 No changes to the `ClubStatistics` interface or any other data model. The fix only changes the source of data for existing fields:
 
-| Field | Current Source | New Source | Fallback |
-|-------|---------------|-----------|----------|
+| Field             | Current Source               | New Source                                     | Fallback          |
+| ----------------- | ---------------------------- | ---------------------------------------------- | ----------------- |
 | `octoberRenewals` | `clubPerformance` (always 0) | `districtPerformance` `Oct. Ren.` / `Oct. Ren` | `clubPerformance` |
-| `aprilRenewals` | `clubPerformance` (always 0) | `districtPerformance` `Apr. Ren.` / `Apr. Ren` | `clubPerformance` |
-| `newMembers` | `clubPerformance` | `districtPerformance` `New Members` / `New` | `clubPerformance` |
-| `paymentsCount` | `clubPerformance` (always 0) | `districtPerformance` `Total to Date` | `clubPerformance` |
-| All other fields | `clubPerformance` | No change | N/A |
-
+| `aprilRenewals`   | `clubPerformance` (always 0) | `districtPerformance` `Apr. Ren.` / `Apr. Ren` | `clubPerformance` |
+| `newMembers`      | `clubPerformance`            | `districtPerformance` `New Members` / `New`    | `clubPerformance` |
+| `paymentsCount`   | `clubPerformance` (always 0) | `districtPerformance` `Total to Date`          | `clubPerformance` |
+| All other fields  | `clubPerformance`            | No change                                      | N/A               |
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### PBT Decision Framework Analysis
 
 Per the testing steering document (§7.3), each candidate property was evaluated:
 
-| Candidate | Universal property? | 5 examples sufficient? | Complex input space? | Algebraic property? | Decision |
-|-----------|---------------------|------------------------|----------------------|----------------------|----------|
-| Payment merge | Yes — must hold for all club/district pairs | No — column name variants, ID formats, missing data create many combinations | Yes — two CSV schemas, column name variants, ID normalization | No | **PBT** (§7.1: data transformation pipeline, existing bug reveals missed edge cases) |
-| Fallback | Yes | Yes — no match, empty array, missing columns | No — bounded cases | No | **Unit tests** |
-| ID normalization | Yes — must hold for all ID formats | No — leading zeros, all-zeros, mixed formats | Yes — string normalization with edge cases | No | **PBT** (§7.1: data normalization, codebase already has PBT for normalization) |
-| Non-payment invariant | Yes | Yes — a few examples with conflicting values in both sources | No — straightforward field sourcing | No | **Unit tests** |
-| Backward compat | Yes | Yes — single example with empty districtPerformance | No | No | **Unit tests** |
+| Candidate             | Universal property?                         | 5 examples sufficient?                                                       | Complex input space?                                          | Algebraic property? | Decision                                                                             |
+| --------------------- | ------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------ |
+| Payment merge         | Yes — must hold for all club/district pairs | No — column name variants, ID formats, missing data create many combinations | Yes — two CSV schemas, column name variants, ID normalization | No                  | **PBT** (§7.1: data transformation pipeline, existing bug reveals missed edge cases) |
+| Fallback              | Yes                                         | Yes — no match, empty array, missing columns                                 | No — bounded cases                                            | No                  | **Unit tests**                                                                       |
+| ID normalization      | Yes — must hold for all ID formats          | No — leading zeros, all-zeros, mixed formats                                 | Yes — string normalization with edge cases                    | No                  | **PBT** (§7.1: data normalization, codebase already has PBT for normalization)       |
+| Non-payment invariant | Yes                                         | Yes — a few examples with conflicting values in both sources                 | No — straightforward field sourcing                           | No                  | **Unit tests**                                                                       |
+| Backward compat       | Yes                                         | Yes — single example with empty districtPerformance                          | No                                                            | No                  | **Unit tests**                                                                       |
 
 ### Property 1: Payment fields sourced from district performance when match exists
 
-*For any* club that appears in both `clubPerformance` and `districtPerformance` records (with varying column name formats and numeric values), the resulting `ClubStatistics` object's `octoberRenewals`, `aprilRenewals`, `newMembers`, and `paymentsCount` fields SHALL equal the corresponding values from the `districtPerformance` record.
+_For any_ club that appears in both `clubPerformance` and `districtPerformance` records (with varying column name formats and numeric values), the resulting `ClubStatistics` object's `octoberRenewals`, `aprilRenewals`, `newMembers`, and `paymentsCount` fields SHALL equal the corresponding values from the `districtPerformance` record.
 
 **Validates: Requirements 1.2, 1.3, 1.4, 1.5**
 
 ### Property 2: Club ID normalization enables cross-CSV matching
 
-*For any* pair of club records where the club ID in `clubPerformance` and `districtPerformance` differ only in leading zeros (e.g., `00009905` vs `9905`), the DataTransformer SHALL successfully match them and merge payment data from the `districtPerformance` record.
+_For any_ pair of club records where the club ID in `clubPerformance` and `districtPerformance` differ only in leading zeros (e.g., `00009905` vs `9905`), the DataTransformer SHALL successfully match them and merge payment data from the `districtPerformance` record.
 
 **Validates: Requirements 2.1, 2.2**
 
@@ -153,6 +159,7 @@ Library: `fast-check` (already available in the project's test dependencies)
 Two property tests, each with minimum 100 iterations. Tests generate random CSV record pairs with varying club IDs, column names, and numeric values.
 
 **Generators needed:**
+
 - Random `ParsedRecord` for `clubPerformance` with valid club ID and name
 - Random `ParsedRecord` for `districtPerformance` with payment columns and matching club ID
 - Random club IDs with varying leading-zero counts
@@ -174,6 +181,7 @@ Unit tests cover specific examples and edge cases where property tests add compl
 ### Test Isolation
 
 Per the testing steering document:
+
 - Tests use fresh `DataTransformer` instances per test
 - No shared state between tests
 - No filesystem, network, or clock dependencies

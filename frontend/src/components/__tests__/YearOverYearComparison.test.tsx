@@ -41,9 +41,7 @@ describe('YearOverYearComparison', () => {
 
       // Should NOT render comparison cards
       expect(screen.queryByText('Total Membership')).not.toBeInTheDocument()
-      expect(
-        screen.queryByText('Distinguished Clubs')
-      ).not.toBeInTheDocument()
+      expect(screen.queryByText('Distinguished Clubs')).not.toBeInTheDocument()
       expect(screen.queryByText('Thriving Clubs %')).not.toBeInTheDocument()
     })
   })
@@ -63,17 +61,21 @@ describe('YearOverYearComparison', () => {
 
       // Should render the comparison view with metric cards and charts
       // Each metric appears twice: once in the comparison card (h3) and once in the chart (h4)
-      expect(screen.getAllByText('Total Membership').length).toBeGreaterThanOrEqual(1)
-      expect(screen.getAllByText('Distinguished Clubs').length).toBeGreaterThanOrEqual(1)
-      expect(screen.getAllByText('Thriving Clubs %').length).toBeGreaterThanOrEqual(1)
+      expect(
+        screen.getAllByText('Total Membership').length
+      ).toBeGreaterThanOrEqual(1)
+      expect(
+        screen.getAllByText('Distinguished Clubs').length
+      ).toBeGreaterThanOrEqual(1)
+      expect(
+        screen.getAllByText('Thriving Clubs %').length
+      ).toBeGreaterThanOrEqual(1)
 
       // Should render the Year-Over-Year Comparison heading
       expect(screen.getByText('Year-Over-Year Comparison')).toBeInTheDocument()
 
       // Should NOT render the empty state
-      expect(
-        screen.queryByText('No Historical Data')
-      ).not.toBeInTheDocument()
+      expect(screen.queryByText('No Historical Data')).not.toBeInTheDocument()
     })
   })
 

@@ -55,36 +55,12 @@ describe('DataTransformer', () => {
             'Club Status',
             'Mem. Base',
           ],
-          [
-            '1234',
-            'Test Club A',
-            'A',
-            '1',
-            '25',
-            '5',
-            'Active',
-            '20',
-          ],
-          [
-            '5678',
-            'Test Club B',
-            'A',
-            '2',
-            '18',
-            '3',
-            'Active',
-            '15',
-          ],
+          ['1234', 'Test Club A', 'A', '1', '25', '5', 'Active', '20'],
+          ['5678', 'Test Club B', 'A', '2', '18', '3', 'Active', '15'],
         ],
         divisionPerformance: [],
         districtPerformance: [
-          [
-            'Club',
-            'Oct. Ren.',
-            'Apr. Ren.',
-            'New Members',
-            'Total to Date',
-          ],
+          ['Club', 'Oct. Ren.', 'Apr. Ren.', 'New Members', 'Total to Date'],
           ['1234', '10', '8', '7', '30'],
           ['5678', '6', '5', '7', '22'],
         ],
@@ -344,13 +320,7 @@ describe('DataTransformer', () => {
     it('should handle numeric values as strings', async () => {
       const csvData: RawCSVData = {
         clubPerformance: [
-          [
-            'Club Number',
-            'Club Name',
-            'Division',
-            'Area',
-            'Active Members',
-          ],
+          ['Club Number', 'Club Name', 'Division', 'Area', 'Active Members'],
           ['1234', 'Test Club', 'A', '1', '25'],
         ],
         divisionPerformance: [],
@@ -506,13 +476,7 @@ describe('DataTransformer', () => {
           ],
           divisionPerformance: [],
           districtPerformance: [
-            [
-              'Club',
-              'Oct. Ren.',
-              'Apr. Ren.',
-              'New Members',
-              'Total to Date',
-            ],
+            ['Club', 'Oct. Ren.', 'Apr. Ren.', 'New Members', 'Total to Date'],
             ['1234', '15', '12', '8', '35'],
           ],
         }
@@ -559,13 +523,7 @@ describe('DataTransformer', () => {
           ],
           divisionPerformance: [],
           districtPerformance: [
-            [
-              'Club',
-              'Oct. Ren',
-              'Apr. Ren',
-              'New',
-              'Total to Date',
-            ],
+            ['Club', 'Oct. Ren', 'Apr. Ren', 'New', 'Total to Date'],
             ['1234', '10', '5', '3', '18'],
           ],
         }
@@ -590,13 +548,7 @@ describe('DataTransformer', () => {
           ],
           divisionPerformance: [],
           districtPerformance: [
-            [
-              'Club',
-              'Oct. Ren.',
-              'Apr. Ren.',
-              'New Members',
-              'Total to Date',
-            ],
+            ['Club', 'Oct. Ren.', 'Apr. Ren.', 'New Members', 'Total to Date'],
             ['1234', 'N/A', '', 'invalid', 'bad'],
           ],
         }
@@ -640,13 +592,7 @@ describe('DataTransformer', () => {
           ],
           divisionPerformance: [],
           districtPerformance: [
-            [
-              'Club',
-              'Oct. Ren.',
-              'Apr. Ren.',
-              'New Members',
-              'Total to Date',
-            ],
+            ['Club', 'Oct. Ren.', 'Apr. Ren.', 'New Members', 'Total to Date'],
             ['9999', '50', '40', '30', '120'],
           ],
         }
@@ -682,7 +628,20 @@ describe('DataTransformer', () => {
               'Total to Date',
               'Club Status',
             ],
-            ['5678', 'Legacy Club', 'B', '3', '22', '4', '18', '7', '5', '3', '15', 'Active'],
+            [
+              '5678',
+              'Legacy Club',
+              'B',
+              '3',
+              '22',
+              '4',
+              '18',
+              '7',
+              '5',
+              '3',
+              '15',
+              'Active',
+            ],
           ],
           divisionPerformance: [],
           districtPerformance: [],
@@ -745,7 +704,20 @@ describe('DataTransformer', () => {
               'New Members',
               'Total to Date',
             ],
-            ['1234', 'Club From DP', 'Z', '99', '999', '10', '888', 'Suspended', '12', '8', '4', '24'],
+            [
+              '1234',
+              'Club From DP',
+              'Z',
+              '99',
+              '999',
+              '10',
+              '888',
+              'Suspended',
+              '12',
+              '8',
+              '4',
+              '24',
+            ],
           ],
         }
 
@@ -813,17 +785,20 @@ describe('DataTransformer', () => {
               'Mem. Base',
               'Club Status',
             ],
-            ['00009905', 'Regression Test Club', 'C', '7', '15', '3', '12', 'Active'],
+            [
+              '00009905',
+              'Regression Test Club',
+              'C',
+              '7',
+              '15',
+              '3',
+              '12',
+              'Active',
+            ],
           ],
           divisionPerformance: [],
           districtPerformance: [
-            [
-              'Club',
-              'Oct. Ren.',
-              'Apr. Ren.',
-              'New Members',
-              'Total to Date',
-            ],
+            ['Club', 'Oct. Ren.', 'Apr. Ren.', 'New Members', 'Total to Date'],
             ['9905', '9', '4', '2', '16'],
           ],
         }

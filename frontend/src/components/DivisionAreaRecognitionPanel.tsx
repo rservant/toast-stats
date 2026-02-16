@@ -95,7 +95,10 @@ export const DivisionAreaRecognitionPanel: React.FC<
       return 0
     }
 
-    return divisions.reduce((count, division) => count + division.areas.length, 0)
+    return divisions.reduce(
+      (count, division) => count + division.areas.length,
+      0
+    )
   }, [divisions, isLoading])
 
   // Loading state
@@ -224,8 +227,8 @@ export const DivisionAreaRecognitionPanel: React.FC<
           style={{ fontSize: '14px' }}
         >
           Showing {totalAreaCount} area
-          {totalAreaCount !== 1 ? 's' : ''} across {divisions.length}{' '}
-          division{divisions.length !== 1 ? 's' : ''}
+          {totalAreaCount !== 1 ? 's' : ''} across {divisions.length} division
+          {divisions.length !== 1 ? 's' : ''}
         </p>
       </div>
     </section>

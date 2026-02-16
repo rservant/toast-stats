@@ -47,11 +47,17 @@ Frontend:
 **Files:** `frontend/src/hooks/useDistrictAnalytics.ts`, `frontend/src/hooks/useClubTrends.ts`
 
 `useDistrictAnalytics.ts` defines:
+
 ```ts
-distinguishedLevel: 'NotDistinguished' | 'Smedley' | 'President' | 'Select' | 'Distinguished'
+distinguishedLevel: 'NotDistinguished' |
+  'Smedley' |
+  'President' |
+  'Select' |
+  'Distinguished'
 ```
 
 `useClubTrends.ts` defines:
+
 ```ts
 distinguishedLevel?: 'President' | 'Select' | 'Distinguished'
 ```
@@ -74,9 +80,11 @@ The `analytics-core` canonical type `DistinguishedLevel` uses `'President'` (sin
 **File:** `frontend/src/components/ClubDetailModal.tsx`
 
 When `membershipTrend` has exactly 1 point, the polyline calculation does:
+
 ```ts
-const x = (index / (club.membershipTrend.length - 1)) * 800  // 0/0 = NaN
+const x = (index / (club.membershipTrend.length - 1)) * 800 // 0/0 = NaN
 ```
+
 This produces `NaN` coordinates. The chart renders but the point placement is undefined. The `membershipRange` fallback (`|| 1`) handles the Y-axis case, but the X-axis division by zero is unguarded.
 
 **Fix:** Guard with `Math.max(club.membershipTrend.length - 1, 1)` or render a single centered dot instead of a polyline when there's only one data point.
@@ -140,16 +148,16 @@ This file also contains a divergent `ClubTrend` interface (see bug #1) which com
 
 ## Priority Ranking
 
-| # | Issue | Type | Severity | Effort |
-|---|-------|------|----------|--------|
-| 3 | SVG NaN on single data point | Bug | Medium | Low |
-| 2 | President/Presidents naming inconsistency | Bug | Medium | Low |
-| 1 | distinguishedLevel type mismatch | Bug | Low | Low |
-| 4 | Payment data not displayed | Gap | Low | Medium |
-| 7 | Add payment breakdown section | Enhancement | Low | Medium |
-| 8 | Clarify "Change" time period | Enhancement | Low | Low |
-| 6 | Richer distinguished display | Enhancement | Low | Medium |
-| 5 | DCP goals overflow guard | Enhancement | Low | Low |
-| 10 | Use useClubTrends hook | Enhancement | Low | Medium |
-| 11 | useClubTrends.ts is dead code | Cleanup | Low | Low |
-| 9 | CSP always true (known gap) | Known Gap | Low | Blocked |
+| #   | Issue                                     | Type        | Severity | Effort  |
+| --- | ----------------------------------------- | ----------- | -------- | ------- |
+| 3   | SVG NaN on single data point              | Bug         | Medium   | Low     |
+| 2   | President/Presidents naming inconsistency | Bug         | Medium   | Low     |
+| 1   | distinguishedLevel type mismatch          | Bug         | Low      | Low     |
+| 4   | Payment data not displayed                | Gap         | Low      | Medium  |
+| 7   | Add payment breakdown section             | Enhancement | Low      | Medium  |
+| 8   | Clarify "Change" time period              | Enhancement | Low      | Low     |
+| 6   | Richer distinguished display              | Enhancement | Low      | Medium  |
+| 5   | DCP goals overflow guard                  | Enhancement | Low      | Low     |
+| 10  | Use useClubTrends hook                    | Enhancement | Low      | Medium  |
+| 11  | useClubTrends.ts is dead code             | Cleanup     | Low      | Low     |
+| 9   | CSP always true (known gap)               | Known Gap   | Low      | Blocked |

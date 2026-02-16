@@ -784,11 +784,9 @@ describe('AnalyticsComputer Integration Tests', () => {
 
       // Health assessment
       expect(typeof clubTrend.currentStatus).toBe('string')
-      expect([
-        'thriving',
-        'vulnerable',
-        'intervention-required',
-      ]).toContain(clubTrend.currentStatus)
+      expect(['thriving', 'vulnerable', 'intervention-required']).toContain(
+        clubTrend.currentStatus
+      )
       expect(typeof clubTrend.healthScore).toBe('number')
 
       // Membership data

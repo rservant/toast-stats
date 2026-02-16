@@ -38,7 +38,11 @@ function mockAllDependencies() {
           baseDirectory: '/tmp/test',
           source: 'test',
           isConfigured: true,
-          validationStatus: { isValid: true, isAccessible: true, isSecure: true },
+          validationStatus: {
+            isValid: true,
+            isAccessible: true,
+            isSecure: true,
+          },
         })),
         isReady: vi.fn(() => true),
       })),
@@ -92,9 +96,14 @@ function mockExpress(opts: {
         return mockServer
       }),
     }
-    function expressFn() { return mockApp }
+    function expressFn() {
+      return mockApp
+    }
     expressFn.Router = vi.fn(() => ({
-      get: vi.fn(), post: vi.fn(), delete: vi.fn(), use: vi.fn(),
+      get: vi.fn(),
+      post: vi.fn(),
+      delete: vi.fn(),
+      use: vi.fn(),
     }))
     expressFn.json = vi.fn(() => vi.fn())
     return { default: expressFn }
@@ -125,8 +134,12 @@ describe('Memory Integration - Startup and Shutdown Sequence', () => {
     vi.doMock('../utils/memoryMonitor.js', () => {
       return {
         MemoryMonitor: class MockMemoryMonitor {
-          start(ms: number) { startFn(ms) }
-          stop() { stopFn() }
+          start(ms: number) {
+            startFn(ms)
+          }
+          stop() {
+            stopFn()
+          }
         },
       }
     })
@@ -177,9 +190,14 @@ describe('Memory Integration - Startup and Shutdown Sequence', () => {
 
     mockHeapValidator()
     mockMemoryMonitor()
-    vi.doMock('express', mockExpress({
-      onListen: (cb) => { listenCallback = cb },
-    }))
+    vi.doMock(
+      'express',
+      mockExpress({
+        onListen: cb => {
+          listenCallback = cb
+        },
+      })
+    )
     mockAllDependencies()
 
     await import('../index.js')
@@ -206,27 +224,35 @@ describe('Memory Integration - Startup and Shutdown Sequence', () => {
 
     mockHeapValidator()
     mockMemoryMonitor()
-    vi.doMock('express', mockExpress({
-      onListen: (cb) => { listenCallback = cb },
-      mockServerClose,
-    }))
+    vi.doMock(
+      'express',
+      mockExpress({
+        onListen: cb => {
+          listenCallback = cb
+        },
+        mockServerClose,
+      })
+    )
     mockAllDependencies()
 
     // Intercept process.on to capture signal handlers
     const originalProcessOn = process.on.bind(process)
-    const processOnSpy = vi.spyOn(process, 'on').mockImplementation(
-      ((event: string | symbol, handler: (...args: unknown[]) => void) => {
-        const key = String(event)
-        if (key === 'SIGTERM' || key === 'SIGINT') {
-          const list = signalHandlers.get(key) ?? []
-          list.push(handler as () => void)
-          signalHandlers.set(key, list)
-          return process
-        }
-        return originalProcessOn(event as string, handler)
-      }) as NodeJS.Process['on'],
-    )
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as never)
+    const processOnSpy = vi.spyOn(process, 'on').mockImplementation(((
+      event: string | symbol,
+      handler: (...args: unknown[]) => void
+    ) => {
+      const key = String(event)
+      if (key === 'SIGTERM' || key === 'SIGINT') {
+        const list = signalHandlers.get(key) ?? []
+        list.push(handler as () => void)
+        signalHandlers.set(key, list)
+        return process
+      }
+      return originalProcessOn(event as string, handler)
+    }) as NodeJS.Process['on'])
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as never)
 
     await import('../index.js')
     expect(listenCallback).toBeDefined()
@@ -262,26 +288,34 @@ describe('Memory Integration - Startup and Shutdown Sequence', () => {
 
     mockHeapValidator()
     mockMemoryMonitor()
-    vi.doMock('express', mockExpress({
-      onListen: (cb) => { listenCallback = cb },
-      mockServerClose,
-    }))
+    vi.doMock(
+      'express',
+      mockExpress({
+        onListen: cb => {
+          listenCallback = cb
+        },
+        mockServerClose,
+      })
+    )
     mockAllDependencies()
 
     const originalProcessOn = process.on.bind(process)
-    const processOnSpy = vi.spyOn(process, 'on').mockImplementation(
-      ((event: string | symbol, handler: (...args: unknown[]) => void) => {
-        const key = String(event)
-        if (key === 'SIGTERM' || key === 'SIGINT') {
-          const list = signalHandlers.get(key) ?? []
-          list.push(handler as () => void)
-          signalHandlers.set(key, list)
-          return process
-        }
-        return originalProcessOn(event as string, handler)
-      }) as NodeJS.Process['on'],
-    )
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as never)
+    const processOnSpy = vi.spyOn(process, 'on').mockImplementation(((
+      event: string | symbol,
+      handler: (...args: unknown[]) => void
+    ) => {
+      const key = String(event)
+      if (key === 'SIGTERM' || key === 'SIGINT') {
+        const list = signalHandlers.get(key) ?? []
+        list.push(handler as () => void)
+        signalHandlers.set(key, list)
+        return process
+      }
+      return originalProcessOn(event as string, handler)
+    }) as NodeJS.Process['on'])
+    const exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation((() => {}) as never)
 
     await import('../index.js')
     expect(listenCallback).toBeDefined()

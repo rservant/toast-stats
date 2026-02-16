@@ -21,12 +21,8 @@ vi.mock('../../../utils/logger.js', () => ({
 
 // Mock CircuitBreaker to pass operations through directly
 vi.mock('../../../utils/CircuitBreaker.js', () => {
-  const MockCircuitBreaker = function (
-    this: Record<string, unknown>
-  ) {
-    this.execute = vi.fn(
-      async <T>(operation: () => Promise<T>) => operation()
-    )
+  const MockCircuitBreaker = function (this: Record<string, unknown>) {
+    this.execute = vi.fn(async <T>(operation: () => Promise<T>) => operation())
     this.getStats = vi.fn(() => ({
       state: 'CLOSED',
       failureCount: 0,
@@ -104,7 +100,7 @@ function makeManifestBuffer(
   const manifest: Record<string, unknown> = {
     snapshotId,
     createdAt: `${snapshotId}T10:00:00Z`,
-    districts: districts.map((d) => ({
+    districts: districts.map(d => ({
       districtId: d.districtId,
       fileName: `district_${d.districtId}.json`,
       status: d.status,
@@ -112,8 +108,8 @@ function makeManifestBuffer(
       lastModified: `${snapshotId}T10:00:00Z`,
     })),
     totalDistricts: districts.length,
-    successfulDistricts: districts.filter((d) => d.status === 'success').length,
-    failedDistricts: districts.filter((d) => d.status !== 'success').length,
+    successfulDistricts: districts.filter(d => d.status === 'success').length,
+    failedDistricts: districts.filter(d => d.status !== 'success').length,
   }
   if (writeComplete !== undefined) {
     manifest['writeComplete'] = writeComplete
@@ -224,11 +220,10 @@ function setupPrefixListing(
     [],
     null,
     {
-      prefixes: snapshotIds.map((id) => `snapshots/${id}/`),
+      prefixes: snapshotIds.map(id => `snapshots/${id}/`),
     },
   ])
 }
-
 
 // ============================================================================
 // Tests
@@ -248,11 +243,7 @@ describe('GCSSnapshotStorage — Complex Operations', () => {
   describe('getLatestSuccessful', () => {
     it('should return the newest snapshot with status "success" and writeComplete true', async () => {
       // Three snapshots: all success + writeComplete
-      setupPrefixListing(mockBucket, [
-        '2024-01-13',
-        '2024-01-14',
-        '2024-01-15',
-      ])
+      setupPrefixListing(mockBucket, ['2024-01-13', '2024-01-14', '2024-01-15'])
 
       mockBucket.file.mockImplementation((path: string) => {
         const file = createMockFile(path)
@@ -332,9 +323,7 @@ describe('GCSSnapshotStorage — Complex Operations', () => {
           ])
         } else if (path.endsWith('manifest.json')) {
           const wc = snapshotId === '2024-01-15' ? false : true
-          file.download.mockResolvedValue([
-            makeManifestBuffer(snapshotId, wc),
-          ])
+          file.download.mockResolvedValue([makeManifestBuffer(snapshotId, wc)])
         } else if (path.includes('district_')) {
           file.download.mockResolvedValue([makePerDistrictDataBuffer('42')])
         }
@@ -464,9 +453,7 @@ describe('GCSSnapshotStorage — Complex Operations', () => {
           ])
         } else if (path.endsWith('manifest.json')) {
           const wc = snapshotId === '2024-01-15' ? false : true
-          file.download.mockResolvedValue([
-            makeManifestBuffer(snapshotId, wc),
-          ])
+          file.download.mockResolvedValue([makeManifestBuffer(snapshotId, wc)])
         } else if (path.includes('district_')) {
           file.download.mockResolvedValue([makePerDistrictDataBuffer('42')])
         }
@@ -502,7 +489,6 @@ describe('GCSSnapshotStorage — Complex Operations', () => {
       expect(result).toBeNull()
     })
   })
-
 
   // ==========================================================================
   // getSnapshot (Req 1.2, 9.4)
@@ -576,9 +562,7 @@ describe('GCSSnapshotStorage — Complex Operations', () => {
             manifestReadCount++
             // First read: writeComplete true; second read: writeComplete false
             const wc = manifestReadCount <= 1
-            return Promise.resolve([
-              makeManifestBuffer('2024-01-15', wc),
-            ])
+            return Promise.resolve([makeManifestBuffer('2024-01-15', wc)])
           })
         } else if (path.endsWith('metadata.json')) {
           file.download.mockResolvedValue([
@@ -646,18 +630,13 @@ describe('GCSSnapshotStorage — Complex Operations', () => {
     })
   })
 
-
   // ==========================================================================
   // listSnapshots (Req 1.7, 10.2)
   // ==========================================================================
 
   describe('listSnapshots', () => {
     it('should return snapshots sorted newest-first', async () => {
-      setupPrefixListing(mockBucket, [
-        '2024-01-13',
-        '2024-01-14',
-        '2024-01-15',
-      ])
+      setupPrefixListing(mockBucket, ['2024-01-13', '2024-01-14', '2024-01-15'])
 
       mockBucket.file.mockImplementation((path: string) => {
         const file = createMockFile(path)
@@ -710,11 +689,7 @@ describe('GCSSnapshotStorage — Complex Operations', () => {
     })
 
     it('should filter by date range (created_after / created_before)', async () => {
-      setupPrefixListing(mockBucket, [
-        '2024-01-13',
-        '2024-01-14',
-        '2024-01-15',
-      ])
+      setupPrefixListing(mockBucket, ['2024-01-13', '2024-01-14', '2024-01-15'])
 
       mockBucket.file.mockImplementation((path: string) => {
         const file = createMockFile(path)
@@ -744,11 +719,7 @@ describe('GCSSnapshotStorage — Complex Operations', () => {
     })
 
     it('should short-circuit at limit (Req 10.2)', async () => {
-      setupPrefixListing(mockBucket, [
-        '2024-01-13',
-        '2024-01-14',
-        '2024-01-15',
-      ])
+      setupPrefixListing(mockBucket, ['2024-01-13', '2024-01-14', '2024-01-15'])
 
       // Track which metadata files are read
       const metadataReads: string[] = []
@@ -800,7 +771,7 @@ describe('GCSSnapshotStorage — Complex Operations', () => {
       await storage.listSnapshots()
 
       // Verify only metadata files were accessed, no manifest reads
-      const manifestReads = filesAccessed.filter((p) =>
+      const manifestReads = filesAccessed.filter(p =>
         p.includes('manifest.json')
       )
       expect(manifestReads).toHaveLength(0)
@@ -858,9 +829,7 @@ describe('GCSSnapshotStorage — Complex Operations', () => {
     })
 
     it('should return false when bucket is not accessible (Req 8.2)', async () => {
-      mockBucket.getFiles.mockRejectedValue(
-        new Error('permission denied')
-      )
+      mockBucket.getFiles.mockRejectedValue(new Error('permission denied'))
 
       const storage = createStorage(mockBucket)
       const result = await storage.isReady()

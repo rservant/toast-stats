@@ -168,7 +168,9 @@ describe('ClosingPeriodDetector Property Tests', () => {
       // - Divisible by 400 → leap year
 
       // Generate years that are divisible by 4
-      const divisibleBy4Arb = fc.integer({ min: 1972, max: 2096 }).filter(y => y % 4 === 0)
+      const divisibleBy4Arb = fc
+        .integer({ min: 1972, max: 2096 })
+        .filter(y => y % 4 === 0)
 
       fc.assert(
         fc.property(divisibleBy4Arb, year => {
@@ -325,7 +327,10 @@ describe('ClosingPeriodDetector Property Tests', () => {
           expect(result.isClosingPeriod).toBe(true)
 
           // Calculate expected last day
-          const expectedLastDay = getExpectedLastDay(scenario.dataYear, scenario.dataMonth)
+          const expectedLastDay = getExpectedLastDay(
+            scenario.dataYear,
+            scenario.dataMonth
+          )
           const expectedSnapshotDate = `${scenario.dataYear}-${scenario.dataMonth.toString().padStart(2, '0')}-${expectedLastDay.toString().padStart(2, '0')}`
 
           // Verify snapshot date is the last day of the data month
@@ -362,7 +367,10 @@ describe('ClosingPeriodDetector Property Tests', () => {
           expect(result.logicalDate).toBe(expectedSnapshotDate)
 
           // Verify the snapshot year is the prior year (data year, not collection year)
-          const snapshotYear = parseInt(result.snapshotDate.split('-')[0] ?? '0', 10)
+          const snapshotYear = parseInt(
+            result.snapshotDate.split('-')[0] ?? '0',
+            10
+          )
           expect(snapshotYear).toBe(scenario.dataYear)
           expect(snapshotYear).toBe(scenario.collectionYear - 1)
         }),
@@ -393,7 +401,8 @@ describe('ClosingPeriodDetector Property Tests', () => {
           // The snapshot should NOT be in the collection month
           // Either the year is different, or the month is different
           const isInCollectionMonth =
-            snapshotYear === scenario.collectionYear && snapshotMonth === scenario.collectionMonth
+            snapshotYear === scenario.collectionYear &&
+            snapshotMonth === scenario.collectionMonth
 
           expect(isInCollectionMonth).toBe(false)
 
@@ -452,32 +461,42 @@ describe('ClosingPeriodDetector Property Tests', () => {
       // Verifies that all 12 months produce correct last-day calculations
 
       fc.assert(
-        fc.property(dataMonthArb, fc.integer({ min: 1, max: 28 }), (dataMonthInfo, collectionDay) => {
-          // Create a collection date in the next month
-          let collectionYear = dataMonthInfo.year
-          let collectionMonth = dataMonthInfo.month + 1
+        fc.property(
+          dataMonthArb,
+          fc.integer({ min: 1, max: 28 }),
+          (dataMonthInfo, collectionDay) => {
+            // Create a collection date in the next month
+            let collectionYear = dataMonthInfo.year
+            let collectionMonth = dataMonthInfo.month + 1
 
-          if (collectionMonth > 12) {
-            collectionMonth = 1
-            collectionYear = dataMonthInfo.year + 1
+            if (collectionMonth > 12) {
+              collectionMonth = 1
+              collectionYear = dataMonthInfo.year + 1
+            }
+
+            const collectionDate = `${collectionYear}-${collectionMonth.toString().padStart(2, '0')}-${collectionDay.toString().padStart(2, '0')}`
+
+            const metadata = {
+              date: collectionDate,
+              isClosingPeriod: true,
+              dataMonth: dataMonthInfo.formatted,
+            }
+
+            const result = detector.detect(collectionDate, metadata)
+
+            // Verify the snapshot date ends with the correct last day
+            const expectedLastDay = getExpectedLastDay(
+              dataMonthInfo.year,
+              dataMonthInfo.month
+            )
+            const snapshotDay = parseInt(
+              result.snapshotDate.split('-')[2] ?? '0',
+              10
+            )
+
+            expect(snapshotDay).toBe(expectedLastDay)
           }
-
-          const collectionDate = `${collectionYear}-${collectionMonth.toString().padStart(2, '0')}-${collectionDay.toString().padStart(2, '0')}`
-
-          const metadata = {
-            date: collectionDate,
-            isClosingPeriod: true,
-            dataMonth: dataMonthInfo.formatted,
-          }
-
-          const result = detector.detect(collectionDate, metadata)
-
-          // Verify the snapshot date ends with the correct last day
-          const expectedLastDay = getExpectedLastDay(dataMonthInfo.year, dataMonthInfo.month)
-          const snapshotDay = parseInt(result.snapshotDate.split('-')[2] ?? '0', 10)
-
-          expect(snapshotDay).toBe(expectedLastDay)
-        }),
+        ),
         { numRuns: 100 }
       )
     })

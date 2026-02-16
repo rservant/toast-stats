@@ -24,7 +24,7 @@ Thriving clubs are on track to achieve distinguished status by year-end. Using t
 1.2 No differentiation by distinguished level (Smedley/President's/Select/Distinguished) - just whether they will be distinguished or better  
 1.3 The projection calculation no longer uses linear regression  
 1.4 Returns 0 when there are zero thriving clubs  
-1.5 Returns total club count when all clubs are thriving  
+1.5 Returns total club count when all clubs are thriving
 
 ### 2. Single Projected Field
 
@@ -38,7 +38,7 @@ Thriving clubs are on track to achieve distinguished status by year-end. Using t
 2.2 The `projectedSelect` and `projectedPresident` fields are removed from the type  
 2.3 The frontend uses the single `projectedDistinguished` field directly without summing  
 2.4 The analytics-core module outputs only the single projected field  
-2.5 All tests are updated to reflect the simplified data model  
+2.5 All tests are updated to reflect the simplified data model
 
 ### 3. Backend Type Alignment
 
@@ -50,7 +50,7 @@ Thriving clubs are on track to achieve distinguished status by year-end. Using t
 
 3.1 The backend's `DistinguishedClubAnalytics.distinguishedProjection` type matches analytics-core's `DistinguishedProjection`  
 3.2 The backend tests use the simplified projection format (only `projectedDistinguished`)  
-3.3 All backend tests pass with the updated type  
+3.3 All backend tests pass with the updated type
 
 ## Technical Notes
 

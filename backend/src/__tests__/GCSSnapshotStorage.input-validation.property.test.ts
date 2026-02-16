@@ -72,9 +72,9 @@ function validateDistrictId(storage: GCSSnapshotStorage, id: string): void {
 
 /** Bad format — doesn't match YYYY-MM-DD regex */
 const badFormatSnapshotIdArb = fc.oneof(
-  fc.string({ minLength: 1, maxLength: 20 }).filter(
-    (s) => !/^\d{4}-\d{2}-\d{2}$/.test(s)
-  ),
+  fc
+    .string({ minLength: 1, maxLength: 20 })
+    .filter(s => !/^\d{4}-\d{2}-\d{2}$/.test(s)),
   fc.constant('2024/01/15'),
   fc.constant('20240115'),
   fc.constant('24-01-15'),
@@ -94,7 +94,7 @@ const invalidCalendarDateArb = fc.constantFrom(
   '2024-13-01', // Month 13
   '2024-00-15', // Month 0
   '2024-01-00', // Day 0
-  '2024-01-32'  // Day 32
+  '2024-01-32' // Day 32
 )
 
 /** Path traversal sequences */
@@ -134,9 +134,9 @@ const nonAlphanumericDistrictIdArb = fc.oneof(
   fc.constant('42\t43'),
   fc.constant('42.json'),
   fc.constant('district@42'),
-  fc.string({ minLength: 1, maxLength: 10 }).filter(
-    (s) => s.trim().length > 0 && !/^[A-Za-z0-9]+$/.test(s)
-  )
+  fc
+    .string({ minLength: 1, maxLength: 10 })
+    .filter(s => s.trim().length > 0 && !/^[A-Za-z0-9]+$/.test(s))
 )
 
 // ============================================================================
@@ -149,7 +149,7 @@ describe('GCSSnapshotStorage — Property 10: Input validation', () => {
   describe('Invalid snapshot IDs', () => {
     it('should reject bad format snapshot IDs', () => {
       fc.assert(
-        fc.property(badFormatSnapshotIdArb, (id) => {
+        fc.property(badFormatSnapshotIdArb, id => {
           expect(() => validateSnapshotId(storage, id)).toThrow(
             StorageOperationError
           )
@@ -167,7 +167,7 @@ describe('GCSSnapshotStorage — Property 10: Input validation', () => {
 
     it('should reject invalid calendar dates', () => {
       fc.assert(
-        fc.property(invalidCalendarDateArb, (id) => {
+        fc.property(invalidCalendarDateArb, id => {
           expect(() => validateSnapshotId(storage, id)).toThrow(
             StorageOperationError
           )
@@ -184,7 +184,7 @@ describe('GCSSnapshotStorage — Property 10: Input validation', () => {
 
     it('should reject path traversal sequences', () => {
       fc.assert(
-        fc.property(pathTraversalSnapshotIdArb, (id) => {
+        fc.property(pathTraversalSnapshotIdArb, id => {
           expect(() => validateSnapshotId(storage, id)).toThrow(
             StorageOperationError
           )
@@ -201,7 +201,7 @@ describe('GCSSnapshotStorage — Property 10: Input validation', () => {
 
     it('should reject unicode separators', () => {
       fc.assert(
-        fc.property(unicodeSnapshotIdArb, (id) => {
+        fc.property(unicodeSnapshotIdArb, id => {
           expect(() => validateSnapshotId(storage, id)).toThrow(
             StorageOperationError
           )
@@ -218,7 +218,7 @@ describe('GCSSnapshotStorage — Property 10: Input validation', () => {
 
     it('should reject percent-encoded characters', () => {
       fc.assert(
-        fc.property(percentEncodedSnapshotIdArb, (id) => {
+        fc.property(percentEncodedSnapshotIdArb, id => {
           expect(() => validateSnapshotId(storage, id)).toThrow(
             StorageOperationError
           )
@@ -253,7 +253,7 @@ describe('GCSSnapshotStorage — Property 10: Input validation', () => {
   describe('Invalid district IDs', () => {
     it('should reject empty and whitespace-only district IDs', () => {
       fc.assert(
-        fc.property(emptyDistrictIdArb, (id) => {
+        fc.property(emptyDistrictIdArb, id => {
           expect(() => validateDistrictId(storage, id)).toThrow(
             StorageOperationError
           )
@@ -271,7 +271,7 @@ describe('GCSSnapshotStorage — Property 10: Input validation', () => {
 
     it('should reject non-alphanumeric district IDs', () => {
       fc.assert(
-        fc.property(nonAlphanumericDistrictIdArb, (id) => {
+        fc.property(nonAlphanumericDistrictIdArb, id => {
           expect(() => validateDistrictId(storage, id)).toThrow(
             StorageOperationError
           )
@@ -292,8 +292,8 @@ describe('GCSSnapshotStorage — Property 10: Input validation', () => {
         fc.property(
           fc
             .string({ minLength: 1, maxLength: 10 })
-            .filter((s) => /^[A-Za-z0-9]+$/.test(s)),
-          (id) => {
+            .filter(s => /^[A-Za-z0-9]+$/.test(s)),
+          id => {
             expect(() => validateDistrictId(storage, id)).not.toThrow()
           }
         ),

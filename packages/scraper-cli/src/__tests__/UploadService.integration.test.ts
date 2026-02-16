@@ -79,7 +79,6 @@ function addSnapshotDate(
   )
 }
 
-
 // ─── 8.1 Dry-run integration ────────────────────────────────────────────────
 
 describe('Integration: dry-run scans dates, emits progress, outputs JSON, no hashing, no GCS calls', () => {
@@ -151,7 +150,6 @@ describe('Integration: dry-run scans dates, emits progress, outputs JSON, no has
     expect(typeof summary.duration_ms).toBe('number')
   })
 })
-
 
 // ─── 8.2 Non-incremental upload with concurrency ────────────────────────────
 
@@ -231,7 +229,7 @@ describe('Integration: non-incremental upload uploads all files with concurrency
         maxConcurrent = currentConcurrent
       }
       // Simulate async work to allow concurrency to build up
-      await new Promise((resolve) => setTimeout(resolve, 5))
+      await new Promise(resolve => setTimeout(resolve, 5))
       await originalUploadStream(remotePath, stream, contentType, metadata)
       currentConcurrent--
     }
@@ -245,7 +243,6 @@ describe('Integration: non-incremental upload uploads all files with concurrency
     expect(maxConcurrent).toBeGreaterThan(0)
   })
 })
-
 
 // ─── 8.3 Incremental no-change (fast-path) ─────────────────────────────────
 
@@ -282,7 +279,6 @@ describe('Integration: incremental no-change — second run uploads nothing via 
   })
 })
 
-
 // ─── 8.4 Incremental with one changed file ──────────────────────────────────
 
 describe('Integration: incremental with one changed file', () => {
@@ -316,7 +312,7 @@ describe('Integration: incremental with one changed file', () => {
       if (filePath === changedFile) {
         return 'changed-checksum-' + Date.now().toString(16)
       }
-      return originalSha256(filePath).then((hash) => {
+      return originalSha256(filePath).then(hash => {
         // Remove the duplicate call added by originalSha256
         h.hasher.calls.pop()
         return hash
@@ -335,7 +331,6 @@ describe('Integration: incremental with one changed file', () => {
     expect(h.bucket.calls[0]!.remotePath).toContain('metadata.json')
   })
 })
-
 
 // ─── 8.5 Corrupted manifest falls back to full upload ───────────────────────
 
@@ -363,7 +358,6 @@ describe('Integration: corrupted manifest falls back to full upload', () => {
   })
 })
 
-
 // ─── 8.6 Manifest write failure surfaces in summary ─────────────────────────
 
 describe('Integration: manifest write failure surfaces in summary', () => {
@@ -390,12 +384,11 @@ describe('Integration: manifest write failure surfaces in summary', () => {
 
     // Verify retry was attempted: two writeFile calls for the manifest tmp path
     const manifestWriteCalls = h.fs.writeFileCalls.filter(
-      (c) => c.path === manifestTmpPath
+      c => c.path === manifestTmpPath
     )
     expect(manifestWriteCalls).toHaveLength(2)
   })
 })
-
 
 // ─── 8.7 Backward compatibility snapshot test ───────────────────────────────
 

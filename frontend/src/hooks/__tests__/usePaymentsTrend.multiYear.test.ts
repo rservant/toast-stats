@@ -19,7 +19,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { getProgramYear } from '../../utils/programYear'
-import type { DistrictAnalytics, DistrictPerformanceTargets } from '../useDistrictAnalytics'
+import type {
+  DistrictAnalytics,
+  DistrictPerformanceTargets,
+} from '../useDistrictAnalytics'
 import type { UseQueryResult } from '@tanstack/react-query'
 
 // Mock useDistrictAnalytics at the module level
@@ -154,7 +157,9 @@ describe('usePaymentsTrend — Multi-Year Data Flow', () => {
         { date: '2025-01-05', payments: 200 },
       ]
 
-      mockDistrictAnalytics(makeAnalyticsData(paymentsTrend, makePerformanceTargets(200, 180)))
+      mockDistrictAnalytics(
+        makeAnalyticsData(paymentsTrend, makePerformanceTargets(200, 180))
+      )
 
       const { result } = renderHook(() =>
         usePaymentsTrend('42', undefined, '2025-01-15', selectedYear)
@@ -189,7 +194,9 @@ describe('usePaymentsTrend — Multi-Year Data Flow', () => {
         { date: '2025-01-10', payments: 180 },
       ]
 
-      mockDistrictAnalytics(makeAnalyticsData(paymentsTrend, makePerformanceTargets(180, 160)))
+      mockDistrictAnalytics(
+        makeAnalyticsData(paymentsTrend, makePerformanceTargets(180, 160))
+      )
 
       const { result } = renderHook(() =>
         usePaymentsTrend('42', undefined, '2025-01-15', selectedYear)
@@ -226,7 +233,9 @@ describe('usePaymentsTrend — Multi-Year Data Flow', () => {
         { date: '2024-10-01', payments: 50 },
       ]
 
-      mockDistrictAnalytics(makeAnalyticsData(paymentsTrend, makePerformanceTargets(50, 45)))
+      mockDistrictAnalytics(
+        makeAnalyticsData(paymentsTrend, makePerformanceTargets(50, 45))
+      )
 
       const { result } = renderHook(() =>
         usePaymentsTrend('42', undefined, '2025-01-15', selectedYear)
@@ -273,7 +282,9 @@ describe('usePaymentsTrend — Multi-Year Data Flow', () => {
 
       // Select 2023-2024 as the current year (not the most recent)
       const selectedYear = getProgramYear(2023) // "2023-2024"
-      mockDistrictAnalytics(makeAnalyticsData(paymentsTrend, makePerformanceTargets(90, 80)))
+      mockDistrictAnalytics(
+        makeAnalyticsData(paymentsTrend, makePerformanceTargets(90, 80))
+      )
 
       const { result } = renderHook(() =>
         usePaymentsTrend('42', undefined, '2025-01-15', selectedYear)
@@ -303,7 +314,9 @@ describe('usePaymentsTrend — Multi-Year Data Flow', () => {
 
       // First: select 2024-2025
       const year2024 = getProgramYear(2024)
-      mockDistrictAnalytics(makeAnalyticsData(paymentsTrend, makePerformanceTargets(90, 80)))
+      mockDistrictAnalytics(
+        makeAnalyticsData(paymentsTrend, makePerformanceTargets(90, 80))
+      )
 
       const { result: result1 } = renderHook(() =>
         usePaymentsTrend('42', undefined, '2025-01-15', year2024)
@@ -315,8 +328,12 @@ describe('usePaymentsTrend — Multi-Year Data Flow', () => {
         usePaymentsTrend('42', undefined, '2025-01-15', year2022)
       )
 
-      expect(result1.current.data!.multiYearData!.currentYear.label).toBe('2024-2025')
-      expect(result2.current.data!.multiYearData!.currentYear.label).toBe('2022-2023')
+      expect(result1.current.data!.multiYearData!.currentYear.label).toBe(
+        '2024-2025'
+      )
+      expect(result2.current.data!.multiYearData!.currentYear.label).toBe(
+        '2022-2023'
+      )
     })
   })
 
@@ -341,7 +358,9 @@ describe('usePaymentsTrend — Multi-Year Data Flow', () => {
       ]
 
       // performanceTargets.membershipPayments.current = 120 (current YTD)
-      mockDistrictAnalytics(makeAnalyticsData(paymentsTrend, makePerformanceTargets(120, 100)))
+      mockDistrictAnalytics(
+        makeAnalyticsData(paymentsTrend, makePerformanceTargets(120, 100))
+      )
 
       const { result } = renderHook(() =>
         usePaymentsTrend('42', undefined, '2025-01-15', selectedYear)
@@ -375,7 +394,9 @@ describe('usePaymentsTrend — Multi-Year Data Flow', () => {
         { date: '2024-10-01', payments: 120 },
       ]
 
-      mockDistrictAnalytics(makeAnalyticsData(paymentsTrend, makePerformanceTargets(120, 100)))
+      mockDistrictAnalytics(
+        makeAnalyticsData(paymentsTrend, makePerformanceTargets(120, 100))
+      )
 
       const { result } = renderHook(() =>
         usePaymentsTrend('42', undefined, '2025-01-15', selectedYear)
@@ -393,11 +414,11 @@ describe('usePaymentsTrend — Multi-Year Data Flow', () => {
       const selectedYear = getProgramYear(2024) // "2024-2025"
 
       // Only current year data, no previous years
-      const paymentsTrend = [
-        { date: '2024-10-01', payments: 120 },
-      ]
+      const paymentsTrend = [{ date: '2024-10-01', payments: 120 }]
 
-      mockDistrictAnalytics(makeAnalyticsData(paymentsTrend, makePerformanceTargets(120, 100)))
+      mockDistrictAnalytics(
+        makeAnalyticsData(paymentsTrend, makePerformanceTargets(120, 100))
+      )
 
       const { result } = renderHook(() =>
         usePaymentsTrend('42', undefined, '2025-01-15', selectedYear)

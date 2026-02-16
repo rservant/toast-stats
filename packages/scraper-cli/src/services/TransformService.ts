@@ -1217,18 +1217,31 @@ export class TransformService {
    * Requirements: 1.1, 1.3, 1.4, 1.5
    */
   private async writeSnapshotPointer(snapshotDate: string): Promise<void> {
-    const pointerPath = path.join(this.cacheDir, 'snapshots', 'latest-successful.json')
+    const pointerPath = path.join(
+      this.cacheDir,
+      'snapshots',
+      'latest-successful.json'
+    )
 
     // Read existing pointer to check if we should update (Requirement 1.5)
     try {
-      const existing = JSON.parse(await fs.readFile(pointerPath, 'utf-8')) as unknown
+      const existing = JSON.parse(
+        await fs.readFile(pointerPath, 'utf-8')
+      ) as unknown
       const validation = validateSnapshotPointer(existing)
-      if (validation.success && validation.data && validation.data.snapshotId > snapshotDate) {
+      if (
+        validation.success &&
+        validation.data &&
+        validation.data.snapshotId > snapshotDate
+      ) {
         // Existing pointer is newer, don't overwrite
-        this.logger.info('Existing snapshot pointer is newer, skipping update', {
-          existing: validation.data.snapshotId,
-          incoming: snapshotDate,
-        })
+        this.logger.info(
+          'Existing snapshot pointer is newer, skipping update',
+          {
+            existing: validation.data.snapshotId,
+            incoming: snapshotDate,
+          }
+        )
         return
       }
     } catch {
@@ -1250,7 +1263,11 @@ export class TransformService {
 
     // Atomic write via temp file + rename (Requirement 1.3)
     const tempPath = `${pointerPath}.tmp.${Date.now()}`
-    await fs.writeFile(tempPath, JSON.stringify(validated.data, null, 2), 'utf-8')
+    await fs.writeFile(
+      tempPath,
+      JSON.stringify(validated.data, null, 2),
+      'utf-8'
+    )
     await fs.rename(tempPath, pointerPath)
 
     this.logger.info('Snapshot pointer written', {
@@ -1258,7 +1275,6 @@ export class TransformService {
       path: pointerPath,
     })
   }
-
 
   /**
    * Get manifest entry for a district snapshot file
@@ -1349,7 +1365,10 @@ export class TransformService {
       )
 
       // Write district snapshot file to snapshot date directory
-      const snapshotPath = this.getDistrictSnapshotPath(snapshotDate, districtId)
+      const snapshotPath = this.getDistrictSnapshotPath(
+        snapshotDate,
+        districtId
+      )
       const snapshotDir = path.dirname(snapshotPath)
 
       await fs.mkdir(snapshotDir, { recursive: true })
@@ -1502,10 +1521,13 @@ export class TransformService {
       )
 
       if (!shouldUpdate) {
-        this.logger.info('Skipping transform: existing snapshot is newer or equal', {
-          snapshotDate,
-          collectionDate: closingPeriodInfo.collectionDate,
-        })
+        this.logger.info(
+          'Skipping transform: existing snapshot is newer or equal',
+          {
+            snapshotDate,
+            collectionDate: closingPeriodInfo.collectionDate,
+          }
+        )
 
         return {
           success: true,
@@ -1591,7 +1613,10 @@ export class TransformService {
     const allSuccessfulDistricts: string[] = []
 
     for (const districtId of districtsToTransform) {
-      const entry = await this.getDistrictManifestEntry(snapshotDate, districtId)
+      const entry = await this.getDistrictManifestEntry(
+        snapshotDate,
+        districtId
+      )
       if (entry) {
         districtEntries.push(entry)
         allSuccessfulDistricts.push(districtId)
@@ -1617,7 +1642,11 @@ export class TransformService {
           processingDuration,
           closingPeriodInfo
         )
-        await this.writeManifest(snapshotDate, districtEntries, failedDistrictIds)
+        await this.writeManifest(
+          snapshotDate,
+          districtEntries,
+          failedDistrictIds
+        )
 
         // Add metadata and manifest to snapshot locations
         const snapshotDir = this.getSnapshotDir(snapshotDate)
@@ -1696,7 +1725,10 @@ export class TransformService {
         // Pointer is an optimization, not critical — log and continue
         this.logger.error('Failed to write snapshot pointer', {
           snapshotDate,
-          error: pointerError instanceof Error ? pointerError.message : 'Unknown error',
+          error:
+            pointerError instanceof Error
+              ? pointerError.message
+              : 'Unknown error',
         })
       }
     }

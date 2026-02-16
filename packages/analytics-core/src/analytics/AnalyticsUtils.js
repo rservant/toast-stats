@@ -14,13 +14,12 @@
  * @returns Parsed integer value
  */
 export function parseIntSafe(value, defaultValue = 0) {
-    if (typeof value === 'number')
-        return Math.floor(value);
-    if (typeof value === 'string') {
-        const parsed = parseInt(value, 10);
-        return isNaN(parsed) ? defaultValue : parsed;
-    }
-    return defaultValue;
+  if (typeof value === 'number') return Math.floor(value)
+  if (typeof value === 'string') {
+    const parsed = parseInt(value, 10)
+    return isNaN(parsed) ? defaultValue : parsed
+  }
+  return defaultValue
 }
 /**
  * Parse an integer value, returning undefined for missing/invalid data
@@ -33,21 +32,21 @@ export function parseIntSafe(value, defaultValue = 0) {
  * @returns Parsed integer value or undefined if parsing fails
  */
 export function parseIntOrUndefined(value) {
-    if (value === null || value === undefined || value === '') {
-        return undefined;
+  if (value === null || value === undefined || value === '') {
+    return undefined
+  }
+  if (typeof value === 'number') {
+    return isNaN(value) ? undefined : Math.floor(value)
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    if (trimmed === '') {
+      return undefined
     }
-    if (typeof value === 'number') {
-        return isNaN(value) ? undefined : Math.floor(value);
-    }
-    if (typeof value === 'string') {
-        const trimmed = value.trim();
-        if (trimmed === '') {
-            return undefined;
-        }
-        const parsed = parseInt(trimmed, 10);
-        return isNaN(parsed) ? undefined : parsed;
-    }
-    return undefined;
+    const parsed = parseInt(trimmed, 10)
+    return isNaN(parsed) ? undefined : parsed
+  }
+  return undefined
 }
 /**
  * Ensure a value is a string for use as Map key
@@ -56,9 +55,8 @@ export function parseIntOrUndefined(value) {
  * @returns String representation of the value
  */
 export function ensureString(value) {
-    if (value === null || value === undefined)
-        return '';
-    return String(value);
+  if (value === null || value === undefined) return ''
+  return String(value)
 }
 /**
  * Get the DCP goals checkpoint for a given month
@@ -79,32 +77,32 @@ export function ensureString(value) {
  * @throws Error if month is not between 1 and 12
  */
 export function getDCPCheckpoint(month) {
-    // Validate month is in valid range
-    if (month < 1 || month > 12) {
-        throw new Error(`Invalid month: ${month}. Must be between 1 and 12.`);
-    }
-    // July (7): Administrative checkpoint - 0 DCP goals required
-    if (month === 7) {
-        return 0;
-    }
-    // August-September (8-9): 1 goal required
-    if (month === 8 || month === 9) {
-        return 1;
-    }
-    // October-November (10-11): 2 goals required
-    if (month === 10 || month === 11) {
-        return 2;
-    }
-    // December (12) or January (1): 3 goals required
-    if (month === 12 || month === 1) {
-        return 3;
-    }
-    // February-March (2-3): 4 goals required
-    if (month === 2 || month === 3) {
-        return 4;
-    }
-    // April-June (4-6): 5 goals required
-    return 5;
+  // Validate month is in valid range
+  if (month < 1 || month > 12) {
+    throw new Error(`Invalid month: ${month}. Must be between 1 and 12.`)
+  }
+  // July (7): Administrative checkpoint - 0 DCP goals required
+  if (month === 7) {
+    return 0
+  }
+  // August-September (8-9): 1 goal required
+  if (month === 8 || month === 9) {
+    return 1
+  }
+  // October-November (10-11): 2 goals required
+  if (month === 10 || month === 11) {
+    return 2
+  }
+  // December (12) or January (1): 3 goals required
+  if (month === 12 || month === 1) {
+    return 3
+  }
+  // February-March (2-3): 4 goals required
+  if (month === 2 || month === 3) {
+    return 4
+  }
+  // April-June (4-6): 5 goals required
+  return 5
 }
 /**
  * Determine the current month for DCP checkpoint evaluation
@@ -117,21 +115,22 @@ export function getDCPCheckpoint(month) {
  * @throws Error if date string is invalid
  */
 export function getCurrentProgramMonth(dateString) {
-    let date;
-    if (dateString) {
-        // Parse the date string (expected format: YYYY-MM-DD)
-        date = new Date(dateString);
-        // Validate the parsed date
-        if (isNaN(date.getTime())) {
-            throw new Error(`Invalid date string: ${dateString}. Expected format: YYYY-MM-DD`);
-        }
+  let date
+  if (dateString) {
+    // Parse the date string (expected format: YYYY-MM-DD)
+    date = new Date(dateString)
+    // Validate the parsed date
+    if (isNaN(date.getTime())) {
+      throw new Error(
+        `Invalid date string: ${dateString}. Expected format: YYYY-MM-DD`
+      )
     }
-    else {
-        // Use current date
-        date = new Date();
-    }
-    // getMonth() returns 0-11, so add 1 to get 1-12
-    return date.getMonth() + 1;
+  } else {
+    // Use current date
+    date = new Date()
+  }
+  // getMonth() returns 0-11, so add 1 to get 1-12
+  return date.getMonth() + 1
 }
 /**
  * Get month name from month number
@@ -140,21 +139,21 @@ export function getCurrentProgramMonth(dateString) {
  * @returns Month name string
  */
 export function getMonthName(month) {
-    const monthNames = [
-        'January',
-        'February',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'September',
-        'October',
-        'November',
-        'December',
-    ];
-    return monthNames[month - 1] || 'Unknown';
+  const monthNames = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ]
+  return monthNames[month - 1] || 'Unknown'
 }
 /**
  * Find the same date in the previous program year
@@ -166,9 +165,9 @@ export function getMonthName(month) {
  * @returns Previous year date in YYYY-MM-DD format
  */
 export function findPreviousProgramYearDate(currentDate) {
-    const currentYear = parseInt(currentDate.substring(0, 4));
-    const previousYearDate = `${currentYear - 1}${currentDate.substring(4)}`;
-    return previousYearDate;
+  const currentYear = parseInt(currentDate.substring(0, 4))
+  const previousYearDate = `${currentYear - 1}${currentDate.substring(4)}`
+  return previousYearDate
 }
 /**
  * Calculate percentage change between two values
@@ -181,10 +180,12 @@ export function findPreviousProgramYearDate(currentDate) {
  * @returns Percentage change rounded to 1 decimal place
  */
 export function calculatePercentageChange(previousValue, currentValue) {
-    if (previousValue === 0) {
-        return currentValue > 0 ? 100 : 0;
-    }
-    return (Math.round(((currentValue - previousValue) / previousValue) * 1000) / 10);
+  if (previousValue === 0) {
+    return currentValue > 0 ? 100 : 0
+  }
+  return (
+    Math.round(((currentValue - previousValue) / previousValue) * 1000) / 10
+  )
 }
 /**
  * Determine trend direction from a series of values
@@ -196,29 +197,25 @@ export function calculatePercentageChange(previousValue, currentValue) {
  * @returns Trend direction: 'increasing', 'decreasing', or 'stable'
  */
 export function determineTrend(values) {
-    if (values.length < 2)
-        return 'stable';
-    // Calculate simple linear regression slope
-    const n = values.length;
-    const sumX = (n * (n - 1)) / 2; // Sum of indices 0, 1, 2, ...
-    const sumY = values.reduce((sum, val) => sum + val, 0);
-    const sumXY = values.reduce((sum, val, idx) => sum + idx * val, 0);
-    const sumX2 = (n * (n - 1) * (2 * n - 1)) / 6; // Sum of squares
-    const denominator = n * sumX2 - sumX * sumX;
-    if (denominator === 0)
-        return 'stable';
-    const slope = (n * sumXY - sumX * sumY) / denominator;
-    // Determine trend based on slope
-    // Use a threshold to avoid classifying small changes as trends
-    const avgValue = sumY / n;
-    const relativeSlope = avgValue > 0 ? slope / avgValue : slope;
-    if (relativeSlope > 0.05) {
-        return 'increasing';
-    }
-    else if (relativeSlope < -0.05) {
-        return 'decreasing';
-    }
-    else {
-        return 'stable';
-    }
+  if (values.length < 2) return 'stable'
+  // Calculate simple linear regression slope
+  const n = values.length
+  const sumX = (n * (n - 1)) / 2 // Sum of indices 0, 1, 2, ...
+  const sumY = values.reduce((sum, val) => sum + val, 0)
+  const sumXY = values.reduce((sum, val, idx) => sum + idx * val, 0)
+  const sumX2 = (n * (n - 1) * (2 * n - 1)) / 6 // Sum of squares
+  const denominator = n * sumX2 - sumX * sumX
+  if (denominator === 0) return 'stable'
+  const slope = (n * sumXY - sumX * sumY) / denominator
+  // Determine trend based on slope
+  // Use a threshold to avoid classifying small changes as trends
+  const avgValue = sumY / n
+  const relativeSlope = avgValue > 0 ? slope / avgValue : slope
+  if (relativeSlope > 0.05) {
+    return 'increasing'
+  } else if (relativeSlope < -0.05) {
+    return 'decreasing'
+  } else {
+    return 'stable'
+  }
 }

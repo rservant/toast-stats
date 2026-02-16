@@ -3,6 +3,7 @@
 ## Overview
 
 This implementation fixes two bugs in the District Overview page:
+
 1. "Targets: N/A" - caused by missing base values and recognition targets in PerformanceTargetsData
 2. "+0 members" - caused by incorrect membership change calculation
 

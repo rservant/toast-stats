@@ -186,6 +186,5 @@ describe('Route Module Composition Property Tests', () => {
         }
       )
     })
-
   })
 })

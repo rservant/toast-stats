@@ -16,14 +16,14 @@ No architectural changes. The existing two-process architecture (scraper-cli for
 
 ### Affected Files
 
-| File | Action | Category |
-|------|--------|----------|
-| `backend/src/routes/districts/shared.ts` | Remove orphaned functions, interface, import, and auto-start call | Backend dead code |
-| `backend/src/routes/districts/index.ts` | Remove orphaned re-exports | Backend dead code |
-| `backend/src/__tests__/districts.integration.test.ts` | Remove "Unified Backfill Endpoints" describe block | Test cleanup |
-| `backend/src/__tests__/functionality-preservation.property.test.ts` | Remove two backfill test blocks | Test cleanup |
-| `backend/src/routes/districts/__tests__/route-composition.property.test.ts` | Remove two backfill test blocks, update stale comment | Test cleanup |
-| `frontend/src/hooks/useContrastCheck.ts` | Delete entire file | Frontend dead code |
+| File                                                                        | Action                                                            | Category           |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------ |
+| `backend/src/routes/districts/shared.ts`                                    | Remove orphaned functions, interface, import, and auto-start call | Backend dead code  |
+| `backend/src/routes/districts/index.ts`                                     | Remove orphaned re-exports                                        | Backend dead code  |
+| `backend/src/__tests__/districts.integration.test.ts`                       | Remove "Unified Backfill Endpoints" describe block                | Test cleanup       |
+| `backend/src/__tests__/functionality-preservation.property.test.ts`         | Remove two backfill test blocks                                   | Test cleanup       |
+| `backend/src/routes/districts/__tests__/route-composition.property.test.ts` | Remove two backfill test blocks, update stale comment             | Test cleanup       |
+| `frontend/src/hooks/useContrastCheck.ts`                                    | Delete entire file                                                | Frontend dead code |
 
 ## Components and Interfaces
 
@@ -71,16 +71,19 @@ stopBackfillCleanupInterval,
 ### Test Blocks to Remove
 
 **districts.integration.test.ts:**
+
 - The entire `describe('Unified Backfill Endpoints', ...)` block (lines ~1397-1590), containing:
   - `POST /api/districts/backfill` tests (7 tests)
   - `GET /api/districts/backfill/:backfillId` tests (2 tests)
   - `DELETE /api/districts/backfill/:backfillId` tests (2 tests)
 
 **functionality-preservation.property.test.ts:**
+
 - `it('should preserve response structure for backfill endpoints', ...)` block
 - `it('should preserve request validation for backfill initiation', ...)` block
 
 **route-composition.property.test.ts:**
+
 - `it('should respond with proper error format for invalid backfill IDs', ...)` block
 - `it('should handle backfill request validation consistently', ...)` block
 - Update stale comment: `// (4 sub-routers: snapshots, backfill, core, analytics)` → `// (5 sub-routers: snapshots, core, rankings, analyticsSummary, analytics)`
@@ -93,10 +96,9 @@ The entire file is deleted. No other file imports from it (confirmed via grep).
 
 No data model changes. This is purely a code removal operation.
 
-
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 This cleanup is purely subtractive. The key correctness concern is that removing dead code does not break anything that was working. Most acceptance criteria are specific absence checks (does function X still exist?) which are best validated by compilation and test execution rather than property-based tests.
 
@@ -104,19 +106,19 @@ After prework analysis and reflection, the following properties were identified:
 
 ### Property 1: Retained exports remain functional
 
-*For any* non-backfill export from `shared.ts` and `index.ts` (e.g., `validateDistrictId`, `getValidDistrictId`, `validateDateFormat`, `snapshotStore`, `districtDataAggregator`, `getRefreshService`, `getTimeSeriesIndexService`), the export SHALL still be accessible and importable after cleanup.
+_For any_ non-backfill export from `shared.ts` and `index.ts` (e.g., `validateDistrictId`, `getValidDistrictId`, `validateDateFormat`, `snapshotStore`, `districtDataAggregator`, `getRefreshService`, `getTimeSeriesIndexService`), the export SHALL still be accessible and importable after cleanup.
 
 **Validates: Requirements 1.8, 2.4**
 
 ### Property 2: Retained tests pass after cleanup
 
-*For any* non-backfill test in the three affected test files, the test SHALL continue to pass with the same behavior after the backfill test blocks are removed.
+_For any_ non-backfill test in the three affected test files, the test SHALL continue to pass with the same behavior after the backfill test blocks are removed.
 
 **Validates: Requirements 3.4, 3.5, 3.6**
 
 ### Property 3: No dangling references to useContrastCheck
 
-*For any* file in the frontend source tree, the file SHALL NOT contain an import statement referencing `useContrastCheck`.
+_For any_ file in the frontend source tree, the file SHALL NOT contain an import statement referencing `useContrastCheck`.
 
 **Validates: Requirements 4.2**
 
@@ -127,6 +129,7 @@ Note: Properties 1 and 2 are most naturally validated by compilation (TypeScript
 No new error handling is introduced. The cleanup removes error handling code (the `validateBackfillRequest` function) that was already orphaned.
 
 The only error scenario is if the cleanup accidentally removes code that is still referenced. This is caught by:
+
 1. TypeScript compilation (dangling imports/references)
 2. Existing test suite execution (behavioral regressions)
 

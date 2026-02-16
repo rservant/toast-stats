@@ -3,10 +3,12 @@
 ## Overview
 
 This design addresses data inconsistencies in the District Overview dashboard where:
+
 1. **Paid Clubs shows 0**: The `transformPerformanceTargets()` function hardcodes `paidClubs.current: 0` because `PerformanceTargetsData` lacks a `paidClubsCount` field
 2. **Distinguished Clubs mismatch (57 vs 30)**: The `isClubDistinguished()` method in `AreaDivisionRecognitionModule` only checks `dcpGoals >= 5` without validating membership/net growth requirements
 
 The fix involves:
+
 1. Adding `paidClubsCount` field to `PerformanceTargetsData` type
 2. Computing `paidClubsCount` in `AnalyticsComputer.computePerformanceTargets()`
 3. Fixing `isClubDistinguished()` to use the full DCP criteria
@@ -50,7 +52,7 @@ export interface PerformanceTargetsData {
   distinguishedTarget: number
   clubGrowthTarget: number
   /** Total count of paid clubs (clubs with "Active" status) */
-  paidClubsCount: number  // NEW FIELD
+  paidClubsCount: number // NEW FIELD
   currentProgress: {
     membership: number
     distinguished: number
@@ -77,15 +79,15 @@ computePerformanceTargets(
   allDistrictsRankings?: AllDistrictsRankingsData
 ): PerformanceTargetsData {
   // ... existing code ...
-  
+
   // Calculate total paid clubs from area recognition
   const totalPaidClubs = areaRecognitions.reduce(
     (sum, area) => sum + area.paidClubs,
     0
   )
-  
+
   // ... existing code ...
-  
+
   return {
     districtId,
     computedAt: new Date().toISOString(),
@@ -125,16 +127,16 @@ private isClubDistinguished(club: ClubStatistics): boolean {
 
   // Smedley: 10 goals + 25 members
   if (dcpGoals >= 10 && membership >= 25) return true
-  
+
   // President's: 9 goals + 20 members
   if (dcpGoals >= 9 && membership >= 20) return true
-  
+
   // Select: 7 goals + (20 members OR 5+ net growth)
   if (dcpGoals >= 7 && (membership >= 20 || netGrowth >= 5)) return true
-  
+
   // Distinguished: 5 goals + (20 members OR 3+ net growth)
   if (dcpGoals >= 5 && (membership >= 20 || netGrowth >= 3)) return true
-  
+
   return false
 }
 
@@ -154,7 +156,7 @@ export function transformPerformanceTargets(
 ): DistrictPerformanceTargets {
   return {
     paidClubs: {
-      current: performanceTargets.paidClubsCount,  // Use actual value
+      current: performanceTargets.paidClubsCount, // Use actual value
       base: null,
       targets: null,
       achievedLevel: null,
@@ -176,7 +178,7 @@ interface ClubStatistics {
   divisionId: string
   areaId: string
   membershipCount: number
-  membershipBase?: number  // Used for net growth calculation
+  membershipBase?: number // Used for net growth calculation
   dcpGoals: number
   clubStatus?: string
   status?: string
@@ -186,31 +188,30 @@ interface ClubStatistics {
 
 ### PerformanceTargetsData Changes
 
-| Field | Type | Change | Description |
-|-------|------|--------|-------------|
-| paidClubsCount | number | NEW | Total count of paid clubs |
-
-
+| Field          | Type   | Change | Description               |
+| -------------- | ------ | ------ | ------------------------- |
+| paidClubsCount | number | NEW    | Total count of paid clubs |
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Paid Clubs Count Computation
 
-*For any* district snapshot containing clubs with various statuses, the computed `paidClubsCount` SHALL equal the count of clubs with "Active" status, and the value SHALL always be non-negative (>= 0).
+_For any_ district snapshot containing clubs with various statuses, the computed `paidClubsCount` SHALL equal the count of clubs with "Active" status, and the value SHALL always be non-negative (>= 0).
 
 **Validates: Requirements 1.2, 4.3**
 
 ### Property 2: Transformation Preserves Paid Clubs Value
 
-*For any* valid `PerformanceTargetsData` object with a `paidClubsCount` value, the `transformPerformanceTargets()` function SHALL produce a `DistrictPerformanceTargets` object where `paidClubs.current` equals the input `paidClubsCount`.
+_For any_ valid `PerformanceTargetsData` object with a `paidClubsCount` value, the `transformPerformanceTargets()` function SHALL produce a `DistrictPerformanceTargets` object where `paidClubs.current` equals the input `paidClubsCount`.
 
 **Validates: Requirements 1.3**
 
 ### Property 3: Distinguished Club Criteria Validation
 
-*For any* club with DCP goals and membership values, `isClubDistinguished()` SHALL return `true` if and only if the club meets one of the following criteria:
+_For any_ club with DCP goals and membership values, `isClubDistinguished()` SHALL return `true` if and only if the club meets one of the following criteria:
+
 - Smedley: 10+ goals AND 25+ members
 - President's: 9+ goals AND 20+ members
 - Select: 7+ goals AND (20+ members OR 5+ net growth)
@@ -220,7 +221,7 @@ interface ClubStatistics {
 
 ### Property 4: Performance Targets Data Round-Trip Serialization
 
-*For any* valid `PerformanceTargetsData` object, serializing to JSON and then deserializing SHALL produce an object equivalent to the original, with all fields including `paidClubsCount` and `currentProgress.distinguished` preserved.
+_For any_ valid `PerformanceTargetsData` object, serializing to JSON and then deserializing SHALL produce an object equivalent to the original, with all fields including `paidClubsCount` and `currentProgress.distinguished` preserved.
 
 **Validates: Requirements 3.1, 3.2, 3.3**
 
@@ -244,22 +245,23 @@ interface ClubStatistics {
 
 Per the testing steering document, property tests are a tool, not a default. We apply the decision framework to each correctness property:
 
-| Property | PBT Warranted? | Rationale |
-|----------|----------------|-----------|
-| 1. Paid Clubs Count | No | Simple counting logic; 3-5 examples provide equivalent confidence |
-| 2. Transformation Preserves Value | No | Simple pass-through; examples are clearer |
-| 3. Distinguished Club Criteria | **Yes** | Threshold-based business rules with boundary conditions; complex input space |
-| 4. Round-Trip Serialization | **Yes** | Encoding/decoding roundtrip - classic PBT use case |
+| Property                          | PBT Warranted? | Rationale                                                                    |
+| --------------------------------- | -------------- | ---------------------------------------------------------------------------- |
+| 1. Paid Clubs Count               | No             | Simple counting logic; 3-5 examples provide equivalent confidence            |
+| 2. Transformation Preserves Value | No             | Simple pass-through; examples are clearer                                    |
+| 3. Distinguished Club Criteria    | **Yes**        | Threshold-based business rules with boundary conditions; complex input space |
+| 4. Round-Trip Serialization       | **Yes**        | Encoding/decoding roundtrip - classic PBT use case                           |
 
 ### Property-Based Tests (2 tests)
 
 Per Section 7.1 of testing.md, PBT is warranted for:
+
 - **Business rules with universal properties** (Distinguished criteria)
 - **Encoding/decoding roundtrips** (JSON serialization)
 
 #### Property Test 1: Distinguished Club Criteria Validation
 
-*For any* club with DCP goals and membership values, `isClubDistinguished()` SHALL return `true` if and only if the club meets the official DCP criteria.
+_For any_ club with DCP goals and membership values, `isClubDistinguished()` SHALL return `true` if and only if the club meets the official DCP criteria.
 
 - **Library**: fast-check
 - **Iterations**: 100 minimum
@@ -268,7 +270,7 @@ Per Section 7.1 of testing.md, PBT is warranted for:
 
 #### Property Test 2: Performance Targets Data Round-Trip Serialization
 
-*For any* valid `PerformanceTargetsData` object, JSON round-trip SHALL preserve all fields.
+_For any_ valid `PerformanceTargetsData` object, JSON round-trip SHALL preserve all fields.
 
 - **Library**: fast-check
 - **Iterations**: 100 minimum
@@ -295,28 +297,28 @@ Per Section 7.3 of testing.md: "Would 5 well-chosen examples provide equivalent 
 
 Per Section 9 of testing.md: "Threshold-based logic MUST be protected by tests that name the rule and cover boundary conditions."
 
-| Test Case | Goals | Members | Net Growth | Expected | Rule Being Tested |
-|-----------|-------|---------|------------|----------|-------------------|
-| Below threshold | 4 | 25 | 5 | Not Distinguished | Minimum 5 goals required |
-| Distinguished (members) | 5 | 20 | 0 | Distinguished | 5+ goals + 20+ members |
-| Distinguished (growth) | 5 | 15 | 3 | Distinguished | 5+ goals + 3+ net growth |
-| Not Distinguished | 5 | 19 | 2 | Not Distinguished | Needs 20 members OR 3+ growth |
-| Select (members) | 7 | 20 | 0 | Distinguished | 7+ goals + 20+ members |
-| Select (growth) | 7 | 15 | 5 | Distinguished | 7+ goals + 5+ net growth |
-| President's | 9 | 20 | 0 | Distinguished | 9+ goals + 20+ members |
-| Smedley | 10 | 25 | 0 | Distinguished | 10 goals + 25+ members |
-| Missing membershipBase | 5 | 20 | undefined | Distinguished | Graceful handling of missing data |
+| Test Case               | Goals | Members | Net Growth | Expected          | Rule Being Tested                 |
+| ----------------------- | ----- | ------- | ---------- | ----------------- | --------------------------------- |
+| Below threshold         | 4     | 25      | 5          | Not Distinguished | Minimum 5 goals required          |
+| Distinguished (members) | 5     | 20      | 0          | Distinguished     | 5+ goals + 20+ members            |
+| Distinguished (growth)  | 5     | 15      | 3          | Distinguished     | 5+ goals + 3+ net growth          |
+| Not Distinguished       | 5     | 19      | 2          | Not Distinguished | Needs 20 members OR 3+ growth     |
+| Select (members)        | 7     | 20      | 0          | Distinguished     | 7+ goals + 20+ members            |
+| Select (growth)         | 7     | 15      | 5          | Distinguished     | 7+ goals + 5+ net growth          |
+| President's             | 9     | 20      | 0          | Distinguished     | 9+ goals + 20+ members            |
+| Smedley                 | 10    | 25      | 0          | Distinguished     | 10 goals + 25+ members            |
+| Missing membershipBase  | 5     | 20      | undefined  | Distinguished     | Graceful handling of missing data |
 
 ## Implementation Notes
 
 ### File Changes Summary
 
-| File | Change Type | Description |
-|------|-------------|-------------|
-| `packages/analytics-core/src/types.ts` | Modify | Add `paidClubsCount` field to `PerformanceTargetsData` |
-| `packages/analytics-core/src/analytics/AnalyticsComputer.ts` | Modify | Include `paidClubsCount` in return object |
-| `packages/analytics-core/src/analytics/AreaDivisionRecognitionModule.ts` | Modify | Fix `isClubDistinguished()` to use full DCP criteria |
-| `backend/src/utils/performanceTargetsTransformation.ts` | Modify | Use `performanceTargets.paidClubsCount` instead of 0 |
+| File                                                                     | Change Type | Description                                            |
+| ------------------------------------------------------------------------ | ----------- | ------------------------------------------------------ |
+| `packages/analytics-core/src/types.ts`                                   | Modify      | Add `paidClubsCount` field to `PerformanceTargetsData` |
+| `packages/analytics-core/src/analytics/AnalyticsComputer.ts`             | Modify      | Include `paidClubsCount` in return object              |
+| `packages/analytics-core/src/analytics/AreaDivisionRecognitionModule.ts` | Modify      | Fix `isClubDistinguished()` to use full DCP criteria   |
+| `backend/src/utils/performanceTargetsTransformation.ts`                  | Modify      | Use `performanceTargets.paidClubsCount` instead of 0   |
 
 ### Regeneration Required
 

@@ -289,92 +289,95 @@ export class AnalyticsComputer implements IAnalyticsComputer {
    * @returns Membership change (positive = growth, negative = decline)
    */
   private calculateMembershipChangeWithBase(
-      snapshots: DistrictStatistics[],
-      allDistrictsRankings: AllDistrictsRankingsData | undefined,
-      districtId: string
-    ): number {
-      // Requirement 1.2: Log warning when rankings data is not provided
-      if (!allDistrictsRankings) {
-        logger.warn(
-          'All districts rankings data is undefined, cannot perform rankings-based membership change calculation',
-          { districtId }
-        )
-      }
+    snapshots: DistrictStatistics[],
+    allDistrictsRankings: AllDistrictsRankingsData | undefined,
+    districtId: string
+  ): number {
+    // Requirement 1.2: Log warning when rankings data is not provided
+    if (!allDistrictsRankings) {
+      logger.warn(
+        'All districts rankings data is undefined, cannot perform rankings-based membership change calculation',
+        { districtId }
+      )
+    }
 
-      // Try to get paymentBase from all-districts rankings
-      // Requirement 8.2: WHEN Payment_Base is available from All_Districts_Rankings, use it
-      let districtRanking = allDistrictsRankings?.rankings.find(
-        r => r.districtId === districtId
+    // Try to get paymentBase from all-districts rankings
+    // Requirement 8.2: WHEN Payment_Base is available from All_Districts_Rankings, use it
+    let districtRanking = allDistrictsRankings?.rankings.find(
+      r => r.districtId === districtId
+    )
+
+    // Requirement 2.2: If exact match fails, try normalized lookup by stripping non-numeric characters
+    if (!districtRanking && allDistrictsRankings) {
+      const normalizedSearchId = this.normalizeDistrictId(districtId)
+      districtRanking = allDistrictsRankings.rankings.find(
+        r => this.normalizeDistrictId(r.districtId) === normalizedSearchId
       )
 
-      // Requirement 2.2: If exact match fails, try normalized lookup by stripping non-numeric characters
-      if (!districtRanking && allDistrictsRankings) {
-        const normalizedSearchId = this.normalizeDistrictId(districtId)
-        districtRanking = allDistrictsRankings.rankings.find(
-          r => this.normalizeDistrictId(r.districtId) === normalizedSearchId
+      // Requirement 1.1: Log warning when district is not found in rankings after both lookups
+      if (!districtRanking) {
+        const availableDistrictIds = allDistrictsRankings.rankings.map(
+          r => r.districtId
         )
-
-        // Requirement 1.1: Log warning when district is not found in rankings after both lookups
-        if (!districtRanking) {
-          const availableDistrictIds = allDistrictsRankings.rankings.map(
-            r => r.districtId
-          )
-          logger.warn(
-            'District not found in all districts rankings after exact and normalized lookup',
-            {
-              soughtDistrictId: districtId,
-              normalizedSearchId,
-              availableDistrictIds,
-            }
-          )
-        }
-      }
-
-      const paymentBase = districtRanking?.paymentBase
-
-      // Requirement 1.3: Log warning when paymentBase is null/undefined on a matched ranking
-      if (districtRanking && (paymentBase === undefined || paymentBase === null)) {
         logger.warn(
-          'Matched district ranking has null or undefined paymentBase, falling back to snapshot-based calculation',
+          'District not found in all districts rankings after exact and normalized lookup',
           {
-            districtId,
-            matchedDistrictId: districtRanking.districtId,
+            soughtDistrictId: districtId,
+            normalizedSearchId,
+            availableDistrictIds,
           }
         )
       }
-
-      if (paymentBase !== undefined && paymentBase !== null) {
-        // Requirement 8.1: Calculate membershipChange as currentPayments - paymentBase
-        // Get current payments from rankings (official value) or from latest snapshot
-        const latestSnapshot = snapshots[snapshots.length - 1]
-        const currentPayments =
-          districtRanking?.totalPayments ??
-          (latestSnapshot
-            ? this.membershipModule.getTotalPayments(latestSnapshot)
-            : 0)
-
-        return currentPayments - paymentBase
-      }
-
-      // Requirement 2.3: Fall back to snapshot-based calculation using per-club membershipBase
-      // Instead of delegating to calculateMembershipChange (which returns 0 for single snapshots),
-      // compute sum(paymentsCount) - sum(membershipBase) from the latest snapshot
-      const latestSnapshotFallback = snapshots[snapshots.length - 1]
-      if (!latestSnapshotFallback) {
-        return 0
-      }
-
-      const totalPayments = latestSnapshotFallback.clubs.reduce(
-        (sum, club) => sum + club.paymentsCount,
-        0
-      )
-      const totalMembershipBase = latestSnapshotFallback.clubs.reduce(
-        (sum, club) => sum + club.membershipBase,
-        0
-      )
-
-      return totalPayments - totalMembershipBase
     }
+
+    const paymentBase = districtRanking?.paymentBase
+
+    // Requirement 1.3: Log warning when paymentBase is null/undefined on a matched ranking
+    if (
+      districtRanking &&
+      (paymentBase === undefined || paymentBase === null)
+    ) {
+      logger.warn(
+        'Matched district ranking has null or undefined paymentBase, falling back to snapshot-based calculation',
+        {
+          districtId,
+          matchedDistrictId: districtRanking.districtId,
+        }
+      )
+    }
+
+    if (paymentBase !== undefined && paymentBase !== null) {
+      // Requirement 8.1: Calculate membershipChange as currentPayments - paymentBase
+      // Get current payments from rankings (official value) or from latest snapshot
+      const latestSnapshot = snapshots[snapshots.length - 1]
+      const currentPayments =
+        districtRanking?.totalPayments ??
+        (latestSnapshot
+          ? this.membershipModule.getTotalPayments(latestSnapshot)
+          : 0)
+
+      return currentPayments - paymentBase
+    }
+
+    // Requirement 2.3: Fall back to snapshot-based calculation using per-club membershipBase
+    // Instead of delegating to calculateMembershipChange (which returns 0 for single snapshots),
+    // compute sum(paymentsCount) - sum(membershipBase) from the latest snapshot
+    const latestSnapshotFallback = snapshots[snapshots.length - 1]
+    if (!latestSnapshotFallback) {
+      return 0
+    }
+
+    const totalPayments = latestSnapshotFallback.clubs.reduce(
+      (sum, club) => sum + club.paymentsCount,
+      0
+    )
+    const totalMembershipBase = latestSnapshotFallback.clubs.reduce(
+      (sum, club) => sum + club.membershipBase,
+      0
+    )
+
+    return totalPayments - totalMembershipBase
+  }
 
   /**
    * Normalize a district ID by stripping all non-numeric characters.

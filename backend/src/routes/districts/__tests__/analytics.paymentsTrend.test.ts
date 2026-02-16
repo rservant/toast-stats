@@ -31,13 +31,15 @@ const {
 
 // Mock the shared module
 vi.mock('../shared.js', () => ({
-  getValidDistrictId: vi.fn((req: { params: Record<string, string | undefined> }) => {
-    const districtId = req.params['districtId']
-    if (!districtId || !/^[A-Za-z0-9]+$/.test(districtId)) {
-      return null
+  getValidDistrictId: vi.fn(
+    (req: { params: Record<string, string | undefined> }) => {
+      const districtId = req.params['districtId']
+      if (!districtId || !/^[A-Za-z0-9]+$/.test(districtId)) {
+        return null
+      }
+      return districtId
     }
-    return districtId
-  }),
+  ),
   validateDateFormat: vi.fn((date: string) => {
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/
     if (!dateRegex.test(date)) {
@@ -139,7 +141,6 @@ vi.mock('@toastmasters/analytics-core', () => ({
 // Import the router under test (after mocks are set up)
 import { analyticsRouter } from '../analytics.js'
 
-
 /**
  * Creates a minimal mock DistrictAnalytics object for testing.
  * Only includes fields needed by the analytics endpoint response.
@@ -211,7 +212,10 @@ describe('Analytics Endpoint — Payments Trend (Requirements 1.1–1.4)', () =>
 
     // Default: getSnapshotForDate returns a valid snapshot
     mockGetSnapshotForDate.mockResolvedValue({
-      snapshot: { snapshot_id: '2024-01-15', created_at: '2024-01-15T10:00:00Z' },
+      snapshot: {
+        snapshot_id: '2024-01-15',
+        created_at: '2024-01-15T10:00:00Z',
+      },
       snapshotDate: '2024-01-15',
     })
 
@@ -249,9 +253,18 @@ describe('Analytics Endpoint — Payments Trend (Requirements 1.1–1.4)', () =>
       // paymentsTrend MUST be present with mapped { date, payments } objects
       expect(response.body.paymentsTrend).toBeDefined()
       expect(response.body.paymentsTrend).toHaveLength(3)
-      expect(response.body.paymentsTrend[0]).toEqual({ date: '2024-01-01', payments: 180 })
-      expect(response.body.paymentsTrend[1]).toEqual({ date: '2024-01-08', payments: 195 })
-      expect(response.body.paymentsTrend[2]).toEqual({ date: '2024-01-15', payments: 210 })
+      expect(response.body.paymentsTrend[0]).toEqual({
+        date: '2024-01-01',
+        payments: 180,
+      })
+      expect(response.body.paymentsTrend[1]).toEqual({
+        date: '2024-01-08',
+        payments: 195,
+      })
+      expect(response.body.paymentsTrend[2]).toEqual({
+        date: '2024-01-15',
+        payments: 210,
+      })
 
       // Verify getTrendData was called with correct arguments
       expect(mockTimeSeriesService.getTrendData).toHaveBeenCalledWith(
@@ -306,7 +319,9 @@ describe('Analytics Endpoint — Payments Trend (Requirements 1.1–1.4)', () =>
       // Requirement 1.3: When TimeSeriesIndexService throws, omit paymentsTrend
       // and log a debug message — the response should still succeed with analytics data
       const mockTimeSeriesService = {
-        getTrendData: vi.fn().mockRejectedValue(new Error('Index file not found')),
+        getTrendData: vi
+          .fn()
+          .mockRejectedValue(new Error('Index file not found')),
       }
       mockGetTimeSeriesIndexService.mockResolvedValue(mockTimeSeriesService)
 

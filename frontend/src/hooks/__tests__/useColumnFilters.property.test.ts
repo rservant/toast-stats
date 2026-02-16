@@ -50,7 +50,11 @@ const clubTrendGenerator = fc.record({
     }),
     { minLength: 1, maxLength: 10 }
   ),
-  currentStatus: fc.constantFrom('thriving', 'vulnerable', 'intervention-required'),
+  currentStatus: fc.constantFrom(
+    'thriving',
+    'vulnerable',
+    'intervention-required'
+  ),
   riskFactors: fc.array(fc.string(), { maxLength: 5 }),
   distinguishedLevel: fc.option(
     fc.constantFrom('Smedley', 'President', 'Select', 'Distinguished'),
@@ -170,7 +174,11 @@ const clubTrendWithDistinguishedGenerator = fc.record({
     }),
     { minLength: 1, maxLength: 10 }
   ),
-  currentStatus: fc.constantFrom('thriving', 'vulnerable', 'intervention-required'),
+  currentStatus: fc.constantFrom(
+    'thriving',
+    'vulnerable',
+    'intervention-required'
+  ),
   riskFactors: fc.array(fc.string(), { maxLength: 5 }),
   distinguishedLevel: fc.constantFrom(
     'Smedley',

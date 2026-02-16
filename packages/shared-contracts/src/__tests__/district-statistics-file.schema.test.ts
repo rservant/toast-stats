@@ -388,7 +388,8 @@ describe('DistrictStatisticsFileSchema validation', () => {
         ...dataWithoutRawFields
       } = data
 
-      const result = DistrictStatisticsFileSchema.safeParse(dataWithoutRawFields)
+      const result =
+        DistrictStatisticsFileSchema.safeParse(dataWithoutRawFields)
 
       expect(result.success).toBe(false)
       if (!result.success) {

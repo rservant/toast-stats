@@ -38,10 +38,7 @@ function createIsolatedCacheDir(): {
   cleanup: () => Promise<void>
 } {
   const uniqueId = `${Date.now()}-${Math.random().toString(36).slice(2)}-${process.pid}`
-  const cachePath = path.join(
-    os.tmpdir(),
-    `transform-pointer-test-${uniqueId}`
-  )
+  const cachePath = path.join(os.tmpdir(), `transform-pointer-test-${uniqueId}`)
 
   return {
     path: cachePath,
@@ -86,7 +83,11 @@ async function setupRawCsvData(
  */
 async function readPointerFile(
   cacheDir: string
-): Promise<{ snapshotId: string; updatedAt: string; schemaVersion: string } | null> {
+): Promise<{
+  snapshotId: string
+  updatedAt: string
+  schemaVersion: string
+} | null> {
   const pointerPath = path.join(cacheDir, 'snapshots', 'latest-successful.json')
   try {
     const content = await fs.readFile(pointerPath, 'utf-8')

@@ -52,11 +52,7 @@ type TabType =
  * a number or an object (backend returns object from /analytics endpoint)
  */
 function getDistinguishedProjectionValue(
-  projection:
-    | number
-    | { projectedDistinguished?: number }
-    | null
-    | undefined
+  projection: number | { projectedDistinguished?: number } | null | undefined
 ): number {
   if (projection === null || projection === undefined) {
     return 0
@@ -487,8 +483,6 @@ const DistrictDetailPage: React.FC = () => {
             />
           )}
 
-
-
           {/* No Data Prompt - Direct to Admin Panel for Backfill */}
           {!isLoadingOverview &&
             !overviewError &&
@@ -636,10 +630,14 @@ const DistrictDetailPage: React.FC = () => {
                         yearOverYear: aggregatedAnalytics.yearOverYear,
                       })}
                       currentYear={{
-                        totalMembership: aggregatedAnalytics.summary.totalMembership,
-                        distinguishedClubs: aggregatedAnalytics.summary.distinguishedClubs.total,
-                        thrivingClubs: aggregatedAnalytics.summary.clubCounts.thriving,
-                        totalClubs: aggregatedAnalytics.summary.clubCounts.total,
+                        totalMembership:
+                          aggregatedAnalytics.summary.totalMembership,
+                        distinguishedClubs:
+                          aggregatedAnalytics.summary.distinguishedClubs.total,
+                        thrivingClubs:
+                          aggregatedAnalytics.summary.clubCounts.thriving,
+                        totalClubs:
+                          aggregatedAnalytics.summary.clubCounts.total,
                       }}
                       isLoading={isLoadingAggregated}
                     />

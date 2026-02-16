@@ -95,14 +95,14 @@ The solution modifies the `DataTransformer` to preserve raw CSV arrays alongside
 
 ### Affected Components
 
-| Package | File | Change Type |
-|---------|------|-------------|
-| shared-contracts | `src/types/district-statistics-file.ts` | Add raw data fields |
-| shared-contracts | `src/types/scraped-record.ts` | New file - ScrapedRecord type |
-| shared-contracts | `src/schemas/district-statistics-file.schema.ts` | Add Zod validation for raw data |
-| analytics-core | `src/interfaces.ts` | Add raw data fields to DistrictStatistics |
-| analytics-core | `src/transformation/DataTransformer.ts` | Preserve raw CSV arrays in output |
-| backend | `src/types/districts.ts` | Verify compatibility (already has fields) |
+| Package          | File                                             | Change Type                               |
+| ---------------- | ------------------------------------------------ | ----------------------------------------- |
+| shared-contracts | `src/types/district-statistics-file.ts`          | Add raw data fields                       |
+| shared-contracts | `src/types/scraped-record.ts`                    | New file - ScrapedRecord type             |
+| shared-contracts | `src/schemas/district-statistics-file.schema.ts` | Add Zod validation for raw data           |
+| analytics-core   | `src/interfaces.ts`                              | Add raw data fields to DistrictStatistics |
+| analytics-core   | `src/transformation/DataTransformer.ts`          | Preserve raw CSV arrays in output         |
+| backend          | `src/types/districts.ts`                         | Verify compatibility (already has fields) |
 
 ## Components and Interfaces
 
@@ -115,7 +115,7 @@ New type definition for raw CSV records:
 
 /**
  * A single record from scraped CSV data.
- * 
+ *
  * Represents one row from a CSV file with column names as keys
  * and cell values as strings, numbers, or null.
  */
@@ -136,7 +136,7 @@ export interface DistrictStatisticsFile {
   divisions: DivisionStatisticsFile[]
   areas: AreaStatisticsFile[]
   totals: DistrictTotalsFile
-  
+
   // Raw CSV data arrays - required for frontend division/area calculations
   divisionPerformance: ScrapedRecord[]
   clubPerformance: ScrapedRecord[]
@@ -158,7 +158,7 @@ export interface DistrictStatistics {
   divisions: DivisionStatistics[]
   areas: AreaStatistics[]
   totals: DistrictTotals
-  
+
   // Raw CSV data arrays - required for frontend division/area calculations
   divisionPerformance: ScrapedRecord[]
   clubPerformance: ScrapedRecord[]
@@ -209,21 +209,21 @@ async transformRawCSV(
 
 The raw CSV arrays preserve all original column names. Key fields used by the frontend:
 
-| CSV File | Field Name | Usage |
-|----------|------------|-------|
-| division-performance.csv | Division | Division identifier |
-| division-performance.csv | Area | Area identifier |
-| division-performance.csv | Division Club Base | Division's club base for threshold calculations |
-| division-performance.csv | Area Club Base | Area's club base for threshold calculations |
-| division-performance.csv | Nov Visit award | First round visit completion ("1" = completed) |
-| division-performance.csv | May visit award | Second round visit completion ("1" = completed) |
-| division-performance.csv | Club | Club identifier for lookup |
-| club-performance.csv | Club Number | Club identifier |
-| club-performance.csv | Club Status | Club operational status (Active, Suspended, etc.) |
-| club-performance.csv | Club Distinguished Status | Distinguished level from CSV |
-| club-performance.csv | Goals Met | DCP goals achieved |
-| club-performance.csv | Active Members | Current membership count |
-| club-performance.csv | Mem. Base | Membership base for net growth |
+| CSV File                 | Field Name                | Usage                                             |
+| ------------------------ | ------------------------- | ------------------------------------------------- |
+| division-performance.csv | Division                  | Division identifier                               |
+| division-performance.csv | Area                      | Area identifier                                   |
+| division-performance.csv | Division Club Base        | Division's club base for threshold calculations   |
+| division-performance.csv | Area Club Base            | Area's club base for threshold calculations       |
+| division-performance.csv | Nov Visit award           | First round visit completion ("1" = completed)    |
+| division-performance.csv | May visit award           | Second round visit completion ("1" = completed)   |
+| division-performance.csv | Club                      | Club identifier for lookup                        |
+| club-performance.csv     | Club Number               | Club identifier                                   |
+| club-performance.csv     | Club Status               | Club operational status (Active, Suspended, etc.) |
+| club-performance.csv     | Club Distinguished Status | Distinguished level from CSV                      |
+| club-performance.csv     | Goals Met                 | DCP goals achieved                                |
+| club-performance.csv     | Active Members            | Current membership count                          |
+| club-performance.csv     | Mem. Base                 | Membership base for net growth                    |
 
 ### Zod Schema for Validation
 
@@ -253,34 +253,33 @@ export const DistrictStatisticsFileSchema = z.object({
 })
 ```
 
-
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 Based on the prework analysis, the following properties have been consolidated to eliminate redundancy:
 
 ### Property 1: Raw Data Preservation
 
-*For any* raw CSV input with clubPerformance, divisionPerformance, and districtPerformance arrays, the transformed DistrictStatistics output SHALL include all three raw arrays with all original column names and values preserved exactly as they appeared in the input.
+_For any_ raw CSV input with clubPerformance, divisionPerformance, and districtPerformance arrays, the transformed DistrictStatistics output SHALL include all three raw arrays with all original column names and values preserved exactly as they appeared in the input.
 
 **Validates: Requirements 1.1, 1.2, 1.3, 1.6**
 
 ### Property 2: CSV to ScrapedRecord Parsing
 
-*For any* 2D CSV array where the first row contains headers and subsequent rows contain data values, parsing SHALL produce an array of ScrapedRecord objects where each record maps header names to corresponding row values, with the number of output records equal to the number of data rows (excluding the header row).
+_For any_ 2D CSV array where the first row contains headers and subsequent rows contain data values, parsing SHALL produce an array of ScrapedRecord objects where each record maps header names to corresponding row values, with the number of output records equal to the number of data rows (excluding the header row).
 
 **Validates: Requirements 1.4**
 
 ### Property 3: ScrapedRecord Value Type Validation
 
-*For any* ScrapedRecord object, the Zod schema SHALL accept records containing only string, number, or null values, and SHALL reject records containing any other value types (objects, arrays, undefined, boolean, etc.).
+_For any_ ScrapedRecord object, the Zod schema SHALL accept records containing only string, number, or null values, and SHALL reject records containing any other value types (objects, arrays, undefined, boolean, etc.).
 
 **Validates: Requirements 2.5, 5.3**
 
 ### Property 4: Backend Data Integrity
 
-*For any* snapshot containing raw data arrays (clubPerformance, divisionPerformance, districtPerformance), the backend API response SHALL contain the exact same data as stored in the snapshot file, with no computation, transformation, or modification applied.
+_For any_ snapshot containing raw data arrays (clubPerformance, divisionPerformance, districtPerformance), the backend API response SHALL contain the exact same data as stored in the snapshot file, with no computation, transformation, or modification applied.
 
 **Validates: Requirements 4.1, 4.2**
 
@@ -291,6 +290,7 @@ Based on the prework analysis, the following properties have been consolidated t
 **Scenario**: Raw CSV array is empty or not provided in input
 
 **Handling**:
+
 - DataTransformer SHALL include an empty array `[]` in the output
 - No error or warning logged (this is a valid state)
 - Downstream consumers (frontend) handle empty arrays gracefully
@@ -306,6 +306,7 @@ const clubPerformanceRecords = this.parseCSVRows(csvData.clubPerformance ?? [])
 **Scenario**: CSV array has no header row or malformed structure
 
 **Handling**:
+
 - If array has fewer than 2 rows (no data rows), return empty array
 - Log debug message for troubleshooting
 - Continue processing without throwing
@@ -325,6 +326,7 @@ private parseCSVRows(rows: string[][]): ScrapedRecord[] {
 **Scenario**: District statistics file fails Zod validation
 
 **Handling**:
+
 - TransformService logs error with validation details
 - Throws error to prevent writing invalid data
 - Error message includes which field failed and why
@@ -344,6 +346,7 @@ if (!validationResult.success) {
 **Scenario**: Snapshot file exists but cannot be parsed
 
 **Handling**:
+
 - Backend returns 500 error with descriptive message
 - Logs error with file path and parse error details
 - Does not attempt to compute or generate data (per data-computation-separation steering)
@@ -364,6 +367,7 @@ Per the testing steering document, this feature uses **unit tests with well-chos
 **DataTransformer Tests** (`packages/analytics-core/src/__tests__/DataTransformer.test.ts`):
 
 Raw Data Preservation (validates Property 1):
+
 - Test with CSV containing Division Club Base, Area Club Base columns → verify preserved in output
 - Test with CSV containing Nov Visit award, May visit award columns → verify preserved in output
 - Test with CSV containing Club Status, Club Distinguished Status columns → verify preserved in output
@@ -371,6 +375,7 @@ Raw Data Preservation (validates Property 1):
 - Test with CSV containing only header row → verify empty arrays in output
 
 CSV to ScrapedRecord Parsing (validates Property 2):
+
 - Test with 3-column header and 2 data rows → verify 2 records with correct keys
 - Test with numeric values in CSV → verify preserved as numbers in records
 - Test with string values in CSV → verify preserved as strings in records
@@ -379,6 +384,7 @@ CSV to ScrapedRecord Parsing (validates Property 2):
 **Zod Schema Tests** (`packages/shared-contracts/src/__tests__/district-statistics-file.schema.test.ts`):
 
 ScrapedRecord Validation (validates Property 3):
+
 - Test with valid ScrapedRecord (string values) → passes validation
 - Test with valid ScrapedRecord (number values) → passes validation
 - Test with valid ScrapedRecord (null values) → passes validation
@@ -387,6 +393,7 @@ ScrapedRecord Validation (validates Property 3):
 - Test with invalid ScrapedRecord (boolean value) → fails validation with error
 
 DistrictStatisticsFile Validation:
+
 - Test with all required fields including raw arrays → passes validation
 - Test with missing divisionPerformance field → fails validation
 - Test with missing clubPerformance field → fails validation
@@ -397,6 +404,7 @@ DistrictStatisticsFile Validation:
 **TransformService Integration** (`packages/scraper-cli/src/__tests__/TransformService.integration.test.ts`):
 
 Backend Data Integrity (validates Property 4):
+
 - Transform CSV files with known content → verify JSON output contains exact raw arrays
 - Read generated JSON file → verify Zod validation passes
 - Verify specific column values are preserved exactly as input
@@ -418,9 +426,9 @@ packages/
 
 ### Test Coverage Summary
 
-| Property | Test Type | Location |
-|----------|-----------|----------|
-| Property 1: Raw Data Preservation | Unit tests | DataTransformer.test.ts |
-| Property 2: CSV to ScrapedRecord Parsing | Unit tests | DataTransformer.test.ts |
-| Property 3: ScrapedRecord Value Type Validation | Unit tests | district-statistics-file.schema.test.ts |
-| Property 4: Backend Data Integrity | Integration tests | TransformService.integration.test.ts |
+| Property                                        | Test Type         | Location                                |
+| ----------------------------------------------- | ----------------- | --------------------------------------- |
+| Property 1: Raw Data Preservation               | Unit tests        | DataTransformer.test.ts                 |
+| Property 2: CSV to ScrapedRecord Parsing        | Unit tests        | DataTransformer.test.ts                 |
+| Property 3: ScrapedRecord Value Type Validation | Unit tests        | district-statistics-file.schema.test.ts |
+| Property 4: Backend Data Integrity              | Integration tests | TransformService.integration.test.ts    |

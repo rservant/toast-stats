@@ -744,14 +744,11 @@ export class AnalyticsComputeService {
           districtId
         )
         if (previousSnapshot) {
-          this.logger.info(
-            'Loaded previous year snapshot for YoY comparison',
-            {
-              date,
-              districtId,
-              previousYearDate,
-            }
-          )
+          this.logger.info('Loaded previous year snapshot for YoY comparison', {
+            date,
+            districtId,
+            previousYearDate,
+          })
         } else {
           this.logger.info(
             'No previous year snapshot found, YoY will use single snapshot',
@@ -1066,7 +1063,9 @@ export class AnalyticsComputeService {
         date: snapshotDate,
         requestedDate: date,
         isClosingPeriod: closingPeriodInfo.isClosingPeriod,
-        dataMonth: closingPeriodInfo.isClosingPeriod ? closingPeriodInfo.dataMonth : undefined,
+        dataMonth: closingPeriodInfo.isClosingPeriod
+          ? closingPeriodInfo.dataMonth
+          : undefined,
         districtsProcessed: [],
         districtsSucceeded: [],
         districtsFailed: [],
@@ -1103,7 +1102,9 @@ export class AnalyticsComputeService {
         date: snapshotDate,
         requestedDate: date,
         isClosingPeriod: closingPeriodInfo.isClosingPeriod,
-        dataMonth: closingPeriodInfo.isClosingPeriod ? closingPeriodInfo.dataMonth : undefined,
+        dataMonth: closingPeriodInfo.isClosingPeriod
+          ? closingPeriodInfo.dataMonth
+          : undefined,
         districtsProcessed: [],
         districtsSucceeded: [],
         districtsFailed: [],
@@ -1133,7 +1134,8 @@ export class AnalyticsComputeService {
     // Requirement 5.2 (per-metric-rankings): Load rankings once per compute operation
     // This is more efficient than loading for each district
     // Use snapshotDate for loading rankings (Requirement 8.1)
-    const allDistrictsRankings = await this.loadAllDistrictsRankings(snapshotDate)
+    const allDistrictsRankings =
+      await this.loadAllDistrictsRankings(snapshotDate)
     if (!allDistrictsRankings) {
       this.logger.warn(
         'All-districts rankings not available, per-metric rankings will be null',
@@ -1143,10 +1145,14 @@ export class AnalyticsComputeService {
 
     for (const districtId of districtsToCompute) {
       // Use snapshotDate for all computeDistrictAnalytics calls (Requirement 8.1, 8.3)
-      const result = await this.computeDistrictAnalytics(snapshotDate, districtId, {
-        force,
-        allDistrictsRankings,
-      })
+      const result = await this.computeDistrictAnalytics(
+        snapshotDate,
+        districtId,
+        {
+          force,
+          allDistrictsRankings,
+        }
+      )
       results.push(result)
 
       if (result.success && !result.skipped) {
@@ -1259,7 +1265,10 @@ export class AnalyticsComputeService {
     const successfulResults = results.filter(r => r.success && !r.skipped)
     if (successfulResults.length > 0 && manifestEntries.length > 0) {
       try {
-        await this.analyticsWriter.writeAnalyticsManifest(snapshotDate, manifestEntries)
+        await this.analyticsWriter.writeAnalyticsManifest(
+          snapshotDate,
+          manifestEntries
+        )
         const manifestPath = path.join(
           this.getAnalyticsDir(snapshotDate),
           'manifest.json'
@@ -1314,7 +1323,9 @@ export class AnalyticsComputeService {
       date: snapshotDate,
       requestedDate: date,
       isClosingPeriod: closingPeriodInfo.isClosingPeriod,
-      dataMonth: closingPeriodInfo.isClosingPeriod ? closingPeriodInfo.dataMonth : undefined,
+      dataMonth: closingPeriodInfo.isClosingPeriod
+        ? closingPeriodInfo.dataMonth
+        : undefined,
       districtsProcessed,
       districtsSucceeded,
       districtsFailed,

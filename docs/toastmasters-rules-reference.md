@@ -317,10 +317,10 @@ When calculating recognition status, apply rules in this order:
 
 ## 13. Version History
 
-| Version | Date         | Changes                                          |
-| ------- | ------------ | ------------------------------------------------ |
-| 1.0     | January 2026 | Initial canonical rules reference                |
-| 1.1     | February 2026 | Added membership dues payment schedule (§4.1)   |
+| Version | Date          | Changes                                       |
+| ------- | ------------- | --------------------------------------------- |
+| 1.0     | January 2026  | Initial canonical rules reference             |
+| 1.1     | February 2026 | Added membership dues payment schedule (§4.1) |
 
 ---
 

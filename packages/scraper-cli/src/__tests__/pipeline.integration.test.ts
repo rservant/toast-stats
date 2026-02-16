@@ -1325,11 +1325,7 @@ describe('Pipeline Integration Tests', () => {
       expect(transformResult.districtsSucceeded).toContain(districtId)
 
       // Verify snapshot was created at the requested date (not adjusted)
-      const snapshotDir = path.join(
-        testCache.path,
-        'snapshots',
-        requestedDate
-      )
+      const snapshotDir = path.join(testCache.path, 'snapshots', requestedDate)
       const snapshotExists = await fs
         .access(snapshotDir)
         .then(() => true)
@@ -1407,11 +1403,7 @@ describe('Pipeline Integration Tests', () => {
       expect(transformResult.districtsSucceeded).toContain(districtId)
 
       // Verify snapshot was created at the requested date
-      const snapshotDir = path.join(
-        testCache.path,
-        'snapshots',
-        requestedDate
-      )
+      const snapshotDir = path.join(testCache.path, 'snapshots', requestedDate)
       const snapshotExists = await fs
         .access(snapshotDir)
         .then(() => true)
@@ -1482,11 +1474,7 @@ describe('Pipeline Integration Tests', () => {
       expect(transformResult.districtsSucceeded).toContain(districtId)
 
       // Verify snapshot was created at the requested date
-      const snapshotDir = path.join(
-        testCache.path,
-        'snapshots',
-        requestedDate
-      )
+      const snapshotDir = path.join(testCache.path, 'snapshots', requestedDate)
       const snapshotExists = await fs
         .access(snapshotDir)
         .then(() => true)

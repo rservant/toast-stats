@@ -127,7 +127,6 @@ vi.mock('../../../services/PreComputedAnalyticsReader.js', () => ({
 // Import mocked functions
 import { getTimeSeriesIndexService } from '../shared.js'
 
-
 /**
  * Helper to create a realistic DistrictAnalytics mock object.
  * Club counts are derived from array lengths (Requirements 2.1-2.4).
@@ -706,13 +705,23 @@ describe('Analytics Summary Route', () => {
         // returns empty, so the route re-queries with the full program year (2025-07-01
         // to 2026-06-30) and finds the data.
         const expandedData = [
-          createMockTimeSeriesDataPoint({ date: '2025-10-15', membership: 1200 }),
-          createMockTimeSeriesDataPoint({ date: '2025-11-15', membership: 1250 }),
-          createMockTimeSeriesDataPoint({ date: '2025-12-15', membership: 1300 }),
+          createMockTimeSeriesDataPoint({
+            date: '2025-10-15',
+            membership: 1200,
+          }),
+          createMockTimeSeriesDataPoint({
+            date: '2025-11-15',
+            membership: 1250,
+          }),
+          createMockTimeSeriesDataPoint({
+            date: '2025-12-15',
+            membership: 1300,
+          }),
         ]
 
         const mockTimeSeriesService = {
-          getTrendData: vi.fn()
+          getTrendData: vi
+            .fn()
             // First call: original date range returns empty
             .mockResolvedValueOnce([])
             // Second call: expanded program year range returns data
@@ -738,11 +747,17 @@ describe('Analytics Summary Route', () => {
         // 1st: original range, 2nd: expanded program year range
         expect(mockTimeSeriesService.getTrendData).toHaveBeenCalledTimes(2)
         expect(mockTimeSeriesService.getTrendData).toHaveBeenNthCalledWith(
-          1, '42', '2025-07-01', '2025-09-26'
+          1,
+          '42',
+          '2025-07-01',
+          '2025-09-26'
         )
         // Program year for endDate 2025-09-26 is 2025-07-01 to 2026-06-30
         expect(mockTimeSeriesService.getTrendData).toHaveBeenNthCalledWith(
-          2, '42', '2025-07-01', '2026-06-30'
+          2,
+          '42',
+          '2025-07-01',
+          '2026-06-30'
         )
       })
 
@@ -752,12 +767,16 @@ describe('Analytics Summary Route', () => {
         //
         // Property 1: Response dateRange preserves original request
         const expandedData = [
-          createMockTimeSeriesDataPoint({ date: '2025-10-15', membership: 1100 }),
+          createMockTimeSeriesDataPoint({
+            date: '2025-10-15',
+            membership: 1100,
+          }),
         ]
 
         const mockTimeSeriesService = {
-          getTrendData: vi.fn()
-            .mockResolvedValueOnce([])       // initial: empty
+          getTrendData: vi
+            .fn()
+            .mockResolvedValueOnce([]) // initial: empty
             .mockResolvedValueOnce(expandedData), // expanded: has data
         }
         vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
@@ -782,8 +801,14 @@ describe('Analytics Summary Route', () => {
         // When the initial query returns data, no expansion happens.
         // The dateRange should still reflect the original request.
         const initialData = [
-          createMockTimeSeriesDataPoint({ date: '2025-08-15', membership: 1400 }),
-          createMockTimeSeriesDataPoint({ date: '2025-09-01', membership: 1450 }),
+          createMockTimeSeriesDataPoint({
+            date: '2025-08-15',
+            membership: 1400,
+          }),
+          createMockTimeSeriesDataPoint({
+            date: '2025-09-01',
+            membership: 1450,
+          }),
         ]
 
         const mockTimeSeriesService = {
@@ -813,8 +838,9 @@ describe('Analytics Summary Route', () => {
         // Requirement 1.3: When the Time_Series_Index contains no data points for
         // the entire program year, return an empty trend array without error.
         const mockTimeSeriesService = {
-          getTrendData: vi.fn()
-            .mockResolvedValueOnce([])  // initial: empty
+          getTrendData: vi
+            .fn()
+            .mockResolvedValueOnce([]) // initial: empty
             .mockResolvedValueOnce([]), // expanded: also empty
         }
         vi.mocked(getTimeSeriesIndexService).mockResolvedValue(
@@ -843,11 +869,15 @@ describe('Analytics Summary Route', () => {
         // When endDate is before July (e.g., 2025-03-15), the program year is 2024-2025
         // which runs from 2024-07-01 to 2025-06-30.
         const expandedData = [
-          createMockTimeSeriesDataPoint({ date: '2024-10-01', membership: 900 }),
+          createMockTimeSeriesDataPoint({
+            date: '2024-10-01',
+            membership: 900,
+          }),
         ]
 
         const mockTimeSeriesService = {
-          getTrendData: vi.fn()
+          getTrendData: vi
+            .fn()
             .mockResolvedValueOnce([])
             .mockResolvedValueOnce(expandedData),
         }
@@ -863,7 +893,10 @@ describe('Analytics Summary Route', () => {
         // Verify the expanded query used the correct program year boundaries
         // endDate 2025-03-15 → program year 2024-07-01 to 2025-06-30
         expect(mockTimeSeriesService.getTrendData).toHaveBeenNthCalledWith(
-          2, '42', '2024-07-01', '2025-06-30'
+          2,
+          '42',
+          '2024-07-01',
+          '2025-06-30'
         )
 
         // dateRange preserves original request
@@ -877,12 +910,21 @@ describe('Analytics Summary Route', () => {
       it('should include payments trend data from expanded query', async () => {
         // Verify that payments data is also returned from the expanded query
         const expandedData = [
-          createMockTimeSeriesDataPoint({ date: '2025-10-15', membership: 1200, payments: 180 }),
-          createMockTimeSeriesDataPoint({ date: '2025-11-15', membership: 1250, payments: 200 }),
+          createMockTimeSeriesDataPoint({
+            date: '2025-10-15',
+            membership: 1200,
+            payments: 180,
+          }),
+          createMockTimeSeriesDataPoint({
+            date: '2025-11-15',
+            membership: 1250,
+            payments: 200,
+          }),
         ]
 
         const mockTimeSeriesService = {
-          getTrendData: vi.fn()
+          getTrendData: vi
+            .fn()
             .mockResolvedValueOnce([])
             .mockResolvedValueOnce(expandedData),
         }
@@ -936,21 +978,21 @@ describe('Analytics Summary Route', () => {
             membership: {
               current: 1500,
               previous: 1400,
-              change: 100,            // absolute: +100 members
+              change: 100, // absolute: +100 members
               percentageChange: 7.14, // percentage: +7.14%
             },
             distinguishedClubs: {
               current: 25,
               previous: 20,
-              change: 5,              // absolute: +5 clubs
-              percentageChange: 25,   // percentage: +25%
+              change: 5, // absolute: +5 clubs
+              percentageChange: 25, // percentage: +25%
             },
             clubHealth: {
               thrivingClubs: {
                 current: 30,
                 previous: 25,
-                change: 5,              // absolute: +5 clubs
-                percentageChange: 20,   // percentage: +20%
+                change: 5, // absolute: +5 clubs
+                percentageChange: 20, // percentage: +20%
               },
               vulnerableClubs: {
                 current: 15,
@@ -1052,20 +1094,20 @@ describe('Analytics Summary Route', () => {
             membership: {
               current: 1200,
               previous: 1500,
-              change: -300,              // absolute: lost 300 members
-              percentageChange: -20,     // percentage: -20%
+              change: -300, // absolute: lost 300 members
+              percentageChange: -20, // percentage: -20%
             },
             distinguishedClubs: {
               current: 15,
               previous: 25,
-              change: -10,               // absolute: lost 10 clubs
-              percentageChange: -40,     // percentage: -40%
+              change: -10, // absolute: lost 10 clubs
+              percentageChange: -40, // percentage: -40%
             },
             clubHealth: {
               thrivingClubs: {
                 current: 20,
                 previous: 30,
-                change: -10,             // absolute: lost 10 clubs
+                change: -10, // absolute: lost 10 clubs
                 percentageChange: -33.33, // percentage: -33.33%
               },
               vulnerableClubs: {
@@ -1096,4 +1138,3 @@ describe('Analytics Summary Route', () => {
     })
   })
 })
-

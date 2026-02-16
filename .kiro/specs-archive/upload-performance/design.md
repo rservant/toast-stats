@@ -43,6 +43,7 @@ graph TD
 ```
 
 Key architectural decisions:
+
 - **Dependency injection** for FileSystem, Hasher, BucketClient, Clock, ProgressReporter — enables unit testing with fakes
 - **Async generators** replace array-based file collection, keeping memory flat
 - **Local manifest with fast-path** (size+mtime check before hashing) replaces per-file GCS metadata lookups
@@ -74,12 +75,17 @@ interface Hasher {
 
 /** GCS upload operations interface — stream-based, no remote reads */
 interface BucketClient {
-  uploadStream(remotePath: string, stream: Readable, contentType: string, metadata: Record<string, string>): Promise<void>
+  uploadStream(
+    remotePath: string,
+    stream: Readable,
+    contentType: string,
+    metadata: Record<string, string>
+  ): Promise<void>
 }
 
 /** Clock interface for timestamps */
 interface Clock {
-  now(): string  // returns ISO timestamp
+  now(): string // returns ISO timestamp
 }
 ```
 
@@ -109,13 +115,13 @@ Extended with new fields for date range filtering and concurrency:
 
 ```typescript
 export interface UploadOperationOptions {
-  date?: string              // existing: single date
-  since?: string             // new: inclusive start date (YYYY-MM-DD)
-  until?: string             // new: inclusive end date (YYYY-MM-DD)
-  incremental?: boolean      // existing
-  dryRun?: boolean           // existing
-  verbose?: boolean          // existing
-  concurrency?: number       // new: max concurrent uploads (default 10)
+  date?: string // existing: single date
+  since?: string // new: inclusive start date (YYYY-MM-DD)
+  until?: string // new: inclusive end date (YYYY-MM-DD)
+  incremental?: boolean // existing
+  dryRun?: boolean // existing
+  verbose?: boolean // existing
+  concurrency?: number // new: max concurrent uploads (default 10)
 }
 ```
 
@@ -124,13 +130,13 @@ export interface UploadOperationOptions {
 ```typescript
 export interface UploadOptions {
   date?: string
-  since?: string             // new
-  until?: string             // new
+  since?: string // new
+  until?: string // new
   incremental: boolean
   dryRun: boolean
   verbose: boolean
   config?: string
-  concurrency?: number       // new
+  concurrency?: number // new
 }
 ```
 
@@ -143,8 +149,8 @@ interface FileInfo {
   localPath: string
   remotePath: string
   size: number
-  mtimeMs: number                // new: for fast-path comparison
-  checksum: string | undefined   // undefined when not computed
+  mtimeMs: number // new: for fast-path comparison
+  checksum: string | undefined // undefined when not computed
 }
 ```
 
@@ -153,14 +159,14 @@ interface FileInfo {
 ```typescript
 interface UploadManifestEntry {
   checksum: string
-  size: number          // for fast-path comparison
-  mtimeMs: number       // for fast-path comparison
+  size: number // for fast-path comparison
+  mtimeMs: number // for fast-path comparison
   uploadedAt: string
 }
 
 interface UploadManifest {
   schemaVersion: '1.0.0'
-  entries: Record<string, UploadManifestEntry>  // keyed by remotePath
+  entries: Record<string, UploadManifestEntry> // keyed by remotePath
 }
 ```
 
@@ -170,9 +176,22 @@ Injectable interface for streaming progress to stderr. Date-level progress is em
 
 ```typescript
 interface ProgressReporter {
-  onDateComplete(index: number, total: number, date: string, fileCount: number): void
-  onFileUploaded(remotePath: string, status: 'uploaded' | 'skipped' | 'failed'): void
-  onComplete(summary: { uploaded: number; skipped: number; failed: number; duration_ms: number }): void
+  onDateComplete(
+    index: number,
+    total: number,
+    date: string,
+    fileCount: number
+  ): void
+  onFileUploaded(
+    remotePath: string,
+    status: 'uploaded' | 'skipped' | 'failed'
+  ): void
+  onComplete(summary: {
+    uploaded: number
+    skipped: number
+    failed: number
+    duration_ms: number
+  }): void
 }
 ```
 
@@ -190,7 +209,7 @@ class UploadService implements IUploadService {
   private readonly clock: Clock
   private readonly progressReporter: ProgressReporter
 
-  constructor(config: UploadServiceConfig)  // wires defaults for missing deps
+  constructor(config: UploadServiceConfig) // wires defaults for missing deps
 
   // Changed: async generator, conditional checksums
   private async *collectFiles(
@@ -289,49 +308,49 @@ Written atomically: write to `.upload-manifest.json.tmp`, then rename to `.uploa
 
 ### Property 1: Dry-run file collection preserves metadata without checksums
 
-*For any* directory tree of snapshot files, when `collectFiles` is called with `computeChecksums=false`, every yielded `FileInfo` SHALL have `checksum === undefined` AND have a valid `localPath`, `remotePath`, `size > 0`, and `mtimeMs > 0` matching the actual file on disk.
+_For any_ directory tree of snapshot files, when `collectFiles` is called with `computeChecksums=false`, every yielded `FileInfo` SHALL have `checksum === undefined` AND have a valid `localPath`, `remotePath`, `size > 0`, and `mtimeMs > 0` matching the actual file on disk.
 
 **Validates: Requirements 1.1, 1.2**
 
 ### Property 2: Date range filtering
 
-*For any* list of valid YYYY-MM-DD date strings and any `since`/`until` pair where `since <= until`, `filterDatesByRange(dates, since, until)` SHALL return only dates `d` where `since <= d <= until` (lexicographic comparison), and SHALL include all such dates from the input.
+_For any_ list of valid YYYY-MM-DD date strings and any `since`/`until` pair where `since <= until`, `filterDatesByRange(dates, since, until)` SHALL return only dates `d` where `since <= d <= until` (lexicographic comparison), and SHALL include all such dates from the input.
 
 **Validates: Requirements 3.1, 3.2, 3.3, 3.7**
 
 ### Property 3: Manifest fast-path correctness
 
-*For any* file where size and mtimeMs match the manifest entry, `shouldSkipFastPath` SHALL return true. *For any* file where size or mtimeMs differ from the manifest entry (or no entry exists), `shouldSkipFastPath` SHALL return false.
+_For any_ file where size and mtimeMs match the manifest entry, `shouldSkipFastPath` SHALL return true. _For any_ file where size or mtimeMs differ from the manifest entry (or no entry exists), `shouldSkipFastPath` SHALL return false.
 
 **Validates: Requirements 4.2, 4.3**
 
 ### Property 4: Summary count invariant
 
-*For any* upload operation result, `filesProcessed.length` SHALL equal `filesUploaded.length + filesFailed.length + filesSkipped.length`.
+_For any_ upload operation result, `filesProcessed.length` SHALL equal `filesUploaded.length + filesFailed.length + filesSkipped.length`.
 
 **Validates: Requirements 5.6, 6.3**
 
 ### Property 5: File collector completeness
 
-*For any* directory tree, the async generator `collectFiles` SHALL yield exactly one `FileInfo` for each regular file in the tree, with no duplicates and no omissions.
+_For any_ directory tree, the async generator `collectFiles` SHALL yield exactly one `FileInfo` for each regular file in the tree, with no duplicates and no omissions.
 
 **Validates: Requirements 6.1**
 
 ## Error Handling
 
-| Scenario | Behavior | Exit Code |
-|---|---|---|
-| GCS authentication failure (deterministic: error `code` property matching `UNAUTHENTICATED` or `PERMISSION_DENIED`, or numeric code 7 or 16 — no message-pattern heuristics) | Set abort flag, cancel pending uploads, report auth error with `authError: true`, emit complete summary with accurate counts | 2 (COMPLETE_FAILURE) |
-| Single file upload failure (non-auth) | Log error, record in `filesFailed`, continue with remaining files | 1 (PARTIAL_FAILURE) |
-| Missing snapshot directory for `--date` | Return error result immediately | 1 |
-| No snapshot dates found | Return error result | 1 |
-| Invalid `--since`/`--until` format | Reject with error message before upload starts | 2 |
-| `--since` after `--until` | Reject with error message before upload starts | 2 |
-| `--date` combined with `--since`/`--until` | Reject with error message before upload starts | 2 |
-| Invalid `--concurrency` value | Reject with error message before upload starts | 2 |
-| Missing `.upload-manifest.json` | Log warning, treat as empty manifest, upload all files | N/A (not an error) |
-| Corrupted `.upload-manifest.json` (invalid JSON or wrong schema) | Log warning, treat as empty manifest, upload all files | N/A (not an error) |
-| Manifest write failure | Retry once. If retry fails: log error, set `manifestWriteError: true` in summary, continue uploading. Next incremental run may re-upload files from this run. | N/A (non-fatal, but surfaced in summary) |
+| Scenario                                                                                                                                                                     | Behavior                                                                                                                                                      | Exit Code                                |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| GCS authentication failure (deterministic: error `code` property matching `UNAUTHENTICATED` or `PERMISSION_DENIED`, or numeric code 7 or 16 — no message-pattern heuristics) | Set abort flag, cancel pending uploads, report auth error with `authError: true`, emit complete summary with accurate counts                                  | 2 (COMPLETE_FAILURE)                     |
+| Single file upload failure (non-auth)                                                                                                                                        | Log error, record in `filesFailed`, continue with remaining files                                                                                             | 1 (PARTIAL_FAILURE)                      |
+| Missing snapshot directory for `--date`                                                                                                                                      | Return error result immediately                                                                                                                               | 1                                        |
+| No snapshot dates found                                                                                                                                                      | Return error result                                                                                                                                           | 1                                        |
+| Invalid `--since`/`--until` format                                                                                                                                           | Reject with error message before upload starts                                                                                                                | 2                                        |
+| `--since` after `--until`                                                                                                                                                    | Reject with error message before upload starts                                                                                                                | 2                                        |
+| `--date` combined with `--since`/`--until`                                                                                                                                   | Reject with error message before upload starts                                                                                                                | 2                                        |
+| Invalid `--concurrency` value                                                                                                                                                | Reject with error message before upload starts                                                                                                                | 2                                        |
+| Missing `.upload-manifest.json`                                                                                                                                              | Log warning, treat as empty manifest, upload all files                                                                                                        | N/A (not an error)                       |
+| Corrupted `.upload-manifest.json` (invalid JSON or wrong schema)                                                                                                             | Log warning, treat as empty manifest, upload all files                                                                                                        | N/A (not an error)                       |
+| Manifest write failure                                                                                                                                                       | Retry once. If retry fails: log error, set `manifestWriteError: true` in summary, continue uploading. Next incremental run may re-upload files from this run. | N/A (non-fatal, but surfaced in summary) |
 
 ## Testing Strategy
 
@@ -388,9 +407,19 @@ Property 1 (dry-run metadata) is better served by the integration test suite (3-
 
 ```typescript
 // Minimal fakes — injected via UploadServiceConfig
-class FakeFileSystem implements FileSystem { /* in-memory directory tree */ }
-class FakeHasher implements Hasher { /* deterministic: returns hash of path string */ }
-class FakeBucketClient implements BucketClient { /* records uploadStream calls, can simulate failures */ }
-class FakeClock implements Clock { /* returns fixed timestamp */ }
-class FakeProgressReporter implements ProgressReporter { /* captures calls for assertion */ }
+class FakeFileSystem implements FileSystem {
+  /* in-memory directory tree */
+}
+class FakeHasher implements Hasher {
+  /* deterministic: returns hash of path string */
+}
+class FakeBucketClient implements BucketClient {
+  /* records uploadStream calls, can simulate failures */
+}
+class FakeClock implements Clock {
+  /* returns fixed timestamp */
+}
+class FakeProgressReporter implements ProgressReporter {
+  /* captures calls for assertion */
+}
 ```

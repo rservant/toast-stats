@@ -56,7 +56,9 @@ export class MemoryMonitor {
       })
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : 'Unknown error collecting memory metrics'
+        error instanceof Error
+          ? error.message
+          : 'Unknown error collecting memory metrics'
       logger.error('Failed to collect memory metrics', {
         component: 'MemoryMonitor',
         error: message,

@@ -392,4 +392,3 @@ export function validateSnapshotPointer(
     error: `SnapshotPointer validation failed: ${result.error.message}`,
   }
 }
-

@@ -42,6 +42,7 @@ Bug 1 fix is in the serving layer (backend reads from time-series index instead 
 **New behavior:** When `startDate` and `endDate` query parameters are present, use `getTimeSeriesIndexService()` to call `getTrendData(districtId, startDate, endDate)` and map the result to `{ date, payments }` objects. When date parameters are absent, omit `paymentsTrend` entirely.
 
 **Changes required:**
+
 1. Import `getTimeSeriesIndexService` from `./shared.js` (already exported)
 2. Replace the `readMembershipAnalytics` block with a `getTrendData` call gated on `startDate`/`endDate` presence
 3. Remove the `readMembershipAnalytics` import if no longer used elsewhere in this file
@@ -175,10 +176,9 @@ No new data models are introduced. Existing types used:
 
 No schema changes. No new pre-computed file formats. No API response shape changes (the `/analytics` endpoint already includes `paymentsTrend` as an optional field).
 
-
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 Per the testing steering document, property-based tests are a tool, not a default. The `findSnapshotForDate` fix involves a simple numeric threshold (180 days) and an exact-match priority — neither has complex input spaces nor mathematical/algebraic invariants. Five well-chosen examples at boundary values (179, 180, 181, 365 days; exact match with closer alternatives) provide equivalent confidence. Therefore, no property-based tests are warranted for this fix. All acceptance criteria will be validated through unit tests with well-chosen examples.
 
@@ -215,23 +215,27 @@ When a snapshot with `snapshotDate` equal to the target date exists in the array
 Per the testing steering document, unit tests with well-chosen examples are preferred for bounded logic.
 
 **Analytics endpoint (Bug 1):**
+
 - Test that when `startDate` and `endDate` are provided, the endpoint calls `getTrendData` and includes `paymentsTrend` in the response
 - Test that when `startDate`/`endDate` are absent, `paymentsTrend` is omitted
 - Test that when `getTrendData` returns empty array, `paymentsTrend` is omitted
 - Test that when `getTrendData` throws, `paymentsTrend` is omitted and response still succeeds
 
 **findSnapshotForDate (Bug 2):**
+
 - Test that a single current-year snapshot with a previous-year target date (>180 days away) returns `undefined`
 - Test that an exact match is returned even when other snapshots are closer
 - Test that a same-year snapshot is returned (existing behavior preserved)
 - Test that a snapshot within 180 days of the target is returned (existing fallback behavior preserved)
 
 **YearOverYearComparison (Bug 2 frontend):**
+
 - Test that all-zero `yearOverYear` renders the empty state
 - Test that non-zero `yearOverYear` renders comparison cards
 - Test that `undefined` `yearOverYear` renders the empty state (existing behavior)
 
 **computeYearOverYear integration:**
+
 - Test that passing only `[currentSnapshot]` now returns `dataAvailable: false` (regression test for the core bug)
 - Test that passing `[previousSnapshot, currentSnapshot]` returns `dataAvailable: true` with correct metrics
 

@@ -83,8 +83,15 @@ analyticsRouter.get(
 
       // Use date-aware snapshot selection to respect endDate query parameter
       // Requirements: 2.1, 2.2, 2.3 (Analytics Date Selection Fix)
-      const endDate = typeof req.query['endDate'] === 'string' ? req.query['endDate'] : undefined
-      const { snapshot, snapshotDate, error: snapshotError } = await getSnapshotForDate(endDate)
+      const endDate =
+        typeof req.query['endDate'] === 'string'
+          ? req.query['endDate']
+          : undefined
+      const {
+        snapshot,
+        snapshotDate,
+        error: snapshotError,
+      } = await getSnapshotForDate(endDate)
 
       // Handle error when requested snapshot doesn't exist (Requirement 2.3)
       if (snapshotError) {
@@ -298,7 +305,11 @@ analyticsRouter.get(
       // Use date-aware snapshot selection to respect endDate query parameter
       // Requirements: 1.1, 1.2, 1.3, 1.4 (Analytics Date Selection Fix)
       const endDateParam = typeof endDate === 'string' ? endDate : undefined
-      const { snapshot, snapshotDate, error: snapshotError } = await getSnapshotForDate(endDateParam)
+      const {
+        snapshot,
+        snapshotDate,
+        error: snapshotError,
+      } = await getSnapshotForDate(endDateParam)
 
       // Handle error when requested snapshot doesn't exist (Requirement 1.3)
       if (snapshotError) {
@@ -352,10 +363,11 @@ analyticsRouter.get(
 
       // Read performance targets for per-metric rankings (world rank, percentile, region rank)
       // Per-metric-rankings spec: Include rankings in analytics response
-      const performanceTargets = await preComputedAnalyticsReader.readPerformanceTargets(
-        snapshotDate,
-        districtId
-      )
+      const performanceTargets =
+        await preComputedAnalyticsReader.readPerformanceTargets(
+          snapshotDate,
+          districtId
+        )
 
       // Read payments trend from time-series index (pre-computed by scraper-cli)
       // Requirements 1.1, 1.2, 1.3, 1.4: Use time-series index instead of single snapshot
@@ -378,7 +390,10 @@ analyticsRouter.get(
           logger.debug('Could not read payments trend from time-series index', {
             operation: 'getDistrictAnalytics',
             districtId,
-            error: trendError instanceof Error ? trendError.message : 'Unknown error',
+            error:
+              trendError instanceof Error
+                ? trendError.message
+                : 'Unknown error',
           })
         }
       }
@@ -422,7 +437,8 @@ analyticsRouter.get(
         filePath: analyticsFilePath,
         schemaVersion: ANALYTICS_SCHEMA_VERSION,
         hasPerformanceTargets: performanceTargets !== null,
-        hasPaymentsTrend: paymentsTrend !== undefined && paymentsTrend.length > 0,
+        hasPaymentsTrend:
+          paymentsTrend !== undefined && paymentsTrend.length > 0,
       })
 
       // Set cache control headers
@@ -433,7 +449,9 @@ analyticsRouter.get(
       // Transform from analytics-core format to frontend-expected format
       const response = {
         ...analytics,
-        ...(performanceTargets && { performanceTargets: transformPerformanceTargets(performanceTargets) }),
+        ...(performanceTargets && {
+          performanceTargets: transformPerformanceTargets(performanceTargets),
+        }),
         ...(paymentsTrend && { paymentsTrend }),
       }
 
@@ -711,8 +729,15 @@ analyticsRouter.get(
 
       // Use date-aware snapshot selection to respect endDate query parameter
       // Requirements: 5.1, 5.2, 5.3 (Analytics Date Selection Fix)
-      const endDate = typeof req.query['endDate'] === 'string' ? req.query['endDate'] : undefined
-      const { snapshot, snapshotDate, error: snapshotError } = await getSnapshotForDate(endDate)
+      const endDate =
+        typeof req.query['endDate'] === 'string'
+          ? req.query['endDate']
+          : undefined
+      const {
+        snapshot,
+        snapshotDate,
+        error: snapshotError,
+      } = await getSnapshotForDate(endDate)
 
       // Handle error when requested snapshot doesn't exist (Requirement 5.3)
       if (snapshotError) {
@@ -892,8 +917,15 @@ analyticsRouter.get(
 
       // Use date-aware snapshot selection to respect endDate query parameter
       // Requirements: 3.1, 3.2, 3.3 (Analytics Date Selection Fix)
-      const endDate = typeof req.query['endDate'] === 'string' ? req.query['endDate'] : undefined
-      const { snapshot, snapshotDate, error: snapshotError } = await getSnapshotForDate(endDate)
+      const endDate =
+        typeof req.query['endDate'] === 'string'
+          ? req.query['endDate']
+          : undefined
+      const {
+        snapshot,
+        snapshotDate,
+        error: snapshotError,
+      } = await getSnapshotForDate(endDate)
 
       // Handle error when requested snapshot doesn't exist (Requirement 3.3)
       if (snapshotError) {
@@ -1063,8 +1095,15 @@ analyticsRouter.get(
 
       // Use date-aware snapshot selection to respect endDate query parameter
       // Requirements: 4.1, 4.2, 4.3 (Analytics Date Selection Fix)
-      const endDate = typeof req.query['endDate'] === 'string' ? req.query['endDate'] : undefined
-      const { snapshot, snapshotDate, error: snapshotError } = await getSnapshotForDate(endDate)
+      const endDate =
+        typeof req.query['endDate'] === 'string'
+          ? req.query['endDate']
+          : undefined
+      const {
+        snapshot,
+        snapshotDate,
+        error: snapshotError,
+      } = await getSnapshotForDate(endDate)
 
       // Handle error when requested snapshot doesn't exist (Requirement 4.3)
       if (snapshotError) {

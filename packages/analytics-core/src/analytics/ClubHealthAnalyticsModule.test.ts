@@ -861,11 +861,9 @@ describe('ClubHealthAnalyticsModule', () => {
 
       // Verify health assessment fields
       expect(clubTrend.currentStatus).toBeDefined()
-      expect([
-        'thriving',
-        'vulnerable',
-        'intervention-required',
-      ]).toContain(clubTrend.currentStatus)
+      expect(['thriving', 'vulnerable', 'intervention-required']).toContain(
+        clubTrend.currentStatus
+      )
       expect(typeof clubTrend.healthScore).toBe('number')
       expect(clubTrend.healthScore).toBeGreaterThanOrEqual(0)
       expect(clubTrend.healthScore).toBeLessThanOrEqual(1)

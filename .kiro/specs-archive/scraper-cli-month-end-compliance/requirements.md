@@ -7,11 +7,13 @@ This feature makes the scraper-cli pipeline compliant with the month-end reconci
 ## Background
 
 The scraper (`ToastmastersScraper.ts`) already:
+
 - Detects closing periods by comparing the CSV's data month to the "As of" date
 - Stores `isClosingPeriod` and `dataMonth` in cache metadata via `setCachedCSVWithMetadata()`
 - Extracts closing period info from CSV footer lines
 
 The TransformService currently:
+
 - Reads raw CSV files from `CACHE_DIR/raw-csv/{date}/district-{id}/`
 - Writes snapshots to `CACHE_DIR/snapshots/{date}/` using the input date directly
 - Does NOT read the cache metadata

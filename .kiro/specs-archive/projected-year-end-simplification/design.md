@@ -3,6 +3,7 @@
 ## Overview
 
 This design simplifies the "Projected Year-End" distinguished clubs calculation by:
+
 1. Replacing the complex linear regression approach with a direct count of thriving clubs
 2. Consolidating three separate projected fields into a single `projectedDistinguished` field
 3. Fixing the frontend bug where all three projected values were being summed (causing 3x the actual value)
@@ -17,7 +18,7 @@ graph TD
     B -->|writes pre-computed files| C[Storage]
     C -->|serves data| D[backend]
     D -->|API response| E[frontend]
-    
+
     subgraph "Changes Required"
         A1[DistinguishedProjection type]
         A2[DistinguishedClubAnalyticsModule]
@@ -29,8 +30,9 @@ graph TD
 ### Current State (Bug)
 
 The `DistinguishedProjection` interface has three projected fields:
+
 - `projectedDistinguished`
-- `projectedSelect`  
+- `projectedSelect`
 - `projectedPresident`
 
 After the previous change (Task 1), all three fields contain the same value (thriving count). However, the frontend helper function `getDistinguishedProjectionValue()` sums all three, resulting in 3x the actual projection.
@@ -46,6 +48,7 @@ Simplify to a single `projectedDistinguished` field. Remove `projectedSelect` an
 **File:** `packages/analytics-core/src/types.ts`
 
 Current:
+
 ```typescript
 export interface DistinguishedProjection {
   projectedDistinguished: number
@@ -59,9 +62,10 @@ export interface DistinguishedProjection {
 ```
 
 New:
+
 ```typescript
 export interface DistinguishedProjection {
-  projectedDistinguished: number  // Single projected field = thriving count
+  projectedDistinguished: number // Single projected field = thriving count
   currentDistinguished: number
   currentSelect: number
   currentPresident: number
@@ -81,7 +85,7 @@ generateDistinguishedProjection(
   thrivingCount?: number
 ): DistinguishedProjection {
   // ... existing logic ...
-  
+
   return {
     projectedDistinguished: thrivingCount ?? 0,
     currentDistinguished: current.distinguished,
@@ -131,11 +135,7 @@ Simplify `getDistinguishedProjectionValue()` to use only `projectedDistinguished
 
 ```typescript
 function getDistinguishedProjectionValue(
-  projection:
-    | number
-    | { projectedDistinguished?: number }
-    | null
-    | undefined
+  projection: number | { projectedDistinguished?: number } | null | undefined
 ): number {
   if (projection === null || projection === undefined) {
     return 0
@@ -153,33 +153,33 @@ function getDistinguishedProjectionValue(
 
 ```typescript
 interface DistinguishedProjection {
-  projectedDistinguished: number  // = thriving club count
-  currentDistinguished: number    // actual current count
-  currentSelect: number           // actual current count
-  currentPresident: number        // actual current count
-  projectionDate: string          // date of projection
+  projectedDistinguished: number // = thriving club count
+  currentDistinguished: number // actual current count
+  currentSelect: number // actual current count
+  currentPresident: number // actual current count
+  projectionDate: string // date of projection
 }
 ```
 
 ## Files to Modify
 
-| Package | File | Change |
-|---------|------|--------|
-| analytics-core | `src/types.ts` | Remove `projectedSelect`, `projectedPresident` from interface |
-| analytics-core | `src/analytics/DistinguishedClubAnalyticsModule.ts` | Update return object |
-| analytics-core | `src/analytics/AnalyticsComputer.ts` | Update `distinguishedLevelBreakdown` |
-| analytics-core | `src/__tests__/DistinguishedClubAnalyticsModule.test.ts` | Update test assertions |
-| analytics-core | `src/analytics/AnalyticsComputer.integration.test.ts` | Update test assertions |
-| backend | `src/types/analytics.ts` | Update `DistinguishedClubAnalytics.distinguishedProjection` type |
-| backend | `src/services/__tests__/PreComputedAnalyticsReader.test.ts` | Update test fixtures |
-| backend | `src/services/__tests__/PreComputedAnalyticsReader.integration.test.ts` | Update test fixtures |
-| backend | `src/services/__tests__/PreComputedAnalyticsReader.extended.test.ts` | Update test fixtures |
-| backend | `src/routes/districts/__tests__/analyticsSummary.test.ts` | Update test fixtures |
-| scraper-cli | `src/__tests__/AnalyticsWriter.test.ts` | Update test fixtures |
-| scraper-cli | `src/__tests__/AnalyticsWriter.property.test.ts` | Update arbitrary generators |
-| scraper-cli | `src/__tests__/AnalyticsComputeService.test.ts` | Update test fixtures |
-| frontend | `src/pages/DistrictDetailPage.tsx` | Simplify helper function |
-| frontend | `src/hooks/__tests__/useAggregatedAnalytics.test.tsx` | Update test fixtures |
+| Package        | File                                                                    | Change                                                           |
+| -------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| analytics-core | `src/types.ts`                                                          | Remove `projectedSelect`, `projectedPresident` from interface    |
+| analytics-core | `src/analytics/DistinguishedClubAnalyticsModule.ts`                     | Update return object                                             |
+| analytics-core | `src/analytics/AnalyticsComputer.ts`                                    | Update `distinguishedLevelBreakdown`                             |
+| analytics-core | `src/__tests__/DistinguishedClubAnalyticsModule.test.ts`                | Update test assertions                                           |
+| analytics-core | `src/analytics/AnalyticsComputer.integration.test.ts`                   | Update test assertions                                           |
+| backend        | `src/types/analytics.ts`                                                | Update `DistinguishedClubAnalytics.distinguishedProjection` type |
+| backend        | `src/services/__tests__/PreComputedAnalyticsReader.test.ts`             | Update test fixtures                                             |
+| backend        | `src/services/__tests__/PreComputedAnalyticsReader.integration.test.ts` | Update test fixtures                                             |
+| backend        | `src/services/__tests__/PreComputedAnalyticsReader.extended.test.ts`    | Update test fixtures                                             |
+| backend        | `src/routes/districts/__tests__/analyticsSummary.test.ts`               | Update test fixtures                                             |
+| scraper-cli    | `src/__tests__/AnalyticsWriter.test.ts`                                 | Update test fixtures                                             |
+| scraper-cli    | `src/__tests__/AnalyticsWriter.property.test.ts`                        | Update arbitrary generators                                      |
+| scraper-cli    | `src/__tests__/AnalyticsComputeService.test.ts`                         | Update test fixtures                                             |
+| frontend       | `src/pages/DistrictDetailPage.tsx`                                      | Simplify helper function                                         |
+| frontend       | `src/hooks/__tests__/useAggregatedAnalytics.test.tsx`                   | Update test fixtures                                             |
 
 ## Error Handling
 
@@ -200,6 +200,7 @@ This is a type simplification with straightforward changes. Unit tests with well
 ### Test Verification
 
 After changes, verify:
+
 - All existing tests pass with updated assertions
 - Frontend displays correct (non-tripled) projection value
 - Pre-computed analytics files have correct structure

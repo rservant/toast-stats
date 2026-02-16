@@ -246,7 +246,10 @@ export class GCSSnapshotStorage implements ISnapshotStorage {
     }
 
     // Unicode separator and percent-encoding check
-    if (/[\u2028\u2029]/.test(snapshotId) || /%[0-9A-Fa-f]{2}/.test(snapshotId)) {
+    if (
+      /[\u2028\u2029]/.test(snapshotId) ||
+      /%[0-9A-Fa-f]{2}/.test(snapshotId)
+    ) {
       throw new StorageOperationError(
         `Invalid snapshot ID: "${snapshotId}" contains unicode separators or percent-encoded characters.`,
         'validateSnapshotId',
@@ -334,7 +337,7 @@ export class GCSSnapshotStorage implements ISnapshotStorage {
         'deadline',
         'internal',
       ]
-      if (transientPatterns.some((p) => msg.includes(p))) {
+      if (transientPatterns.some(p => msg.includes(p))) {
         return { retryable: true, is404: false }
       }
       const permanentPatterns = [
@@ -342,7 +345,7 @@ export class GCSSnapshotStorage implements ISnapshotStorage {
         'forbidden',
         'invalid argument',
       ]
-      if (permanentPatterns.some((p) => msg.includes(p))) {
+      if (permanentPatterns.some(p => msg.includes(p))) {
         return { retryable: false, is404: false }
       }
     }
@@ -459,7 +462,9 @@ export class GCSSnapshotStorage implements ISnapshotStorage {
         autoPaginate: false,
       })
       const prefixes: string[] =
-        ((apiResponse as Record<string, unknown> | undefined)?.prefixes as string[] | undefined) ?? []
+        ((apiResponse as Record<string, unknown> | undefined)?.prefixes as
+          | string[]
+          | undefined) ?? []
       for (const p of prefixes) {
         const snapshotId = p.replace(prefix, '').replace(/\/$/, '')
         if (snapshotId) yield snapshotId
@@ -640,111 +645,110 @@ export class GCSSnapshotStorage implements ISnapshotStorage {
   }
 
   async getSnapshot(snapshotId: string): Promise<Snapshot | null> {
-      this.validateSnapshotId(snapshotId)
+    this.validateSnapshotId(snapshotId)
 
-      // Step 1: Read manifest once, check writeComplete
-      const manifestPath = this.buildObjectPath(snapshotId, 'manifest.json')
-      const manifest = await this.readObject<SnapshotManifest>(
-        manifestPath,
-        SnapshotManifestSchema,
-        'getSnapshot'
-      )
+    // Step 1: Read manifest once, check writeComplete
+    const manifestPath = this.buildObjectPath(snapshotId, 'manifest.json')
+    const manifest = await this.readObject<SnapshotManifest>(
+      manifestPath,
+      SnapshotManifestSchema,
+      'getSnapshot'
+    )
 
-      if (manifest === null) {
-        return null
-      }
-
-      if (manifest.writeComplete !== true) {
-        logger.info('Snapshot manifest writeComplete is not true, skipping', {
-          operation: 'getSnapshot',
-          snapshot_id: snapshotId,
-        })
-        return null
-      }
-
-      // Step 2: Read metadata
-      const metadataPath = this.buildObjectPath(snapshotId, 'metadata.json')
-      const metadataFile = await this.readObject<SnapshotMetadataFile>(
-        metadataPath,
-        SnapshotMetadataFileSchema,
-        'getSnapshot'
-      )
-
-      if (metadataFile === null) {
-        return null
-      }
-
-      // Step 3: Read all district files where status === "success"
-      const districts: DistrictStatistics[] = []
-      for (const entry of manifest.districts) {
-        if (entry.status !== 'success') {
-          continue
-        }
-
-        const districtPath = this.buildObjectPath(
-          snapshotId,
-          `district_${entry.districtId}.json`
-        )
-        const perDistrictData = await this.readObject<PerDistrictData>(
-          districtPath,
-          PerDistrictDataSchema,
-          'getSnapshot'
-        )
-
-        if (perDistrictData !== null) {
-          districts.push(
-            adaptDistrictStatisticsFileToBackend(perDistrictData.data)
-          )
-        }
-      }
-
-      // Step 4: Re-read manifest to confirm writeComplete still true
-      const reReadManifest = await this.readObject<SnapshotManifest>(
-        manifestPath,
-        SnapshotManifestSchema,
-        'getSnapshot'
-      )
-
-      if (reReadManifest === null || reReadManifest.writeComplete !== true) {
-        logger.info(
-          'Snapshot writeComplete changed during read, discarding snapshot',
-          {
-            operation: 'getSnapshot',
-            snapshot_id: snapshotId,
-          }
-        )
-        return null
-      }
-
-      // Step 5: Assemble Snapshot object
-      const snapshot: Snapshot = {
-        snapshot_id: snapshotId,
-        created_at: metadataFile.createdAt,
-        schema_version: metadataFile.schemaVersion,
-        calculation_version: metadataFile.calculationVersion,
-        status: metadataFile.status,
-        errors: metadataFile.errors,
-        payload: {
-          districts,
-          metadata: {
-            source: metadataFile.source,
-            fetchedAt: metadataFile.createdAt,
-            dataAsOfDate: metadataFile.dataAsOfDate,
-            districtCount: districts.length,
-            processingDurationMs: metadataFile.processingDuration,
-            configuredDistricts: metadataFile.configuredDistricts,
-            successfulDistricts: metadataFile.successfulDistricts,
-            failedDistricts: metadataFile.failedDistricts,
-            isClosingPeriodData: metadataFile.isClosingPeriodData,
-            collectionDate: metadataFile.collectionDate,
-            logicalDate: metadataFile.logicalDate,
-          },
-        },
-      }
-
-      return snapshot
+    if (manifest === null) {
+      return null
     }
 
+    if (manifest.writeComplete !== true) {
+      logger.info('Snapshot manifest writeComplete is not true, skipping', {
+        operation: 'getSnapshot',
+        snapshot_id: snapshotId,
+      })
+      return null
+    }
+
+    // Step 2: Read metadata
+    const metadataPath = this.buildObjectPath(snapshotId, 'metadata.json')
+    const metadataFile = await this.readObject<SnapshotMetadataFile>(
+      metadataPath,
+      SnapshotMetadataFileSchema,
+      'getSnapshot'
+    )
+
+    if (metadataFile === null) {
+      return null
+    }
+
+    // Step 3: Read all district files where status === "success"
+    const districts: DistrictStatistics[] = []
+    for (const entry of manifest.districts) {
+      if (entry.status !== 'success') {
+        continue
+      }
+
+      const districtPath = this.buildObjectPath(
+        snapshotId,
+        `district_${entry.districtId}.json`
+      )
+      const perDistrictData = await this.readObject<PerDistrictData>(
+        districtPath,
+        PerDistrictDataSchema,
+        'getSnapshot'
+      )
+
+      if (perDistrictData !== null) {
+        districts.push(
+          adaptDistrictStatisticsFileToBackend(perDistrictData.data)
+        )
+      }
+    }
+
+    // Step 4: Re-read manifest to confirm writeComplete still true
+    const reReadManifest = await this.readObject<SnapshotManifest>(
+      manifestPath,
+      SnapshotManifestSchema,
+      'getSnapshot'
+    )
+
+    if (reReadManifest === null || reReadManifest.writeComplete !== true) {
+      logger.info(
+        'Snapshot writeComplete changed during read, discarding snapshot',
+        {
+          operation: 'getSnapshot',
+          snapshot_id: snapshotId,
+        }
+      )
+      return null
+    }
+
+    // Step 5: Assemble Snapshot object
+    const snapshot: Snapshot = {
+      snapshot_id: snapshotId,
+      created_at: metadataFile.createdAt,
+      schema_version: metadataFile.schemaVersion,
+      calculation_version: metadataFile.calculationVersion,
+      status: metadataFile.status,
+      errors: metadataFile.errors,
+      payload: {
+        districts,
+        metadata: {
+          source: metadataFile.source,
+          fetchedAt: metadataFile.createdAt,
+          dataAsOfDate: metadataFile.dataAsOfDate,
+          districtCount: districts.length,
+          processingDurationMs: metadataFile.processingDuration,
+          configuredDistricts: metadataFile.configuredDistricts,
+          successfulDistricts: metadataFile.successfulDistricts,
+          failedDistricts: metadataFile.failedDistricts,
+          isClosingPeriodData: metadataFile.isClosingPeriodData,
+          collectionDate: metadataFile.collectionDate,
+          logicalDate: metadataFile.logicalDate,
+        },
+      },
+    }
+
+    return snapshot
+  }
 
   async listSnapshots(
     limit?: number,
@@ -805,7 +809,10 @@ export class GCSSnapshotStorage implements ISnapshotStorage {
   ): Promise<DistrictStatistics | null> {
     this.validateSnapshotId(snapshotId)
     this.validateDistrictId(districtId)
-    const objectPath = this.buildObjectPath(snapshotId, `district_${districtId}.json`)
+    const objectPath = this.buildObjectPath(
+      snapshotId,
+      `district_${districtId}.json`
+    )
     const perDistrictData = await this.readObject<PerDistrictData>(
       objectPath,
       PerDistrictDataSchema,
@@ -820,13 +827,13 @@ export class GCSSnapshotStorage implements ISnapshotStorage {
   }
 
   async listDistrictsInSnapshot(snapshotId: string): Promise<string[]> {
-      this.validateSnapshotId(snapshotId)
-      const districtIds: string[] = []
-      for await (const districtId of this.iterateDistrictKeys(snapshotId)) {
-        districtIds.push(districtId)
-      }
-      return districtIds
+    this.validateSnapshotId(snapshotId)
+    const districtIds: string[] = []
+    for await (const districtId of this.iterateDistrictKeys(snapshotId)) {
+      districtIds.push(districtId)
     }
+    return districtIds
+  }
 
   async getSnapshotManifest(
     snapshotId: string
@@ -889,32 +896,32 @@ export class GCSSnapshotStorage implements ISnapshotStorage {
   }
 
   async isSnapshotWriteComplete(snapshotId: string): Promise<boolean> {
-      this.validateSnapshotId(snapshotId)
-      const objectPath = this.buildObjectPath(snapshotId, 'manifest.json')
-      const manifest = await this.readObject<SnapshotManifest>(
-        objectPath,
-        SnapshotManifestSchema,
-        'isSnapshotWriteComplete'
-      )
+    this.validateSnapshotId(snapshotId)
+    const objectPath = this.buildObjectPath(snapshotId, 'manifest.json')
+    const manifest = await this.readObject<SnapshotManifest>(
+      objectPath,
+      SnapshotManifestSchema,
+      'isSnapshotWriteComplete'
+    )
 
-      if (manifest === null) {
-        return false
-      }
-
-      return manifest.writeComplete === true
+    if (manifest === null) {
+      return false
     }
+
+    return manifest.writeComplete === true
+  }
 
   async isReady(): Promise<boolean> {
-      try {
-        await this.bucket.getFiles({
-          prefix: `${this.prefix}/`,
-          delimiter: '/',
-          maxResults: 1,
-          autoPaginate: false,
-        })
-        return true
-      } catch {
-        return false
-      }
+    try {
+      await this.bucket.getFiles({
+        prefix: `${this.prefix}/`,
+        delimiter: '/',
+        maxResults: 1,
+        autoPaginate: false,
+      })
+      return true
+    } catch {
+      return false
     }
+  }
 }

@@ -36,12 +36,12 @@ The change removes the data path where `DistrictDetailPage` fetched single-year 
 
 ### What Changes
 
-| Component | Change |
-|-----------|--------|
-| `DistrictDetailPage.tsx` | Stop passing `aggregatedPaymentsTrend` to `usePaymentsTrend` |
-| `usePaymentsTrend.ts` | Remove `aggregatedPaymentsTrend` parameter; always use `useDistrictAnalytics` data |
-| `MembershipPaymentsChart.tsx` | No changes needed |
-| Backend | No changes needed |
+| Component                     | Change                                                                             |
+| ----------------------------- | ---------------------------------------------------------------------------------- |
+| `DistrictDetailPage.tsx`      | Stop passing `aggregatedPaymentsTrend` to `usePaymentsTrend`                       |
+| `usePaymentsTrend.ts`         | Remove `aggregatedPaymentsTrend` parameter; always use `useDistrictAnalytics` data |
+| `MembershipPaymentsChart.tsx` | No changes needed                                                                  |
+| Backend                       | No changes needed                                                                  |
 
 ### What Stays the Same
 
@@ -77,6 +77,7 @@ export function usePaymentsTrend(
 ```
 
 Internal data flow change:
+
 ```typescript
 // Before: aggregatedPaymentsTrend overrides internal data
 const rawTrend = aggregatedPaymentsTrend ?? analyticsData.paymentsTrend
@@ -141,10 +142,9 @@ For a district viewed in program year 2024-2025:
 6. `buildMultiYearData` structures current year + 2 previous years
 7. Chart renders 3 lines with distinct colors
 
-
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property Assessment (per Testing Steering Document §7.3)
 

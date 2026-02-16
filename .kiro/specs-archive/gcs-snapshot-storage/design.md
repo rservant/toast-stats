@@ -56,7 +56,7 @@ The `StorageProviderFactory` creates `GCSSnapshotStorage` when `STORAGE_PROVIDER
 interface GCSSnapshotStorageConfig {
   projectId: string
   bucketName: string
-  prefix?: string  // default: "snapshots"
+  prefix?: string // default: "snapshots"
   storage?: Storage // optional injected Storage instance for testing
 }
 ```
@@ -153,30 +153,29 @@ writeComplete: z.boolean().optional()
 
 This is an additive, backward-compatible change. Manifests without the field are treated as incomplete (no legacy exception per Requirement 9.3).
 
-
 ## Data Models
 
 ### GCS Object Path Convention
 
 All paths follow the pattern established by the scraper-cli `UploadService`:
 
-| File           | GCS Object Key                                              |
-| -------------- | ----------------------------------------------------------- |
-| Metadata       | `{prefix}/{snapshotId}/metadata.json`                       |
-| Manifest       | `{prefix}/{snapshotId}/manifest.json`                       |
-| District data  | `{prefix}/{snapshotId}/district_{districtId}.json`          |
-| Rankings       | `{prefix}/{snapshotId}/all-districts-rankings.json`         |
+| File          | GCS Object Key                                      |
+| ------------- | --------------------------------------------------- |
+| Metadata      | `{prefix}/{snapshotId}/metadata.json`               |
+| Manifest      | `{prefix}/{snapshotId}/manifest.json`               |
+| District data | `{prefix}/{snapshotId}/district_{districtId}.json`  |
+| Rankings      | `{prefix}/{snapshotId}/all-districts-rankings.json` |
 
 Where `prefix` defaults to `"snapshots"` and `snapshotId` is a `YYYY-MM-DD` date string.
 
 ### Validation Schemas (from shared-contracts)
 
-| File                           | Zod Schema                        | Validated Type              |
-| ------------------------------ | --------------------------------- | --------------------------- |
-| `metadata.json`                | `SnapshotMetadataFileSchema`      | `SnapshotMetadataFile`      |
-| `manifest.json`                | `SnapshotManifestSchema`          | `SnapshotManifest`          |
-| `district_{id}.json`           | `PerDistrictDataSchema`           | `PerDistrictData`           |
-| `all-districts-rankings.json`  | `AllDistrictsRankingsDataSchema`  | `AllDistrictsRankingsData`  |
+| File                          | Zod Schema                       | Validated Type             |
+| ----------------------------- | -------------------------------- | -------------------------- |
+| `metadata.json`               | `SnapshotMetadataFileSchema`     | `SnapshotMetadataFile`     |
+| `manifest.json`               | `SnapshotManifestSchema`         | `SnapshotManifest`         |
+| `district_{id}.json`          | `PerDistrictDataSchema`          | `PerDistrictData`          |
+| `all-districts-rankings.json` | `AllDistrictsRankingsDataSchema` | `AllDistrictsRankingsData` |
 
 All data read from GCS is typed as `unknown`, parsed with `JSON.parse`, then validated through the appropriate Zod schema before being returned to callers. Validation failures produce `StorageOperationError` with `retryable: false`.
 
@@ -245,7 +244,9 @@ private classifyError(error: unknown): { retryable: boolean; is404: boolean } {
 Helper type guards for extracting structured error fields:
 
 ```typescript
-function hasStatusCode(error: unknown): error is { code: number } | { statusCode: number } {
+function hasStatusCode(
+  error: unknown
+): error is { code: number } | { statusCode: number } {
   if (typeof error !== 'object' || error === null) return false
   const e = error as Record<string, unknown>
   return typeof e['code'] === 'number' || typeof e['statusCode'] === 'number'
@@ -253,7 +254,9 @@ function hasStatusCode(error: unknown): error is { code: number } | { statusCode
 
 function getStatusCode(error: unknown): number {
   const e = error as Record<string, unknown>
-  return (typeof e['statusCode'] === 'number' ? e['statusCode'] : e['code']) as number
+  return (
+    typeof e['statusCode'] === 'number' ? e['statusCode'] : e['code']
+  ) as number
 }
 
 function hasErrorCode(error: unknown): error is { code: string } {
@@ -273,8 +276,8 @@ The circuit breaker uses the `expectedErrors` predicate where `true` means "coun
 ```typescript
 const circuitBreaker = new CircuitBreaker('gcs-snapshot', {
   failureThreshold: 5,
-  recoveryTimeout: 60000,   // 1 minute
-  monitoringPeriod: 180000,  // 3 minutes
+  recoveryTimeout: 60000, // 1 minute
+  monitoringPeriod: 180000, // 3 minutes
   expectedErrors: (error: Error) => {
     const classification = classifyError(error)
     // 404s are expected (missing data) — do NOT count toward failure threshold
@@ -289,6 +292,7 @@ const circuitBreaker = new CircuitBreaker('gcs-snapshot', {
 ```
 
 Polarity summary:
+
 - `expectedErrors(err) === true` → count toward failure threshold (transient infra errors)
 - `expectedErrors(err) === false` → ignore (404s, permanent errors)
 
@@ -297,6 +301,7 @@ Only transient infrastructure errors (network, timeout, 5xx) count toward the th
 ### Key Algorithm: getLatestSuccessful
 
 The design must reconcile two competing requirements:
+
 1. Requirement 1.1: process prefixes incrementally in reverse lexical order, stop at first match
 2. Requirement 10.1: avoid loading all results into memory
 
@@ -479,59 +484,59 @@ function mapMetadataFileToSnapshotMetadata(
     calculation_version: file.calculationVersion,
     size_bytes: 0, // Not tracked in GCS metadata files
     error_count: file.errors.length, // Safe: Zod schema guarantees errors is string[]
-    district_count: manifest?.totalDistricts
-      ?? file.successfulDistricts.length + file.failedDistricts.length,
+    district_count:
+      manifest?.totalDistricts ??
+      file.successfulDistricts.length + file.failedDistricts.length,
   }
 }
 ```
 
-
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 Property 1: getLatestSuccessful returns the correct snapshot
-*For any* set of snapshot prefixes in a GCS bucket with varying metadata statuses and writeComplete flags, `getLatestSuccessful()` shall return the snapshot with the lexically greatest (most recent) ID whose metadata status is `"success"` and whose manifest `writeComplete` is `true`, or null if no such snapshot exists.
+_For any_ set of snapshot prefixes in a GCS bucket with varying metadata statuses and writeComplete flags, `getLatestSuccessful()` shall return the snapshot with the lexically greatest (most recent) ID whose metadata status is `"success"` and whose manifest `writeComplete` is `true`, or null if no such snapshot exists.
 **Validates: Requirements 1.1, 9.5**
 
 Property 2: getSnapshot assembles correctly with writeComplete guard
-*For any* valid snapshot ID where the manifest has `writeComplete === true` and all district files are present, `getSnapshot()` shall return a `Snapshot` object containing all districts listed in the manifest. If `writeComplete` is false on either the initial or post-read manifest check, `getSnapshot()` shall return null.
+_For any_ valid snapshot ID where the manifest has `writeComplete === true` and all district files are present, `getSnapshot()` shall return a `Snapshot` object containing all districts listed in the manifest. If `writeComplete` is false on either the initial or post-read manifest check, `getSnapshot()` shall return null.
 **Validates: Requirements 1.2, 9.4**
 
 Property 3: Read operations construct correct paths and validate with Zod
-*For any* valid snapshot ID and file type (metadata, manifest, district, rankings), the GCS object path shall be `{prefix}/{snapshotId}/{filename}` and the returned data shall pass the corresponding shared-contracts Zod schema validation. Invalid data shall produce a `StorageOperationError` with `retryable: false`.
+_For any_ valid snapshot ID and file type (metadata, manifest, district, rankings), the GCS object path shall be `{prefix}/{snapshotId}/{filename}` and the returned data shall pass the corresponding shared-contracts Zod schema validation. Invalid data shall produce a `StorageOperationError` with `retryable: false`.
 **Validates: Requirements 1.3, 1.4, 1.5, 4.4, 6.4**
 
 Property 4: listDistrictsInSnapshot extracts correct district IDs
-*For any* set of GCS objects matching the prefix `{prefix}/{snapshotId}/district_`, the extracted district IDs shall exactly match the set of district file objects present under that snapshot prefix.
+_For any_ set of GCS objects matching the prefix `{prefix}/{snapshotId}/district_`, the extracted district IDs shall exactly match the set of district file objects present under that snapshot prefix.
 **Validates: Requirements 1.6**
 
 Property 5: listSnapshots filters and sorts correctly
-*For any* set of snapshot prefixes with metadata and any combination of `SnapshotFilters`, `listSnapshots()` shall return only snapshots matching all filter criteria, sorted by snapshot ID in reverse lexical order (newest first), limited to the requested count.
+_For any_ set of snapshot prefixes with metadata and any combination of `SnapshotFilters`, `listSnapshots()` shall return only snapshots matching all filter criteria, sorted by snapshot ID in reverse lexical order (newest first), limited to the requested count.
 **Validates: Requirements 1.7**
 
 Property 6: Rankings read enforces writeComplete guard
-*For any* snapshot ID, `readAllDistrictsRankings()` shall return null when `isSnapshotWriteComplete()` returns false, regardless of whether the rankings file exists.
+_For any_ snapshot ID, `readAllDistrictsRankings()` shall return null when `isSnapshotWriteComplete()` returns false, regardless of whether the rankings file exists.
 **Validates: Requirements 2.1, 2.4**
 
 Property 7: All write and delete methods throw read-only error
-*For any* arguments passed to `writeSnapshot()`, `writeDistrictData()`, `writeAllDistrictsRankings()`, or `deleteSnapshot()`, the method shall throw a `StorageOperationError` with `provider: "gcs"` and `retryable: false`.
+_For any_ arguments passed to `writeSnapshot()`, `writeDistrictData()`, `writeAllDistrictsRankings()`, or `deleteSnapshot()`, the method shall throw a `StorageOperationError` with `provider: "gcs"` and `retryable: false`.
 **Validates: Requirements 3.1, 3.2, 3.3, 3.4**
 
 Property 8: 404 returns null without circuit breaker impact
-*For any* read operation where the GCS object does not exist (HTTP 404), the method shall return null without throwing, and the circuit breaker failure count shall not increase.
+_For any_ read operation where the GCS object does not exist (HTTP 404), the method shall return null without throwing, and the circuit breaker failure count shall not increase.
 **Validates: Requirements 4.1, 5.2**
 
 Property 9: Error classification sets retryable flag correctly
-*For any* GCS error with a structured status code, if the code is in {408, 429, 500, 502, 503, 504} or the string code is in {ECONNRESET, ENOTFOUND, ECONNREFUSED, ETIMEDOUT}, the resulting `StorageOperationError` shall have `retryable: true`. If the code is in {400, 401, 403} or matches permanent message patterns, `retryable` shall be `false`. Status code 404 shall be classified as `is404: true`. All errors shall have `provider: "gcs"`.
+_For any_ GCS error with a structured status code, if the code is in {408, 429, 500, 502, 503, 504} or the string code is in {ECONNRESET, ENOTFOUND, ECONNREFUSED, ETIMEDOUT}, the resulting `StorageOperationError` shall have `retryable: true`. If the code is in {400, 401, 403} or matches permanent message patterns, `retryable` shall be `false`. Status code 404 shall be classified as `is404: true`. All errors shall have `provider: "gcs"`.
 **Validates: Requirements 4.2, 4.3, 4.5**
 
 Property 10: Input validation rejects invalid IDs before GCS calls
-*For any* snapshot ID that fails calendar date validation, contains path traversal sequences, unicode separators, or percent-encoded characters, or *for any* district ID that is empty, contains whitespace, or contains path traversal characters, the operation shall throw `StorageOperationError` with `retryable: false` without making any GCS API call.
+_For any_ snapshot ID that fails calendar date validation, contains path traversal sequences, unicode separators, or percent-encoded characters, or _for any_ district ID that is empty, contains whitespace, or contains path traversal characters, the operation shall throw `StorageOperationError` with `retryable: false` without making any GCS API call.
 **Validates: Requirements 6.1, 6.2, 6.3, 4.6**
 
 Property 11: isSnapshotWriteComplete checks manifest writeComplete flag
-*For any* snapshot ID, `isSnapshotWriteComplete()` shall return `true` only when the manifest exists and its `writeComplete` field is exactly `true`. Missing manifest or missing/false `writeComplete` field shall return `false`.
+_For any_ snapshot ID, `isSnapshotWriteComplete()` shall return `true` only when the manifest exists and its `writeComplete` field is exactly `true`. Missing manifest or missing/false `writeComplete` field shall return `false`.
 **Validates: Requirements 9.1, 9.2, 9.3**
 
 ## Error Handling
@@ -547,18 +552,18 @@ All errors thrown by GCSSnapshotStorage are `StorageOperationError` instances wi
 
 ### Error Scenarios
 
-| Scenario                       | Behavior                          | retryable   |
-| ------------------------------ | --------------------------------- | ----------- |
-| Object not found (404)         | Return `null`                     | N/A (no throw) |
-| Network timeout / ECONNRESET   | Throw `StorageOperationError`     | `true`      |
-| HTTP 429 / 500 / 502 / 503     | Throw `StorageOperationError`     | `true`      |
-| Permission denied / 401 / 403  | Throw `StorageOperationError`     | `false`     |
-| Zod validation failure         | Throw `StorageOperationError`     | `false`     |
-| Invalid snapshot ID            | Throw `StorageOperationError`     | `false`     |
-| Invalid district ID            | Throw `StorageOperationError`     | `false`     |
-| Circuit breaker open           | Throw `StorageOperationError`     | `true`      |
-| JSON parse failure             | Throw `StorageOperationError`     | `false`     |
-| Write/delete method called     | Throw `StorageOperationError`     | `false`     |
+| Scenario                      | Behavior                      | retryable      |
+| ----------------------------- | ----------------------------- | -------------- |
+| Object not found (404)        | Return `null`                 | N/A (no throw) |
+| Network timeout / ECONNRESET  | Throw `StorageOperationError` | `true`         |
+| HTTP 429 / 500 / 502 / 503    | Throw `StorageOperationError` | `true`         |
+| Permission denied / 401 / 403 | Throw `StorageOperationError` | `false`        |
+| Zod validation failure        | Throw `StorageOperationError` | `false`        |
+| Invalid snapshot ID           | Throw `StorageOperationError` | `false`        |
+| Invalid district ID           | Throw `StorageOperationError` | `false`        |
+| Circuit breaker open          | Throw `StorageOperationError` | `true`         |
+| JSON parse failure            | Throw `StorageOperationError` | `false`        |
+| Write/delete method called    | Throw `StorageOperationError` | `false`        |
 
 ### Circuit Breaker Behavior
 
@@ -588,9 +593,11 @@ Most GCSSnapshotStorage methods are straightforward read-validate-return operati
 Use `fast-check` (already in the project's dependencies). Minimum 100 iterations per test.
 
 **Property 9: Error classification** — The input space of error objects is genuinely complex: numeric status codes, string error codes, message patterns, and combinations thereof. Generating random error objects with known structured fields and verifying the classification output is a natural fit for PBT.
+
 - Tag: `Feature: gcs-snapshot-storage, Property 9: Error classification sets retryable flag correctly`
 
 **Property 10: Input validation** — Snapshot IDs and district IDs have complex validation rules (calendar date validity, path traversal, unicode, percent-encoding). The input space is large and edge-case-rich. PBT with generators for invalid inputs catches cases that hand-picked examples miss.
+
 - Tag: `Feature: gcs-snapshot-storage, Property 10: Input validation rejects invalid IDs before GCS calls`
 
 ### Unit Tests (preferred for remaining properties)

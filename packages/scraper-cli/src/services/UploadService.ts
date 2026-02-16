@@ -407,7 +407,10 @@ export async function runWithConcurrency<T>(
     })()
 
     active.add(wrapped)
-    wrapped.then(() => active.delete(wrapped), () => active.delete(wrapped))
+    wrapped.then(
+      () => active.delete(wrapped),
+      () => active.delete(wrapped)
+    )
 
     // When pool is full, wait for one to complete before starting next
     if (active.size >= limit) {
@@ -540,7 +543,8 @@ export class UploadService implements IUploadService {
     this.fs = fileSystem
     this.hasher = config.hasher ?? new DefaultHasher(fileSystem)
     this.clock = config.clock ?? new DefaultClock()
-    this.progressReporter = config.progressReporter ?? new DefaultProgressReporter()
+    this.progressReporter =
+      config.progressReporter ?? new DefaultProgressReporter()
 
     // Initialize GCS bucket client — use injected or create default from real GCS
     if (config.bucketClient) {
@@ -602,13 +606,18 @@ export class UploadService implements IUploadService {
    */
   async loadManifest(): Promise<UploadManifest> {
     const manifestPath = this.getManifestPath()
-    const emptyManifest: UploadManifest = { schemaVersion: '1.0.0', entries: {} }
+    const emptyManifest: UploadManifest = {
+      schemaVersion: '1.0.0',
+      entries: {},
+    }
 
     try {
       await this.fs.access(manifestPath)
     } catch {
       // File doesn't exist — not an error, just start fresh
-      this.logger.debug('No upload manifest found, starting fresh', { manifestPath })
+      this.logger.debug('No upload manifest found, starting fresh', {
+        manifestPath,
+      })
       return emptyManifest
     }
 
@@ -623,28 +632,40 @@ export class UploadService implements IUploadService {
         !('schemaVersion' in parsed) ||
         !('entries' in parsed)
       ) {
-        this.logger.warn('Upload manifest has invalid structure, treating as empty', { manifestPath })
+        this.logger.warn(
+          'Upload manifest has invalid structure, treating as empty',
+          { manifestPath }
+        )
         return emptyManifest
       }
 
       const manifest = parsed as { schemaVersion: unknown; entries: unknown }
 
       if (manifest.schemaVersion !== '1.0.0') {
-        this.logger.warn('Upload manifest has unsupported schema version, treating as empty', {
-          manifestPath,
-          schemaVersion: String(manifest.schemaVersion),
-        })
+        this.logger.warn(
+          'Upload manifest has unsupported schema version, treating as empty',
+          {
+            manifestPath,
+            schemaVersion: String(manifest.schemaVersion),
+          }
+        )
         return emptyManifest
       }
 
       if (typeof manifest.entries !== 'object' || manifest.entries === null) {
-        this.logger.warn('Upload manifest entries field is invalid, treating as empty', { manifestPath })
+        this.logger.warn(
+          'Upload manifest entries field is invalid, treating as empty',
+          { manifestPath }
+        )
         return emptyManifest
       }
 
       return parsed as UploadManifest
     } catch {
-      this.logger.warn('Upload manifest is corrupted (invalid JSON), treating as empty', { manifestPath })
+      this.logger.warn(
+        'Upload manifest is corrupted (invalid JSON), treating as empty',
+        { manifestPath }
+      )
       return emptyManifest
     }
   }
@@ -698,7 +719,10 @@ export class UploadService implements IUploadService {
     if (manifestEntry === undefined) {
       return false
     }
-    return fileInfo.size === manifestEntry.size && fileInfo.mtimeMs === manifestEntry.mtimeMs
+    return (
+      fileInfo.size === manifestEntry.size &&
+      fileInfo.mtimeMs === manifestEntry.mtimeMs
+    )
   }
 
   /**
@@ -710,7 +734,9 @@ export class UploadService implements IUploadService {
     const snapshotsDir = this.getSnapshotsDir()
 
     try {
-      const entries = await this.fs.readdir(snapshotsDir, { withFileTypes: true })
+      const entries = await this.fs.readdir(snapshotsDir, {
+        withFileTypes: true,
+      })
       const dates: string[] = []
 
       for (const entry of entries) {
@@ -751,7 +777,7 @@ export class UploadService implements IUploadService {
     since?: string,
     until?: string
   ): string[] {
-    return dates.filter((date) => {
+    return dates.filter(date => {
       if (since !== undefined && date < since) return false
       if (until !== undefined && date > until) return false
       return true
@@ -762,54 +788,54 @@ export class UploadService implements IUploadService {
    * Recursively collect all files in a directory
    */
   /**
-     * Recursively collect all files in a directory using an async generator.
-     * Yields FileInfo one at a time instead of buffering into an array.
-     *
-     * @param dir - Current directory to scan
-     * @param baseDir - Root directory for computing relative paths
-     * @param computeChecksums - When true, compute SHA256 via injected Hasher; when false, yield with checksum: undefined
-     *
-     * Requirements: 1.1, 1.2, 1.4, 1.5, 6.1
-     */
-    private async *collectFiles(
-      dir: string,
-      baseDir: string,
-      computeChecksums: boolean
-    ): AsyncGenerator<FileInfo> {
-      try {
-        const entries = await this.fs.readdir(dir, { withFileTypes: true })
+   * Recursively collect all files in a directory using an async generator.
+   * Yields FileInfo one at a time instead of buffering into an array.
+   *
+   * @param dir - Current directory to scan
+   * @param baseDir - Root directory for computing relative paths
+   * @param computeChecksums - When true, compute SHA256 via injected Hasher; when false, yield with checksum: undefined
+   *
+   * Requirements: 1.1, 1.2, 1.4, 1.5, 6.1
+   */
+  private async *collectFiles(
+    dir: string,
+    baseDir: string,
+    computeChecksums: boolean
+  ): AsyncGenerator<FileInfo> {
+    try {
+      const entries = await this.fs.readdir(dir, { withFileTypes: true })
 
-        for (const entry of entries) {
-          const fullPath = path.join(dir, entry.name)
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name)
 
-          if (entry.isDirectory()) {
-            // Use yield* for recursive subdirectories
-            yield* this.collectFiles(fullPath, baseDir, computeChecksums)
-          } else if (entry.isFile()) {
-            // Get file info using injected FileSystem
-            const stat = await this.fs.stat(fullPath)
-            const checksum = computeChecksums
-              ? await this.calculateFileChecksum(fullPath)
-              : undefined
-            const relativePath = path.relative(baseDir, fullPath)
+        if (entry.isDirectory()) {
+          // Use yield* for recursive subdirectories
+          yield* this.collectFiles(fullPath, baseDir, computeChecksums)
+        } else if (entry.isFile()) {
+          // Get file info using injected FileSystem
+          const stat = await this.fs.stat(fullPath)
+          const checksum = computeChecksums
+            ? await this.calculateFileChecksum(fullPath)
+            : undefined
+          const relativePath = path.relative(baseDir, fullPath)
 
-            yield {
-              localPath: fullPath,
-              remotePath: relativePath,
-              size: stat.size,
-              mtimeMs: stat.mtimeMs,
-              checksum,
-            }
+          yield {
+            localPath: fullPath,
+            remotePath: relativePath,
+            size: stat.size,
+            mtimeMs: stat.mtimeMs,
+            checksum,
           }
         }
-      } catch (error) {
-        this.logger.error('Failed to collect files from directory', {
-          dir,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        })
-        throw error
       }
+    } catch (error) {
+      this.logger.error('Failed to collect files from directory', {
+        dir,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+      throw error
     }
+  }
 
   /**
    * Upload a single file to GCS using injected BucketClient
@@ -887,7 +913,7 @@ export class UploadService implements IUploadService {
     const abortSignal = { aborted: false }
 
     // Build task functions — each wraps a single file upload via BucketClient.uploadStream
-    const tasks = files.map((fileInfo) => {
+    const tasks = files.map(fileInfo => {
       const remotePath = this.buildRemotePath(date, fileInfo.remotePath)
       return async (): Promise<{ remotePath: string; fileInfo: FileInfo }> => {
         // Determine content type based on file extension
@@ -935,7 +961,8 @@ export class UploadService implements IUploadService {
         })
       } else {
         const error = result.reason
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error'
 
         // Deterministic code-based auth error detection (Requirement 5.4)
         if (isAuthError(error)) {
@@ -1053,7 +1080,11 @@ export class UploadService implements IUploadService {
 
     // Apply date range filtering if since/until provided
     if (options.since !== undefined || options.until !== undefined) {
-      datesToUpload = this.filterDatesByRange(datesToUpload, options.since, options.until)
+      datesToUpload = this.filterDatesByRange(
+        datesToUpload,
+        options.since,
+        options.until
+      )
       if (datesToUpload.length === 0) {
         this.logger.warn('No snapshot dates found within the specified range', {
           since: options.since,
@@ -1084,7 +1115,8 @@ export class UploadService implements IUploadService {
       try {
         await this.bucketClient.checkAuth()
       } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error'
         const isAuth = isAuthError(error) || isGCSAuthError(error)
         const hint = isAuth
           ? 'Run "gcloud auth application-default login" to re-authenticate, then retry.'
@@ -1142,7 +1174,11 @@ export class UploadService implements IUploadService {
 
         // Collect files from async generator into per-date batch (Requirement 6.2)
         const files: FileInfo[] = []
-        for await (const fileInfo of this.collectFiles(snapshotDir, snapshotDir, computeChecksums)) {
+        for await (const fileInfo of this.collectFiles(
+          snapshotDir,
+          snapshotDir,
+          computeChecksums
+        )) {
           files.push(fileInfo)
         }
 
@@ -1184,10 +1220,15 @@ export class UploadService implements IUploadService {
             }
 
             // Fast-path failed — compute checksum selectively (Requirement 4.3)
-            const checksum = await this.calculateFileChecksum(fileInfo.localPath)
+            const checksum = await this.calculateFileChecksum(
+              fileInfo.localPath
+            )
 
             // Checksum matches manifest => skip without network (Requirement 4.4)
-            if (manifestEntry !== undefined && manifestEntry.checksum === checksum) {
+            if (
+              manifestEntry !== undefined &&
+              manifestEntry.checksum === checksum
+            ) {
               this.logger.debug('Skipping unchanged file (checksum match)', {
                 localPath: fileInfo.localPath,
                 remotePath,
@@ -1230,7 +1271,11 @@ export class UploadService implements IUploadService {
         // Upload batch concurrently (Requirements 5.1, 5.3, 5.4)
         if (filesToUpload.length > 0) {
           const concurrency = options.concurrency ?? 10
-          const batchResult = await this.uploadBatch(filesToUpload, date, concurrency)
+          const batchResult = await this.uploadBatch(
+            filesToUpload,
+            date,
+            concurrency
+          )
 
           filesUploaded.push(...batchResult.uploaded)
           filesFailed.push(...batchResult.failed)
@@ -1250,7 +1295,7 @@ export class UploadService implements IUploadService {
           if (incremental && !dryRun) {
             for (const uploadedPath of batchResult.uploaded) {
               const fileInfo = filesToUpload.find(
-                (f) => this.buildRemotePath(date, f.remotePath) === uploadedPath
+                f => this.buildRemotePath(date, f.remotePath) === uploadedPath
               )
               if (fileInfo) {
                 manifest.entries[uploadedPath] = {

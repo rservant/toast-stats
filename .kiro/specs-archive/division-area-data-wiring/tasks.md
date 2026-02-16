@@ -12,7 +12,6 @@ This implementation plan addresses the data format mismatch between the scraper-
     - Define `ScrapedRecord` as `Record<string, string | number | null>`
     - Add JSDoc documentation
     - _Requirements: 2.4_
-  
   - [x] 1.2 Export ScrapedRecord from shared-contracts index
     - Update `packages/shared-contracts/src/index.ts` to export ScrapedRecord type
     - _Requirements: 2.4_
@@ -24,13 +23,11 @@ This implementation plan addresses the data format mismatch between the scraper-
     - Add required `clubPerformance: ScrapedRecord[]` field
     - Add required `districtPerformance: ScrapedRecord[]` field
     - _Requirements: 2.1, 2.2, 2.3_
-  
   - [x] 2.2 Update Zod schema for DistrictStatisticsFile
     - Update `packages/shared-contracts/src/schemas/district-statistics-file.schema.ts`
     - Add ScrapedRecordSchema for validating record values
     - Add validation for divisionPerformance, clubPerformance, districtPerformance arrays
     - _Requirements: 2.5, 5.1, 5.2, 5.3_
-  
   - [x] 2.3 Write unit tests for Zod schema validation
     - Add tests to `packages/shared-contracts/src/__tests__/district-statistics-file.schema.test.ts`
     - Test valid ScrapedRecord with string, number, null values
@@ -53,7 +50,6 @@ This implementation plan addresses the data format mismatch between the scraper-
     - After parsing CSV rows to records, include them in the output DistrictStatistics
     - Ensure empty arrays are included when input is empty or missing
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6_
-  
   - [x] 4.2 Write unit tests for DataTransformer raw data preservation
     - Add tests to `packages/analytics-core/src/__tests__/DataTransformer.test.ts`
     - Test CSV with Division Club Base, Area Club Base columns preserved

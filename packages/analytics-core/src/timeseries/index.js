@@ -6,4 +6,4 @@
  *
  * @module timeseries
  */
-export { TimeSeriesDataPointBuilder, } from './TimeSeriesDataPointBuilder.js';
+export { TimeSeriesDataPointBuilder } from './TimeSeriesDataPointBuilder.js'

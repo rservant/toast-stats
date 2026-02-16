@@ -1450,151 +1450,151 @@ export class FileSnapshotStore
    * Uses in-memory cache with 60-second TTL to avoid repeated directory scans
    */
   /**
-     * List snapshots with optional filtering and limiting
-     * Uses in-memory cache with 60-second TTL to avoid repeated directory scans.
-     * Concurrent callers share a single in-flight disk scan to prevent pile-up.
-     */
-    async listSnapshots(
-      limit?: number,
-      filters?: SnapshotFilters
-    ): Promise<SnapshotMetadata[]> {
-      const startTime = Date.now()
+   * List snapshots with optional filtering and limiting
+   * Uses in-memory cache with 60-second TTL to avoid repeated directory scans.
+   * Concurrent callers share a single in-flight disk scan to prevent pile-up.
+   */
+  async listSnapshots(
+    limit?: number,
+    filters?: SnapshotFilters
+  ): Promise<SnapshotMetadata[]> {
+    const startTime = Date.now()
 
-      try {
-        // Check if we have valid cached data (unfiltered, unsorted base data)
-        let metadata: SnapshotMetadata[]
-        const cachedData = this.getCachedSnapshotList()
+    try {
+      // Check if we have valid cached data (unfiltered, unsorted base data)
+      let metadata: SnapshotMetadata[]
+      const cachedData = this.getCachedSnapshotList()
 
-        if (cachedData) {
-          // Use cached data - make a copy to avoid mutating cache
-          metadata = [...cachedData]
+      if (cachedData) {
+        // Use cached data - make a copy to avoid mutating cache
+        metadata = [...cachedData]
 
-          logger.debug('Snapshot list cache hit', {
+        logger.debug('Snapshot list cache hit', {
+          operation: 'listSnapshots',
+          cache_age_ms: Date.now() - (this.snapshotListCache?.cachedAt ?? 0),
+          cached_count: metadata.length,
+        })
+      } else {
+        // Cache miss - join an in-flight read or start a new one
+        if (this.activeListSnapshotsRead) {
+          logger.debug('Joining in-flight listSnapshots disk scan', {
             operation: 'listSnapshots',
-            cache_age_ms: Date.now() - (this.snapshotListCache?.cachedAt ?? 0),
-            cached_count: metadata.length,
           })
+          metadata = [...(await this.activeListSnapshotsRead)]
         } else {
-          // Cache miss - join an in-flight read or start a new one
-          if (this.activeListSnapshotsRead) {
-            logger.debug('Joining in-flight listSnapshots disk scan', {
-              operation: 'listSnapshots',
-            })
-            metadata = [...(await this.activeListSnapshotsRead)]
-          } else {
-            logger.debug('Snapshot list cache miss, reading from disk', {
-              operation: 'listSnapshots',
-            })
-
-            const readPromise = this.performListSnapshotsDiskScan(startTime)
-            this.activeListSnapshotsRead = readPromise
-
-            try {
-              metadata = await readPromise
-            } finally {
-              this.activeListSnapshotsRead = null
-            }
-          }
-        }
-
-        // Apply filters (on copy of cached data)
-        if (filters) {
-          metadata = metadata.filter(item => {
-            if (filters.status && item.status !== filters.status) return false
-            if (
-              filters.schema_version &&
-              item.schema_version !== filters.schema_version
-            )
-              return false
-            if (
-              filters.calculation_version &&
-              item.calculation_version !== filters.calculation_version
-            )
-              return false
-            if (filters.created_after && item.created_at < filters.created_after)
-              return false
-            if (
-              filters.created_before &&
-              item.created_at > filters.created_before
-            )
-              return false
-            if (
-              filters.min_district_count &&
-              item.district_count < filters.min_district_count
-            )
-              return false
-            return true
+          logger.debug('Snapshot list cache miss, reading from disk', {
+            operation: 'listSnapshots',
           })
-        }
 
-        // Sort by creation date (newest first)
-        metadata.sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        )
+          const readPromise = this.performListSnapshotsDiskScan(startTime)
+          this.activeListSnapshotsRead = readPromise
 
-        // Apply limit
-        if (limit && limit > 0) {
-          metadata = metadata.slice(0, limit)
-        }
-
-        return metadata
-      } catch (error) {
-        throw new Error(
-          `Failed to list snapshots: ${error instanceof Error ? error.message : 'Unknown error'}`
-        )
-      }
-    }
-
-    /**
-     * Perform the actual disk scan for listSnapshots.
-     * Reads directory entries with withFileTypes to avoid extra stat calls,
-     * then reads metadata in parallel batches to avoid overwhelming the filesystem.
-     */
-    private async performListSnapshotsDiskScan(
-      startTime: number
-    ): Promise<SnapshotMetadata[]> {
-      await fs.mkdir(this.snapshotsDir, { recursive: true })
-
-      // Use withFileTypes to avoid separate stat() calls per entry
-      const entries = await fs.readdir(this.snapshotsDir, {
-        withFileTypes: true,
-      })
-
-      const snapshotDirs = entries
-        .filter(entry => entry.isDirectory())
-        .map(entry => entry.name)
-
-      // Read metadata in parallel batches to avoid overwhelming the filesystem
-      const BATCH_SIZE = 50
-      const allMetadata: SnapshotMetadata[] = []
-
-      for (let i = 0; i < snapshotDirs.length; i += BATCH_SIZE) {
-        const batch = snapshotDirs.slice(i, i + BATCH_SIZE)
-        const batchResults = await Promise.all(
-          batch.map(dir =>
-            this.getPerDistrictSnapshotMetadataForList(dir).catch(() => null)
-          )
-        )
-        for (const result of batchResults) {
-          if (result !== null) {
-            allMetadata.push(result)
+          try {
+            metadata = await readPromise
+          } finally {
+            this.activeListSnapshotsRead = null
           }
         }
       }
 
-      // Cache the unfiltered, unsorted base data
-      this.cacheSnapshotList(allMetadata)
+      // Apply filters (on copy of cached data)
+      if (filters) {
+        metadata = metadata.filter(item => {
+          if (filters.status && item.status !== filters.status) return false
+          if (
+            filters.schema_version &&
+            item.schema_version !== filters.schema_version
+          )
+            return false
+          if (
+            filters.calculation_version &&
+            item.calculation_version !== filters.calculation_version
+          )
+            return false
+          if (filters.created_after && item.created_at < filters.created_after)
+            return false
+          if (
+            filters.created_before &&
+            item.created_at > filters.created_before
+          )
+            return false
+          if (
+            filters.min_district_count &&
+            item.district_count < filters.min_district_count
+          )
+            return false
+          return true
+        })
+      }
 
-      logger.info('Snapshot list loaded from disk and cached', {
-        operation: 'listSnapshots',
-        snapshot_count: allMetadata.length,
-        total_dirs: snapshotDirs.length,
-        duration_ms: Date.now() - startTime,
-      })
+      // Sort by creation date (newest first)
+      metadata.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
 
-      return allMetadata
+      // Apply limit
+      if (limit && limit > 0) {
+        metadata = metadata.slice(0, limit)
+      }
+
+      return metadata
+    } catch (error) {
+      throw new Error(
+        `Failed to list snapshots: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
+  }
+
+  /**
+   * Perform the actual disk scan for listSnapshots.
+   * Reads directory entries with withFileTypes to avoid extra stat calls,
+   * then reads metadata in parallel batches to avoid overwhelming the filesystem.
+   */
+  private async performListSnapshotsDiskScan(
+    startTime: number
+  ): Promise<SnapshotMetadata[]> {
+    await fs.mkdir(this.snapshotsDir, { recursive: true })
+
+    // Use withFileTypes to avoid separate stat() calls per entry
+    const entries = await fs.readdir(this.snapshotsDir, {
+      withFileTypes: true,
+    })
+
+    const snapshotDirs = entries
+      .filter(entry => entry.isDirectory())
+      .map(entry => entry.name)
+
+    // Read metadata in parallel batches to avoid overwhelming the filesystem
+    const BATCH_SIZE = 50
+    const allMetadata: SnapshotMetadata[] = []
+
+    for (let i = 0; i < snapshotDirs.length; i += BATCH_SIZE) {
+      const batch = snapshotDirs.slice(i, i + BATCH_SIZE)
+      const batchResults = await Promise.all(
+        batch.map(dir =>
+          this.getPerDistrictSnapshotMetadataForList(dir).catch(() => null)
+        )
+      )
+      for (const result of batchResults) {
+        if (result !== null) {
+          allMetadata.push(result)
+        }
+      }
+    }
+
+    // Cache the unfiltered, unsorted base data
+    this.cacheSnapshotList(allMetadata)
+
+    logger.info('Snapshot list loaded from disk and cached', {
+      operation: 'listSnapshots',
+      snapshot_count: allMetadata.length,
+      total_dirs: snapshotDirs.length,
+      duration_ms: Date.now() - startTime,
+    })
+
+    return allMetadata
+  }
 
   /**
    * Validate a snapshot ID to ensure it is safe to use in file paths.
@@ -2093,29 +2093,29 @@ export class FileSnapshotStore
    * Called when snapshots are written or deleted to ensure consistency
    */
   private invalidateCaches(): void {
-      this.currentSnapshotCache = null
-      this.snapshotListCache = null
+    this.currentSnapshotCache = null
+    this.snapshotListCache = null
 
-      // Also remove the on-disk snapshot pointer since it may reference a stale
-      // snapshot after a new snapshot has been written via writeSnapshot.
-      // The pointer will be repaired on the next findLatestSuccessful fallback.
-      const pointerPath = this.resolvePathUnderBase(
-        this.snapshotsDir,
-        'latest-successful.json'
-      )
-      fs.unlink(pointerPath).catch(() => {
-        // Ignore errors — the file may not exist yet
-      })
+    // Also remove the on-disk snapshot pointer since it may reference a stale
+    // snapshot after a new snapshot has been written via writeSnapshot.
+    // The pointer will be repaired on the next findLatestSuccessful fallback.
+    const pointerPath = this.resolvePathUnderBase(
+      this.snapshotsDir,
+      'latest-successful.json'
+    )
+    fs.unlink(pointerPath).catch(() => {
+      // Ignore errors — the file may not exist yet
+    })
 
-      logger.debug('Invalidated all in-memory caches and snapshot pointer', {
-        operation: 'invalidateCaches',
-        invalidated: [
-          'currentSnapshotCache',
-          'snapshotListCache',
-          'snapshotPointerFile',
-        ],
-      })
-    }
+    logger.debug('Invalidated all in-memory caches and snapshot pointer', {
+      operation: 'invalidateCaches',
+      invalidated: [
+        'currentSnapshotCache',
+        'snapshotListCache',
+        'snapshotPointerFile',
+      ],
+    })
+  }
 
   /**
    * Invalidate cached data for a specific snapshot
@@ -2610,34 +2610,34 @@ export class FileSnapshotStore
    * Get metadata for a per-district snapshot directory (for listing)
    */
   /**
-     * Get snapshot metadata for listing purposes.
-     * Reads only metadata.json (skips manifest.json and stat calls) for speed.
-     * The size_bytes field uses an estimate from district count since exact
-     * file sizes are not needed for listing.
-     */
-    private async getPerDistrictSnapshotMetadataForList(
-      snapshotId: string
-    ): Promise<SnapshotMetadata> {
-      const metadataPath = path.join(
-        this.snapshotsDir,
-        snapshotId,
-        'metadata.json'
-      )
+   * Get snapshot metadata for listing purposes.
+   * Reads only metadata.json (skips manifest.json and stat calls) for speed.
+   * The size_bytes field uses an estimate from district count since exact
+   * file sizes are not needed for listing.
+   */
+  private async getPerDistrictSnapshotMetadataForList(
+    snapshotId: string
+  ): Promise<SnapshotMetadata> {
+    const metadataPath = path.join(
+      this.snapshotsDir,
+      snapshotId,
+      'metadata.json'
+    )
 
-      const metadataContent = await fs.readFile(metadataPath, 'utf-8')
-      const metadata: PerDistrictSnapshotMetadata = JSON.parse(metadataContent)
+    const metadataContent = await fs.readFile(metadataPath, 'utf-8')
+    const metadata: PerDistrictSnapshotMetadata = JSON.parse(metadataContent)
 
-      return {
-        snapshot_id: metadata.snapshotId,
-        created_at: metadata.createdAt,
-        status: metadata.status,
-        schema_version: metadata.schemaVersion,
-        calculation_version: metadata.calculationVersion,
-        size_bytes: 0, // Exact size not needed for listing
-        error_count: metadata.errors.length,
-        district_count: metadata.successfulDistricts.length,
-      }
+    return {
+      snapshot_id: metadata.snapshotId,
+      created_at: metadata.createdAt,
+      status: metadata.status,
+      schema_version: metadata.schemaVersion,
+      calculation_version: metadata.calculationVersion,
+      size_bytes: 0, // Exact size not needed for listing
+      error_count: metadata.errors.length,
+      district_count: metadata.successfulDistricts.length,
     }
+  }
 
   /**
    * Extract detailed district error information from snapshot errors
@@ -2732,5 +2732,3 @@ export function createFileSnapshotStore(cacheDir?: string): FileSnapshotStore {
     enableCompression: false,
   })
 }
-
-

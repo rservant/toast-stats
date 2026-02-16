@@ -93,7 +93,9 @@ export class FakeFileSystem implements FileSystem {
     const dir = this.tryGetDirectory(parts)
 
     if (!dir) {
-      const err = new Error(`ENOENT: no such file or directory, scandir '${dirPath}'`) as NodeJS.ErrnoException
+      const err = new Error(
+        `ENOENT: no such file or directory, scandir '${dirPath}'`
+      ) as NodeJS.ErrnoException
       err.code = 'ENOENT'
       throw err
     }
@@ -111,7 +113,9 @@ export class FakeFileSystem implements FileSystem {
     const node = this.getNode(parts)
 
     if (!node) {
-      const err = new Error(`ENOENT: no such file or directory, stat '${filePath}'`) as NodeJS.ErrnoException
+      const err = new Error(
+        `ENOENT: no such file or directory, stat '${filePath}'`
+      ) as NodeJS.ErrnoException
       err.code = 'ENOENT'
       throw err
     }
@@ -128,7 +132,9 @@ export class FakeFileSystem implements FileSystem {
     const node = this.getNode(parts)
 
     if (!node || node.type !== 'file') {
-      const err = new Error(`ENOENT: no such file or directory, open '${filePath}'`) as NodeJS.ErrnoException
+      const err = new Error(
+        `ENOENT: no such file or directory, open '${filePath}'`
+      ) as NodeJS.ErrnoException
       err.code = 'ENOENT'
       throw err
     }
@@ -170,7 +176,9 @@ export class FakeFileSystem implements FileSystem {
     const oldDir = this.tryGetDirectory(oldParts)
 
     if (!oldDir || !oldDir.children.has(oldName)) {
-      const err = new Error(`ENOENT: no such file or directory, rename '${oldPath}'`) as NodeJS.ErrnoException
+      const err = new Error(
+        `ENOENT: no such file or directory, rename '${oldPath}'`
+      ) as NodeJS.ErrnoException
       err.code = 'ENOENT'
       throw err
     }
@@ -191,7 +199,9 @@ export class FakeFileSystem implements FileSystem {
     const node = this.getNode(parts)
 
     if (!node) {
-      const err = new Error(`ENOENT: no such file or directory, access '${filePath}'`) as NodeJS.ErrnoException
+      const err = new Error(
+        `ENOENT: no such file or directory, access '${filePath}'`
+      ) as NodeJS.ErrnoException
       err.code = 'ENOENT'
       throw err
     }

@@ -927,5 +927,4 @@ describe('DivisionAreaRecognitionPanel', () => {
       ).toBeInTheDocument()
     })
   })
-
 })

@@ -1137,7 +1137,10 @@ export function createCLI(): Command {
     )
     .action(async (options: UploadOptions) => {
       // Validate mutual exclusivity: --date with --since/--until
-      if (options.date && (options.since !== undefined || options.until !== undefined)) {
+      if (
+        options.date &&
+        (options.since !== undefined || options.until !== undefined)
+      ) {
         console.error(
           'Error: --date cannot be used together with --since or --until. Use either --date for a single date or --since/--until for a range.'
         )
@@ -1145,7 +1148,11 @@ export function createCLI(): Command {
       }
 
       // Validate --since <= --until
-      if (options.since !== undefined && options.until !== undefined && options.since > options.until) {
+      if (
+        options.since !== undefined &&
+        options.until !== undefined &&
+        options.since > options.until
+      ) {
         console.error(
           `Error: --since "${options.since}" is after --until "${options.until}". The start date must be on or before the end date.`
         )

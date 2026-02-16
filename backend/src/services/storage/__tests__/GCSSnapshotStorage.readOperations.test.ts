@@ -24,12 +24,8 @@ vi.mock('../../../utils/logger.js', () => ({
 
 // Mock CircuitBreaker to pass operations through directly
 vi.mock('../../../utils/CircuitBreaker.js', () => {
-  const MockCircuitBreaker = function (
-    this: Record<string, unknown>
-  ) {
-    this.execute = vi.fn(
-      async <T>(operation: () => Promise<T>) => operation()
-    )
+  const MockCircuitBreaker = function (this: Record<string, unknown>) {
+    this.execute = vi.fn(async <T>(operation: () => Promise<T>) => operation())
     this.getStats = vi.fn(() => ({
       state: 'CLOSED',
       failureCount: 0,
@@ -301,9 +297,9 @@ describe('GCSSnapshotStorage — Snapshot Read Operations', () => {
     it('should throw StorageOperationError for invalid snapshot ID', async () => {
       const storage = createStorage(mockBucket)
 
-      await expect(
-        storage.getSnapshotMetadata('not-a-date')
-      ).rejects.toThrow(StorageOperationError)
+      await expect(storage.getSnapshotMetadata('not-a-date')).rejects.toThrow(
+        StorageOperationError
+      )
 
       expect(mockBucket.file).not.toHaveBeenCalled()
     })
@@ -393,14 +389,13 @@ describe('GCSSnapshotStorage — Snapshot Read Operations', () => {
     it('should throw StorageOperationError for invalid district ID', async () => {
       const storage = createStorage(mockBucket)
 
-      await expect(
-        storage.readDistrictData('2024-01-15', '')
-      ).rejects.toThrow(StorageOperationError)
+      await expect(storage.readDistrictData('2024-01-15', '')).rejects.toThrow(
+        StorageOperationError
+      )
 
       expect(mockBucket.file).not.toHaveBeenCalled()
     })
   })
-
 
   // ==========================================================================
   // readAllDistrictsRankings (Req 2.1, 2.3, 2.4)
@@ -553,11 +548,7 @@ describe('GCSSnapshotStorage — Snapshot Read Operations', () => {
     })
 
     it('should return empty array when no district files exist', async () => {
-      mockBucket.getFiles.mockResolvedValue([
-        [],
-        null,
-        {},
-      ])
+      mockBucket.getFiles.mockResolvedValue([[], null, {}])
 
       const storage = createStorage(mockBucket)
       const result = await storage.listDistrictsInSnapshot('2024-01-15')
@@ -568,9 +559,9 @@ describe('GCSSnapshotStorage — Snapshot Read Operations', () => {
     it('should throw StorageOperationError for invalid snapshot ID', async () => {
       const storage = createStorage(mockBucket)
 
-      await expect(
-        storage.listDistrictsInSnapshot('bad-id')
-      ).rejects.toThrow(StorageOperationError)
+      await expect(storage.listDistrictsInSnapshot('bad-id')).rejects.toThrow(
+        StorageOperationError
+      )
 
       expect(mockBucket.getFiles).not.toHaveBeenCalled()
     })

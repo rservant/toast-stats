@@ -73,7 +73,7 @@ Fix `AnalyticsComputer.calculateMembershipChangeWithBase()` to produce correct m
     - Change the badge to display `analytics.memberCountChange ?? analytics.membershipChange` with "members" label
     - Use fallback to `membershipChange` for backward compatibility with old pre-computed files
     - _Requirements: 4.4_
-  - [ ]* 5.3 Write unit tests for badge rendering
+  - [ ]\* 5.3 Write unit tests for badge rendering
     - Test badge renders `memberCountChange` when available
     - Test badge falls back to `membershipChange` when `memberCountChange` is undefined
     - _Requirements: 6.3_

@@ -12,9 +12,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fs from 'fs/promises'
 import path from 'path'
-import {
-  FileSnapshotStore,
-} from '../SnapshotStore.js'
+import { FileSnapshotStore } from '../SnapshotStore.js'
 
 describe('PerDistrictSnapshotStore ISO Date Directory Naming', () => {
   let testCacheDir: string

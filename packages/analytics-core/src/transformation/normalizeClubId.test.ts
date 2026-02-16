@@ -26,7 +26,9 @@ interface DataTransformerTestAccess {
   ): Map<string, Record<string, string | number | null>>
 }
 
-function getTestAccess(transformer: DataTransformer): DataTransformerTestAccess {
+function getTestAccess(
+  transformer: DataTransformer
+): DataTransformerTestAccess {
   return transformer as unknown as DataTransformerTestAccess
 }
 
@@ -138,9 +140,7 @@ describe('normalizeClubId edge cases', () => {
     })
 
     it('should preserve all-zeros club ID as lookup key', () => {
-      const districtPerformance = [
-        { Club: '0000', 'Oct. Ren.': '1' },
-      ]
+      const districtPerformance = [{ Club: '0000', 'Oct. Ren.': '1' }]
 
       const lookup = access.buildDistrictPerformanceLookup(districtPerformance)
 
@@ -149,9 +149,7 @@ describe('normalizeClubId edge cases', () => {
     })
 
     it('should handle club IDs with no leading zeros in lookup', () => {
-      const districtPerformance = [
-        { Club: '9905', 'Oct. Ren.': '5' },
-      ]
+      const districtPerformance = [{ Club: '9905', 'Oct. Ren.': '5' }]
 
       const lookup = access.buildDistrictPerformanceLookup(districtPerformance)
 

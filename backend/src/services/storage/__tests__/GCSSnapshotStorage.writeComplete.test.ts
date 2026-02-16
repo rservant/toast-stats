@@ -22,12 +22,8 @@ vi.mock('../../../utils/logger.js', () => ({
 
 // Mock CircuitBreaker to pass operations through directly
 vi.mock('../../../utils/CircuitBreaker.js', () => {
-  const MockCircuitBreaker = function (
-    this: Record<string, unknown>
-  ) {
-    this.execute = vi.fn(
-      async <T>(operation: () => Promise<T>) => operation()
-    )
+  const MockCircuitBreaker = function (this: Record<string, unknown>) {
+    this.execute = vi.fn(async <T>(operation: () => Promise<T>) => operation())
     this.getStats = vi.fn(() => ({
       state: 'CLOSED',
       failureCount: 0,
@@ -182,9 +178,9 @@ describe('GCSSnapshotStorage — isSnapshotWriteComplete', () => {
   it('should throw StorageOperationError for invalid snapshot ID', async () => {
     const storage = createStorage(mockBucket)
 
-    await expect(
-      storage.isSnapshotWriteComplete('not-a-date')
-    ).rejects.toThrow(StorageOperationError)
+    await expect(storage.isSnapshotWriteComplete('not-a-date')).rejects.toThrow(
+      StorageOperationError
+    )
 
     // Verify no GCS call was made
     expect(mockBucket.file).not.toHaveBeenCalled()

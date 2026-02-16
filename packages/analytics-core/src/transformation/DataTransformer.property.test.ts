@@ -183,7 +183,7 @@ describe('DataTransformer Payment Merge Property Tests', () => {
       const transformer = new DataTransformer()
 
       await fc.assert(
-        fc.asyncProperty(matchedClubPairArb, async (testCase) => {
+        fc.asyncProperty(matchedClubPairArb, async testCase => {
           const result = await transformer.transformRawCSV(
             '2024-01-15',
             'D101',
@@ -268,13 +268,25 @@ describe('DataTransformer Payment Merge Property Tests', () => {
 
             // Build clubPerformance CSV with one club
             const clubPerformance: string[][] = [
-              ['Club Number', 'Club Name', 'Division', 'Area', 'Active Members'],
+              [
+                'Club Number',
+                'Club Name',
+                'Division',
+                'Area',
+                'Active Members',
+              ],
               [cpClubId, clubName, 'A', '1', '20'],
             ]
 
             // Build districtPerformance CSV with payment data using the other ID format
             const districtPerformance: string[][] = [
-              [dpClubIdCol, 'Oct. Ren.', 'Apr. Ren.', 'New Members', 'Total to Date'],
+              [
+                dpClubIdCol,
+                'Oct. Ren.',
+                'Apr. Ren.',
+                'New Members',
+                'Total to Date',
+              ],
               [
                 dpClubId,
                 octRen.toString(),

@@ -5,6 +5,7 @@
 This design modifies the TransformService in the scraper-cli package to handle month-end closing periods correctly. When the Toastmasters dashboard publishes data for a prior month (closing period), the TransformService will read cache metadata to detect this condition and write snapshots to the last day of the data month rather than the requested date.
 
 The key changes are:
+
 1. Read cache metadata from `raw-csv/{date}/metadata.json` to detect closing periods
 2. Calculate the correct snapshot date (last day of data month) for closing period data
 3. Include closing period fields in snapshot metadata
@@ -47,17 +48,20 @@ A utility class to encapsulate closing period detection and date calculation log
 ```typescript
 interface ClosingPeriodInfo {
   isClosingPeriod: boolean
-  dataMonth: string        // "YYYY-MM" format
-  collectionDate: string   // The actual "As of" date (YYYY-MM-DD)
-  snapshotDate: string     // Date to use for snapshot directory
-  logicalDate: string      // Same as snapshotDate for closing periods
+  dataMonth: string // "YYYY-MM" format
+  collectionDate: string // The actual "As of" date (YYYY-MM-DD)
+  snapshotDate: string // Date to use for snapshot directory
+  logicalDate: string // Same as snapshotDate for closing periods
 }
 
 class ClosingPeriodDetector {
   /**
    * Detect closing period from cache metadata
    */
-  detect(requestedDate: string, metadata: CacheMetadata | null): ClosingPeriodInfo
+  detect(
+    requestedDate: string,
+    metadata: CacheMetadata | null
+  ): ClosingPeriodInfo
 
   /**
    * Calculate the last day of a given month
@@ -93,7 +97,9 @@ class TransformService {
   ): Promise<boolean>
 
   // Modified: Use closing period info for snapshot directory
-  async transform(options: TransformOperationOptions): Promise<TransformOperationResult>
+  async transform(
+    options: TransformOperationOptions
+  ): Promise<TransformOperationResult>
 }
 ```
 
@@ -126,7 +132,7 @@ Located at `CACHE_DIR/raw-csv/{date}/metadata.json`:
 interface CacheMetadata {
   date: string
   isClosingPeriod?: boolean
-  dataMonth?: string  // "YYYY-MM" format
+  dataMonth?: string // "YYYY-MM" format
 }
 ```
 
@@ -158,11 +164,11 @@ interface SnapshotMetadataFile {
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Property 1: Last Day of Month Calculation
 
-*For any* valid year and month combination, the `getLastDayOfMonth` function should return the correct last day (handling February in leap years, 30-day months, and 31-day months).
+_For any_ valid year and month combination, the `getLastDayOfMonth` function should return the correct last day (handling February in leap years, 30-day months, and 31-day months).
 
 **Validates: Requirements 2.1**
 
@@ -170,7 +176,7 @@ interface SnapshotMetadataFile {
 
 ### Property 2: Closing Period Snapshot Date Calculation
 
-*For any* closing period data with a valid data month, the calculated snapshot date should be the last day of that data month, including correct handling of cross-year scenarios (December data collected in January).
+_For any_ closing period data with a valid data month, the calculated snapshot date should be the last day of that data month, including correct handling of cross-year scenarios (December data collected in January).
 
 **Validates: Requirements 2.2, 2.3, 5.1, 5.2**
 
@@ -183,6 +189,7 @@ The following requirements are best covered by unit tests with well-chosen examp
 ### Cache Metadata Extraction (Requirements 1.1, 1.2, 1.3, 1.4)
 
 Unit tests with specific examples:
+
 - Valid metadata with `isClosingPeriod: true` and `dataMonth: "2024-12"`
 - Valid metadata with `isClosingPeriod: false`
 - Missing metadata file (edge case)
@@ -193,6 +200,7 @@ Unit tests with specific examples:
 ### Closing Period Metadata Fields (Requirements 3.1, 3.2, 3.3, 3.4)
 
 Unit tests with specific examples:
+
 - Closing period snapshot includes all three fields correctly
 - Non-closing-period snapshot omits or sets fields to false
 
@@ -201,6 +209,7 @@ Unit tests with specific examples:
 ### Newer Data Wins Logic (Requirements 4.1, 4.2, 4.3, 4.4)
 
 Unit tests with specific examples:
+
 - New data is newer → update proceeds
 - New data is equal → update skipped
 - New data is older → update skipped
@@ -211,6 +220,7 @@ Unit tests with specific examples:
 ### Non-Closing-Period Behavior (Requirements 2.4)
 
 Unit tests with specific examples:
+
 - `isClosingPeriod: false` → snapshot at requested date
 - `isClosingPeriod: undefined` → snapshot at requested date
 
@@ -239,10 +249,12 @@ Unit tests with specific examples:
 ### Decision Framework Applied
 
 Per the testing steering document, property-based tests are warranted when:
+
 1. Mathematical invariants exist ✓ (last day of month calculation)
 2. Complex input spaces with non-obvious edge cases ✓ (date calculations with year boundaries)
 
 Property-based tests are NOT warranted for:
+
 - Simple CRUD operations (metadata reading/writing)
 - Integration glue code (wiring components)
 - Cases where 3-5 examples fully cover the behavior (newer data wins logic)
@@ -250,6 +262,7 @@ Property-based tests are NOT warranted for:
 ### Unit Tests
 
 Unit tests should cover:
+
 - Cache metadata parsing with valid, invalid, and missing data (3-4 examples)
 - Closing period detection with specific scenarios (3-4 examples)
 - Snapshot date determination for closing vs non-closing periods (2-3 examples)
@@ -259,10 +272,12 @@ Unit tests should cover:
 ### Property-Based Tests
 
 Property tests (using fast-check) are limited to:
+
 - **Property 1**: Last day of month calculation - mathematical invariant
 - **Property 2**: Closing period snapshot date calculation - complex date arithmetic
 
 **Configuration**:
+
 - Library: fast-check
 - Minimum iterations: 100 per property test
 - Tag format: **Feature: scraper-cli-month-end-compliance, Property {number}: {property_text}**
@@ -270,6 +285,7 @@ Property tests (using fast-check) are limited to:
 ### Integration Tests
 
 Integration tests should verify:
+
 - Full transform flow with closing period cache metadata
 - Snapshot directory creation at correct location
 - Metadata file contents for closing period snapshots
@@ -300,6 +316,7 @@ Integration tests should verify:
 ### Cross-Year Handling
 
 December closing period data collected in January requires special handling:
+
 - Data month: "2024-12" (December 2024)
 - Collection date: "2025-01-05" (January 2025)
 - Snapshot date: "2024-12-31" (last day of December 2024)
@@ -319,6 +336,7 @@ This section extends the month-end compliance feature to the `compute-analytics`
 ### Problem Statement
 
 When the backfill pipeline runs during a closing period:
+
 1. `transform` command detects closing period and writes snapshot to `2026-01-31` (last day of data month)
 2. `compute-analytics` command looks for snapshot at `2026-02-04` (requested date) and fails with "Snapshot not found"
 
@@ -365,7 +383,9 @@ class AnalyticsComputeService {
   ): ClosingPeriodInfo
 
   // Modified: Use closing period info for snapshot lookup
-  async compute(options: ComputeOperationOptions): Promise<ComputeOperationResult>
+  async compute(
+    options: ComputeOperationOptions
+  ): Promise<ComputeOperationResult>
 }
 ```
 
@@ -383,6 +403,7 @@ class AnalyticsComputeService {
 ### Reuse of Existing Components
 
 The implementation reuses:
+
 - **ClosingPeriodDetector**: Already created for TransformService, can be reused directly
 - **Cache metadata format**: Same `CacheMetadata` interface
 - **readCacheMetadata logic**: Can be extracted to a shared utility or duplicated (simple enough)
@@ -401,6 +422,7 @@ Unit tests with specific examples:
 ### Integration Test Coverage
 
 Integration tests should verify:
+
 - Full compute-analytics flow with closing period cache metadata
 - Analytics written to correct directory (alongside snapshot)
 - JSON output reports actual snapshot date used

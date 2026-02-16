@@ -125,9 +125,11 @@ describe('MemoryMonitor', () => {
     })
 
     it('should handle process.memoryUsage() failure gracefully', () => {
-      const memUsageSpy = vi.spyOn(process, 'memoryUsage').mockImplementation(() => {
-        throw new Error('memoryUsage unavailable')
-      })
+      const memUsageSpy = vi
+        .spyOn(process, 'memoryUsage')
+        .mockImplementation(() => {
+          throw new Error('memoryUsage unavailable')
+        })
 
       monitor.logMetrics()
 
@@ -197,9 +199,9 @@ describe('MemoryMonitor', () => {
       monitor.stop() // second call should be a no-op
 
       // "stopped" log should only appear once
-      const stopCalls = vi.mocked(logger.info).mock.calls.filter(
-        (call) => call[0] === 'Memory monitor stopped'
-      )
+      const stopCalls = vi
+        .mocked(logger.info)
+        .mock.calls.filter(call => call[0] === 'Memory monitor stopped')
       expect(stopCalls).toHaveLength(1)
     })
 
@@ -224,9 +226,9 @@ describe('MemoryMonitor', () => {
       vi.advanceTimersByTime(120000)
 
       // No "Memory metrics" calls after stop
-      const metricsCalls = vi.mocked(logger.info).mock.calls.filter(
-        (call) => call[0] === 'Memory metrics'
-      )
+      const metricsCalls = vi
+        .mocked(logger.info)
+        .mock.calls.filter(call => call[0] === 'Memory metrics')
       expect(metricsCalls).toHaveLength(0)
     })
   })

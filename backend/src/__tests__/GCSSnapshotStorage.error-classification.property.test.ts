@@ -73,13 +73,17 @@ function classifyError(
 /** Gen A: Errors with only a numeric statusCode/code, no string code, no message */
 const retryableStatusCodes = [408, 429, 500, 502, 503, 504] as const
 const permanentStatusCodes = [400, 401, 403] as const
-const allClassifiedCodes = [404, ...retryableStatusCodes, ...permanentStatusCodes]
+const allClassifiedCodes = [
+  404,
+  ...retryableStatusCodes,
+  ...permanentStatusCodes,
+]
 
 const statusCodeOnlyErrorArb = fc.oneof(
   // statusCode property
-  fc.constantFrom(...allClassifiedCodes).map((code) => ({ statusCode: code })),
+  fc.constantFrom(...allClassifiedCodes).map(code => ({ statusCode: code })),
   // code property (numeric)
-  fc.constantFrom(...allClassifiedCodes).map((code) => ({ code }))
+  fc.constantFrom(...allClassifiedCodes).map(code => ({ code }))
 )
 
 /** Gen B: Errors with only a string code, no numeric code */
@@ -98,12 +102,12 @@ const nonRetryableStringCodes = [
 ] as const
 
 const stringCodeOnlyErrorArb = fc.oneof(
-  fc.constantFrom(...retryableStringCodes).map((code) => {
+  fc.constantFrom(...retryableStringCodes).map(code => {
     const err = new Error('some error')
     Object.assign(err, { code })
     return err
   }),
-  fc.constantFrom(...nonRetryableStringCodes).map((code) => {
+  fc.constantFrom(...nonRetryableStringCodes).map(code => {
     const err = new Error('some error')
     Object.assign(err, { code })
     return err
@@ -131,16 +135,19 @@ const notFoundMessagePatterns = [
 ] as const
 
 const messageOnlyErrorArb = fc.oneof(
-  fc.constantFrom(...transientMessagePatterns).map((msg) => new Error(msg)),
-  fc.constantFrom(...permanentMessagePatterns).map((msg) => new Error(msg)),
-  fc.constantFrom(...notFoundMessagePatterns).map((msg) => new Error(msg))
+  fc.constantFrom(...transientMessagePatterns).map(msg => new Error(msg)),
+  fc.constantFrom(...permanentMessagePatterns).map(msg => new Error(msg)),
+  fc.constantFrom(...notFoundMessagePatterns).map(msg => new Error(msg))
 )
 
 /** Gen D: Mixed-field errors — statusCode + string code + message */
 const mixedErrorArb = fc
   .record({
     statusCode: fc.constantFrom(...allClassifiedCodes),
-    stringCode: fc.constantFrom(...retryableStringCodes, ...nonRetryableStringCodes),
+    stringCode: fc.constantFrom(
+      ...retryableStringCodes,
+      ...nonRetryableStringCodes
+    ),
     message: fc.constantFrom(
       ...transientMessagePatterns,
       ...permanentMessagePatterns,
@@ -168,11 +175,8 @@ describe('GCSSnapshotStorage — Property 9: Error classification', () => {
     it('should classify 404 as is404: true, retryable: false', () => {
       fc.assert(
         fc.property(
-          fc.constantFrom(
-            { statusCode: 404 },
-            { code: 404 }
-          ),
-          (error) => {
+          fc.constantFrom({ statusCode: 404 }, { code: 404 }),
+          error => {
             const result = classifyError(storage, error)
             expect(result.is404).toBe(true)
             expect(result.retryable).toBe(false)
@@ -218,33 +222,27 @@ describe('GCSSnapshotStorage — Property 9: Error classification', () => {
   describe('Gen B: string-code-only errors', () => {
     it('should classify retryable string codes as retryable: true', () => {
       fc.assert(
-        fc.property(
-          fc.constantFrom(...retryableStringCodes),
-          (code) => {
-            const err = new Error('some error')
-            Object.assign(err, { code })
-            const result = classifyError(storage, err)
-            expect(result.retryable).toBe(true)
-            expect(result.is404).toBe(false)
-          }
-        ),
+        fc.property(fc.constantFrom(...retryableStringCodes), code => {
+          const err = new Error('some error')
+          Object.assign(err, { code })
+          const result = classifyError(storage, err)
+          expect(result.retryable).toBe(true)
+          expect(result.is404).toBe(false)
+        }),
         { numRuns: 100 }
       )
     })
 
     it('should not classify unknown string codes as retryable', () => {
       fc.assert(
-        fc.property(
-          fc.constantFrom(...nonRetryableStringCodes),
-          (code) => {
-            const err = new Error('unrelated message')
-            Object.assign(err, { code })
-            const result = classifyError(storage, err)
-            // These fall through to message matching; with 'unrelated message'
-            // they should be non-retryable
-            expect(result.retryable).toBe(false)
-          }
-        ),
+        fc.property(fc.constantFrom(...nonRetryableStringCodes), code => {
+          const err = new Error('unrelated message')
+          Object.assign(err, { code })
+          const result = classifyError(storage, err)
+          // These fall through to message matching; with 'unrelated message'
+          // they should be non-retryable
+          expect(result.retryable).toBe(false)
+        }),
         { numRuns: 100 }
       )
     })
@@ -253,42 +251,33 @@ describe('GCSSnapshotStorage — Property 9: Error classification', () => {
   describe('Gen C: message-only errors', () => {
     it('should classify transient message patterns as retryable: true', () => {
       fc.assert(
-        fc.property(
-          fc.constantFrom(...transientMessagePatterns),
-          (msg) => {
-            const result = classifyError(storage, new Error(msg))
-            expect(result.retryable).toBe(true)
-            expect(result.is404).toBe(false)
-          }
-        ),
+        fc.property(fc.constantFrom(...transientMessagePatterns), msg => {
+          const result = classifyError(storage, new Error(msg))
+          expect(result.retryable).toBe(true)
+          expect(result.is404).toBe(false)
+        }),
         { numRuns: 100 }
       )
     })
 
     it('should classify permanent message patterns as retryable: false', () => {
       fc.assert(
-        fc.property(
-          fc.constantFrom(...permanentMessagePatterns),
-          (msg) => {
-            const result = classifyError(storage, new Error(msg))
-            expect(result.retryable).toBe(false)
-            expect(result.is404).toBe(false)
-          }
-        ),
+        fc.property(fc.constantFrom(...permanentMessagePatterns), msg => {
+          const result = classifyError(storage, new Error(msg))
+          expect(result.retryable).toBe(false)
+          expect(result.is404).toBe(false)
+        }),
         { numRuns: 100 }
       )
     })
 
     it('should classify not-found message patterns as is404: true', () => {
       fc.assert(
-        fc.property(
-          fc.constantFrom(...notFoundMessagePatterns),
-          (msg) => {
-            const result = classifyError(storage, new Error(msg))
-            expect(result.is404).toBe(true)
-            expect(result.retryable).toBe(false)
-          }
-        ),
+        fc.property(fc.constantFrom(...notFoundMessagePatterns), msg => {
+          const result = classifyError(storage, new Error(msg))
+          expect(result.is404).toBe(true)
+          expect(result.retryable).toBe(false)
+        }),
         { numRuns: 100 }
       )
     })

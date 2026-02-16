@@ -3,6 +3,7 @@
 ## Introduction
 
 This document specifies the requirements for fixing two bugs in the District Overview page:
+
 1. **"Targets: N/A" Bug**: All three metric cards (Paid Clubs, Membership Payments, Distinguished Clubs) display "Targets: N/A" instead of actual recognition level targets
 2. **"+0 members" Bug**: The membership change badge shows "+0 members" when it should show actual membership change
 

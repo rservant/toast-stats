@@ -26,9 +26,7 @@ import crypto from 'crypto'
 import { SnapshotBuilder } from '../services/SnapshotBuilder.js'
 import type { IRawCSVStorage } from '../types/storageInterfaces.js'
 import type { DistrictConfigurationService } from '../services/DistrictConfigurationService.js'
-import type {
-  FileSnapshotStore,
-} from '../services/SnapshotStore.js'
+import type { FileSnapshotStore } from '../services/SnapshotStore.js'
 import { CSVType, type RawCSVCacheMetadata } from '../types/rawCSVCache.js'
 import { TestLogger } from '../services/TestServiceFactory.js'
 

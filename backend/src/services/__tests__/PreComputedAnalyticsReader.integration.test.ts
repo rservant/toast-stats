@@ -623,15 +623,11 @@ describe('PreComputedAnalyticsReader Integration Tests', () => {
       expect(analytics.distinguishedProjection).toHaveProperty(
         'currentDistinguished'
       )
-      expect(analytics.distinguishedProjection).toHaveProperty(
-        'currentSelect'
-      )
+      expect(analytics.distinguishedProjection).toHaveProperty('currentSelect')
       expect(analytics.distinguishedProjection).toHaveProperty(
         'currentPresident'
       )
-      expect(analytics.distinguishedProjection).toHaveProperty(
-        'projectionDate'
-      )
+      expect(analytics.distinguishedProjection).toHaveProperty('projectionDate')
       expect(analytics).toHaveProperty('divisionRankings')
       expect(Array.isArray(analytics.divisionRankings)).toBe(true)
       expect(analytics).toHaveProperty('topPerformingAreas')

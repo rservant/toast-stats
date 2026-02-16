@@ -12,7 +12,10 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import type { PerformanceTargetsData, MetricRankings } from '@toastmasters/analytics-core'
+import type {
+  PerformanceTargetsData,
+  MetricRankings,
+} from '@toastmasters/analytics-core'
 import {
   transformPerformanceTargets,
   createNullPerformanceTargets,
@@ -232,7 +235,11 @@ describe('performanceTargetsTransformation', () => {
 
         const result = transformPerformanceTargets(input)
 
-        for (const metric of [result.paidClubs, result.membershipPayments, result.distinguishedClubs]) {
+        for (const metric of [
+          result.paidClubs,
+          result.membershipPayments,
+          result.distinguishedClubs,
+        ]) {
           expect(metric).toHaveProperty('current')
           expect(metric).toHaveProperty('base')
           expect(metric).toHaveProperty('targets')
@@ -441,7 +448,12 @@ describe('performanceTargetsTransformation', () => {
        * Rule: All valid recognition levels should be passed through correctly
        */
       it('correctly maps all recognition level values', () => {
-        const levels = ['distinguished', 'select', 'presidents', 'smedley'] as const
+        const levels = [
+          'distinguished',
+          'select',
+          'presidents',
+          'smedley',
+        ] as const
 
         for (const level of levels) {
           const input = createTestPerformanceTargetsData({
@@ -514,13 +526,17 @@ describe('performanceTargetsTransformation', () => {
         // Verify membershipPayments mapping (Requirements 7.2, 7.5, 7.8)
         expect(result.membershipPayments.current).toBe(2600)
         expect(result.membershipPayments.base).toBe(2500)
-        expect(result.membershipPayments.targets).toEqual(membershipPaymentsTargets)
+        expect(result.membershipPayments.targets).toEqual(
+          membershipPaymentsTargets
+        )
         expect(result.membershipPayments.achievedLevel).toBe('select')
 
         // Verify distinguishedClubs mapping (Requirements 7.3, 7.6, 7.9)
         expect(result.distinguishedClubs.current).toBe(50)
         expect(result.distinguishedClubs.base).toBe(95) // Uses paidClubBase per Requirement 7.3
-        expect(result.distinguishedClubs.targets).toEqual(distinguishedClubsTargets)
+        expect(result.distinguishedClubs.targets).toEqual(
+          distinguishedClubsTargets
+        )
         expect(result.distinguishedClubs.achievedLevel).toBe('distinguished')
       })
     })

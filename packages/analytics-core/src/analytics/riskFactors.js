@@ -11,12 +11,12 @@
  * These are the human-readable strings that appear in the riskFactors array.
  */
 export const RISK_FACTOR_LABELS = {
-    lowMembership: 'Low membership',
-    decliningMembership: 'Declining membership',
-    lowPayments: 'Low payments',
-    inactiveOfficers: 'Inactive officers',
-    noRecentMeetings: 'No recent meetings',
-};
+  lowMembership: 'Low membership',
+  decliningMembership: 'Declining membership',
+  lowPayments: 'Low payments',
+  inactiveOfficers: 'Inactive officers',
+  noRecentMeetings: 'No recent meetings',
+}
 /**
  * Convert ClubRiskFactors object to string array format.
  *
@@ -29,23 +29,23 @@ export const RISK_FACTOR_LABELS = {
  * Requirements: 2.6
  */
 export function riskFactorsToStringArray(factors) {
-    const result = [];
-    if (factors.lowMembership) {
-        result.push(RISK_FACTOR_LABELS.lowMembership);
-    }
-    if (factors.decliningMembership) {
-        result.push(RISK_FACTOR_LABELS.decliningMembership);
-    }
-    if (factors.lowPayments) {
-        result.push(RISK_FACTOR_LABELS.lowPayments);
-    }
-    if (factors.inactiveOfficers) {
-        result.push(RISK_FACTOR_LABELS.inactiveOfficers);
-    }
-    if (factors.noRecentMeetings) {
-        result.push(RISK_FACTOR_LABELS.noRecentMeetings);
-    }
-    return result;
+  const result = []
+  if (factors.lowMembership) {
+    result.push(RISK_FACTOR_LABELS.lowMembership)
+  }
+  if (factors.decliningMembership) {
+    result.push(RISK_FACTOR_LABELS.decliningMembership)
+  }
+  if (factors.lowPayments) {
+    result.push(RISK_FACTOR_LABELS.lowPayments)
+  }
+  if (factors.inactiveOfficers) {
+    result.push(RISK_FACTOR_LABELS.inactiveOfficers)
+  }
+  if (factors.noRecentMeetings) {
+    result.push(RISK_FACTOR_LABELS.noRecentMeetings)
+  }
+  return result
 }
 /**
  * Convert string array back to ClubRiskFactors object format.
@@ -59,11 +59,17 @@ export function riskFactorsToStringArray(factors) {
  * Requirements: 2.6
  */
 export function stringArrayToRiskFactors(riskFactorStrings) {
-    return {
-        lowMembership: riskFactorStrings.includes(RISK_FACTOR_LABELS.lowMembership),
-        decliningMembership: riskFactorStrings.includes(RISK_FACTOR_LABELS.decliningMembership),
-        lowPayments: riskFactorStrings.includes(RISK_FACTOR_LABELS.lowPayments),
-        inactiveOfficers: riskFactorStrings.includes(RISK_FACTOR_LABELS.inactiveOfficers),
-        noRecentMeetings: riskFactorStrings.includes(RISK_FACTOR_LABELS.noRecentMeetings),
-    };
+  return {
+    lowMembership: riskFactorStrings.includes(RISK_FACTOR_LABELS.lowMembership),
+    decliningMembership: riskFactorStrings.includes(
+      RISK_FACTOR_LABELS.decliningMembership
+    ),
+    lowPayments: riskFactorStrings.includes(RISK_FACTOR_LABELS.lowPayments),
+    inactiveOfficers: riskFactorStrings.includes(
+      RISK_FACTOR_LABELS.inactiveOfficers
+    ),
+    noRecentMeetings: riskFactorStrings.includes(
+      RISK_FACTOR_LABELS.noRecentMeetings
+    ),
+  }
 }

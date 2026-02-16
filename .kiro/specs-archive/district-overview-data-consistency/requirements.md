@@ -19,6 +19,7 @@ This document specifies the requirements for fixing data inconsistencies in the 
 ### Distinguished Club Criteria (Official Toastmasters DCP)
 
 Per official Toastmasters Distinguished Club Program requirements:
+
 - **Distinguished**: 5+ DCP goals AND (20+ members OR 3+ net growth)
 - **Select Distinguished**: 7+ DCP goals AND (20+ members OR 5+ net growth)
 - **President's Distinguished**: 9+ DCP goals AND 20+ members

@@ -245,6 +245,7 @@ private async repairSnapshotPointer(snapshotId: string): Promise<void> {
 ```
 
 **Note on architectural boundary:** The backend writing the pointer file during fallback repair is a narrow exception to the "backend is read-only" rule. This is justified because:
+
 1. It's a cache/index repair, not data computation
 2. It only happens on the fallback path (pointer missing/broken)
 3. It prevents repeated slow scans
@@ -264,10 +265,10 @@ private async repairSnapshotPointer(snapshotId: string): Promise<void> {
 }
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `snapshotId` | `string` | Date-formatted snapshot ID (YYYY-MM-DD) |
-| `updatedAt` | `string` | ISO 8601 timestamp of last pointer update |
+| Field           | Type     | Description                               |
+| --------------- | -------- | ----------------------------------------- |
+| `snapshotId`    | `string` | Date-formatted snapshot ID (YYYY-MM-DD)   |
+| `updatedAt`     | `string` | ISO 8601 timestamp of last pointer update |
 | `schemaVersion` | `string` | Schema version of the referenced snapshot |
 
 The file is intentionally minimal. It contains only what's needed to locate and validate the referenced snapshot.
@@ -290,13 +291,13 @@ snapshots/
 
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 Per the testing steering document, property tests are reserved for cases where the input space is genuinely complex or mathematical invariants exist. Most acceptance criteria in this feature have bounded, well-understood inputs where 3-5 well-chosen unit test examples provide equivalent confidence. Only two properties warrant property-based testing:
 
 ### Property 1: Chronological ordering of pointer updates
 
-*For any* two valid snapshot dates A and B, regardless of the order in which `writeSnapshotPointer` is called, the resulting pointer file SHALL contain the chronologically later date.
+_For any_ two valid snapshot dates A and B, regardless of the order in which `writeSnapshotPointer` is called, the resulting pointer file SHALL contain the chronologically later date.
 
 This has a genuinely complex input space (arbitrary date pairs in any order) where string comparison edge cases and off-by-one errors are non-obvious.
 
@@ -304,7 +305,7 @@ This has a genuinely complex input space (arbitrary date pairs in any order) whe
 
 ### Property 2: Snapshot pointer schema round-trip
 
-*For any* valid `SnapshotPointer` object, serializing to JSON and parsing back through the Zod schema SHALL produce an equivalent object.
+_For any_ valid `SnapshotPointer` object, serializing to JSON and parsing back through the Zod schema SHALL produce an equivalent object.
 
 This is a serialization round-trip — exactly the pattern where property tests excel at catching encoding/decoding mismatches.
 
@@ -323,17 +324,17 @@ The remaining acceptance criteria are best covered by unit tests with well-chose
 
 ## Error Handling
 
-| Scenario | Component | Behavior |
-|----------|-----------|----------|
-| Pointer file missing (ENOENT) | Backend | Log warning, fall back to directory scan |
-| Pointer file invalid JSON | Backend | Log warning, fall back to directory scan |
-| Pointer file fails Zod validation | Backend | Log warning with validation error, fall back to directory scan |
-| Pointer references missing directory | Backend | Log warning, fall back to directory scan |
-| Pointer references non-success snapshot | Backend | Log warning with snapshot status, fall back to directory scan |
-| Fallback scan finds no successful snapshot | Backend | Return null (existing behavior unchanged) |
-| Pointer repair fails after fallback | Backend | Log warning, continue (non-fatal) |
-| Pointer write fails in scraper-cli | Scraper CLI | Log error, do not fail the transform operation (pointer is an optimization, not critical) |
-| Concurrent pointer writes | Scraper CLI | Read-compare-write with date comparison; later date always wins |
+| Scenario                                   | Component   | Behavior                                                                                  |
+| ------------------------------------------ | ----------- | ----------------------------------------------------------------------------------------- |
+| Pointer file missing (ENOENT)              | Backend     | Log warning, fall back to directory scan                                                  |
+| Pointer file invalid JSON                  | Backend     | Log warning, fall back to directory scan                                                  |
+| Pointer file fails Zod validation          | Backend     | Log warning with validation error, fall back to directory scan                            |
+| Pointer references missing directory       | Backend     | Log warning, fall back to directory scan                                                  |
+| Pointer references non-success snapshot    | Backend     | Log warning with snapshot status, fall back to directory scan                             |
+| Fallback scan finds no successful snapshot | Backend     | Return null (existing behavior unchanged)                                                 |
+| Pointer repair fails after fallback        | Backend     | Log warning, continue (non-fatal)                                                         |
+| Pointer write fails in scraper-cli         | Scraper CLI | Log error, do not fail the transform operation (pointer is an optimization, not critical) |
+| Concurrent pointer writes                  | Scraper CLI | Read-compare-write with date comparison; later date always wins                           |
 
 All error handling follows the principle that the pointer is an optimization. Its absence or corruption must never prevent the system from functioning — it only affects cold-start performance.
 
@@ -357,6 +358,7 @@ Each property test runs a minimum of 100 iterations. Tests are tagged with their
 ### Unit Testing
 
 Unit tests cover specific examples and edge cases:
+
 - Successful transform writes pointer with correct fields (Requirements 1.1, 1.4)
 - Partial/failed transform leaves pointer unchanged (Requirement 1.2)
 - Atomic write leaves no `.tmp` files behind (Requirement 1.3)
@@ -373,6 +375,7 @@ Unit tests cover specific examples and edge cases:
 ### Test Isolation
 
 Per the testing steering document:
+
 - Each test uses a unique temporary directory for the snapshot cache
 - All directories are cleaned up in `afterEach` hooks
 - No shared state between tests

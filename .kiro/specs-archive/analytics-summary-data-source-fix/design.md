@@ -48,21 +48,21 @@ The route handler changes are:
 
 The `DistrictAnalytics` type (from `@toastmasters/analytics-core`) contains all fields needed. The mapping is:
 
-| AggregatedAnalyticsResponse field | Source from DistrictAnalytics |
-|---|---|
-| `summary.totalMembership` | `totalMembership` |
-| `summary.membershipChange` | `membershipChange` |
-| `summary.clubCounts.total` | `allClubs.length` |
-| `summary.clubCounts.thriving` | `thrivingClubs.length` |
-| `summary.clubCounts.vulnerable` | `vulnerableClubs.length` |
-| `summary.clubCounts.interventionRequired` | `interventionRequiredClubs.length` |
-| `summary.distinguishedClubs.smedley` | `distinguishedClubs.smedley` |
-| `summary.distinguishedClubs.presidents` | `distinguishedClubs.presidents` |
-| `summary.distinguishedClubs.select` | `distinguishedClubs.select` |
-| `summary.distinguishedClubs.distinguished` | `distinguishedClubs.distinguished` |
-| `summary.distinguishedClubs.total` | `distinguishedClubs.total` |
-| `summary.distinguishedProjection` | `distinguishedProjection.projectedDistinguished` |
-| `computedAt` | `latestSnapshot.created_at` (from the Snapshot object) |
+| AggregatedAnalyticsResponse field          | Source from DistrictAnalytics                          |
+| ------------------------------------------ | ------------------------------------------------------ |
+| `summary.totalMembership`                  | `totalMembership`                                      |
+| `summary.membershipChange`                 | `membershipChange`                                     |
+| `summary.clubCounts.total`                 | `allClubs.length`                                      |
+| `summary.clubCounts.thriving`              | `thrivingClubs.length`                                 |
+| `summary.clubCounts.vulnerable`            | `vulnerableClubs.length`                               |
+| `summary.clubCounts.interventionRequired`  | `interventionRequiredClubs.length`                     |
+| `summary.distinguishedClubs.smedley`       | `distinguishedClubs.smedley`                           |
+| `summary.distinguishedClubs.presidents`    | `distinguishedClubs.presidents`                        |
+| `summary.distinguishedClubs.select`        | `distinguishedClubs.select`                            |
+| `summary.distinguishedClubs.distinguished` | `distinguishedClubs.distinguished`                     |
+| `summary.distinguishedClubs.total`         | `distinguishedClubs.total`                             |
+| `summary.distinguishedProjection`          | `distinguishedProjection.projectedDistinguished`       |
+| `computedAt`                               | `latestSnapshot.created_at` (from the Snapshot object) |
 
 Note: The frontend's `convertToAggregatedFormat` fallback function already performs this exact same mapping (deriving club counts from array lengths). This confirms the mapping is correct and consistent.
 
@@ -94,14 +94,14 @@ No new data models are introduced. The existing types are:
 
 The mapping between these types is documented in the field mapping table above.
 
-
 ## Correctness Properties
 
-*A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees.*
+_A property is a characteristic or behavior that should hold true across all valid executions of a system — essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
 ### Prework Analysis Summary
 
 After analyzing all acceptance criteria, the testable behaviors in this feature are:
+
 - Field mapping from `DistrictAnalytics` to `AggregatedAnalyticsResponse` (Requirements 1.3, 2.1–2.4, 3.3, 5.1, 5.2)
 - Error cases: null analytics returns 404, no snapshot returns 404 (Requirements 1.4, 1.5)
 - Wiring: single `readDistrictAnalytics()` call, no `PreComputedAnalyticsService` dependency (Requirements 3.1, 4.1)

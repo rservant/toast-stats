@@ -21,9 +21,7 @@ import type { PerformanceTargetsData, MetricRankings } from '../types.js'
 /**
  * Generate a valid district ID (e.g., "D101", "D42", "D1")
  */
-const districtIdArb = fc
-  .integer({ min: 1, max: 999 })
-  .map(n => `D${n}`)
+const districtIdArb = fc.integer({ min: 1, max: 999 }).map(n => `D${n}`)
 
 /**
  * Generate a valid ISO timestamp string
@@ -71,7 +69,16 @@ const regionRankArb = fc.oneof(
  */
 const regionArb = fc.oneof(
   fc.constant(null),
-  fc.constantFrom('Region 1', 'Region 2', 'Region 3', 'Region 4', 'Region 5', 'Region 6', 'Region 7', 'Region 8')
+  fc.constantFrom(
+    'Region 1',
+    'Region 2',
+    'Region 3',
+    'Region 4',
+    'Region 5',
+    'Region 6',
+    'Region 7',
+    'Region 8'
+  )
 )
 
 /**
@@ -107,19 +114,20 @@ const projectedAchievementArb = fc.record({
 /**
  * Generate a valid PerformanceTargetsData object
  */
-const performanceTargetsDataArb: fc.Arbitrary<PerformanceTargetsData> = fc.record({
-  districtId: districtIdArb,
-  computedAt: isoTimestampArb,
-  membershipTarget: nonNegativeIntArb,
-  distinguishedTarget: nonNegativeIntArb,
-  clubGrowthTarget: nonNegativeIntArb,
-  paidClubsCount: nonNegativeIntArb,
-  currentProgress: currentProgressArb,
-  projectedAchievement: projectedAchievementArb,
-  paidClubsRankings: metricRankingsArb,
-  membershipPaymentsRankings: metricRankingsArb,
-  distinguishedClubsRankings: metricRankingsArb,
-})
+const performanceTargetsDataArb: fc.Arbitrary<PerformanceTargetsData> =
+  fc.record({
+    districtId: districtIdArb,
+    computedAt: isoTimestampArb,
+    membershipTarget: nonNegativeIntArb,
+    distinguishedTarget: nonNegativeIntArb,
+    clubGrowthTarget: nonNegativeIntArb,
+    paidClubsCount: nonNegativeIntArb,
+    currentProgress: currentProgressArb,
+    projectedAchievement: projectedAchievementArb,
+    paidClubsRankings: metricRankingsArb,
+    membershipPaymentsRankings: metricRankingsArb,
+    distinguishedClubsRankings: metricRankingsArb,
+  })
 
 // ========== Helper Functions ==========
 
@@ -135,24 +143,67 @@ function arePerformanceTargetsEqual(
   if (original.districtId !== deserialized.districtId) return false
   if (original.computedAt !== deserialized.computedAt) return false
   if (original.membershipTarget !== deserialized.membershipTarget) return false
-  if (original.distinguishedTarget !== deserialized.distinguishedTarget) return false
+  if (original.distinguishedTarget !== deserialized.distinguishedTarget)
+    return false
   if (original.clubGrowthTarget !== deserialized.clubGrowthTarget) return false
   if (original.paidClubsCount !== deserialized.paidClubsCount) return false
 
   // Check currentProgress
-  if (original.currentProgress.membership !== deserialized.currentProgress.membership) return false
-  if (original.currentProgress.distinguished !== deserialized.currentProgress.distinguished) return false
-  if (original.currentProgress.clubGrowth !== deserialized.currentProgress.clubGrowth) return false
+  if (
+    original.currentProgress.membership !==
+    deserialized.currentProgress.membership
+  )
+    return false
+  if (
+    original.currentProgress.distinguished !==
+    deserialized.currentProgress.distinguished
+  )
+    return false
+  if (
+    original.currentProgress.clubGrowth !==
+    deserialized.currentProgress.clubGrowth
+  )
+    return false
 
   // Check projectedAchievement
-  if (original.projectedAchievement.membership !== deserialized.projectedAchievement.membership) return false
-  if (original.projectedAchievement.distinguished !== deserialized.projectedAchievement.distinguished) return false
-  if (original.projectedAchievement.clubGrowth !== deserialized.projectedAchievement.clubGrowth) return false
+  if (
+    original.projectedAchievement.membership !==
+    deserialized.projectedAchievement.membership
+  )
+    return false
+  if (
+    original.projectedAchievement.distinguished !==
+    deserialized.projectedAchievement.distinguished
+  )
+    return false
+  if (
+    original.projectedAchievement.clubGrowth !==
+    deserialized.projectedAchievement.clubGrowth
+  )
+    return false
 
   // Check rankings
-  if (!areMetricRankingsEqual(original.paidClubsRankings, deserialized.paidClubsRankings)) return false
-  if (!areMetricRankingsEqual(original.membershipPaymentsRankings, deserialized.membershipPaymentsRankings)) return false
-  if (!areMetricRankingsEqual(original.distinguishedClubsRankings, deserialized.distinguishedClubsRankings)) return false
+  if (
+    !areMetricRankingsEqual(
+      original.paidClubsRankings,
+      deserialized.paidClubsRankings
+    )
+  )
+    return false
+  if (
+    !areMetricRankingsEqual(
+      original.membershipPaymentsRankings,
+      deserialized.membershipPaymentsRankings
+    )
+  )
+    return false
+  if (
+    !areMetricRankingsEqual(
+      original.distinguishedClubsRankings,
+      deserialized.distinguishedClubsRankings
+    )
+  )
+    return false
 
   return true
 }
@@ -194,7 +245,7 @@ describe('PerformanceTargetsData Property Tests', () => {
      */
     it('should preserve all fields through JSON serialization round-trip', () => {
       fc.assert(
-        fc.property(performanceTargetsDataArb, (original) => {
+        fc.property(performanceTargetsDataArb, original => {
           // Serialize to JSON
           const serialized = JSON.stringify(original)
 
@@ -220,7 +271,7 @@ describe('PerformanceTargetsData Property Tests', () => {
      */
     it('should preserve paidClubsCount field through JSON round-trip', () => {
       fc.assert(
-        fc.property(performanceTargetsDataArb, (original) => {
+        fc.property(performanceTargetsDataArb, original => {
           const serialized = JSON.stringify(original)
           const deserialized = JSON.parse(serialized) as PerformanceTargetsData
 
@@ -242,7 +293,7 @@ describe('PerformanceTargetsData Property Tests', () => {
      */
     it('should preserve currentProgress.distinguished field through JSON round-trip', () => {
       fc.assert(
-        fc.property(performanceTargetsDataArb, (original) => {
+        fc.property(performanceTargetsDataArb, original => {
           const serialized = JSON.stringify(original)
           const deserialized = JSON.parse(serialized) as PerformanceTargetsData
 
@@ -265,7 +316,7 @@ describe('PerformanceTargetsData Property Tests', () => {
      */
     it('should preserve all currentProgress fields through JSON round-trip', () => {
       fc.assert(
-        fc.property(performanceTargetsDataArb, (original) => {
+        fc.property(performanceTargetsDataArb, original => {
           const serialized = JSON.stringify(original)
           const deserialized = JSON.parse(serialized) as PerformanceTargetsData
 
@@ -294,7 +345,7 @@ describe('PerformanceTargetsData Property Tests', () => {
      */
     it('should preserve all projectedAchievement boolean fields through JSON round-trip', () => {
       fc.assert(
-        fc.property(performanceTargetsDataArb, (original) => {
+        fc.property(performanceTargetsDataArb, original => {
           const serialized = JSON.stringify(original)
           const deserialized = JSON.parse(serialized) as PerformanceTargetsData
 
@@ -324,27 +375,33 @@ describe('PerformanceTargetsData Property Tests', () => {
      */
     it('should preserve all MetricRankings fields including null values through JSON round-trip', () => {
       fc.assert(
-        fc.property(performanceTargetsDataArb, (original) => {
+        fc.property(performanceTargetsDataArb, original => {
           const serialized = JSON.stringify(original)
           const deserialized = JSON.parse(serialized) as PerformanceTargetsData
 
           // Check paidClubsRankings
-          expect(areMetricRankingsEqual(
-            original.paidClubsRankings,
-            deserialized.paidClubsRankings
-          )).toBe(true)
+          expect(
+            areMetricRankingsEqual(
+              original.paidClubsRankings,
+              deserialized.paidClubsRankings
+            )
+          ).toBe(true)
 
           // Check membershipPaymentsRankings
-          expect(areMetricRankingsEqual(
-            original.membershipPaymentsRankings,
-            deserialized.membershipPaymentsRankings
-          )).toBe(true)
+          expect(
+            areMetricRankingsEqual(
+              original.membershipPaymentsRankings,
+              deserialized.membershipPaymentsRankings
+            )
+          ).toBe(true)
 
           // Check distinguishedClubsRankings
-          expect(areMetricRankingsEqual(
-            original.distinguishedClubsRankings,
-            deserialized.distinguishedClubsRankings
-          )).toBe(true)
+          expect(
+            areMetricRankingsEqual(
+              original.distinguishedClubsRankings,
+              deserialized.distinguishedClubsRankings
+            )
+          ).toBe(true)
 
           return true
         }),
@@ -361,7 +418,7 @@ describe('PerformanceTargetsData Property Tests', () => {
      */
     it('should produce valid parseable JSON', () => {
       fc.assert(
-        fc.property(performanceTargetsDataArb, (original) => {
+        fc.property(performanceTargetsDataArb, original => {
           const serialized = JSON.stringify(original)
 
           // Should not throw when parsing
@@ -388,7 +445,7 @@ describe('PerformanceTargetsData Property Tests', () => {
      */
     it('should produce identical JSON when re-serialized after round-trip', () => {
       fc.assert(
-        fc.property(performanceTargetsDataArb, (original) => {
+        fc.property(performanceTargetsDataArb, original => {
           const serialized1 = JSON.stringify(original)
           const deserialized = JSON.parse(serialized1) as PerformanceTargetsData
           const serialized2 = JSON.stringify(deserialized)
