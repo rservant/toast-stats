@@ -36,27 +36,16 @@ describe('Service Factory Integration', () => {
       expect(typeof refreshService.executeRefresh).toBe('function')
     })
 
-    it('should create BackfillService', () => {
-      const factory = getProductionServiceFactory()
-      const backfillService = factory.createBackfillService()
-
-      // Verify BackfillService was created
-      expect(backfillService).toBeDefined()
-      expect(backfillService.constructor.name).toBe('BackfillService')
-    })
-
     it('should create services with proper dependency chain', () => {
       const factory = getProductionServiceFactory()
 
       // Create services - each creates its own internal dependencies
       const snapshotStorage = factory.createSnapshotStorage()
       const refreshService = factory.createRefreshService()
-      const backfillService = factory.createBackfillService()
 
       // Verify all services were created
       expect(snapshotStorage).toBeDefined()
       expect(refreshService).toBeDefined()
-      expect(backfillService).toBeDefined()
 
       // Verify services have expected interfaces
       expect(typeof refreshService.executeRefresh).toBe('function')
@@ -76,27 +65,16 @@ describe('Service Factory Integration', () => {
       expect(typeof refreshService.executeRefresh).toBe('function')
     })
 
-    it('should create BackfillService', () => {
-      const factory = getTestServiceFactory()
-      const backfillService = factory.createBackfillService()
-
-      // Verify BackfillService was created
-      expect(backfillService).toBeDefined()
-      expect(backfillService.constructor.name).toBe('BackfillService')
-    })
-
     it('should create services with proper dependency chain', () => {
       const factory = getTestServiceFactory()
 
       // Create services - each creates its own internal dependencies
       const snapshotStorage = factory.createSnapshotStorage()
       const refreshService = factory.createRefreshService()
-      const backfillService = factory.createBackfillService()
 
       // Verify all services were created
       expect(snapshotStorage).toBeDefined()
       expect(refreshService).toBeDefined()
-      expect(backfillService).toBeDefined()
 
       // Verify services have expected interfaces
       expect(typeof refreshService.executeRefresh).toBe('function')
@@ -111,6 +89,7 @@ describe('Service Factory Integration', () => {
 
       // Test that we can resolve services from the container using service tokens
       // Note: RankingCalculator is no longer registered - it's in analytics-core
+      // Note: BackfillService has been removed - backfill is no longer in the backend
       expect(() =>
         container.resolve(TestServiceTokens.Configuration)
       ).not.toThrow()
@@ -122,9 +101,6 @@ describe('Service Factory Integration', () => {
       ).not.toThrow()
       expect(() =>
         container.resolve(TestServiceTokens.RefreshService)
-      ).not.toThrow()
-      expect(() =>
-        container.resolve(TestServiceTokens.BackfillService)
       ).not.toThrow()
     })
   })

@@ -3,7 +3,6 @@ import { render } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { AuthProvider } from '../contexts/AuthContext'
-import { BackfillProvider } from '../contexts/BackfillContext'
 import { ProgramYearProvider } from '../contexts/ProgramYearContext'
 
 // Ensure a minimal localStorage is available in the test environment
@@ -103,9 +102,7 @@ export const renderWithProviders = (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ProgramYearProvider>
-          <BackfillProvider>
-            <RouterProvider router={router} />
-          </BackfillProvider>
+          <RouterProvider router={router} />
         </ProgramYearProvider>
       </AuthProvider>
     </QueryClientProvider>

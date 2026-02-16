@@ -288,7 +288,7 @@ const LandingPage: React.FC = () => {
                   <ul className="space-y-2 text-tm-black">
                     <li className="flex items-start">
                       <span className="text-tm-loyal-blue mr-2">1.</span>
-                      Go to the Admin page to start a backfill operation
+                      Go to the Admin page to manage data collection
                     </li>
                     <li className="flex items-start">
                       <span className="text-tm-loyal-blue mr-2">2.</span>

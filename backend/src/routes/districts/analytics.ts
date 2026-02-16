@@ -323,7 +323,7 @@ analyticsRouter.get(
           error: {
             code: 'NO_DATA_AVAILABLE',
             message: 'No cached data available for analytics',
-            details: 'Consider initiating a backfill to fetch historical data',
+            details: 'Run scraper-cli to collect historical data',
           },
         })
         return

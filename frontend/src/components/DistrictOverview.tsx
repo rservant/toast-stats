@@ -97,18 +97,12 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
       {!isLoading && !error && !analytics && (
         <EmptyState
           title="No Cached Data Available"
-          message="This district doesn't have any cached historical data yet. Initiate a backfill to start collecting performance data over time."
-          icon="backfill"
+          message="This district doesn't have any cached historical data yet. Use the Admin Panel to start collecting performance data over time."
+          icon="data"
           action={{
-            label: 'Initiate Backfill',
+            label: 'Go to Admin Panel',
             onClick: () => {
-              // Trigger backfill button - this will be handled by the parent component
-              const backfillButton = document.querySelector(
-                '[data-backfill-trigger]'
-              ) as HTMLButtonElement
-              if (backfillButton) {
-                backfillButton.click()
-              }
+              window.location.href = '/admin'
             },
           }}
         />

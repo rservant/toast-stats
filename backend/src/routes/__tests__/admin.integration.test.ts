@@ -52,9 +52,7 @@ vi.mock('../../services/ProductionServiceFactory.js', () => ({
 }))
 
 // Mock the main index.js to prevent server initialization side effects
-vi.mock('../../index.js', () => ({
-  getUnifiedBackfillServiceInstance: vi.fn(),
-}))
+vi.mock('../../index.js', () => ({}))
 
 // Mock logger
 vi.mock('../../utils/logger.js', () => ({

@@ -364,7 +364,7 @@ const DistrictDetailPage: React.FC = () => {
                 </p>
               </div>
 
-              {/* Program Year, Date Selector and Backfill Button */}
+              {/* Program Year, Date Selector and Actions */}
               <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-start">
                 {/* Program Year Selector */}
                 {availableProgramYears.length > 0 && (
@@ -414,7 +414,7 @@ const DistrictDetailPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Backfill Button */}
+                {/* Actions */}
                 {districtId && (
                   <div className="flex flex-col gap-2">
                     <label className="text-xs sm:text-sm font-tm-body font-medium text-gray-700 opacity-0 pointer-events-none hidden sm:block">
@@ -483,15 +483,15 @@ const DistrictDetailPage: React.FC = () => {
             />
           )}
 
-          {/* No Data Prompt - Direct to Admin Panel for Backfill */}
+          {/* No Data Prompt - Direct to Admin Panel */}
           {!isLoadingOverview &&
             !overviewError &&
             !hasOverviewData &&
             districtId && (
               <EmptyState
                 title="No District Data Available"
-                message="This district doesn't have any cached historical data yet. Use the Admin Panel to start a backfill and collect performance data."
-                icon="backfill"
+                message="This district doesn't have any cached historical data yet. Use the Admin Panel to manage data collection."
+                icon="data"
                 action={{
                   label: 'Go to Admin Panel',
                   onClick: () => {

@@ -28,9 +28,7 @@ describe('AdminPage', () => {
 
       expect(screen.getByText('Admin Panel')).toBeInTheDocument()
       expect(
-        screen.getByText(
-          'Manage snapshots, analytics, and monitor system health'
-        )
+        screen.getByText('Manage snapshots and monitor system health')
       ).toBeInTheDocument()
     })
   })
@@ -45,18 +43,15 @@ describe('AdminPage', () => {
 
       expect(screen.getByText('Admin Panel')).toBeInTheDocument()
       expect(
-        screen.getByText(
-          'Manage snapshots, analytics, and monitor system health'
-        )
+        screen.getByText('Manage snapshots and monitor system health')
       ).toBeInTheDocument()
     })
 
-    it('should render all three main sections', () => {
+    it('should render all two main sections', () => {
       renderWithProviders(<AdminPage />)
 
       // Check for section headings
       expect(screen.getByText('Snapshots')).toBeInTheDocument()
-      expect(screen.getByText('Unified Backfill')).toBeInTheDocument()
       expect(screen.getByText('System Health')).toBeInTheDocument()
     })
 
@@ -66,11 +61,6 @@ describe('AdminPage', () => {
       expect(
         screen.getByText(
           'Manage data snapshots - view, delete, and regenerate snapshot data'
-        )
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText(
-          'Manage backfill operations - data collection and analytics generation'
         )
       ).toBeInTheDocument()
       expect(
@@ -146,38 +136,6 @@ describe('AdminPage', () => {
     })
   })
 
-  describe('Unified Backfill Section', () => {
-    beforeEach(() => {
-      sessionStorage.setItem('auth_token', 'test-token')
-    })
-
-    it('should render backfill configuration controls', () => {
-      renderWithProviders(<AdminPage />)
-
-      expect(screen.getByText('Backfill Configuration')).toBeInTheDocument()
-      expect(screen.getByText('Job Type')).toBeInTheDocument()
-      expect(screen.getByText('Start Backfill')).toBeInTheDocument()
-      expect(screen.getByText('Preview')).toBeInTheDocument()
-    })
-
-    it('should render job type selector with options', () => {
-      renderWithProviders(<AdminPage />)
-
-      const jobTypeSelect = screen.getByLabelText('Job Type')
-      expect(jobTypeSelect).toBeInTheDocument()
-      expect(jobTypeSelect).toHaveValue('data-collection')
-    })
-
-    it('should render snapshot summary stats', () => {
-      renderWithProviders(<AdminPage />)
-
-      // The updated UI shows summary stats - use getAllByText since these appear in multiple sections
-      expect(screen.getAllByText('Total Snapshots').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('Successful').length).toBeGreaterThan(0)
-      expect(screen.getByText('Last Completed')).toBeInTheDocument()
-    })
-  })
-
   describe('System Health Section', () => {
     beforeEach(() => {
       sessionStorage.setItem('auth_token', 'test-token')
@@ -222,18 +180,11 @@ describe('AdminPage', () => {
 
       // Check that sections have proper aria-labelledby attributes
       const snapshotsSection = screen.getByText('Snapshots').closest('section')
-      const backfillSection = screen
-        .getByText('Unified Backfill')
-        .closest('section')
       const healthSection = screen.getByText('System Health').closest('section')
 
       expect(snapshotsSection).toHaveAttribute(
         'aria-labelledby',
         'section-snapshots'
-      )
-      expect(backfillSection).toHaveAttribute(
-        'aria-labelledby',
-        'section-unified-backfill'
       )
       expect(healthSection).toHaveAttribute(
         'aria-labelledby',

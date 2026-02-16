@@ -147,14 +147,6 @@ vi.mock('../../contexts/ProgramYearContext', () => ({
   })),
 }))
 
-// Mock the BackfillContext
-vi.mock('../../contexts/BackfillContext', () => ({
-  useBackfillContext: vi.fn(() => ({
-    addBackfill: vi.fn(),
-    backfills: [],
-  })),
-}))
-
 // Mock the GlobalRankingsTab component to verify it receives correct props
 vi.mock('../../components/GlobalRankingsTab', () => ({
   default: vi.fn(({ districtId, districtName }) => (

@@ -5,7 +5,6 @@
 
 import { type Request, type Response } from 'express'
 import { logger } from '../../utils/logger.js'
-import { BackfillService } from '../../services/UnifiedBackfillService.js'
 import { RefreshService } from '../../services/RefreshService.js'
 import { DistrictConfigurationService } from '../../services/DistrictConfigurationService.js'
 import { getProductionServiceFactory } from '../../services/ProductionServiceFactory.js'
@@ -69,7 +68,6 @@ export const districtConfigService = new DistrictConfigurationService(
 
 // Initialize services (async initialization)
 let _refreshService: RefreshService | null = null
-let _backfillService: BackfillService | null = null
 let _preComputedAnalyticsService: PreComputedAnalyticsService | null = null
 let _timeSeriesIndexService: ITimeSeriesIndexService | null = null
 
@@ -100,27 +98,12 @@ async function initializeServices(): Promise<void> {
     undefined, // validator
     _preComputedAnalyticsService
   )
-
-  _backfillService = new BackfillService(
-    _refreshService,
-    // BackfillService now accepts ISnapshotStorage, supporting both local and cloud storage
-    snapshotStore,
-    districtConfigService,
-    undefined, // alertManager
-    undefined, // circuitBreakerManager
-    undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
-  )
 }
 
 // Getters for services (ensure initialization)
 export async function getRefreshService(): Promise<RefreshService> {
   await initializeServices()
   return _refreshService!
-}
-
-export async function getBackfillService(): Promise<BackfillService> {
-  await initializeServices()
-  return _backfillService!
 }
 
 export async function getTimeSeriesIndexService(): Promise<ITimeSeriesIndexService> {

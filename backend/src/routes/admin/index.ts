@@ -14,8 +14,6 @@ import { snapshotManagementRouter } from './snapshot-management.js'
 import { districtConfigRouter } from './district-config.js'
 import { monitoringRouter } from './monitoring.js'
 import { processSeparationRouter } from './process-separation.js'
-import { backfillRouter } from './backfill.js'
-import { unifiedBackfillRouter } from './unified-backfill.js'
 
 const router = Router()
 
@@ -27,14 +25,6 @@ router.use('/', snapshotsRouter)
 
 // Snapshot deletion/management routes (Requirements: 8.1, 8.2, 8.3)
 router.use('/', snapshotManagementRouter)
-
-// Backfill routes (Requirements: 7.1)
-router.use('/backfill', backfillRouter)
-
-// Unified Backfill routes (Requirements: 9.1)
-// New consolidated backfill service with persistent job state, automatic recovery,
-// and support for both data-collection and analytics-generation job types
-router.use('/unified-backfill', unifiedBackfillRouter)
 
 // District configuration routes (Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6)
 router.use('/', districtConfigRouter)

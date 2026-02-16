@@ -9,74 +9,11 @@ import districtRoutes from './routes/districts/index.js'
 import adminRoutes from './routes/admin/index.js'
 import { logger } from './utils/logger.js'
 import { getProductionServiceFactory } from './services/ProductionServiceFactory.js'
-import { StorageProviderFactory } from './services/storage/StorageProviderFactory.js'
-import { UnifiedBackfillService } from './services/backfill/unified/UnifiedBackfillService.js'
-import { DistrictConfigurationService } from './services/DistrictConfigurationService.js'
-import { PreComputedAnalyticsService } from './services/PreComputedAnalyticsService.js'
 import { validateHeapConfiguration } from './utils/heapValidator.js'
 import { MemoryMonitor } from './utils/memoryMonitor.js'
 
 const app = express()
 const PORT = process.env['PORT'] || 5001
-
-// ============================================================================
-// Singleton UnifiedBackfillService Instance
-// ============================================================================
-
-/**
- * Singleton instance of UnifiedBackfillService
- * Shared between server startup (for recovery) and API routes
- * This ensures that recovered jobs are visible to API requests
- */
-let unifiedBackfillServiceInstance: UnifiedBackfillService | null = null
-
-/**
- * Get the singleton UnifiedBackfillService instance
- * Creates the instance lazily if not already created
- */
-export async function getUnifiedBackfillServiceInstance(): Promise<UnifiedBackfillService> {
-  if (unifiedBackfillServiceInstance) {
-    return unifiedBackfillServiceInstance
-  }
-
-  // Create storage providers
-  const storageProviders = StorageProviderFactory.createFromEnvironment()
-
-  // Create required services for UnifiedBackfillService
-  const productionFactory = getProductionServiceFactory()
-  const refreshService = productionFactory.createRefreshService()
-  const configService = new DistrictConfigurationService(
-    storageProviders.districtConfigStorage
-  )
-
-  // Create PreComputedAnalyticsService for analytics generation during backfill
-  // Requirements: 3.1, 3.3 - Configure with correct snapshots directory path
-  const cacheConfig = productionFactory.createCacheConfigService()
-  const cacheDirectory = cacheConfig.getConfiguration().baseDirectory
-  const preComputedAnalyticsService = new PreComputedAnalyticsService({
-    snapshotsDir: `${cacheDirectory}/snapshots`,
-  })
-
-  // Create UnifiedBackfillService with autoRecoverOnInit enabled
-  unifiedBackfillServiceInstance = new UnifiedBackfillService(
-    storageProviders.backfillJobStorage,
-    storageProviders.snapshotStorage,
-    storageProviders.timeSeriesIndexStorage,
-    refreshService,
-    configService,
-    preComputedAnalyticsService,
-    { autoRecoverOnInit: true }
-  )
-
-  return unifiedBackfillServiceInstance
-}
-
-/**
- * Reset the singleton instance (for testing only)
- */
-export function resetUnifiedBackfillServiceInstance(): void {
-  unifiedBackfillServiceInstance = null
-}
 
 // ============================================================================
 // Express App Configuration
@@ -233,63 +170,6 @@ const server = app.listen(PORT, async () => {
       environmentVariable: process.env['CACHE_DIR'] || 'not set',
     })
     // Don't exit the server, but log the critical error
-  }
-
-  // Initialize UnifiedBackfillService and recover incomplete jobs
-  // This runs after the server is ready to handle requests
-  // Requirements: 1.4, 10.1
-  try {
-    logger.info('Initializing UnifiedBackfillService for job recovery', {
-      component: 'ServerStartup',
-      operation: 'initializeBackfillRecovery',
-    })
-
-    // Get the singleton instance (creates it if needed)
-    const unifiedBackfillService = await getUnifiedBackfillServiceInstance()
-
-    // Initialize the service - this will automatically recover incomplete jobs
-    const recoveryResult = await unifiedBackfillService.initialize()
-
-    if (recoveryResult) {
-      if (recoveryResult.jobsRecovered > 0 || recoveryResult.jobsFailed > 0) {
-        logger.info('✅ Backfill job recovery completed', {
-          component: 'ServerStartup',
-          operation: 'initializeBackfillRecovery',
-          success: recoveryResult.success,
-          jobsRecovered: recoveryResult.jobsRecovered,
-          jobsFailed: recoveryResult.jobsFailed,
-          errors:
-            recoveryResult.errors.length > 0
-              ? recoveryResult.errors
-              : undefined,
-        })
-      } else {
-        logger.info('✅ No incomplete backfill jobs found for recovery', {
-          component: 'ServerStartup',
-          operation: 'initializeBackfillRecovery',
-        })
-      }
-    } else {
-      logger.debug('Backfill service initialized (recovery not triggered)', {
-        component: 'ServerStartup',
-        operation: 'initializeBackfillRecovery',
-      })
-    }
-  } catch (error) {
-    // Recovery failure should not prevent server startup
-    // Log the error but continue running
-    logger.error('❌ Failed to initialize backfill job recovery', {
-      component: 'ServerStartup',
-      operation: 'initializeBackfillRecovery',
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-    })
-    logger.warn('⚠️  Server will continue without backfill job recovery', {
-      component: 'ServerStartup',
-      operation: 'initializeBackfillRecovery',
-      recommendation:
-        'Check storage configuration and retry manually if needed',
-    })
   }
 })
 

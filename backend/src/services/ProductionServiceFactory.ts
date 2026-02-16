@@ -35,8 +35,6 @@ import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
 import { logger } from '../utils/logger.js'
 import { FileSnapshotStore } from './SnapshotStore.js'
 import { RefreshService } from './RefreshService.js'
-import { BackfillService } from './UnifiedBackfillService.js'
-import { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import { MonthEndDataMapper } from './MonthEndDataMapper.js'
 import { SnapshotStore } from '../types/snapshots.js'
 import { config } from '../config/index.js'
@@ -181,15 +179,6 @@ export interface ProductionServiceFactory {
     cacheConfig?: CacheConfigService,
     rawCSVCache?: RawCSVCacheService
   ): MonthEndDataMapper
-
-  /**
-   * Create BackfillService instance
-   */
-  createBackfillService(
-    refreshService?: RefreshService,
-    snapshotStore?: SnapshotStore,
-    configService?: DistrictConfigurationService
-  ): BackfillService
 
   /**
    * Cleanup all resources
@@ -388,36 +377,6 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       )
     )
 
-    // Register BackfillService
-    container.register(
-      ServiceTokens.BackfillService,
-      createServiceFactory(
-        (container: ServiceContainer) => {
-          const refreshService = container.resolve(ServiceTokens.RefreshService)
-          const snapshotStore = container.resolve(ServiceTokens.SnapshotStore)
-          // Create DistrictConfigurationService with storage from StorageProviderFactory
-          const storageProviders =
-            StorageProviderFactory.createFromEnvironment()
-          const configService = new DistrictConfigurationService(
-            storageProviders.districtConfigStorage
-          )
-
-          // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
-          return new BackfillService(
-            refreshService,
-            snapshotStore as FileSnapshotStore,
-            configService,
-            undefined, // alertManager
-            undefined, // circuitBreakerManager
-            undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
-          )
-        },
-        async () => {
-          // BackfillService doesn't have dispose method
-        }
-      )
-    )
-
     this.containers.push(container)
     return container
   }
@@ -571,45 +530,6 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
   }
 
   /**
-   * Create BackfillService instance
-   *
-   * Uses the storage abstraction layer to respect STORAGE_PROVIDER env var:
-   * - STORAGE_PROVIDER=gcp: Uses FirestoreSnapshotStorage
-   * - STORAGE_PROVIDER=local or unset: Uses LocalSnapshotStorage
-   *
-   * Requirements: 1.3, 1.4 (Storage Abstraction)
-   */
-  createBackfillService(
-    refreshService?: RefreshService,
-    snapshotStore?: SnapshotStore,
-    configService?: DistrictConfigurationService
-  ): BackfillService {
-    const refresh = refreshService || this.createRefreshService()
-    // Use storage abstraction layer if no store provided
-    const storageProviders = StorageProviderFactory.createFromEnvironment()
-    const store = snapshotStore || storageProviders.snapshotStorage
-    // Create DistrictConfigurationService with storage from StorageProviderFactory if not provided
-    let config = configService
-    if (!config) {
-      config = new DistrictConfigurationService(
-        storageProviders.districtConfigStorage
-      )
-    }
-
-    // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
-    const service = new BackfillService(
-      refresh,
-      store,
-      config,
-      undefined, // alertManager
-      undefined, // circuitBreakerManager
-      undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
-    )
-    // BackfillService doesn't have dispose method, so we don't track it
-    return service
-  }
-
-  /**
    * Cleanup all resources
    */
   async cleanup(): Promise<void> {
@@ -655,7 +575,6 @@ export const ServiceTokens = {
   Logger: createServiceToken('Logger', ProductionLogger),
   SnapshotStore: createServiceToken('SnapshotStore', FileSnapshotStore),
   RefreshService: createServiceToken('RefreshService', RefreshService),
-  BackfillService: createServiceToken('BackfillService', BackfillService),
 }
 
 /**

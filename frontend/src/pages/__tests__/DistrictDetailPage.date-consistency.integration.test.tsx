@@ -128,13 +128,6 @@ vi.mock('../../hooks/useDistrictData', () => ({
   })),
 }))
 
-vi.mock('../../contexts/BackfillContext', () => ({
-  useBackfillContext: vi.fn(() => ({
-    addBackfill: vi.fn(),
-    backfills: [],
-  })),
-}))
-
 // Import the mocked hook to control its behavior
 import { useDistrictStatistics } from '../../hooks/useMembershipData'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'

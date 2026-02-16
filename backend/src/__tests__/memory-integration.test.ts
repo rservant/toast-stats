@@ -53,17 +53,9 @@ function mockAllDependencies() {
     StorageProviderFactory: {
       createFromEnvironment: vi.fn(() => ({
         districtConfigStorage: {},
-        backfillJobStorage: {},
         snapshotStorage: {},
         timeSeriesIndexStorage: {},
       })),
-    },
-  }))
-  vi.doMock('../services/backfill/unified/UnifiedBackfillService.js', () => ({
-    UnifiedBackfillService: class {
-      async initialize() {
-        return { success: true, jobsRecovered: 0, jobsFailed: 0, errors: [] }
-      }
     },
   }))
   vi.doMock('../services/DistrictConfigurationService.js', () => ({

@@ -27,7 +27,6 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import React from 'react'
 import DistrictDetailPage from '../DistrictDetailPage'
 import { ProgramYearProvider } from '../../contexts/ProgramYearContext'
-import { BackfillProvider } from '../../contexts/BackfillContext'
 
 // ---------------------------------------------------------------------------
 // Global mocks (before any component imports that depend on them)
@@ -287,18 +286,16 @@ function renderDistrictDetailPage() {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <BackfillProvider>
-        <ProgramYearProvider>
-          <MemoryRouter initialEntries={['/districts/D42']}>
-            <Routes>
-              <Route
-                path="/districts/:districtId"
-                element={<DistrictDetailPage />}
-              />
-            </Routes>
-          </MemoryRouter>
-        </ProgramYearProvider>
-      </BackfillProvider>
+      <ProgramYearProvider>
+        <MemoryRouter initialEntries={['/districts/D42']}>
+          <Routes>
+            <Route
+              path="/districts/:districtId"
+              element={<DistrictDetailPage />}
+            />
+          </Routes>
+        </MemoryRouter>
+      </ProgramYearProvider>
     </QueryClientProvider>
   )
 }

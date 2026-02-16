@@ -518,10 +518,7 @@ describe('Analytics Summary Route', () => {
 
         expect(response.body.error.details.districtId).toBe('42')
         expect(response.body.error.details.recommendation).toContain(
-          'analytics-generation'
-        )
-        expect(response.body.error.details.backfillJobType).toBe(
-          'analytics-generation'
+          'scraper-cli compute-analytics'
         )
       })
 
@@ -615,8 +612,8 @@ describe('Analytics Summary Route', () => {
 
         expect(response.body.error.code).toBe('ANALYTICS_NOT_AVAILABLE')
         expect(response.body.error.details.districtId).toBe('42')
-        expect(response.body.error.details.backfillJobType).toBe(
-          'analytics-generation'
+        expect(response.body.error.details.recommendation).toContain(
+          'scraper-cli compute-analytics'
         )
       })
 

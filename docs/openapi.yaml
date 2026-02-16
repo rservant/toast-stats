@@ -12,7 +12,7 @@ info:
     - **District Data**: Access district statistics, club information, and performance metrics
     - **Rankings**: Global and district-level ranking comparisons
     - **Analytics**: Membership trends, club health analysis, and leadership insights
-    - **Historical Data**: Backfill operations for historical data collection
+    - **Historical Data**: Historical data collected via scraper-cli pipeline
     - **Administration**: Snapshot management and system administration
 
     ## Data Model
@@ -46,8 +46,6 @@ tags:
     description: Global and district ranking endpoints
   - name: Analytics
     description: Analytics and insights endpoints
-  - name: Backfill
-    description: Historical data collection endpoints
   - name: Admin
     description: Administrative and snapshot management endpoints
   - name: Cache
@@ -1505,7 +1503,7 @@ paths:
                   message: No cached dates available
                   details: No snapshots have been collected yet
                   suggestions:
-                    - Initiate a backfill operation to collect historical data
+                    - Run scraper-cli to collect historical data
                     - Check if the data collection service is running
         '500':
           description: Internal server error
@@ -1688,7 +1686,7 @@ paths:
                       suggestions:
                         - "Try a different date range"
                         - "Check available dates using GET /districts/{districtId}/cached-dates"
-                        - "Initiate a backfill operation to collect historical data"
+                        - "Run scraper-cli to collect historical data"
                 snapshotNotFound:
                   summary: Requested snapshot does not exist
                   value:
@@ -2234,7 +2232,7 @@ paths:
                       suggestions:
                         - "Try a different date range"
                         - "Check available dates using GET /districts/{districtId}/cached-dates"
-                        - "Initiate a backfill operation to collect historical data"
+                        - "Run scraper-cli to collect historical data"
                 snapshotNotFound:
                   summary: Requested snapshot does not exist
                   value:
@@ -3730,7 +3728,7 @@ paths:
                       details: "Year-over-year comparison requires data for the requested date"
                       suggestions:
                         - "Verify the district ID is correct"
-                        - "Use the backfill endpoint to collect historical data for this district"
+                        - "Run scraper-cli to collect historical data for this district"
                         - "Check available dates using the /districts/{districtId}/cached-dates endpoint"
                 snapshotNotFound:
                   summary: No snapshot for requested date
@@ -4017,13 +4015,13 @@ paths:
 
         The `analytics_available` field indicates whether pre-computed analytics
         (analytics-summary.json) exist for each snapshot. This is useful for:
-        - Identifying snapshots that need analytics backfill
+        - Identifying snapshots that need analytics generation via scraper-cli
         - Understanding which snapshots can serve fast analytics requests
-        - Planning backfill operations
+        - Planning scraper-cli compute-analytics runs
 
         The response metadata includes:
         - `analytics_available_count`: Number of snapshots with analytics
-        - `analytics_missing_count`: Number of snapshots needing backfill
+        - `analytics_missing_count`: Number of snapshots needing analytics generation
 
         ## Filtering Options
 
@@ -4048,7 +4046,7 @@ paths:
         - Finding snapshots with specific characteristics
         - Monitoring data collection health over time
         - Debugging data quality issues
-        - Identifying snapshots that need analytics backfill
+        - Identifying snapshots that need analytics generation via scraper-cli
       parameters:
         - name: limit
           in: query
@@ -4264,8 +4262,8 @@ paths:
                       limit_applied: 50
                       query_duration_ms: 32
                       generated_at: "2026-01-24T10:30:00Z"
-                snapshotsNeedingBackfill:
-                  summary: Identifying snapshots that need analytics backfill
+                snapshotsNeedingAnalytics:
+                  summary: Identifying snapshots that need analytics generation
                   value:
                     snapshots:
                       - snapshot_id: "2026-01-22"
@@ -4463,7 +4461,7 @@ paths:
                     type: string
                     description: |
                       Source of the snapshot data, indicating how the data was obtained.
-                      Common values include 'scraper', 'backfill', or 'manual'.
+                      Common values include 'scraper' or 'manual'.
                     example: scraper
                   is_closing_period:
                     type: boolean
@@ -4849,7 +4847,7 @@ paths:
                     type: string
                     description: |
                       Source of the snapshot data, indicating how the data was obtained.
-                      Common values include 'scraper', 'backfill', or 'manual'.
+                      Common values include 'scraper' or 'manual'.
                     example: scraper
                   is_closing_period:
                     type: boolean
@@ -5246,14 +5244,10 @@ components:
         - VALIDATION_ERROR
         # 404 Not Found errors
         - SNAPSHOT_NOT_FOUND
-        - BACKFILL_NOT_FOUND
         - CLUB_NOT_FOUND
         - NO_DATA_AVAILABLE
-        # 409 Conflict errors
-        - CANNOT_CANCEL_JOB
         # 500 Internal Server errors
         - ANALYTICS_ERROR
-        - BACKFILL_ERROR
         - INTERNAL_ERROR
         # 503 Service Unavailable errors
         - SERVICE_UNAVAILABLE
@@ -5341,20 +5335,6 @@ components:
           suggestions:
             - Check available dates using the /districts/{districtId}/cached-dates endpoint
             - Use the fallback parameter to get the nearest available snapshot
-
-    ConflictErrorResponse:
-      allOf:
-        - $ref: '#/components/schemas/ErrorResponse'
-      description: |
-        409 Conflict error response.
-        Returned when the request conflicts with the current state of the resource.
-      example:
-        error:
-          code: CANNOT_CANCEL_JOB
-          message: Cannot cancel job
-          details: Job is already complete and cannot be cancelled
-          suggestions:
-            - Only jobs in 'processing' status can be cancelled
 
     InternalServerErrorResponse:
       allOf:
@@ -5470,7 +5450,7 @@ components:
           type: string
           description: |
             Source of the snapshot data, indicating how the data was obtained.
-            Common values include 'scraper', 'backfill', or 'manual'.
+            Common values include 'scraper' or 'manual'.
           example: scraper
         from_cache:
           type: boolean
@@ -5483,8 +5463,8 @@ components:
           description: |
             Indicates whether pre-computed analytics (analytics-summary.json)
             exist for this snapshot. When false, analytics requests for this
-            snapshot will return a 404 error and require running the analytics
-            backfill job.
+            snapshot will return a 404 error and require running scraper-cli
+            compute-analytics.
           example: true
       example:
         snapshot_id: "2026-01-24"
@@ -7319,285 +7299,6 @@ components:
           is_fallback: false
           data_source: scraper
           from_cache: true
-
-    # Backfill Schemas
-    BackfillRequest:
-      type: object
-      description: |
-        Request body for initiating a backfill operation to collect historical
-        district data. Backfill operations retrieve and store snapshot data for
-        specified date ranges and districts.
-
-        The operation runs asynchronously and returns a backfill job ID that can
-        be used to monitor progress via the backfill status endpoint.
-      required:
-        - startDate
-        - endDate
-      properties:
-        targetDistricts:
-          type: array
-          description: |
-            List of district IDs to include in the backfill operation.
-            If not provided or empty, all available districts will be targeted.
-            District IDs can be numeric (e.g., "57") or alphabetic (e.g., "F").
-          items:
-            type: string
-            description: District identifier.
-          example:
-            - "57"
-            - "F"
-            - "101"
-        startDate:
-          type: string
-          format: date
-          description: |
-            Start date for the backfill date range in ISO 8601 format (YYYY-MM-DD).
-            The backfill will collect data starting from this date (inclusive).
-            Must be before or equal to endDate.
-          example: "2025-07-01"
-        endDate:
-          type: string
-          format: date
-          description: |
-            End date for the backfill date range in ISO 8601 format (YYYY-MM-DD).
-            The backfill will collect data up to and including this date.
-            Must be after or equal to startDate.
-          example: "2025-12-31"
-        collectionType:
-          type: string
-          description: |
-            Strategy for collecting data across districts.
-            - `per-district`: Collect all dates for one district before moving to the next.
-              Better for focused district analysis and reduces memory usage.
-            - `all-districts`: Collect data for all districts for each date before moving
-              to the next date. Better for cross-district comparisons on specific dates.
-          enum:
-            - per-district
-            - all-districts
-          default: per-district
-          example: per-district
-        concurrency:
-          type: integer
-          description: |
-            Maximum number of concurrent data collection operations.
-            Higher values speed up collection but increase load on source systems.
-            Recommended range is 1-5 for most use cases.
-          minimum: 1
-          maximum: 10
-          default: 3
-          example: 3
-      example:
-        targetDistricts:
-          - "57"
-          - "F"
-        startDate: "2025-07-01"
-        endDate: "2025-12-31"
-        collectionType: per-district
-        concurrency: 3
-
-    BackfillStatus:
-      type: object
-      description: |
-        Status information for a backfill operation, including progress tracking,
-        scope details, and collection strategy. Returned by backfill status endpoints
-        to monitor the progress of asynchronous data collection jobs.
-      required:
-        - backfillId
-        - status
-        - progress
-        - scope
-        - collectionStrategy
-        - createdAt
-        - updatedAt
-      properties:
-        backfillId:
-          type: string
-          description: |
-            Unique identifier for the backfill job. Used to query status,
-            monitor progress, and cancel the operation if needed.
-          example: "bf-2026-01-24-abc123"
-        status:
-          type: string
-          description: |
-            Current status of the backfill operation.
-            - `processing`: Job is actively collecting data
-            - `complete`: Job finished successfully
-            - `error`: Job encountered an unrecoverable error
-            - `cancelled`: Job was cancelled by user request
-          enum:
-            - processing
-            - complete
-            - error
-            - cancelled
-          example: processing
-        progress:
-          type: object
-          description: |
-            Progress tracking information showing how much of the backfill
-            operation has been completed.
-          required:
-            - total
-            - completed
-            - failed
-            - percentage
-          properties:
-            total:
-              type: integer
-              description: |
-                Total number of data collection tasks in this backfill job.
-                Calculated as (number of districts) × (number of dates in range).
-              minimum: 0
-              example: 180
-            completed:
-              type: integer
-              description: |
-                Number of tasks that have completed successfully.
-              minimum: 0
-              example: 45
-            failed:
-              type: integer
-              description: |
-                Number of tasks that failed during collection.
-                Failed tasks may be retried depending on the error type.
-              minimum: 0
-              example: 2
-            percentage:
-              type: number
-              format: float
-              description: |
-                Percentage of total tasks completed (including failed).
-                Calculated as ((completed + failed) / total) × 100.
-              minimum: 0
-              maximum: 100
-              example: 26.1
-          example:
-            total: 180
-            completed: 45
-            failed: 2
-            percentage: 26.1
-        scope:
-          type: object
-          description: |
-            Defines the scope of the backfill operation, including which
-            districts and date range are being processed.
-          required:
-            - scopeType
-          properties:
-            scopeType:
-              type: string
-              description: |
-                Type of scope for the backfill operation.
-                - `all-districts`: Backfill targets all available districts
-                - `specific-districts`: Backfill targets only specified districts
-                - `single-district`: Backfill targets a single district
-              enum:
-                - all-districts
-                - specific-districts
-                - single-district
-              example: specific-districts
-            targetDistricts:
-              type: array
-              description: |
-                List of district IDs included in this backfill operation.
-                Empty or null for all-districts scope type.
-              items:
-                type: string
-              example:
-                - "57"
-                - "F"
-                - "101"
-            startDate:
-              type: string
-              format: date
-              description: |
-                Start date of the backfill date range (inclusive).
-              example: "2025-07-01"
-            endDate:
-              type: string
-              format: date
-              description: |
-                End date of the backfill date range (inclusive).
-              example: "2025-12-31"
-          example:
-            scopeType: specific-districts
-            targetDistricts:
-              - "57"
-              - "F"
-            startDate: "2025-07-01"
-            endDate: "2025-12-31"
-        collectionStrategy:
-          type: object
-          description: |
-            Configuration for how data is collected during the backfill operation.
-          required:
-            - type
-            - concurrency
-          properties:
-            type:
-              type: string
-              description: |
-                Strategy for collecting data across districts and dates.
-                - `per-district`: Collect all dates for one district before moving to the next
-                - `all-districts`: Collect data for all districts for each date
-              enum:
-                - per-district
-                - all-districts
-              example: per-district
-            concurrency:
-              type: integer
-              description: |
-                Maximum number of concurrent data collection operations.
-              minimum: 1
-              maximum: 10
-              example: 3
-          example:
-            type: per-district
-            concurrency: 3
-        createdAt:
-          type: string
-          format: date-time
-          description: |
-            Timestamp when the backfill job was created.
-          example: "2026-01-24T10:30:00Z"
-        updatedAt:
-          type: string
-          format: date-time
-          description: |
-            Timestamp when the backfill job status was last updated.
-          example: "2026-01-24T10:35:00Z"
-        completedAt:
-          type: string
-          format: date-time
-          description: |
-            Timestamp when the backfill job completed (successfully, with error, or cancelled).
-            Only present when status is not `processing`.
-          example: "2026-01-24T12:45:00Z"
-        errorMessage:
-          type: string
-          description: |
-            Error message if the backfill job failed.
-            Only present when status is `error`.
-          example: "Failed to connect to data source after multiple retries"
-      example:
-        backfillId: "bf-2026-01-24-abc123"
-        status: processing
-        progress:
-          total: 180
-          completed: 45
-          failed: 2
-          percentage: 26.1
-        scope:
-          scopeType: specific-districts
-          targetDistricts:
-            - "57"
-            - "F"
-          startDate: "2025-07-01"
-          endDate: "2025-12-31"
-        collectionStrategy:
-          type: per-district
-          concurrency: 3
-        createdAt: "2026-01-24T10:30:00Z"
-        updatedAt: "2026-01-24T10:35:00Z"
 
     # Analytics Schemas
     ClubSummary:
@@ -10737,18 +10438,6 @@ components:
           - json
         default: json
       example: csv
-
-    backfillIdParam:
-      name: backfillId
-      in: path
-      required: true
-      description: |
-        Unique identifier for a backfill operation.
-        This ID is returned when initiating a backfill via `POST /admin/unified-backfill`
-        and can be used to monitor progress or cancel the operation.
-      schema:
-        type: string
-      example: "bf-2026-01-24-abc123"
 
     snapshotIdParam:
       name: snapshotId

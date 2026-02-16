@@ -259,7 +259,7 @@ describe('LandingPage - Error Handling', () => {
     // Check for setup instructions
     expect(screen.getByText('What happens next:')).toBeInTheDocument()
     expect(
-      screen.getByText('Go to the Admin page to start a backfill operation')
+      screen.getByText('Go to the Admin page to manage data collection')
     ).toBeInTheDocument()
   })
 

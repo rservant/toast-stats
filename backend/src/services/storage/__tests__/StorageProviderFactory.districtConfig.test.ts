@@ -554,8 +554,7 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
       expect(result).toHaveProperty('rawCSVStorage')
       expect(result).toHaveProperty('districtConfigStorage')
       expect(result).toHaveProperty('timeSeriesIndexStorage')
-      expect(result).toHaveProperty('backfillJobStorage')
-      expect(Object.keys(result)).toHaveLength(5)
+      expect(Object.keys(result)).toHaveLength(4)
     })
   })
 

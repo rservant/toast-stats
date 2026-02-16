@@ -24,7 +24,6 @@ import {
 } from './shared.js'
 import { logger } from '../../utils/logger.js'
 import type { ISnapshotStorage } from '../../types/storageInterfaces.js'
-import { getPendingBackfillJobCount } from './backfill.js'
 
 export const monitoringRouter = Router()
 
@@ -465,7 +464,7 @@ export interface SystemHealthMetrics {
   cacheHitRate: number
   /** Average response time in milliseconds for analytics requests */
   averageResponseTime: number
-  /** Number of pending background operations (e.g., backfill jobs) */
+  /** Number of pending background operations (always 0 — backend has no background operations) */
   pendingOperations: number
   /** Total number of snapshots in the store */
   snapshotCount: number
@@ -550,8 +549,8 @@ monitoringRouter.get('/health', logAdminAccess, async (req, res) => {
       })
     }
 
-    // Count pending backfill operations
-    const pendingOperations = getPendingBackfillJobCount()
+    // No background operations in the backend — always 0
+    const pendingOperations = 0
 
     const systemHealth: SystemHealthMetrics = {
       cacheHitRate: Math.round(cacheHitRate * 100) / 100, // Round to 2 decimal places

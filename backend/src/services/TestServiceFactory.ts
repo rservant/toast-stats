@@ -34,12 +34,9 @@ import {
 import { CacheConfigService } from './CacheConfigService.js'
 import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
 import { RefreshService } from './RefreshService.js'
-import { BackfillService } from './UnifiedBackfillService.js'
-import { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import { FileSnapshotStore } from './SnapshotStore.js'
 import { SnapshotStore } from '../types/snapshots.js'
 import { RawCSVCacheService } from './RawCSVCacheService.js'
-import { LocalDistrictConfigStorage } from './storage/LocalDistrictConfigStorage.js'
 import { createMockCacheService } from '../__tests__/utils/mockCacheService.js'
 import { LocalSnapshotStorage } from './storage/LocalSnapshotStorage.js'
 import { LocalRawCSVStorage } from './storage/LocalRawCSVStorage.js'
@@ -145,15 +142,6 @@ export interface TestServiceFactory {
    * Create RefreshService instance
    */
   createRefreshService(snapshotStore?: SnapshotStore): RefreshService
-
-  /**
-   * Create BackfillService instance
-   */
-  createBackfillService(
-    refreshService?: RefreshService,
-    snapshotStore?: SnapshotStore,
-    configService?: DistrictConfigurationService
-  ): BackfillService
 
   /**
    * Create a fully configured service container with all services registered
@@ -283,38 +271,6 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
   }
 
   /**
-   * Create BackfillService instance
-   */
-  createBackfillService(
-    refreshService?: RefreshService,
-    snapshotStore?: SnapshotStore,
-    configService?: DistrictConfigurationService
-  ): BackfillService {
-    const refresh = refreshService || this.createRefreshService()
-    const store = snapshotStore || this.createSnapshotStoreInstance()
-    // Create DistrictConfigurationService with storage if not provided
-    let config = configService
-    if (!config) {
-      const cacheDir =
-        this.createTestConfiguration().getConfiguration().cacheDirectory
-      const storage = new LocalDistrictConfigStorage(cacheDir)
-      config = new DistrictConfigurationService(storage)
-    }
-
-    // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
-    const service = new BackfillService(
-      refresh,
-      store as FileSnapshotStore,
-      config,
-      undefined, // alertManager
-      undefined, // circuitBreakerManager
-      undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
-    )
-    // BackfillService doesn't have dispose method, so we don't track it
-    return service
-  }
-
-  /**
    * Create a fully configured service container with all services registered
    */
   createConfiguredContainer(
@@ -403,37 +359,6 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
       )
     )
 
-    // Register BackfillService
-    // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
-    container.register(
-      ServiceTokens.BackfillService,
-      createServiceFactory(
-        (container: ServiceContainer) => {
-          const refreshService = container.resolve(ServiceTokens.RefreshService)
-          const snapshotStore = container.resolve(ServiceTokens.SnapshotStore)
-          // Create DistrictConfigurationService with storage
-          const cacheConfig = container.resolve(
-            ServiceTokens.CacheConfigService
-          )
-          const cacheDir = cacheConfig.getCacheDirectory()
-          const storage = new LocalDistrictConfigStorage(cacheDir)
-          const configService = new DistrictConfigurationService(storage)
-
-          return new BackfillService(
-            refreshService,
-            snapshotStore as FileSnapshotStore,
-            configService,
-            undefined, // alertManager
-            undefined, // circuitBreakerManager
-            undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
-          )
-        },
-        async () => {
-          // BackfillService doesn't have dispose method
-        }
-      )
-    )
-
     return container
   }
 
@@ -509,17 +434,6 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
         () => this.createRefreshService(),
         async _instance => {
           // RefreshService doesn't have dispose method
-        }
-      )
-    )
-
-    // Register BackfillService
-    container.registerInterface(
-      'BackfillService',
-      createServiceFactory(
-        () => this.createBackfillService(),
-        async _instance => {
-          // BackfillService doesn't have dispose method
         }
       )
     )
@@ -607,7 +521,6 @@ export const ServiceTokens = {
   Logger: createServiceToken('Logger', TestLogger),
   SnapshotStore: createServiceToken('SnapshotStore', FileSnapshotStore),
   RefreshService: createServiceToken('RefreshService', RefreshService),
-  BackfillService: createServiceToken('BackfillService', BackfillService),
 }
 
 /**
@@ -623,7 +536,6 @@ export const InterfaceTokens = {
   ILogger: createInterfaceToken<ILogger>('ILogger'),
   SnapshotStore: createInterfaceToken<SnapshotStore>('SnapshotStore'),
   RefreshService: createInterfaceToken<RefreshService>('RefreshService'),
-  BackfillService: createInterfaceToken<BackfillService>('BackfillService'),
 
   // Storage abstraction layer interface tokens
   // Requirements: 1.3, 1.4
