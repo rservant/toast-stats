@@ -485,8 +485,8 @@ coreRouter.get(
           (district as DistrictStatistics & { membershipHistory?: unknown[] })
             .membershipHistory || []
         return {
-          membershipHistory,
-        } as MembershipHistoryResponse
+          data: membershipHistory as MembershipHistoryResponse['data'],
+        } satisfies MembershipHistoryResponse
       },
       'fetch membership history from per-district snapshot'
     )
@@ -532,8 +532,8 @@ coreRouter.get(
       districtId,
       district =>
         ({
-          clubs: district.clubs || [],
-        }) as ClubsResponse,
+          clubs: (district.clubs || []) as unknown as ClubsResponse['clubs'],
+        }) satisfies Record<string, unknown> as ClubsResponse,
       'fetch clubs from per-district snapshot'
     )
 
@@ -713,8 +713,8 @@ coreRouter.get(
           (district as DistrictStatistics & { dailyReports?: unknown[] })
             .dailyReports || []
         return {
-          dailyReports,
-        } as DailyReportsResponse
+          reports: dailyReports as DailyReportsResponse['reports'],
+        } satisfies DailyReportsResponse
       },
       'fetch daily reports from snapshot'
     )

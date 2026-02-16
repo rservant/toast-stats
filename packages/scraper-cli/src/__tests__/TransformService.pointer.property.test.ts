@@ -78,9 +78,7 @@ async function setupRawCsvData(
  * Read and parse the pointer file from the snapshots directory.
  * Returns null if the file does not exist.
  */
-async function readPointerFile(
-  cacheDir: string
-): Promise<{
+async function readPointerFile(cacheDir: string): Promise<{
   snapshotId: string
   updatedAt: string
   schemaVersion: string

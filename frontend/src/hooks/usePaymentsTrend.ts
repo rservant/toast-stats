@@ -317,7 +317,7 @@ export function usePaymentsTrend(
         trendDirection: direction,
       },
     }
-  }, [analyticsData, currentProgramYear, selectedProgramYear])
+  }, [analyticsData, currentProgramYear])
 
   return {
     data: result,

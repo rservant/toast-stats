@@ -461,16 +461,14 @@ export class GCSSnapshotStorage implements ISnapshotStorage {
         pageToken,
         autoPaginate: false,
       })
+      const response = apiResponse as Record<string, unknown> | undefined
       const prefixes: string[] =
-        ((apiResponse as Record<string, unknown> | undefined)?.prefixes as
-          | string[]
-          | undefined) ?? []
+        (response?.['prefixes'] as string[] | undefined) ?? []
       for (const p of prefixes) {
         const snapshotId = p.replace(prefix, '').replace(/\/$/, '')
         if (snapshotId) yield snapshotId
       }
-      pageToken = (apiResponse as Record<string, unknown> | undefined)
-        ?.nextPageToken as string | undefined
+      pageToken = response?.['nextPageToken'] as string | undefined
     } while (pageToken)
   }
 
@@ -506,8 +504,9 @@ export class GCSSnapshotStorage implements ISnapshotStorage {
           }
         }
       }
-      pageToken = (apiResponse as Record<string, unknown> | undefined)
-        ?.nextPageToken as string | undefined
+      pageToken = (apiResponse as Record<string, unknown> | undefined)?.[
+        'nextPageToken'
+      ] as string | undefined
     } while (pageToken)
   }
 

@@ -59,11 +59,15 @@ function createStorage(): GCSSnapshotStorage {
 }
 
 function validateSnapshotId(storage: GCSSnapshotStorage, id: string): void {
-  ;(storage as unknown as Record<string, Function>)['validateSnapshotId'](id)
+  ;(storage as unknown as Record<string, (...args: unknown[]) => unknown>)[
+    'validateSnapshotId'
+  ](id)
 }
 
 function validateDistrictId(storage: GCSSnapshotStorage, id: string): void {
-  ;(storage as unknown as Record<string, Function>)['validateDistrictId'](id)
+  ;(storage as unknown as Record<string, (...args: unknown[]) => unknown>)[
+    'validateDistrictId'
+  ](id)
 }
 
 // ============================================================================

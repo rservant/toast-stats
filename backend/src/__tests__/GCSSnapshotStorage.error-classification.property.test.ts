@@ -61,9 +61,9 @@ function classifyError(
   storage: GCSSnapshotStorage,
   error: unknown
 ): { retryable: boolean; is404: boolean } {
-  return (storage as unknown as Record<string, Function>)['classifyError'](
-    error
-  ) as { retryable: boolean; is404: boolean }
+  return (
+    storage as unknown as Record<string, (...args: unknown[]) => unknown>
+  )['classifyError'](error) as { retryable: boolean; is404: boolean }
 }
 
 // ============================================================================

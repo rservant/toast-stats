@@ -122,9 +122,9 @@ describe('GCSSnapshotStorage — Task 3', () => {
 
       const storage = createStorage(mockBucket)
       // Access private method via bracket notation
-      const result = await (storage as unknown as Record<string, Function>)[
-        'readObject'
-      ]('snapshots/2024-01-15/test.json', TestSchema, 'testOp')
+      const result = await (
+        storage as unknown as Record<string, (...args: unknown[]) => unknown>
+      )['readObject']('snapshots/2024-01-15/test.json', TestSchema, 'testOp')
 
       expect(result).toEqual({ id: 'abc', value: 42 })
       expect(mockBucket.file).toHaveBeenCalledWith(
@@ -140,9 +140,9 @@ describe('GCSSnapshotStorage — Task 3', () => {
       mockBucket.file.mockReturnValue(mockFile)
 
       const storage = createStorage(mockBucket)
-      const result = await (storage as unknown as Record<string, Function>)[
-        'readObject'
-      ]('snapshots/2024-01-15/test.json', TestSchema, 'testOp')
+      const result = await (
+        storage as unknown as Record<string, (...args: unknown[]) => unknown>
+      )['readObject']('snapshots/2024-01-15/test.json', TestSchema, 'testOp')
 
       expect(result).toBeNull()
     })
@@ -154,19 +154,15 @@ describe('GCSSnapshotStorage — Task 3', () => {
 
       const storage = createStorage(mockBucket)
       await expect(
-        (storage as unknown as Record<string, Function>)['readObject'](
-          'snapshots/2024-01-15/test.json',
-          TestSchema,
-          'testOp'
-        )
+        (storage as unknown as Record<string, (...args: unknown[]) => unknown>)[
+          'readObject'
+        ]('snapshots/2024-01-15/test.json', TestSchema, 'testOp')
       ).rejects.toThrow(StorageOperationError)
 
       try {
-        await (storage as unknown as Record<string, Function>)['readObject'](
-          'snapshots/2024-01-15/test.json',
-          TestSchema,
-          'testOp'
-        )
+        await (
+          storage as unknown as Record<string, (...args: unknown[]) => unknown>
+        )['readObject']('snapshots/2024-01-15/test.json', TestSchema, 'testOp')
       } catch (error) {
         expect(error).toBeInstanceOf(StorageOperationError)
         const opError = error as StorageOperationError
@@ -187,11 +183,9 @@ describe('GCSSnapshotStorage — Task 3', () => {
       const storage = createStorage(mockBucket)
 
       try {
-        await (storage as unknown as Record<string, Function>)['readObject'](
-          'snapshots/2024-01-15/test.json',
-          TestSchema,
-          'testOp'
-        )
+        await (
+          storage as unknown as Record<string, (...args: unknown[]) => unknown>
+        )['readObject']('snapshots/2024-01-15/test.json', TestSchema, 'testOp')
         expect.fail('Should have thrown')
       } catch (error) {
         expect(error).toBeInstanceOf(StorageOperationError)
@@ -212,11 +206,9 @@ describe('GCSSnapshotStorage — Task 3', () => {
       const storage = createStorage(mockBucket)
 
       try {
-        await (storage as unknown as Record<string, Function>)['readObject'](
-          'snapshots/2024-01-15/test.json',
-          TestSchema,
-          'testOp'
-        )
+        await (
+          storage as unknown as Record<string, (...args: unknown[]) => unknown>
+        )['readObject']('snapshots/2024-01-15/test.json', TestSchema, 'testOp')
         expect.fail('Should have thrown')
       } catch (error) {
         expect(error).toBeInstanceOf(StorageOperationError)
@@ -238,9 +230,9 @@ describe('GCSSnapshotStorage — Task 3', () => {
       mockBucket.file.mockReturnValue(mockFile)
 
       const storage = createStorage(mockBucket)
-      const result = await (storage as unknown as Record<string, Function>)[
-        'checkObjectExists'
-      ]('snapshots/2024-01-15/rankings.json', 'testOp')
+      const result = await (
+        storage as unknown as Record<string, (...args: unknown[]) => unknown>
+      )['checkObjectExists']('snapshots/2024-01-15/rankings.json', 'testOp')
 
       expect(result).toBe(true)
     })
@@ -251,9 +243,9 @@ describe('GCSSnapshotStorage — Task 3', () => {
       mockBucket.file.mockReturnValue(mockFile)
 
       const storage = createStorage(mockBucket)
-      const result = await (storage as unknown as Record<string, Function>)[
-        'checkObjectExists'
-      ]('snapshots/2024-01-15/rankings.json', 'testOp')
+      const result = await (
+        storage as unknown as Record<string, (...args: unknown[]) => unknown>
+      )['checkObjectExists']('snapshots/2024-01-15/rankings.json', 'testOp')
 
       expect(result).toBe(false)
     })
@@ -268,9 +260,9 @@ describe('GCSSnapshotStorage — Task 3', () => {
       const storage = createStorage(mockBucket)
 
       try {
-        await (storage as unknown as Record<string, Function>)[
-          'checkObjectExists'
-        ]('snapshots/2024-01-15/rankings.json', 'testOp')
+        await (
+          storage as unknown as Record<string, (...args: unknown[]) => unknown>
+        )['checkObjectExists']('snapshots/2024-01-15/rankings.json', 'testOp')
         expect.fail('Should have thrown')
       } catch (error) {
         expect(error).toBeInstanceOf(StorageOperationError)
@@ -300,9 +292,9 @@ describe('GCSSnapshotStorage — Task 3', () => {
       ])
 
       const storage = createStorage(mockBucket)
-      const gen = (storage as unknown as Record<string, Function>)[
-        'iterateSnapshotPrefixes'
-      ]() as AsyncGenerator<string>
+      const gen = (
+        storage as unknown as Record<string, (...args: unknown[]) => unknown>
+      )['iterateSnapshotPrefixes']() as AsyncGenerator<string>
 
       const ids: string[] = []
       for await (const id of gen) {
@@ -324,9 +316,9 @@ describe('GCSSnapshotStorage — Task 3', () => {
       ])
 
       const storage = createStorage(mockBucket)
-      const gen = (storage as unknown as Record<string, Function>)[
-        'iterateSnapshotPrefixes'
-      ]() as AsyncGenerator<string>
+      const gen = (
+        storage as unknown as Record<string, (...args: unknown[]) => unknown>
+      )['iterateSnapshotPrefixes']() as AsyncGenerator<string>
 
       const ids: string[] = []
       for await (const id of gen) {
@@ -358,9 +350,9 @@ describe('GCSSnapshotStorage — Task 3', () => {
         ])
 
       const storage = createStorage(mockBucket)
-      const gen = (storage as unknown as Record<string, Function>)[
-        'iterateSnapshotPrefixes'
-      ]() as AsyncGenerator<string>
+      const gen = (
+        storage as unknown as Record<string, (...args: unknown[]) => unknown>
+      )['iterateSnapshotPrefixes']() as AsyncGenerator<string>
 
       const ids: string[] = []
       for await (const id of gen) {
@@ -375,9 +367,9 @@ describe('GCSSnapshotStorage — Task 3', () => {
       mockBucket.getFiles.mockResolvedValue([[], null, {}])
 
       const storage = createStorage(mockBucket)
-      const gen = (storage as unknown as Record<string, Function>)[
-        'iterateSnapshotPrefixes'
-      ]() as AsyncGenerator<string>
+      const gen = (
+        storage as unknown as Record<string, (...args: unknown[]) => unknown>
+      )['iterateSnapshotPrefixes']() as AsyncGenerator<string>
 
       const ids: string[] = []
       for await (const id of gen) {
@@ -391,9 +383,9 @@ describe('GCSSnapshotStorage — Task 3', () => {
       mockBucket.getFiles.mockResolvedValue([[], null, {}])
 
       const storage = createStorage(mockBucket, 'my-prefix')
-      const gen = (storage as unknown as Record<string, Function>)[
-        'iterateSnapshotPrefixes'
-      ]() as AsyncGenerator<string>
+      const gen = (
+        storage as unknown as Record<string, (...args: unknown[]) => unknown>
+      )['iterateSnapshotPrefixes']() as AsyncGenerator<string>
 
       // Consume the generator
       for await (const _ of gen) {
@@ -500,11 +492,9 @@ describe('GCSSnapshotStorage — Task 3', () => {
       mockBucket.file.mockReturnValue(mockFile)
 
       const storage = createStorage(mockBucket)
-      await (storage as unknown as Record<string, Function>)['readObject'](
-        'snapshots/2024-01-15/metadata.json',
-        TestSchema,
-        'test'
-      )
+      await (
+        storage as unknown as Record<string, (...args: unknown[]) => unknown>
+      )['readObject']('snapshots/2024-01-15/metadata.json', TestSchema, 'test')
 
       expect(mockBucket.file).toHaveBeenCalledWith(
         'snapshots/2024-01-15/metadata.json'
@@ -519,27 +509,27 @@ describe('GCSSnapshotStorage — Task 3', () => {
       mockBucket.file.mockReturnValue(mockFile)
 
       const storage = createStorage(mockBucket, 'custom')
-      const path = (storage as unknown as Record<string, Function>)[
-        'buildObjectPath'
-      ]('2024-01-15', 'manifest.json')
+      const path = (
+        storage as unknown as Record<string, (...args: unknown[]) => unknown>
+      )['buildObjectPath']('2024-01-15', 'manifest.json')
 
       expect(path).toBe('custom/2024-01-15/manifest.json')
     })
 
     it('should build correct path for district files', () => {
       const storage = createStorage(mockBucket)
-      const path = (storage as unknown as Record<string, Function>)[
-        'buildObjectPath'
-      ]('2024-01-15', 'district_42.json')
+      const path = (
+        storage as unknown as Record<string, (...args: unknown[]) => unknown>
+      )['buildObjectPath']('2024-01-15', 'district_42.json')
 
       expect(path).toBe('snapshots/2024-01-15/district_42.json')
     })
 
     it('should build correct path for rankings file', () => {
       const storage = createStorage(mockBucket)
-      const path = (storage as unknown as Record<string, Function>)[
-        'buildObjectPath'
-      ]('2024-01-15', 'all-districts-rankings.json')
+      const path = (
+        storage as unknown as Record<string, (...args: unknown[]) => unknown>
+      )['buildObjectPath']('2024-01-15', 'all-districts-rankings.json')
 
       expect(path).toBe('snapshots/2024-01-15/all-districts-rankings.json')
     })

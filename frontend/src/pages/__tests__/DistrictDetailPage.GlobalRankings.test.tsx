@@ -228,11 +228,11 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       const tabNav = screen.getByRole('navigation')
 
       // Verify all tabs are present within the navigation
+      // Note: Analytics tab is currently hidden (commented out in component)
       expect(tabNav).toHaveTextContent(/overview/i)
       expect(tabNav).toHaveTextContent(/clubs/i)
       expect(tabNav).toHaveTextContent(/divisions & areas/i)
       expect(tabNav).toHaveTextContent(/trends/i)
-      expect(tabNav).toHaveTextContent(/analytics/i)
       expect(tabNav).toHaveTextContent(/global rankings/i)
     })
 
@@ -243,14 +243,13 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       const tabNav = screen.getByRole('navigation')
       const tabButtons = tabNav.querySelectorAll('button')
 
-      // Verify the order
-      expect(tabButtons).toHaveLength(6)
+      // Verify the order (Analytics tab is currently hidden)
+      expect(tabButtons).toHaveLength(5)
       expect(tabButtons[0]).toHaveTextContent(/overview/i)
       expect(tabButtons[1]).toHaveTextContent(/clubs/i)
       expect(tabButtons[2]).toHaveTextContent(/divisions & areas/i)
       expect(tabButtons[3]).toHaveTextContent(/trends/i)
-      expect(tabButtons[4]).toHaveTextContent(/analytics/i)
-      expect(tabButtons[5]).toHaveTextContent(/global rankings/i)
+      expect(tabButtons[4]).toHaveTextContent(/global rankings/i)
     })
   })
 
@@ -379,16 +378,16 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
         name: /global rankings/i,
       })
 
-      // Get the tab navigation and find the Analytics tab within it
+      // Get the tab navigation and find the Trends tab within it (Analytics is currently hidden)
       const tabNav = screen.getByRole('navigation')
       const tabButtons = tabNav.querySelectorAll('button')
-      const analyticsTab = Array.from(tabButtons).find(btn =>
-        btn.textContent?.toLowerCase().includes('analytics')
+      const trendsTab = Array.from(tabButtons).find(btn =>
+        btn.textContent?.toLowerCase().includes('trends')
       )
 
       // Both should have the same inactive styling classes
       expect(globalRankingsTab).toHaveClass('text-gray-600')
-      expect(analyticsTab).toHaveClass('text-gray-600')
+      expect(trendsTab).toHaveClass('text-gray-600')
     })
 
     it('should have consistent active styling with other tabs', async () => {

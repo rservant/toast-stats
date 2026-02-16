@@ -113,7 +113,9 @@ const areaStatisticsArb = fc.record({
  * Values can be strings, numbers, or null
  */
 const scrapedRecordArb = fc.dictionary(
-  fc.string({ minLength: 1, maxLength: 20 }),
+  fc.string({ minLength: 1, maxLength: 20 }).filter(
+    (k) => k !== '__proto__' && k !== 'constructor' && k !== 'prototype'
+  ),
   fc.oneof(
     fc.string({ minLength: 0, maxLength: 50 }),
     fc.integer(),
