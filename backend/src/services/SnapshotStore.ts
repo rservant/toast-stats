@@ -868,11 +868,6 @@ export class FileSnapshotStore
     }> = []
 
     // First, create clubs from byClub entries (these carry membership data)
-    const dcpGoalsPerClub =
-      byClub.length > 0 ? Math.floor(totalAwards / byClub.length) : 0
-    const remainingGoals =
-      byClub.length > 0 ? totalAwards % byClub.length : 0
-
     for (let index = 0; index < byClub.length; index++) {
       const club = byClub[index]!
       clubs.push({
@@ -882,7 +877,7 @@ export class FileSnapshotStore
         areaId: '',
         membershipCount: club.memberCount,
         paymentsCount: 0,
-        dcpGoals: dcpGoalsPerClub + (index < remainingGoals ? 1 : 0),
+        dcpGoals: 0, // Will be distributed below
         status: statusList[index] ?? 'Active',
         divisionName: '',
         areaName: '',
@@ -902,7 +897,7 @@ export class FileSnapshotStore
         areaId: '',
         membershipCount: 0,
         paymentsCount: 0,
-        dcpGoals: 0,
+        dcpGoals: 0, // Will be distributed below
         status: statusList[i] ?? 'Active',
         divisionName: '',
         areaName: '',
@@ -911,6 +906,15 @@ export class FileSnapshotStore
         newMembers: 0,
         membershipBase: 0,
       })
+    }
+
+    // Distribute DCP goals across all clubs to preserve totalAwards on round-trip
+    if (totalAwards > 0 && clubs.length > 0) {
+      const goalsPerClub = Math.floor(totalAwards / clubs.length)
+      const extraGoals = totalAwards % clubs.length
+      for (let i = 0; i < clubs.length; i++) {
+        clubs[i]!.dcpGoals = goalsPerClub + (i < extraGoals ? 1 : 0)
+      }
     }
 
     // If there are awards but no clubs, create a synthetic club to preserve the awards count
