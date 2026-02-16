@@ -30,11 +30,11 @@ import { LocalRawCSVStorage } from './LocalRawCSVStorage.js'
 import { LocalDistrictConfigStorage } from './LocalDistrictConfigStorage.js'
 import { LocalTimeSeriesIndexStorage } from './LocalTimeSeriesIndexStorage.js'
 import { LocalBackfillJobStorage } from './LocalBackfillJobStorage.js'
-import { FirestoreSnapshotStorage } from './FirestoreSnapshotStorage.js'
 import { FirestoreDistrictConfigStorage } from './FirestoreDistrictConfigStorage.js'
 import { FirestoreTimeSeriesIndexStorage } from './FirestoreTimeSeriesIndexStorage.js'
 import { FirestoreBackfillJobStorage } from './FirestoreBackfillJobStorage.js'
 import { GCSRawCSVStorage } from './GCSRawCSVStorage.js'
+import { GCSSnapshotStorage } from './GCSSnapshotStorage.js'
 import { CacheConfigService } from '../CacheConfigService.js'
 import type { ServiceConfiguration } from '../../types/serviceContainer.js'
 
@@ -350,10 +350,11 @@ export class StorageProviderFactory {
       firestoreCollection: collectionName,
     })
 
-    // Create Firestore snapshot storage
-    const snapshotStorage = new FirestoreSnapshotStorage({
+    // Create GCS snapshot storage (read-only, replaces FirestoreSnapshotStorage)
+    const snapshotStorage = new GCSSnapshotStorage({
       projectId: gcpConfig.projectId,
-      collectionName,
+      bucketName: gcpConfig.bucketName,
+      prefix: 'snapshots',
     })
 
     // Create GCS raw CSV storage

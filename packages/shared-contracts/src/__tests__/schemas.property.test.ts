@@ -245,6 +245,7 @@ const snapshotManifestArb = fc.record({
   totalDistricts: fc.nat(),
   successfulDistricts: fc.nat(),
   failedDistricts: fc.nat(),
+  writeComplete: fc.option(fc.boolean(), { nil: undefined }),
   allDistrictsRankings: fc.option(
     fc.record({
       filename: fc.string({ minLength: 1 }),
@@ -538,6 +539,48 @@ describe('Property 1: Schema-Type Consistency', () => {
           }
           const result = SnapshotManifestSchema.safeParse(dataWithOptional)
           expect(result.success).toBe(true)
+        }),
+        fcOptions
+      )
+    })
+
+    it('should accept manifest with writeComplete: true', () => {
+      fc.assert(
+        fc.property(snapshotManifestArb, data => {
+          const withWriteComplete = { ...data, writeComplete: true }
+          const result = SnapshotManifestSchema.safeParse(withWriteComplete)
+          expect(result.success).toBe(true)
+          if (result.success) {
+            expect(result.data.writeComplete).toBe(true)
+          }
+        }),
+        fcOptions
+      )
+    })
+
+    it('should accept manifest with writeComplete: false', () => {
+      fc.assert(
+        fc.property(snapshotManifestArb, data => {
+          const withWriteComplete = { ...data, writeComplete: false }
+          const result = SnapshotManifestSchema.safeParse(withWriteComplete)
+          expect(result.success).toBe(true)
+          if (result.success) {
+            expect(result.data.writeComplete).toBe(false)
+          }
+        }),
+        fcOptions
+      )
+    })
+
+    it('should accept manifest with writeComplete omitted', () => {
+      fc.assert(
+        fc.property(snapshotManifestArb, data => {
+          const { writeComplete: _, ...withoutWriteComplete } = data
+          const result = SnapshotManifestSchema.safeParse(withoutWriteComplete)
+          expect(result.success).toBe(true)
+          if (result.success) {
+            expect(result.data.writeComplete).toBeUndefined()
+          }
         }),
         fcOptions
       )

@@ -67,6 +67,9 @@ export const SnapshotManifestSchema = z.object({
   /** Number of failed districts */
   failedDistricts: z.number(),
 
+  /** Whether the snapshot upload is complete. Set to true by scraper-cli as the final step. */
+  writeComplete: z.boolean().optional(),
+
   /** All districts rankings file info (optional) */
   allDistrictsRankings: z
     .object({

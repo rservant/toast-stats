@@ -42,6 +42,8 @@ export interface SnapshotManifest {
   successfulDistricts: number
   /** Number of failed districts */
   failedDistricts: number
+  /** Whether the snapshot upload is complete. Set to true by scraper-cli as the final step. */
+  writeComplete?: boolean
   /** All districts rankings file info (optional) */
   allDistrictsRankings?: {
     /** Name of the rankings file */

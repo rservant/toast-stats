@@ -10,6 +10,7 @@
  * - LocalDistrictConfigStorage: Local filesystem district config storage (development)
  * - FirestoreSnapshotStorage: Cloud Firestore storage (production)
  * - GCSRawCSVStorage: Cloud Storage CSV cache (production)
+ * - GCSSnapshotStorage: Cloud Storage snapshot storage (production)
  *
  * Factory:
  * - StorageProviderFactory: Creates storage providers from environment or explicit config
@@ -35,6 +36,8 @@ export { FirestoreTimeSeriesIndexStorage } from './FirestoreTimeSeriesIndexStora
 export type { FirestoreTimeSeriesIndexStorageConfig } from './FirestoreTimeSeriesIndexStorage.js'
 export { GCSRawCSVStorage } from './GCSRawCSVStorage.js'
 export type { GCSRawCSVStorageConfig } from './GCSRawCSVStorage.js'
+export { GCSSnapshotStorage } from './GCSSnapshotStorage.js'
+export type { GCSSnapshotStorageConfig } from './GCSSnapshotStorage.js'
 export { StorageProviderFactory } from './StorageProviderFactory.js'
 export type { StorageProviders } from './StorageProviderFactory.js'
 

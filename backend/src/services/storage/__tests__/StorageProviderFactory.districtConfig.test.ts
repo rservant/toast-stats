@@ -25,9 +25,10 @@ import type { StorageConfig } from '../../../types/storageInterfaces.js'
 // ============================================================================
 
 // Track constructor calls for verification
-interface MockFirestoreSnapshotConfig {
+interface MockGCSSnapshotConfig {
   projectId: string
-  collectionName?: string
+  bucketName: string
+  prefix?: string
 }
 
 interface MockFirestoreDistrictConfig {
@@ -39,21 +40,21 @@ interface MockGCSConfig {
   bucketName: string
 }
 
-const firestoreSnapshotConstructorCalls: MockFirestoreSnapshotConfig[] = []
+const gcsSnapshotConstructorCalls: MockGCSSnapshotConfig[] = []
 const firestoreDistrictConfigConstructorCalls: MockFirestoreDistrictConfig[] =
   []
 const gcsConstructorCalls: MockGCSConfig[] = []
 
 // Mock the GCP provider modules to avoid actual GCP connections
-vi.mock('../FirestoreSnapshotStorage.js', () => {
+vi.mock('../GCSSnapshotStorage.js', () => {
   return {
-    FirestoreSnapshotStorage: class MockFirestoreSnapshotStorage {
-      _mockType = 'FirestoreSnapshotStorage'
-      _config: MockFirestoreSnapshotConfig
+    GCSSnapshotStorage: class MockGCSSnapshotStorage {
+      _mockType = 'GCSSnapshotStorage'
+      _config: MockGCSSnapshotConfig
 
-      constructor(config: MockFirestoreSnapshotConfig) {
+      constructor(config: MockGCSSnapshotConfig) {
         this._config = config
-        firestoreSnapshotConstructorCalls.push(config)
+        gcsSnapshotConstructorCalls.push(config)
       }
 
       getLatestSuccessful = vi.fn()
@@ -70,6 +71,8 @@ vi.mock('../FirestoreSnapshotStorage.js', () => {
       writeAllDistrictsRankings = vi.fn()
       readAllDistrictsRankings = vi.fn()
       hasAllDistrictsRankings = vi.fn()
+      isSnapshotWriteComplete = vi.fn()
+      deleteSnapshot = vi.fn()
     },
   }
 })
@@ -143,7 +146,7 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
     vi.clearAllMocks()
 
     // Clear constructor call tracking arrays
-    firestoreSnapshotConstructorCalls.length = 0
+    gcsSnapshotConstructorCalls.length = 0
     firestoreDistrictConfigConstructorCalls.length = 0
     gcsConstructorCalls.length = 0
   })
@@ -286,8 +289,8 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
       StorageProviderFactory.createFromEnvironment()
 
       // Verify all GCP providers use the same project ID
-      expect(firestoreSnapshotConstructorCalls).toHaveLength(1)
-      expect(firestoreSnapshotConstructorCalls[0]?.projectId).toBe(
+      expect(gcsSnapshotConstructorCalls).toHaveLength(1)
+      expect(gcsSnapshotConstructorCalls[0]?.projectId).toBe(
         'shared-project-id'
       )
 
@@ -615,7 +618,7 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
       expect(result.districtConfigStorage).toBeDefined()
 
       // GCP provider
-      firestoreSnapshotConstructorCalls.length = 0
+      gcsSnapshotConstructorCalls.length = 0
       firestoreDistrictConfigConstructorCalls.length = 0
       gcsConstructorCalls.length = 0
 
@@ -641,7 +644,7 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
       }
 
       // Verify no GCP providers were created
-      expect(firestoreSnapshotConstructorCalls).toHaveLength(0)
+      expect(gcsSnapshotConstructorCalls).toHaveLength(0)
       expect(firestoreDistrictConfigConstructorCalls).toHaveLength(0)
       expect(gcsConstructorCalls).toHaveLength(0)
     })
