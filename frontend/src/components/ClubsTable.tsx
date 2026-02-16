@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { ClubTrend } from '../hooks/useDistrictAnalytics'
+import type { ClubHealthStatus } from '../hooks/useDistrictAnalytics'
 import { ExportButton } from './ExportButton'
 import { exportClubPerformance } from '../utils/csvExport'
 import { LoadingSkeleton } from './LoadingSkeleton'
@@ -137,7 +138,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
           bValue = b.latestDcpGoals
           break
         case 'status': {
-          const statusOrder = {
+          const statusOrder: Record<ClubHealthStatus, number> = {
             'intervention-required': 0,
             vulnerable: 1,
             thriving: 2,
