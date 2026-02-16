@@ -9,36 +9,14 @@
 
 | Priority | Items | Description                                            |
 | -------- | ----- | ------------------------------------------------------ |
-| High     | 1     | No-op transformer functions, safe to remove            |
 | Medium   | 3     | Cascading dead code from backfill.ts removal + orphan  |
 | Low      | 6     | Deprecated aliases still consumed by tests             |
 
 ---
 
-## High Priority — Safe to Remove
-
-### 1. `backend/src/utils/transformers.ts` — Most functions are no-op pass-throughs
-
-The following exported functions accept `unknown`, do no transformation, and `return apiResponse` unchanged:
-
-- `transformDistrictsResponse`
-- `transformDistrictStatisticsResponse`
-- `transformMembershipHistoryResponse`
-- `transformClubsResponse`
-
-They are imported and called in `backend/src/routes/districts/core.ts`, but they do nothing. They were placeholder implementations that were never completed because the architecture shifted to pre-computed data served from files.
-
-`transformDailyReportsResponse` and `transformDailyReportDetailResponse` have partial logic but follow the same pattern.
-
-Only `transformErrorResponse` and `transformEducationalAwardsResponse` do real work.
-
-**Recommendation:** Remove the no-op functions and their imports from `core.ts`. Keep `transformErrorResponse` and `transformEducationalAwardsResponse`.
-
----
-
 ## Medium Priority — Cascading Dead Code & Orphans
 
-### 2. `backend/src/routes/districts/shared.ts` — Backfill-related functions now orphaned
+### 1. `backend/src/routes/districts/shared.ts` — Backfill-related functions now orphaned
 
 The removal of `backfill.ts` left several functions in `shared.ts` with zero importers:
 
@@ -50,7 +28,7 @@ The corresponding re-exports in `backend/src/routes/districts/index.ts` (`getBac
 
 **Recommendation:** Remove the orphaned functions from `shared.ts` and their re-exports from `index.ts`.
 
-### 3. Test files reference deleted `/api/districts/backfill` endpoints
+### 2. Test files reference deleted `/api/districts/backfill` endpoints
 
 Two test files still exercise the now-removed deprecated district backfill endpoints:
 
@@ -61,7 +39,7 @@ These tests will now get 404s since the routes no longer exist. The admin backfi
 
 **Recommendation:** Remove the test blocks that exercise the deleted district backfill endpoints.
 
-### 4. `frontend/src/hooks/useContrastCheck.ts` — No longer imported by anything
+### 3. `frontend/src/hooks/useContrastCheck.ts` — No longer imported by anything
 
 With the removal of `useResponsiveDesign.ts` (which was its only consumer), `useContrastCheck` is now completely orphaned. No component, hook, or test file imports it.
 
@@ -73,27 +51,27 @@ With the removal of `useResponsiveDesign.ts` (which was its only consumer), `use
 
 These items are properly marked `@deprecated` and still consumed by test files. They are not urgent but represent cleanup debt.
 
-### 5. `PerDistrictFileSnapshotStore` alias in `SnapshotStore.ts`
+### 4. `PerDistrictFileSnapshotStore` alias in `SnapshotStore.ts`
 
 Alias for `FileSnapshotStore`. Used extensively in test files (8+ test files reference it). Removing it requires updating all those test imports to use `FileSnapshotStore` directly.
 
-### 6. `AreaProgressSummary` / `AreaProgressSummaryProps` / `AreaWithDivision` in `DivisionAreaProgressSummary.tsx`
+### 5. `AreaProgressSummary` / `AreaProgressSummaryProps` / `AreaWithDivision` in `DivisionAreaProgressSummary.tsx`
 
 Deprecated aliases for the renamed component. `AreaProgressSummary` is used in `AreaProgressSummary.test.tsx` and `AreaWithDivision` is used in `areaProgressText.ts` and its tests. Production code uses the new names.
 
-### 7. `AreaRecognitionPanel` / `AreaRecognitionPanelProps` in `DivisionAreaRecognitionPanel.tsx`
+### 6. `AreaRecognitionPanel` / `AreaRecognitionPanelProps` in `DivisionAreaRecognitionPanel.tsx`
 
 Deprecated aliases exported from `components/index.ts`. No production page imports them — only the new `DivisionAreaRecognitionPanel` name is used.
 
-### 8. `createSnapshotStore()` on `ProductionServiceFactory`
+### 7. `createSnapshotStore()` on `ProductionServiceFactory`
 
 Not deprecated in code but has a comment saying `createSnapshotStorage()` should be preferred. Still used in test mocks and the `snapshot-debug.ts` script.
 
-### 9. `AvailableProgramYearsResult` type alias
+### 8. `AvailableProgramYearsResult` type alias
 
 Deprecated alias for `AvailableRankingYearsResponse` in `AvailableProgramYearsService.ts`. Not imported anywhere outside its definition file.
 
-### 10. `backend/src/routes/admin.ts` — Deprecated re-export shim
+### 9. `backend/src/routes/admin.ts` — Deprecated re-export shim
 
 Re-exports `default` from `./admin/index.js`. Still imported by `backend/src/index.ts` as `adminRoutes`. Functional but unnecessary indirection — `index.ts` could import from `./routes/admin/index.js` directly.
 
@@ -127,3 +105,7 @@ The following items were identified and removed on 2026-02-16:
 6. ~~`frontend/src/hooks/useDailyReports.ts`~~ — Deleted (only consumer was dead)
 7. ~~`frontend/src/hooks/useResponsiveDesign.ts`~~ — Deleted (not used by any component)
 8. ~~`backend/src/routes/districts/backfill.ts`~~ — Deleted along with OpenAPI entries in both `backend/openapi.yaml` and `docs/openapi.yaml`
+
+**High priority (third pass):**
+
+9. ~~No-op transformer functions in `backend/src/utils/transformers.ts`~~ — Removed `transformDistrictsResponse`, `transformDistrictStatisticsResponse`, `transformMembershipHistoryResponse`, `transformClubsResponse`, `transformDailyReportsResponse`, `transformDailyReportDetailResponse` and their imports from `core.ts`

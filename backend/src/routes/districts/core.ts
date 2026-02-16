@@ -9,12 +9,6 @@ import { cacheMiddleware } from '../../middleware/cache.js'
 import { generateDistrictCacheKey } from '../../utils/cacheKeys.js'
 import { logger } from '../../utils/logger.js'
 import {
-  transformDistrictsResponse,
-  transformDistrictStatisticsResponse,
-  transformMembershipHistoryResponse,
-  transformClubsResponse,
-  transformDailyReportsResponse,
-  transformDailyReportDetailResponse,
   transformEducationalAwardsResponse,
   transformErrorResponse,
 } from '../../utils/transformers.js'
@@ -84,7 +78,7 @@ coreRouter.get(
           lastUpdated: summary.lastUpdated,
         }))
 
-        return transformDistrictsResponse({ districts }) as DistrictsResponse
+        return { districts } as DistrictsResponse
       },
       'fetch districts from per-district snapshot'
     )
@@ -416,9 +410,7 @@ coreRouter.get(
           }
         )
 
-        return transformDistrictStatisticsResponse(
-          district
-        ) as DistrictStatistics
+        return district as DistrictStatistics
       },
       'fetch district statistics from per-district snapshot'
     )
@@ -492,9 +484,9 @@ coreRouter.get(
         const membershipHistory =
           (district as DistrictStatistics & { membershipHistory?: unknown[] })
             .membershipHistory || []
-        return transformMembershipHistoryResponse({
+        return {
           membershipHistory,
-        }) as MembershipHistoryResponse
+        } as MembershipHistoryResponse
       },
       'fetch membership history from per-district snapshot'
     )
@@ -539,7 +531,7 @@ coreRouter.get(
       res,
       districtId,
       district =>
-        transformClubsResponse({
+        ({
           clubs: district.clubs || [],
         }) as ClubsResponse,
       'fetch clubs from per-district snapshot'
@@ -720,9 +712,9 @@ coreRouter.get(
         const dailyReports =
           (district as DistrictStatistics & { dailyReports?: unknown[] })
             .dailyReports || []
-        return transformDailyReportsResponse({
+        return {
           dailyReports,
-        }) as DailyReportsResponse
+        } as DailyReportsResponse
       },
       'fetch daily reports from snapshot'
     )
@@ -806,9 +798,7 @@ coreRouter.get(
         }
         const dailyReportDetail =
           districtAny.dailyReportDetail || districtAny.dailyReports?.[0] || {}
-        return transformDailyReportDetailResponse(
-          dailyReportDetail
-        ) as DailyReportDetailResponse
+        return dailyReportDetail as DailyReportDetailResponse
       },
       'fetch daily report detail from snapshot'
     )
