@@ -830,6 +830,25 @@ export class FileSnapshotStore
     // Distribute the total awards across clubs if there are any
     const totalAwards = data.education?.totalAwards ?? 0
     const byClub = data.membership?.byClub ?? []
+
+    // Build club entries that preserve both membership data (from byClub) and
+    // status counts (active/suspended/ineligible/low) through round-trip.
+    // The adapter on read counts clubs by status, so we must create exactly
+    // the right number of clubs with each status.
+    const activeCount = data.clubs?.active ?? 0
+    const suspendedCount = data.clubs?.suspended ?? 0
+    const ineligibleCount = data.clubs?.ineligible ?? 0
+    const lowCount = data.clubs?.low ?? 0
+    const totalStatusCount =
+      activeCount + suspendedCount + ineligibleCount + lowCount
+
+    // Build status list: exact counts for each status
+    const statusList: string[] = []
+    for (let i = 0; i < activeCount; i++) statusList.push('Active')
+    for (let i = 0; i < suspendedCount; i++) statusList.push('Suspended')
+    for (let i = 0; i < ineligibleCount; i++) statusList.push('Ineligible')
+    for (let i = 0; i < lowCount; i++) statusList.push('Low')
+
     let clubs: Array<{
       clubId: string
       clubName: string
@@ -846,33 +865,55 @@ export class FileSnapshotStore
       newMembers: number
       membershipBase: number
       clubStatus?: string
-    }> = byClub.map((club, index) => {
-      const clubCount = byClub.length
-      const dcpGoalsPerClub =
-        clubCount > 0 ? Math.floor(totalAwards / clubCount) : 0
-      const remainingGoals = clubCount > 0 ? totalAwards % clubCount : 0
-      return {
+    }> = []
+
+    // First, create clubs from byClub entries (these carry membership data)
+    const dcpGoalsPerClub =
+      byClub.length > 0 ? Math.floor(totalAwards / byClub.length) : 0
+    const remainingGoals =
+      byClub.length > 0 ? totalAwards % byClub.length : 0
+
+    for (let index = 0; index < byClub.length; index++) {
+      const club = byClub[index]!
+      clubs.push({
         clubId: club.clubId,
         clubName: club.clubName,
         divisionId: '',
         areaId: '',
         membershipCount: club.memberCount,
         paymentsCount: 0,
-        // Distribute DCP goals to preserve totalAwards on round-trip
         dcpGoals: dcpGoalsPerClub + (index < remainingGoals ? 1 : 0),
-        status: 'Active',
+        status: statusList[index] ?? 'Active',
         divisionName: '',
         areaName: '',
         octoberRenewals: 0,
         aprilRenewals: 0,
         newMembers: data.membership?.new ?? 0,
         membershipBase: 0,
-      }
-    })
+      })
+    }
+
+    // Then, create placeholder clubs for remaining status counts not covered by byClub
+    for (let i = byClub.length; i < totalStatusCount; i++) {
+      clubs.push({
+        clubId: `placeholder_${i}`,
+        clubName: `Placeholder Club ${i}`,
+        divisionId: '',
+        areaId: '',
+        membershipCount: 0,
+        paymentsCount: 0,
+        dcpGoals: 0,
+        status: statusList[i] ?? 'Active',
+        divisionName: '',
+        areaName: '',
+        octoberRenewals: 0,
+        aprilRenewals: 0,
+        newMembers: 0,
+        membershipBase: 0,
+      })
+    }
 
     // If there are awards but no clubs, create a synthetic club to preserve the awards count
-    // This handles edge cases in tests where totalAwards > 0 but byClub is empty
-    // Use 'synthetic' status so the adapter won't count it as active/suspended/etc
     if (totalAwards > 0 && clubs.length === 0) {
       clubs = [
         {
@@ -883,14 +924,14 @@ export class FileSnapshotStore
           membershipCount: 0,
           paymentsCount: 0,
           dcpGoals: totalAwards,
-          status: 'synthetic', // Special status that adapter will count as active
+          status: 'synthetic',
           divisionName: '',
           areaName: '',
           octoberRenewals: 0,
           aprilRenewals: 0,
           newMembers: 0,
           membershipBase: 0,
-          clubStatus: 'synthetic', // Use clubStatus to override status counting
+          clubStatus: 'synthetic',
         },
       ]
     }
