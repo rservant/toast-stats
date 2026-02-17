@@ -343,7 +343,7 @@ export interface MyNewFileType { ... }
 
 ## 10. Enforcement
 
-### 9.1 Code Review Requirements
+### 10.1 Code Review Requirements
 
 Pull requests MUST be rejected if they:
 
@@ -352,7 +352,7 @@ Pull requests MUST be rejected if they:
 - Add data transformation to backend code
 - Bypass pre-computed file reading
 
-### 9.2 Acceptable Backend Operations
+### 10.2 Acceptable Backend Operations
 
 The following operations ARE permitted in the backend:
 
@@ -363,7 +363,7 @@ The following operations ARE permitted in the backend:
 - Cache management (in-memory caching of read files)
 - Schema version validation
 
-### 9.3 Unacceptable Backend Operations
+### 10.3 Unacceptable Backend Operations
 
 The following operations are FORBIDDEN in the backend:
 
@@ -378,7 +378,7 @@ The following operations are FORBIDDEN in the backend:
 
 ## 11. Performance Requirements
 
-### 10.1 Backend Response Times
+### 11.1 Backend Response Times
 
 - P50 response time: < 10ms
 - P95 response time: < 50ms
@@ -386,7 +386,7 @@ The following operations are FORBIDDEN in the backend:
 
 These targets are ONLY achievable with pre-computed data serving.
 
-### 10.2 Computation Budget
+### 11.2 Computation Budget
 
 The backend has a computation budget of **0ms** for data computation.
 

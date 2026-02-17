@@ -7,12 +7,14 @@ A web application for visualizing Toastmasters district statistics with an intui
 This is a monorepo containing:
 
 - `frontend/` - React + TypeScript + Vite application
-- `backend/` - Node.js + Express + TypeScript API server
+- `backend/` - Node.js + Express + TypeScript API server (read-only, serves pre-computed data)
 - `packages/scraper-cli/` - Standalone CLI tool for scraping Toastmasters dashboard data
+- `packages/analytics-core/` - Shared analytics computation library
+- `packages/shared-contracts/` - Data contracts (types + Zod schemas) between packages
 
 ## Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 20+ and npm
 
 ## Getting Started
 
@@ -104,9 +106,13 @@ npm run lint
 - Node.js
 - Express
 - TypeScript
-- JWT for authentication
-- Node-cache for caching
-- Axios for external API calls
+- Zod for runtime validation
+- In-memory caching
+
+### Shared Packages
+
+- `@toastmasters-tracker/shared-contracts` - TypeScript types and Zod schemas
+- `@toastmasters/analytics-core` - Analytics computation logic
 
 ## Data Source
 
@@ -123,8 +129,8 @@ The system uses a **two-process architecture** that separates data acquisition f
 └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
-1. **Scraper CLI** (`packages/scraper-cli/`): Standalone tool that scrapes Toastmasters dashboard and writes to the Raw CSV Cache
-2. **Backend** (`backend/`): Reads from the cache and creates snapshots using SnapshotBuilder (no scraping)
+1. **Scraper CLI** (`packages/scraper-cli/`): Standalone tool that scrapes Toastmasters dashboard, transforms data, and computes analytics
+2. **Backend** (`backend/`): Read-only API server that serves pre-computed data from snapshots (no scraping, no computation)
 
 This separation enables:
 
@@ -177,35 +183,32 @@ USE_MOCK_DATA=false  # Use real data from cache (requires scraper-cli to populat
 
 This project has evolved through multiple phases of development. Completed specifications have been archived in `.kiro/specs-archive/` for historical reference.
 
-**Recent Completions (January 2026):**
+**Recent Completions (February 2026):**
 
-- **april-renewal-status**: Membership payment tracking columns
-- **closing-period-fallback-cache**: Scraper navigation optimization
-- **club-status-field**: Club status display and filtering
-- **date-aware-district-statistics**: Date-synchronized statistics
-- **district-performance-targets**: Performance targets and rankings
-- **division-area-performance-cards**: Division/Area performance display
-- **membership-payments-chart**: Multi-year payment trend charts
-- **pbt-test-cleanup**: Property-based test optimization
+- **remove-backend-backfill**: Removed all backfill code, redirecting to scraper-cli
+- **v8-heap-configuration**: V8 heap memory management for production stability
+- **gcp-storage-migration**: Storage abstraction with GCP Firestore and Cloud Storage
+- **openapi-documentation**: Comprehensive OpenAPI 3.0 specification
+- **shared-data-contracts**: Shared TypeScript types and Zod schemas between packages
 
 **Infrastructure & Architecture:**
 
 - **scraper-cli-separation**: Standalone scraping CLI tool
-- **analytics-engine-migration**: PerDistrictSnapshotStore migration
+- **data-computation-separation**: Backend as read-only API, all computation in scraper-cli
 - **data-refresh-architecture**: Snapshot-based data architecture
-- **unified-backfill-service**: Historical data collection
 - **raw-csv-cache-system**: CSV caching infrastructure
 
-See `.kiro/specs-archive/README.md` for the complete list of archived specifications.
+See `.kiro/specs-archive/README.md` for the complete list of 83 archived specifications.
 
 ## Deployment
 
 For production deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
-Quick deployment options:
+Production architecture:
 
-- **Node.js/PM2**: Build and run with process manager
-- **Static Hosting**: Build frontend and deploy to Vercel/Netlify
+- **Frontend**: Firebase Hosting (static SPA)
+- **Backend**: Google Cloud Run (containerized API)
+- **Storage**: Firestore (snapshots) + Cloud Storage (CSV cache)
 
 ### Cache Management
 

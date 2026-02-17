@@ -35,8 +35,6 @@
     "typecheck:backend:all": "npm run typecheck:all --workspace=backend",
     "typecheck:frontend": "npm run typecheck --workspace=frontend",
     "typecheck:count": "npm run typecheck:count --workspaces",
-    "typecheck:report": "node scripts/typescript-status.js",
-    "typecheck:detailed": "node scripts/typescript-status.js --detailed",
     "quality:check": "npm run lint && npm run lint:yaml && npm run typecheck && npm run format:check && npm run test",
     "quality:fix": "npm run lint --workspaces -- --fix && npm run format",
     "pre-commit": "npm run typecheck && npm run lint && npm run lint:yaml",

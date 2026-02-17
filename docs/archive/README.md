@@ -87,7 +87,7 @@ The project root directory had 18+ markdown files, making it difficult to find c
 
 - **Active documentation** (README.md, PROJECT_STATUS.md)
 - **Operational guides** (DEPLOYMENT.md, SECURITY.md)
-- **Current policies** (TYPESCRIPT_POLICY.md, etc.)
+- **Current policies** (.kiro/steering/typescript.md, etc.)
 
 ## When to Reference Archived Documents
 
@@ -119,7 +119,6 @@ For current project information, refer to the root-level documentation:
 - **[PROJECT_STATUS.md](../../PROJECT_STATUS.md)** - Current project status and implementation details
 - **[DEPLOYMENT.md](../../DEPLOYMENT.md)** - Production deployment guide
 - **[SECURITY.md](../../SECURITY.md)** - Security policy and reporting
-- **[TYPESCRIPT_POLICY.md](../../TYPESCRIPT_POLICY.md)** - TypeScript compliance policy
 
 ## Archive Organization
 

@@ -44,6 +44,7 @@ downloads/
 
 # Test artifacts - temporary directories only
 test-cache*/
+test-snapshots/
 test-dir/
 
 # Generated reports
@@ -57,9 +58,7 @@ debug_*.js
 # Temporary files
 *.tmp
 *.temp
-backend/reconciliation-config.json
 logs
-.firebase/
 logs.json
-backfill-logs/
 logs.txt
+.firebase/
