@@ -1,6 +1,11 @@
 /**
  * Property-Based Tests for CacheSecurityManager
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Universal business rule: sanitization idempotence (f(f(x)) === f(x)) over arbitrary strings
+ *   - Complex input space: path traversal rejection across generated malicious inputs
+ *   - Security validation: safe-output guarantees cannot be exhaustively tested with examples
+ *
  * **Feature: raw-csv-cache-refactor, Property 3: Security Validation Correctness**
  * **Validates: Requirements 2.1, 2.2, 2.4, 2.5**
  *

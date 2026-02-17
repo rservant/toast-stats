@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for RefreshService No New-Month Snapshots
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Universal business rule: no misleading new-month snapshots during closing periods
+ *   - Complex input space: generated month-boundary scenarios with varied data states
+ *
  * Feature: closing-period-api-integration
  * Property 4: No Misleading New-Month Snapshots
  *

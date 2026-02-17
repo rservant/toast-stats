@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for DataNormalizer
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Mathematical invariant: normalization transformation consistency across varied inputs
+ *   - Complex input space: membership calculation over generated club/member data structures
+ *
  * Feature: refresh-service-refactor
  *
  * Property 2: Data Normalization Transformation

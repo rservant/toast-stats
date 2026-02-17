@@ -1,6 +1,11 @@
 /**
  * Property-Based Tests for DistrictIdValidator
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Complex input space: validation across generated patterns (numeric, alpha, prefixed, invalid)
+ *   - Universal business rule: validation determinism (same input always produces same result)
+ *   - Edge case discovery: generated inputs find boundary conditions explicit examples miss
+ *
  * **Feature: district-analytics-performance, Property 12: District ID Validation**
  *
  * This test validates the district ID validation logic using property-based testing

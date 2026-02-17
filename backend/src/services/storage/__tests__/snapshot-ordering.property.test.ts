@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for Latest Successful Snapshot Ordering
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Mathematical invariant: latest-snapshot ordering must be correct across all date sequences
+ *   - Complex input space: generated snapshot date sequences with varied orderings
+ *
  * Feature: gcp-storage-migration
  * Property 3: Latest Successful Snapshot Ordering
  *
