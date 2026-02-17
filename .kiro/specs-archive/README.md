@@ -81,6 +81,11 @@ This directory contains specifications that have been completed and are no longe
 **Status**: ✅ COMPLETE  
 **Purpose**: Systematic removal of all backfill code from backend and frontend, redirecting users to scraper-cli
 
+#### v8-heap-configuration/
+
+**Status**: ✅ COMPLETE  
+**Purpose**: V8 heap memory configuration with HeapValidator and MemoryMonitor to prevent OOM crashes in production
+
 ### Features
 
 #### district-global-rankings/

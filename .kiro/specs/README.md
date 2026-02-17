@@ -4,11 +4,6 @@ This directory contains all specifications that are currently active for develop
 
 ## Active Specifications
 
-### v8-heap-configuration/
-
-**Status**: ⚠️ NEARLY COMPLETE  
-**Purpose**: V8 heap memory configuration to prevent OOM crashes in production
-
 ### bounded-lru-cache/
 
 **Status**: ⬜ NOT STARTED  
