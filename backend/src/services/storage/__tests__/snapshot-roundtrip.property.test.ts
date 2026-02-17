@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for Snapshot Round-Trip Consistency
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Mathematical invariant: round-trip consistency (store then retrieve yields identical data)
+ *   - Complex input space: generated snapshot payloads with varied structures and sizes
+ *
  * Feature: gcp-storage-migration
  * Property 1: Snapshot Round-Trip Consistency
  *

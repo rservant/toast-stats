@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for RefreshService Closing Period Detection
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Universal business rule: closing period detection accuracy across all date scenarios
+ *   - Complex input space: generated date/time combinations spanning period transitions
+ *
  * Feature: closing-period-api-integration
  * Property 1: Closing Period Detection Accuracy
  *

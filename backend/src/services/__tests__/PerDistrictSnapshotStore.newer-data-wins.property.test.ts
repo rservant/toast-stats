@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for PerDistrictSnapshotStore Snapshot Comparison Logic
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Mathematical invariant: newer-data-wins ordering must hold across all snapshot pairs
+ *   - Complex input space: generated snapshot pairs with varied timestamps and data
+ *
  * Feature: closing-period-api-integration
  * Property 3: Newer Data Wins
  *

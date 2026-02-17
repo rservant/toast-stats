@@ -1,6 +1,10 @@
 /**
  * Property-based tests for PerDistrictSnapshotStore
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Universal business rule: storage properties must hold across all valid snapshot inputs
+ *   - Complex input space: snapshot data with varied district IDs, dates, and payloads
+ *
  * These tests validate universal properties of the per-district snapshot storage system
  * using property-based testing with fast-check to ensure correctness across all inputs.
  */

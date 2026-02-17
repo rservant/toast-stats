@@ -1,6 +1,10 @@
 /**
  * Property 9: Error classification sets retryable flag correctly
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Complex input space: error classification across tiered generators (status codes, error types)
+ *   - Universal business rule: retryable flag must be consistently set based on error characteristics
+ *
  * Uses tiered generators to test precedence:
  *   Gen A: statusCode-only errors — verify numeric classification
  *   Gen B: string-code-only errors — verify ECONNRESET/ENOTFOUND/etc

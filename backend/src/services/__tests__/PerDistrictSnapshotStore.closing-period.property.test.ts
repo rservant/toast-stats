@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for PerDistrictSnapshotStore Closing Period Support
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Mathematical invariant: snapshot date correctness during closing periods
+ *   - Complex input space: generated date ranges spanning period boundaries
+ *
  * Feature: closing-period-api-integration
  * Property 2: Snapshot Date Correctness
  *

@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for CSV Content Round-Trip Consistency
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Mathematical invariant: round-trip consistency (encode(decode(x)) === x)
+ *   - Complex input space: generated CSV content with varied delimiters, escaping, and encodings
+ *
  * Feature: gcp-storage-migration
  * Property 2: CSV Content Round-Trip Consistency
  *

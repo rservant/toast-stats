@@ -1,6 +1,10 @@
 /**
  * Property 10: Input validation rejects invalid IDs before GCS calls
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Complex input space: generated invalid IDs (bad format, path traversal, unicode, percent-encoded)
+ *   - Security validation: must reject all invalid inputs before reaching GCS layer
+ *
  * Generates invalid snapshot IDs (bad format, invalid calendar dates,
  * path traversal, unicode, percent-encoded) and invalid district IDs
  * (empty, whitespace, traversal characters).

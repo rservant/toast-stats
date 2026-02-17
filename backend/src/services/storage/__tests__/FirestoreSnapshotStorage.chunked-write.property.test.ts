@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for FirestoreSnapshotStorage Chunked Write
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Mathematical invariant: backoff calculation with jitter follows exponential formula
+ *   - Complex input space: generated retry attempt numbers and chunk sizes
+ *
  * **Property 4: Backoff Calculation with Jitter**
  * *For any* retry attempt number `n` (0-indexed), the calculated backoff delay
  * SHALL be `min(initialBackoffMs * 2^n, maxBackoffMs) * (1 ± jitterFactor)`,
@@ -660,6 +664,7 @@ describe('Property 9: Document Structure Equivalence (Firestore Emulator)', () =
           clubsRank: i + 1,
           paymentsRank: i + 1,
           distinguishedRank: i + 1,
+          overallRank: i + 1,
           aggregateScore: districts.length - i,
         })),
       }),
@@ -1174,6 +1179,7 @@ describe('Property 9: Document Structure Equivalence (Firestore Emulator)', () =
                 clubsRank: i + 1,
                 paymentsRank: i + 1,
                 distinguishedRank: i + 1,
+                overallRank: i + 1,
                 aggregateScore: snapshot.payload.districts.length - i,
               })),
             }

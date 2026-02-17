@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for ClosingPeriodDetector
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Complex input space: date-based detection across generated date ranges and boundaries
+ *   - Mathematical invariant: closing period detection must be consistent across all valid dates
+ *
  * Feature: refresh-service-refactor
  *
  * Property 1: Closing Period Detection Correctness
