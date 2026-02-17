@@ -156,5 +156,106 @@ describe('CacheService', () => {
       expect(stats).toHaveProperty('misses')
       expect(stats.keys).toBe(2)
     })
+
+    it('should include maxEntries and maxSize in stats', () => {
+      const cache = new CacheService({ max: 500, maxSize: 10 * 1024 * 1024 })
+      cache.set('key1', 'value1')
+
+      const stats = cache.getStats()
+
+      expect(stats.maxEntries).toBe(500)
+      expect(stats.maxSize).toBe(10 * 1024 * 1024)
+    })
+
+    it('should track hits and misses', () => {
+      cacheService.set('key1', 'value1')
+
+      cacheService.get('key1') // hit
+      cacheService.get('key1') // hit
+      cacheService.get('missing') // miss
+
+      const stats = cacheService.getStats()
+
+      expect(stats.hits).toBe(2)
+      expect(stats.misses).toBe(1)
+    })
+
+    it('should report calculated size', () => {
+      cacheService.set('key1', { data: 'hello' })
+
+      const stats = cacheService.getStats()
+
+      expect(stats.size).toBeGreaterThan(0)
+    })
+  })
+
+  describe('default configuration', () => {
+    it('should use default max of 1000', () => {
+      const cache = new CacheService()
+      const stats = cache.getStats()
+
+      expect(stats.maxEntries).toBe(1000)
+    })
+
+    it('should use default maxSize of 50MB', () => {
+      const cache = new CacheService()
+      const stats = cache.getStats()
+
+      expect(stats.maxSize).toBe(50 * 1024 * 1024)
+    })
+  })
+
+  describe('custom configuration', () => {
+    it('should respect custom max entries', () => {
+      const cache = new CacheService({ max: 50 })
+      const stats = cache.getStats()
+
+      expect(stats.maxEntries).toBe(50)
+    })
+
+    it('should respect custom maxSize', () => {
+      const cache = new CacheService({ maxSize: 1024 * 1024 })
+      const stats = cache.getStats()
+
+      expect(stats.maxSize).toBe(1024 * 1024)
+    })
+  })
+
+  describe('bounded behavior', () => {
+    it('should evict entries when exceeding max entry count', () => {
+      const cache = new CacheService({ max: 3, maxSize: 50 * 1024 * 1024 })
+
+      cache.set('a', 'value-a')
+      cache.set('b', 'value-b')
+      cache.set('c', 'value-c')
+      cache.set('d', 'value-d') // Should evict 'a'
+
+      expect(cache.keys()).toHaveLength(3)
+      expect(cache.has('a')).toBe(false)
+      expect(cache.has('d')).toBe(true)
+    })
+
+    it('should handle single entry cache', () => {
+      const cache = new CacheService({ max: 1, maxSize: 50 * 1024 * 1024 })
+
+      cache.set('first', 'value1')
+      expect(cache.get('first')).toBe('value1')
+
+      cache.set('second', 'value2')
+      expect(cache.get('first')).toBeUndefined()
+      expect(cache.get('second')).toBe('value2')
+    })
+
+    it('should handle non-serializable values with size fallback', () => {
+      const cache = new CacheService({ max: 100, maxSize: 50 * 1024 * 1024 })
+
+      // Create a circular reference
+      const circular: Record<string, unknown> = { name: 'test' }
+      circular['self'] = circular
+
+      // Should not throw — falls back to 1KB size
+      expect(() => cache.set('circular', circular)).not.toThrow()
+      expect(cache.has('circular')).toBe(true)
+    })
   })
 })

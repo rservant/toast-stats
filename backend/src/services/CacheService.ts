@@ -1,23 +1,36 @@
-import NodeCache from 'node-cache'
+import { LRUCache } from 'lru-cache'
 
 export interface CacheOptions {
-  ttl?: number // Time to live in seconds
-  checkperiod?: number // Period in seconds for automatic delete check
+  ttl?: number // Time to live in seconds (default: 900 = 15 minutes)
+  max?: number // Maximum number of entries (default: 1000)
+  maxSize?: number // Maximum total size in bytes (default: 50MB)
 }
 
+// Type alias that satisfies lru-cache's non-nullable value constraint
+type CacheValue = object | string | number | boolean
+
 export class CacheService {
-  private cache: NodeCache
+  private cache: LRUCache<string, CacheValue>
   private defaultTTL: number
+  private hits: number = 0
+  private misses: number = 0
 
   constructor(options: CacheOptions = {}) {
-    // Default TTL is 15 minutes (900 seconds)
-    this.defaultTTL = options.ttl || 900
+    this.defaultTTL = options.ttl ?? 900
 
-    // Initialize node-cache with configuration
-    this.cache = new NodeCache({
-      stdTTL: this.defaultTTL,
-      checkperiod: options.checkperiod || 120, // Check for expired keys every 2 minutes
-      useClones: false, // Don't clone objects for better performance
+    this.cache = new LRUCache<string, CacheValue>({
+      max: options.max ?? 1000,
+      maxSize: options.maxSize ?? 50 * 1024 * 1024,
+      sizeCalculation: (value: unknown): number => {
+        try {
+          return JSON.stringify(value).length
+        } catch {
+          return 1024 // 1KB fallback for non-serializable values
+        }
+      },
+      ttl: this.defaultTTL * 1000, // Convert seconds to milliseconds
+      updateAgeOnGet: true,
+      allowStale: false,
     })
   }
 
@@ -26,8 +39,14 @@ export class CacheService {
    * @param key Cache key
    * @returns Cached value or undefined if not found or expired
    */
-  get<T>(key: string): T | undefined {
-    return this.cache.get<T>(key)
+  get<T extends CacheValue>(key: string): T | undefined {
+    const value = this.cache.get(key) as T | undefined
+    if (value !== undefined) {
+      this.hits++
+    } else {
+      this.misses++
+    }
+    return value
   }
 
   /**
@@ -37,9 +56,10 @@ export class CacheService {
    * @param ttl Optional time to live in seconds (defaults to 15 minutes)
    * @returns true if successful
    */
-  set<T>(key: string, value: T, ttl?: number): boolean {
-    const timeToLive = ttl !== undefined ? ttl : this.defaultTTL
-    return this.cache.set(key, value, timeToLive)
+  set<T extends CacheValue>(key: string, value: T, ttl?: number): boolean {
+    const options = ttl !== undefined ? { ttl: ttl * 1000 } : undefined
+    this.cache.set(key, value, options)
+    return true
   }
 
   /**
@@ -48,7 +68,7 @@ export class CacheService {
    * @returns Number of deleted entries (0 or 1)
    */
   invalidate(key: string): number {
-    return this.cache.del(key)
+    return this.cache.delete(key) ? 1 : 0
   }
 
   /**
@@ -57,14 +77,14 @@ export class CacheService {
    * @returns Number of deleted entries
    */
   invalidateMultiple(keys: string[]): number {
-    return this.cache.del(keys)
+    return keys.reduce((count, key) => count + this.invalidate(key), 0)
   }
 
   /**
    * Clear all cache entries
    */
   clear(): void {
-    this.cache.flushAll()
+    this.cache.clear()
   }
 
   /**
@@ -81,20 +101,28 @@ export class CacheService {
    * @returns Array of all cache keys
    */
   keys(): string[] {
-    return this.cache.keys()
+    return [...this.cache.keys()]
   }
 
   /**
    * Get cache statistics
    * @returns Cache statistics object
    */
-  getStats(): { hits: number; misses: number; keys: number; size: number } {
-    const stats = this.cache.getStats()
+  getStats(): {
+    hits: number
+    misses: number
+    keys: number
+    size: number
+    maxEntries: number
+    maxSize: number
+  } {
     return {
-      hits: stats.hits,
-      misses: stats.misses,
-      keys: stats.keys,
-      size: 0, // NodeCache doesn't provide size, so we'll return 0
+      hits: this.hits,
+      misses: this.misses,
+      keys: this.cache.size,
+      size: this.cache.calculatedSize ?? 0,
+      maxEntries: this.cache.max,
+      maxSize: this.cache.maxSize,
     }
   }
 }
