@@ -76,6 +76,11 @@ This directory contains specifications that have been completed and are no longe
 **Status**: ✅ COMPLETE  
 **Purpose**: In-memory fallback cache for ToastmastersScraper to optimize navigation during closing periods
 
+#### remove-backend-backfill/
+
+**Status**: ✅ COMPLETE  
+**Purpose**: Systematic removal of all backfill code from backend and frontend, redirecting users to scraper-cli
+
 ### Features
 
 #### district-global-rankings/
@@ -249,4 +254,4 @@ This directory contains specifications that have been completed and are no longe
 
 ---
 
-**Last Updated**: January 24, 2026
+**Last Updated**: February 17, 2026
