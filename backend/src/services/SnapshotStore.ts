@@ -773,7 +773,7 @@ export class FileSnapshotStore
 
       // Invalidate caches when writing a successful snapshot
       if (snapshot.status === 'success') {
-        this.invalidateCaches()
+        await this.invalidateCaches()
 
         logger.info('Caches invalidated for successful snapshot', {
           operation: 'writeSnapshot',
@@ -2137,20 +2137,23 @@ export class FileSnapshotStore
    * Invalidate all in-memory caches
    * Called when snapshots are written or deleted to ensure consistency
    */
-  private invalidateCaches(): void {
+  private async invalidateCaches(): Promise<void> {
     this.currentSnapshotCache = null
     this.snapshotListCache = null
 
-    // Also remove the on-disk snapshot pointer since it may reference a stale
+    // Remove the on-disk snapshot pointer since it may reference a stale
     // snapshot after a new snapshot has been written via writeSnapshot.
     // The pointer will be repaired on the next findLatestSuccessful fallback.
+    // Must await to prevent race where the next read sees the stale pointer.
     const pointerPath = this.resolvePathUnderBase(
       this.snapshotsDir,
       'latest-successful.json'
     )
-    fs.unlink(pointerPath).catch(() => {
+    try {
+      await fs.unlink(pointerPath)
+    } catch {
       // Ignore errors — the file may not exist yet
-    })
+    }
 
     logger.debug('Invalidated all in-memory caches and snapshot pointer', {
       operation: 'invalidateCaches',

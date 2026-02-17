@@ -37,6 +37,10 @@ export default defineConfig({
         // Skip test directory artifacts from coverage
         '**/test-dir/**',
       ],
+      thresholds: {
+        lines: 50,
+        branches: 40,
+      },
     },
   },
 })

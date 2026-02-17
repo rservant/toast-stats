@@ -218,15 +218,17 @@ Before proposing a property test, answer:
 
 ### 7.4 Existing PBT Coverage
 
-This codebase already has substantial PBT coverage for:
+This codebase retains ~32 property-based test files that test genuine properties:
 
-- Cache services and integrity validation
-- Snapshot storage and retrieval
-- Ranking calculations
-- Data normalization
-- Service container isolation
+- **Serialization round-trips**: snapshot, CSV, schema, and pointer round-trips
+- **Ordering invariants**: snapshot ordering, change history, newer-data-wins
+- **Math & classification**: Borda count ranking, metric rankings, risk factors, club categorization
+- **Data normalization**: field mapping, division status, snapshot building
+- **Storage contracts**: Firestore/local config storage, chunked write, behavioral equivalence
+- **Date arithmetic**: closing period detection, refresh service date logic
 
 New property tests SHOULD NOT duplicate coverage that already exists.
+Property tests that only iterate fixed values via `constantFrom` SHOULD be converted to unit tests.
 
 ---
 

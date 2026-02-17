@@ -25,6 +25,7 @@
     "test:analytics-core": "npm run test --workspace=@toastmasters/analytics-core",
     "test:shared-contracts": "npm run test --workspace=@toastmasters/shared-contracts",
     "test": "npm run test --workspaces",
+    "test:watch": "npm run test:watch --workspaces --if-present",
     "lint": "npm run lint --workspaces",
     "lint:yaml": "yamllint -c .yamllint.yml .github/ docs/",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
