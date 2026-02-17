@@ -34,9 +34,9 @@ export function cacheMiddleware(options: CacheMiddlewareOptions = {}) {
     const cacheKey = options.keyGenerator
       ? options.keyGenerator(req)
       : generateCacheKey(req.path, {
-          ...req.query,
-          ...req.params,
-        })
+        ...req.query,
+        ...req.params,
+      })
 
     // Try to get cached response
     const cachedResponse = cacheService.get<object>(cacheKey)
