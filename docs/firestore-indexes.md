@@ -325,4 +325,4 @@ When adding queries that require new indexes:
 
 - [Firebase Firestore Indexes Documentation](https://firebase.google.com/docs/firestore/query-data/indexing)
 - [Firebase CLI Reference](https://firebase.google.com/docs/cli)
-- [Backend Architecture](./BACKEND_ARCHITECTURE.md)
+- [Platform Infrastructure](../.kiro/steering/platform-infrastructure.md)
