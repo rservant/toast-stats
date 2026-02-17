@@ -348,6 +348,29 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
   }
 
   /**
+   * Validates that a resolved file path is contained within the configured cacheDir.
+   * Prevents path traversal attacks by ensuring no user-provided input can escape
+   * the expected base directory, even if upstream validation is bypassed.
+   */
+  private validatePathContainment(filePath: string): string {
+    const resolvedBase = path.resolve(this.cacheDir)
+    const resolvedPath = path.resolve(filePath)
+
+    if (!resolvedPath.startsWith(resolvedBase + path.sep) && resolvedPath !== resolvedBase) {
+      logger.error('Path traversal attempt detected', {
+        operation: 'validatePathContainment',
+        filePath,
+        resolvedPath,
+        resolvedBase,
+      })
+      throw new Error('Invalid file path: path traversal detected')
+    }
+
+    return resolvedPath
+  }
+
+
+  /**
    * Read and parse a pre-computed analytics file.
    *
    * @param filePath - Path to the analytics file
@@ -358,8 +381,9 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
   private async readAnalyticsFile<T>(
     filePath: string
   ): Promise<PreComputedAnalyticsFile<T> | null> {
+    const safePath = this.validatePathContainment(filePath)
     try {
-      const content = await fs.readFile(filePath, 'utf-8')
+      const content = await fs.readFile(safePath, 'utf-8')
 
       let parsed: PreComputedAnalyticsFile<T>
       try {
@@ -1008,15 +1032,16 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
       this.getAnalyticsDir(snapshotDate),
       'manifest.json'
     )
+    const safeManifestPath = this.validatePathContainment(manifestPath)
 
     logger.info('Reading analytics manifest', {
       operation: 'getAnalyticsManifest',
       snapshotDate,
-      manifestPath,
+      manifestPath: safeManifestPath,
     })
 
     try {
-      const content = await fs.readFile(manifestPath, 'utf-8')
+      const content = await fs.readFile(safeManifestPath, 'utf-8')
 
       let manifest: AnalyticsManifest
       try {
