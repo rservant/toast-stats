@@ -355,7 +355,7 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
     }
   }
 
-    // Resolve the candidate path to an absolute path
+  // Resolve the candidate path to an absolute path
   /**
    * Validates that a resolved file path is contained within the configured cacheDir.
    * Prevents path traversal attacks by ensuring no user-provided input can escape
