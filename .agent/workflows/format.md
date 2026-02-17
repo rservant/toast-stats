@@ -29,6 +29,7 @@ This project uses **Prettier** for code formatting. The configuration is in `.pr
 ### Before committing, always run:
 
 // turbo
+
 1. Run `npm run format` from the project root to auto-fix formatting
 2. Verify no formatting changes remain with `git diff`
 
