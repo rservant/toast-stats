@@ -177,13 +177,36 @@ describe('determineDistinguishedLevel', () => {
 // ============================================================
 
 describe('getCSPStatus', () => {
-  it('should return true (stub behavior — CSP field not yet in data)', () => {
-    const club = makeClub()
+  it('should return true when cspSubmitted is true', () => {
+    const club = makeClub({ cspSubmitted: true })
     expect(getCSPStatus(club)).toBe(true)
   })
 
-  it('should return true regardless of club properties', () => {
-    const club = makeClub({ membershipCount: 0, dcpGoals: 0 })
+  it('should return false when cspSubmitted is false', () => {
+    const club = makeClub({ cspSubmitted: false })
+    expect(getCSPStatus(club)).toBe(false)
+  })
+
+  it('should return true when cspSubmitted is undefined (pre-2025 data)', () => {
+    const club = makeClub() // no cspSubmitted field
     expect(getCSPStatus(club)).toBe(true)
+  })
+
+  it('should return true regardless of other club properties when CSP submitted', () => {
+    const club = makeClub({
+      membershipCount: 0,
+      dcpGoals: 0,
+      cspSubmitted: true,
+    })
+    expect(getCSPStatus(club)).toBe(true)
+  })
+
+  it('should return false regardless of strong performance when CSP not submitted', () => {
+    const club = makeClub({
+      membershipCount: 30,
+      dcpGoals: 10,
+      cspSubmitted: false,
+    })
+    expect(getCSPStatus(club)).toBe(false)
   })
 })

@@ -67,6 +67,10 @@ export interface ClubStatistics {
 
   // Club operational status (Active, Suspended, Low, Ineligible)
   clubStatus?: string
+
+  // CSP (Club Success Plan) submission status
+  // Present from 2025-2026 program year onward; undefined for earlier years
+  cspSubmitted?: boolean
 }
 
 /**

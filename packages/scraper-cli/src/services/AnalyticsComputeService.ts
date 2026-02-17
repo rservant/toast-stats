@@ -348,9 +348,9 @@ export class AnalyticsComputeService {
       // Status fields - map clubStatus to distinguished status if available
       'Club Distinguished Status': club.clubStatus ?? '',
 
-      // CSP field - assume submitted if not explicitly marked otherwise
-      // Historical data compatibility: if field doesn't exist, assume submitted
-      CSP: 'Yes',
+      // CSP field - use actual value from club data
+      // For pre-2025 data where cspSubmitted is undefined, default to 'Yes'
+      CSP: club.cspSubmitted === false ? 'No' : 'Yes',
     }))
 
     // Calculate total membership from totals if available

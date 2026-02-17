@@ -84,19 +84,16 @@ export function determineDistinguishedLevel(
  * Get CSP (Club Success Plan) submission status from club data.
  *
  * CSP data availability by program year:
- * - 2025-2026 and later: CSP field is guaranteed to be present
- * - Prior to 2025-2026: CSP field did not exist, defaults to true
+ * - 2025-2026 and later: CSP field is present in CSV data → cspSubmitted is boolean
+ * - Prior to 2025-2026: CSP column did not exist → cspSubmitted is undefined
  *
- * Currently a stub that always returns true because ClubStatistics
- * does not yet have a CSP field. When the CSV data includes CSP status,
- * update this function and add the field to ClubStatistics.
+ * When cspSubmitted is undefined (pre-2025 data), we assume CSP was submitted
+ * for backward compatibility — CSP was not a requirement before 2025-2026.
  *
- * @param _club - Club statistics data (unused — CSP field not yet in type)
- * @returns true if CSP is submitted or field is absent (historical data)
+ * @param club - Club statistics data
+ * @returns true if CSP is submitted or field is absent (historical data), false otherwise
  */
-export function getCSPStatus(_club: ClubStatistics): boolean {
-  // ClubStatistics doesn't have a CSP field currently.
-  // For historical data compatibility, default to true.
-  // When CSP field is added to ClubStatistics, this function will be updated.
-  return true
+export function getCSPStatus(club: ClubStatistics): boolean {
+  // If cspSubmitted is undefined, this is pre-2025 data — assume submitted
+  return club.cspSubmitted ?? true
 }

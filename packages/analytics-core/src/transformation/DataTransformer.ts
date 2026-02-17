@@ -319,6 +319,14 @@ export class DataTransformer implements IDataTransformer {
         club.clubStatus = clubStatus
       }
 
+      // Extract CSP (Club Success Plan) submission status
+      // Present from 2025-2026 program year onward; undefined for earlier CSVs
+      const cspValue = this.extractString(record, 'CSP', 'Club Success Plan')
+      if (cspValue !== undefined) {
+        const normalized = cspValue.toLowerCase().trim()
+        club.cspSubmitted = normalized === 'yes' || normalized === 'y'
+      }
+
       clubs.push(club)
     }
 

@@ -81,8 +81,8 @@ export function ensureString(
  * The Toastmasters program year runs July 1 - June 30.
  *
  * Thresholds:
- * - July (7): 0 (administrative checkpoint - officer list/training)
- * - August-September (8-9): 1 goal
+ * - July-August (7-8): 0 (start of program year, no DCP goals required yet)
+ * - September (9): 1 goal
  * - October-November (10-11): 2 goals
  * - December-January (12, 1): 3 goals
  * - February-March (2-3): 4 goals
@@ -98,13 +98,13 @@ export function getDCPCheckpoint(month: number): number {
     throw new Error(`Invalid month: ${month}. Must be between 1 and 12.`)
   }
 
-  // July (7): Administrative checkpoint - 0 DCP goals required
-  if (month === 7) {
+  // July-August (7-8): Start of program year - 0 DCP goals required
+  if (month === 7 || month === 8) {
     return 0
   }
 
-  // August-September (8-9): 1 goal required
-  if (month === 8 || month === 9) {
+  // September (9): 1 goal required
+  if (month === 9) {
     return 1
   }
 

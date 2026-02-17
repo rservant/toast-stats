@@ -80,12 +80,12 @@ describe('AnalyticsUtils', () => {
   })
 
   describe('getDCPCheckpoint', () => {
-    it('should return 0 for July (administrative checkpoint)', () => {
+    it('should return 0 for July-August (start of program year)', () => {
       expect(getDCPCheckpoint(7)).toBe(0)
+      expect(getDCPCheckpoint(8)).toBe(0)
     })
 
-    it('should return 1 for August-September', () => {
-      expect(getDCPCheckpoint(8)).toBe(1)
+    it('should return 1 for September', () => {
       expect(getDCPCheckpoint(9)).toBe(1)
     })
 
