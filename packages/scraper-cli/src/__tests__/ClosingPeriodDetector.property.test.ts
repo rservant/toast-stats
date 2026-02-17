@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for ClosingPeriodDetector
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Complex input space: date boundary detection across generated date combinations
+ *   - Mathematical invariant: closing period detection must be deterministic for any date
+ *
  * Feature: scraper-cli-month-end-compliance
  *
  * Property 1: Last Day of Month Calculation

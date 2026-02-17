@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for UploadService
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Complex input space: date range filtering across generated date sets
+ *   - Universal business rule: upload filtering must correctly partition data
+ *
  * Property 2: Date range filtering
  * For any list of valid YYYY-MM-DD date strings and any since/until pair
  * where since <= until, filterDatesByRange(dates, since, until) SHALL return

@@ -1,6 +1,10 @@
 /**
  * Property-based test for chronological ordering of snapshot pointer updates.
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Mathematical invariant: chronological ordering must be preserved across updates
+ *   - Complex input space: generated date sequences for pointer ordering
+ *
  * **Property 1: Chronological ordering of pointer updates**
  * For any two valid snapshot dates A and B, regardless of the order in which
  * `writeSnapshotPointer` is called, the resulting pointer file SHALL contain

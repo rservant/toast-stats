@@ -4,6 +4,10 @@ import { calculateProgramYearDay } from '../programYear'
 
 /**
  * Property-based tests for program year utilities
+ *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Complex input space: date boundary validation across generated date combinations
+ *   - Mathematical invariant: program year derivation must be deterministic for any valid date
  * **Feature: membership-payments-chart**
  */
 

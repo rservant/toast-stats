@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for Fallback Metrics Tracking Accuracy
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Universal business rule: fallback metrics must accurately track across all scenarios
+ *   - Complex input space: generated failure/success sequences for metrics counters
+ *
  * Feature: closing-period-fallback-cache
  *
  * Property 6: Metrics tracking accuracy

@@ -1,6 +1,10 @@
 /**
  * Property-based tests for schema-type consistency and validation round-trip.
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Mathematical invariant: schema round-trip (parse(serialize(x)) === x)
+ *   - Complex input space: generated data across all schema types
+ *
  * These tests verify that Zod schemas correctly accept valid objects
  * and reject invalid ones using fast-check for property-based testing.
  *

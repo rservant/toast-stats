@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for Configuration Consistency
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Universal business rule: configuration must be consistently applied
+ *   - Complex input space: generated config values across environment combinations
+ *
  * Property 17: Configuration Consistency
  * For any configuration value (cache directory, district list), both the Scraper CLI
  * and Backend SHALL read from the same source and produce identical values.

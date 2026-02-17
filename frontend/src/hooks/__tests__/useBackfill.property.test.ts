@@ -1,5 +1,9 @@
 /**
  * Property-based tests for useBackfill unified hook
+ *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Complex input space: hook state management across generated input combinations
+ *   - Universal business rule: backfill state transitions must be consistent
  * Feature: codebase-cleanup
  * Property 2: Unified Backfill Hook Behavior
  *
