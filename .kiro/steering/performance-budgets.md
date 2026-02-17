@@ -10,12 +10,12 @@
 
 ### Core Web Vitals
 
-| Metric | Target (p75) | Maximum  |
-| ------ | ------------ | -------- |
-| LCP    | < 1.5s       | < 2.5s   |
-| FID    | < 50ms       | < 100ms  |
-| CLS    | < 0.05       | < 0.1    |
-| INP    | < 100ms      | < 200ms  |
+| Metric | Target (p75) | Maximum |
+| ------ | ------------ | ------- |
+| LCP    | < 1.5s       | < 2.5s  |
+| FID    | < 50ms       | < 100ms |
+| CLS    | < 0.05       | < 0.1   |
+| INP    | < 100ms      | < 200ms |
 
 ### Time to Interactive
 
@@ -27,15 +27,15 @@
 
 ### Bundle Size Budgets (Compressed)
 
-| Asset                          | Budget  |
-| ------------------------------ | ------- |
-| JavaScript (Total)             | 200 KB  |
-| JavaScript (Main Bundle)       | 100 KB  |
-| JavaScript (Vendor Bundle)     | 100 KB  |
-| CSS (Total)                    | 50 KB   |
-| Images (Per Page, initial)     | 500 KB  |
-| Fonts (Total)                  | 100 KB  |
-| HTML Document                  | 50 KB   |
+| Asset                      | Budget |
+| -------------------------- | ------ |
+| JavaScript (Total)         | 200 KB |
+| JavaScript (Main Bundle)   | 100 KB |
+| JavaScript (Vendor Bundle) | 100 KB |
+| CSS (Total)                | 50 KB  |
+| Images (Per Page, initial) | 500 KB |
+| Fonts (Total)              | 100 KB |
+| HTML Document              | 50 KB  |
 
 Budget increases require documented justification.
 
@@ -62,28 +62,28 @@ Budget increases require documented justification.
 
 ### Latency by Endpoint Type
 
-| Endpoint Type     | p50 Target | p95 Target |
-| ----------------- | ---------- | ---------- |
-| Health checks     | < 50ms     | < 100ms    |
-| Simple reads      | < 100ms    | < 300ms    |
-| Complex reads     | < 200ms    | < 500ms    |
-| Data mutations    | < 300ms    | < 750ms    |
-| Long-running ops  | < 500ms    | < 2s       |
+| Endpoint Type    | p50 Target | p95 Target |
+| ---------------- | ---------- | ---------- |
+| Health checks    | < 50ms     | < 100ms    |
+| Simple reads     | < 100ms    | < 300ms    |
+| Complex reads    | < 200ms    | < 500ms    |
+| Data mutations   | < 300ms    | < 750ms    |
+| Long-running ops | < 500ms    | < 2s       |
 
 ### Error Rate Targets
 
-| Error Type  | Target | Maximum |
-| ----------- | ------ | ------- |
-| 5xx errors  | < 0.1% | < 1%    |
-| 4xx errors  | < 5%   | < 10%   |
+| Error Type | Target | Maximum |
+| ---------- | ------ | ------- |
+| 5xx errors | < 0.1% | < 1%    |
+| 4xx errors | < 5%   | < 10%   |
 
 ### Throughput
 
-| Metric              | Target    | Maximum   |
-| ------------------- | --------- | --------- |
-| RPS (per instance)  | 50        | 100       |
-| Concurrent requests | 80        | 100       |
-| RPM (total)         | 3,000     | 6,000     |
+| Metric              | Target | Maximum |
+| ------------------- | ------ | ------- |
+| RPS (per instance)  | 50     | 100     |
+| Concurrent requests | 80     | 100     |
+| RPM (total)         | 3,000  | 6,000   |
 
 ---
 

@@ -53,13 +53,13 @@ Development → Staging → Production. Each gate requires: tests pass, TypeScri
 
 ### Cloud Run Resource Defaults
 
-| Resource        | Default | Range           |
-| --------------- | ------- | --------------- |
-| Memory          | 512Mi   | 256Mi–2Gi       |
-| CPU             | 1 vCPU  | 0.5–2 vCPU      |
-| Concurrency     | 80      | 1–1000          |
-| Max instances   | 10      | 1–100           |
-| Request timeout | 300s    | 1s–3600s        |
+| Resource        | Default | Range      |
+| --------------- | ------- | ---------- |
+| Memory          | 512Mi   | 256Mi–2Gi  |
+| CPU             | 1 vCPU  | 0.5–2 vCPU |
+| Concurrency     | 80      | 1–1000     |
+| Max instances   | 10      | 1–100      |
+| Request timeout | 300s    | 1s–3600s   |
 
 **Memory rule**: `--max-old-space-size` ≈ 75% of container memory (384MB for 512Mi).
 

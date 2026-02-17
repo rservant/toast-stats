@@ -46,12 +46,12 @@ Unit tests: co-located (`{name}.test.tsx`). Integration/property tests: `src/__t
 
 ### Naming
 
-| Type       | Pattern         | Example                |
-| ---------- | --------------- | ---------------------- |
-| Pages      | `{Name}Page`    | `DashboardPage`        |
-| Layouts    | `{Name}Layout`  | `MainLayout`           |
-| Components | `{Name}`        | `DistrictCard`         |
-| HOCs       | `with{Feature}` | `withAuth`             |
+| Type       | Pattern         | Example         |
+| ---------- | --------------- | --------------- |
+| Pages      | `{Name}Page`    | `DashboardPage` |
+| Layouts    | `{Name}Layout`  | `MainLayout`    |
+| Components | `{Name}`        | `DistrictCard`  |
+| HOCs       | `with{Feature}` | `withAuth`      |
 
 ### Prohibited Patterns
 
@@ -65,15 +65,15 @@ Unit tests: co-located (`{name}.test.tsx`). Integration/property tests: `src/__t
 
 ## 3. Hooks Guidelines
 
-| Hook          | Use When                              |
-| ------------- | ------------------------------------- |
-| `useState`    | Simple local state                    |
-| `useReducer`  | Complex state with multiple sub-values |
+| Hook          | Use When                                                     |
+| ------------- | ------------------------------------------------------------ |
+| `useState`    | Simple local state                                           |
+| `useReducer`  | Complex state with multiple sub-values                       |
 | `useEffect`   | Side effects (MUST specify deps, MUST cleanup subscriptions) |
-| `useCallback` | Callbacks passed to children          |
-| `useMemo`     | Expensive derived values              |
-| `useRef`      | DOM refs, non-triggering values       |
-| `useContext`  | MUST wrap in custom hook with null check |
+| `useCallback` | Callbacks passed to children                                 |
+| `useMemo`     | Expensive derived values                                     |
+| `useRef`      | DOM refs, non-triggering values                              |
+| `useContext`  | MUST wrap in custom hook with null check                     |
 
 Custom hooks MUST: be prefixed `use`, live in `src/hooks/`, handle loading/error/success states for async.
 
@@ -81,13 +81,13 @@ Custom hooks MUST: be prefixed `use`, live in `src/hooks/`, handle loading/error
 
 ## 4. State Management Hierarchy
 
-| State Type     | Scope            | Solution     |
-| -------------- | ---------------- | ------------ |
-| Local UI       | Single component | `useState`   |
-| Complex local  | Single component | `useReducer` |
-| Shared UI      | Subtree          | Context      |
-| Server state   | App-wide         | React Query  |
-| URL state      | App-wide         | React Router |
+| State Type    | Scope            | Solution     |
+| ------------- | ---------------- | ------------ |
+| Local UI      | Single component | `useState`   |
+| Complex local | Single component | `useReducer` |
+| Shared UI     | Subtree          | Context      |
+| Server state  | App-wide         | React Query  |
+| URL state     | App-wide         | React Router |
 
 ### React Query
 
