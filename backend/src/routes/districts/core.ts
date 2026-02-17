@@ -33,6 +33,7 @@ import {
   findNearestSnapshot,
   getProgramYearInfo,
   extractStringParam,
+  extractQueryParam,
 } from './shared.js'
 
 export const coreRouter = Router()
@@ -120,9 +121,7 @@ coreRouter.get(
   }),
   async (req: Request, res: Response) => {
     const requestId = `rankings_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const rawDate = req.query['date']
-    const requestedDate =
-      typeof rawDate === 'string' ? rawDate : Array.isArray(rawDate) ? rawDate[0] : undefined
+    const requestedDate = extractQueryParam(req.query['date'])
     const enableFallback = req.query['fallback'] !== 'false' // Default to true
 
     logger.info('Received request for district rankings', {
@@ -330,13 +329,7 @@ coreRouter.get(
         req.params['districtId'],
         'districtId'
       )
-      const rawDate = req.query['date']
-      const date =
-        typeof rawDate === 'string'
-          ? rawDate
-          : Array.isArray(rawDate)
-          ? rawDate[0]
-          : undefined
+      const date = extractQueryParam(req.query['date'])
       // Include date in cache key for proper cache invalidation (Requirement 6.1)
       return generateDistrictCacheKey(
         districtId,
@@ -347,13 +340,7 @@ coreRouter.get(
   }),
   async (req: Request, res: Response) => {
     const rawDistrictId = req.params['districtId']
-    const rawRequestedDate = req.query['date']
-    const requestedDate =
-      typeof rawRequestedDate === 'string'
-        ? rawRequestedDate
-        : Array.isArray(rawRequestedDate)
-        ? rawRequestedDate[0]
-        : undefined
+    const requestedDate = extractQueryParam(req.query['date'])
 
     // Handle string | string[] type from Express
     const districtIdStr = Array.isArray(rawDistrictId)
@@ -759,8 +746,7 @@ coreRouter.get(
   }),
   async (req: Request, res: Response) => {
     const districtId = getValidDistrictId(req)
-    const rawDate = req.params['date']
-    const date = Array.isArray(rawDate) ? rawDate[0] : rawDate
+    const date = extractQueryParam(req.params['date'])
 
     // Validate district ID
     if (!districtId) {

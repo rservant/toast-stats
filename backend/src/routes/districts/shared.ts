@@ -155,6 +155,20 @@ export function extractStringParam(
 }
 
 /**
+ * Extract an optional string from an Express query parameter.
+ * Handles the full `string | ParsedQs | string[] | ParsedQs[] | undefined` union
+ * that `req.query[key]` produces, returning `string | undefined`.
+ */
+export function extractQueryParam(value: unknown): string | undefined {
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) {
+    const first: unknown = value[0]
+    return typeof first === 'string' ? first : undefined
+  }
+  return undefined
+}
+
+/**
  * Helper function to validate and extract district ID from request params
  */
 export function getValidDistrictId(req: Request): string | null {
