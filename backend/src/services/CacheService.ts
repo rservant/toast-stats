@@ -1,29 +1,36 @@
 import { LRUCache } from 'lru-cache'
 
 export interface CacheOptions {
-  ttl?: number // Time to live in seconds
-  maxEntries?: number // Maximum number of entries (default: 1000)
+  ttl?: number // Time to live in seconds (default: 900 = 15 minutes)
+  max?: number // Maximum number of entries (default: 1000)
+  maxSize?: number // Maximum total size in bytes (default: 50MB)
 }
 
-/**
- * Non-null cache value type (lru-cache requires values extend {})
- */
+// Type alias that satisfies lru-cache's non-nullable value constraint
 type CacheValue = object | string | number | boolean
 
 export class CacheService {
   private cache: LRUCache<string, CacheValue>
   private defaultTTL: number
-  private hits = 0
-  private misses = 0
+  private hits: number = 0
+  private misses: number = 0
 
   constructor(options: CacheOptions = {}) {
-    // Default TTL is 15 minutes (900 seconds)
-    this.defaultTTL = options.ttl || 900
+    this.defaultTTL = options.ttl ?? 900
 
-    // Initialize lru-cache with configuration
     this.cache = new LRUCache<string, CacheValue>({
-      max: options.maxEntries || 1000,
+      max: options.max ?? 1000,
+      maxSize: options.maxSize ?? 50 * 1024 * 1024,
+      sizeCalculation: (value: unknown): number => {
+        try {
+          return JSON.stringify(value).length
+        } catch {
+          return 1024 // 1KB fallback for non-serializable values
+        }
+      },
       ttl: this.defaultTTL * 1000, // Convert seconds to milliseconds
+      updateAgeOnGet: true,
+      allowStale: false,
     })
   }
 
@@ -33,13 +40,13 @@ export class CacheService {
    * @returns Cached value or undefined if not found or expired
    */
   get<T extends CacheValue>(key: string): T | undefined {
-    const value = this.cache.get(key)
+    const value = this.cache.get(key) as T | undefined
     if (value !== undefined) {
       this.hits++
-      return value as T
+    } else {
+      this.misses++
     }
-    this.misses++
-    return undefined
+    return value
   }
 
   /**
@@ -50,8 +57,8 @@ export class CacheService {
    * @returns true if successful
    */
   set<T extends CacheValue>(key: string, value: T, ttl?: number): boolean {
-    const timeToLive = ttl !== undefined ? ttl : this.defaultTTL
-    this.cache.set(key, value, { ttl: timeToLive * 1000 })
+    const options = ttl !== undefined ? { ttl: ttl * 1000 } : undefined
+    this.cache.set(key, value, options)
     return true
   }
 
@@ -70,11 +77,7 @@ export class CacheService {
    * @returns Number of deleted entries
    */
   invalidateMultiple(keys: string[]): number {
-    let deleted = 0
-    for (const key of keys) {
-      if (this.cache.delete(key)) deleted++
-    }
-    return deleted
+    return keys.reduce((count, key) => count + this.invalidate(key), 0)
   }
 
   /**
@@ -105,12 +108,21 @@ export class CacheService {
    * Get cache statistics
    * @returns Cache statistics object
    */
-  getStats(): { hits: number; misses: number; keys: number; size: number } {
+  getStats(): {
+    hits: number
+    misses: number
+    keys: number
+    size: number
+    maxEntries: number
+    maxSize: number
+  } {
     return {
       hits: this.hits,
       misses: this.misses,
       keys: this.cache.size,
-      size: this.cache.size,
+      size: this.cache.calculatedSize ?? 0,
+      maxEntries: this.cache.max,
+      maxSize: this.cache.maxSize,
     }
   }
 }
