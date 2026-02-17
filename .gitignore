@@ -10,6 +10,10 @@ coverage/
 dist/
 build/
 
+# Compiled JS in source directories (shadows .ts files, breaks vitest)
+packages/*/src/**/*.js
+!packages/*/src/**/*.test.js
+
 # Environment variables
 .env
 .env.local
