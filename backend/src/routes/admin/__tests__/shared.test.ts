@@ -32,7 +32,6 @@ vi.mock('../../../utils/logger.js', () => ({
 vi.mock('../../../services/ProductionServiceFactory.js', () => ({
   getProductionServiceFactory: vi.fn(() => ({
     createSnapshotStorage: vi.fn(),
-    createSnapshotStore: vi.fn(),
     createCacheConfigService: vi.fn(),
     createRefreshService: vi.fn(),
   })),
@@ -175,7 +174,7 @@ describe('Admin Shared Utilities', () => {
       const factory = getServiceFactory()
 
       expect(factory).toBeDefined()
-      expect(typeof factory.createSnapshotStore).toBe('function')
+      expect(typeof factory.createSnapshotStorage).toBe('function')
       expect(typeof factory.createCacheConfigService).toBe('function')
     })
 

@@ -29,20 +29,12 @@ import { ILogger, ICircuitBreakerManager } from '../types/serviceInterfaces.js'
 import type {
   ISnapshotStorage,
   IRawCSVStorage,
+  ITimeSeriesIndexStorage,
 } from '../types/storageInterfaces.js'
-import { AnalyticsEngine } from './AnalyticsEngine.js'
-import { AnalyticsDataSourceAdapter } from './AnalyticsDataSourceAdapter.js'
 import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
 import { logger } from '../utils/logger.js'
 import { FileSnapshotStore } from './SnapshotStore.js'
-import { createDistrictDataAggregator } from './DistrictDataAggregator.js'
 import { RefreshService } from './RefreshService.js'
-import {
-  BordaCountRankingCalculator,
-  type RankingCalculator,
-} from './RankingCalculator.js'
-import { BackfillService } from './UnifiedBackfillService.js'
-import { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import { MonthEndDataMapper } from './MonthEndDataMapper.js'
 import { SnapshotStore } from '../types/snapshots.js'
 import { config } from '../config/index.js'
@@ -121,22 +113,9 @@ export interface ProductionServiceFactory {
   ): CacheConfigService
 
   /**
-   * Create AnalyticsEngine instance with dependency injection
-   */
-  createAnalyticsEngine(cacheConfig?: CacheConfigService): AnalyticsEngine
-
-  /**
    * Create CircuitBreakerManager instance
    */
   createCircuitBreakerManager(): ICircuitBreakerManager
-
-  /**
-   * Create SnapshotStore instance
-   *
-   * @deprecated Use createSnapshotStorage() for storage abstraction layer support.
-   * This method returns FileSnapshotStore directly for backward compatibility.
-   */
-  createSnapshotStore(cacheConfig?: CacheConfigService): SnapshotStore
 
   /**
    * Create ISnapshotStorage instance using the storage abstraction layer
@@ -145,9 +124,6 @@ export interface ProductionServiceFactory {
    * environment variable:
    * - 'local' (default): Returns LocalSnapshotStorage (wraps FileSnapshotStore)
    * - 'gcp': Returns FirestoreSnapshotStorage
-   *
-   * This method should be preferred over createSnapshotStore() for new code
-   * to ensure compatibility with both local and cloud storage backends.
    *
    * Requirements: 1.3, 1.4
    */
@@ -169,14 +145,24 @@ export interface ProductionServiceFactory {
   createRawCSVStorage(): IRawCSVStorage
 
   /**
+   * Create ITimeSeriesIndexStorage instance using the storage abstraction layer
+   *
+   * Returns the appropriate storage implementation based on the STORAGE_PROVIDER
+   * environment variable:
+   * - 'local' (default): Returns LocalTimeSeriesIndexStorage
+   * - 'gcp': Returns FirestoreTimeSeriesIndexStorage
+   *
+   * This method provides access to time-series index operations including
+   * deleteSnapshotEntries for cascading deletion support.
+   *
+   * Requirements: 4.4, 4.5
+   */
+  createTimeSeriesIndexStorage(): ITimeSeriesIndexStorage
+
+  /**
    * Create RefreshService instance
    */
   createRefreshService(snapshotStore?: SnapshotStore): RefreshService
-
-  /**
-   * Create RankingCalculator instance
-   */
-  createRankingCalculator(): RankingCalculator
 
   /**
    * Create RawCSVCacheService instance
@@ -193,15 +179,6 @@ export interface ProductionServiceFactory {
     cacheConfig?: CacheConfigService,
     rawCSVCache?: RawCSVCacheService
   ): MonthEndDataMapper
-
-  /**
-   * Create BackfillService instance
-   */
-  createBackfillService(
-    refreshService?: RefreshService,
-    snapshotStore?: SnapshotStore,
-    configService?: DistrictConfigurationService
-  ): BackfillService
 
   /**
    * Cleanup all resources
@@ -322,26 +299,17 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       )
     )
 
-    // Register AnalyticsEngine
-    container.register(
-      ServiceTokens.AnalyticsEngine,
+    // Register ITimeSeriesIndexStorage interface
+    // Provides abstracted time-series index operations that work with both
+    // local filesystem and Cloud Firestore backends
+    // Includes deleteSnapshotEntries for cascading deletion support
+    // Requirements: 4.1, 4.4, 4.5
+    container.registerInterface<ITimeSeriesIndexStorage>(
+      'ITimeSeriesIndexStorage',
       createServiceFactory(
-        (container: ServiceContainer) => {
-          // Use ISnapshotStorage from the storage abstraction layer
-          // This enables environment-based selection between local and cloud storage
-          const snapshotStorage =
-            container.resolveInterface<ISnapshotStorage>('ISnapshotStorage')
-          const districtDataAggregator = createDistrictDataAggregator(
-            snapshotStorage as unknown as FileSnapshotStore
-          )
-          const dataSource = new AnalyticsDataSourceAdapter(
-            districtDataAggregator,
-            snapshotStorage as unknown as FileSnapshotStore
-          )
-          return new AnalyticsEngine(dataSource)
-        },
-        async (instance: AnalyticsEngine) => {
-          await instance.dispose()
+        () => storageProviders.timeSeriesIndexStorage,
+        async () => {
+          // Storage providers don't have dispose methods
         }
       )
     )
@@ -377,17 +345,6 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
       )
     )
 
-    // Register RankingCalculator
-    container.register(
-      ServiceTokens.RankingCalculator,
-      createServiceFactory(
-        () => new BordaCountRankingCalculator(),
-        async () => {
-          // RankingCalculator doesn't have dispose method
-        }
-      )
-    )
-
     // Register RefreshService
     container.register(
       ServiceTokens.RefreshService,
@@ -403,53 +360,19 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
           // - 'local' or unset: Uses LocalRawCSVStorage (reads from local filesystem)
           const rawCSVStorage =
             container.resolveInterface<IRawCSVStorage>('IRawCSVStorage')
-          const rankingCalculator = container.resolve(
-            ServiceTokens.RankingCalculator
-          )
 
           // RefreshService now uses SnapshotBuilder internally (no scraping)
           // and accepts ISnapshotStorage and IRawCSVStorage for storage abstraction
+          // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
           return new RefreshService(
             snapshotStorage,
             rawCSVStorage,
             undefined, // districtConfigService
-            rankingCalculator
+            undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
           )
         },
         async () => {
           // RefreshService doesn't have dispose method
-        }
-      )
-    )
-
-    // Register BackfillService
-    container.register(
-      ServiceTokens.BackfillService,
-      createServiceFactory(
-        (container: ServiceContainer) => {
-          const refreshService = container.resolve(ServiceTokens.RefreshService)
-          const snapshotStore = container.resolve(ServiceTokens.SnapshotStore)
-          const rankingCalculator = container.resolve(
-            ServiceTokens.RankingCalculator
-          )
-          // Create DistrictConfigurationService with storage from StorageProviderFactory
-          const storageProviders =
-            StorageProviderFactory.createFromEnvironment()
-          const configService = new DistrictConfigurationService(
-            storageProviders.districtConfigStorage
-          )
-
-          return new BackfillService(
-            refreshService,
-            snapshotStore as FileSnapshotStore,
-            configService,
-            undefined, // alertManager
-            undefined, // circuitBreakerManager
-            rankingCalculator
-          )
-        },
-        async () => {
-          // BackfillService doesn't have dispose method
         }
       )
     )
@@ -486,55 +409,11 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
   }
 
   /**
-   * Create AnalyticsEngine instance with dependency injection
-   *
-   * Uses the storage abstraction layer to respect STORAGE_PROVIDER env var:
-   * - STORAGE_PROVIDER=gcp: Uses FirestoreSnapshotStorage
-   * - STORAGE_PROVIDER=local or unset: Uses LocalSnapshotStorage
-   *
-   * Requirements: 1.3, 1.4 (Storage Abstraction)
-   *
-   * @param _cacheConfig - Deprecated parameter, kept for backward compatibility
-   */
-  createAnalyticsEngine(_cacheConfig?: CacheConfigService): AnalyticsEngine {
-    // Use storage abstraction layer to respect STORAGE_PROVIDER env var
-    const storageProviders = StorageProviderFactory.createFromEnvironment()
-    const snapshotStorage = storageProviders.snapshotStorage
-    const districtDataAggregator = createDistrictDataAggregator(
-      snapshotStorage as unknown as FileSnapshotStore
-    )
-    const dataSource = new AnalyticsDataSourceAdapter(
-      districtDataAggregator,
-      snapshotStorage as unknown as FileSnapshotStore
-    )
-    const service = new AnalyticsEngine(dataSource)
-    this.services.push(service)
-    return service
-  }
-
-  /**
    * Create CircuitBreakerManager instance
    */
   createCircuitBreakerManager(): ICircuitBreakerManager {
     const service = new CircuitBreakerManager()
     this.services.push(service)
-    return service
-  }
-
-  /**
-   * Create SnapshotStore instance
-   *
-   * @deprecated Use createSnapshotStorage() for storage abstraction layer support.
-   * This method returns FileSnapshotStore directly for backward compatibility.
-   */
-  createSnapshotStore(cacheConfig?: CacheConfigService): SnapshotStore {
-    const config = cacheConfig || this.createCacheConfigService()
-    const service = new FileSnapshotStore({
-      cacheDir: config.getCacheDirectory(),
-      maxSnapshots: 100,
-      maxAgeDays: 30,
-    })
-    // FileSnapshotStore doesn't have dispose method, so we don't track it
     return service
   }
 
@@ -545,9 +424,6 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
    * environment variable:
    * - 'local' (default): Returns LocalSnapshotStorage (wraps FileSnapshotStore)
    * - 'gcp': Returns FirestoreSnapshotStorage
-   *
-   * This method should be preferred over createSnapshotStore() for new code
-   * to ensure compatibility with both local and cloud storage backends.
    *
    * Requirements: 1.3, 1.4
    */
@@ -575,6 +451,24 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
   }
 
   /**
+   * Create ITimeSeriesIndexStorage instance using the storage abstraction layer
+   *
+   * Returns the appropriate storage implementation based on the STORAGE_PROVIDER
+   * environment variable:
+   * - 'local' (default): Returns LocalTimeSeriesIndexStorage
+   * - 'gcp': Returns FirestoreTimeSeriesIndexStorage
+   *
+   * This method provides access to time-series index operations including
+   * deleteSnapshotEntries for cascading deletion support.
+   *
+   * Requirements: 4.4, 4.5
+   */
+  createTimeSeriesIndexStorage(): ITimeSeriesIndexStorage {
+    const storageProviders = StorageProviderFactory.createFromEnvironment()
+    return storageProviders.timeSeriesIndexStorage
+  }
+
+  /**
    * Create RefreshService instance
    *
    * This method creates a RefreshService using the storage abstraction layer,
@@ -590,27 +484,18 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
     const storageProviders = StorageProviderFactory.createFromEnvironment()
     const store = snapshotStore || storageProviders.snapshotStorage
     const rawCSVStorage = storageProviders.rawCSVStorage
-    const rankingCalculator = this.createRankingCalculator()
 
     // RefreshService now uses SnapshotBuilder internally (no scraping)
     // and accepts IRawCSVStorage for storage abstraction
+    // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
     const service = new RefreshService(
       store,
       rawCSVStorage,
       undefined, // districtConfigService
-      rankingCalculator
+      undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
     )
     // RefreshService doesn't have dispose method, so we don't track it
     return service
-  }
-
-  /**
-   * Create RankingCalculator instance
-   */
-  createRankingCalculator(): RankingCalculator {
-    const calculator = new BordaCountRankingCalculator()
-    // RankingCalculator doesn't have dispose method, so we don't track it
-    return calculator
   }
 
   /**
@@ -641,45 +526,6 @@ export class DefaultProductionServiceFactory implements ProductionServiceFactory
     const logger = new ProductionLogger()
     const service = new MonthEndDataMapper(config, cache, logger)
     // MonthEndDataMapper doesn't have dispose method, so we don't track it
-    return service
-  }
-
-  /**
-   * Create BackfillService instance
-   *
-   * Uses the storage abstraction layer to respect STORAGE_PROVIDER env var:
-   * - STORAGE_PROVIDER=gcp: Uses FirestoreSnapshotStorage
-   * - STORAGE_PROVIDER=local or unset: Uses LocalSnapshotStorage
-   *
-   * Requirements: 1.3, 1.4 (Storage Abstraction)
-   */
-  createBackfillService(
-    refreshService?: RefreshService,
-    snapshotStore?: SnapshotStore,
-    configService?: DistrictConfigurationService
-  ): BackfillService {
-    const refresh = refreshService || this.createRefreshService()
-    // Use storage abstraction layer if no store provided
-    const storageProviders = StorageProviderFactory.createFromEnvironment()
-    const store = snapshotStore || storageProviders.snapshotStorage
-    // Create DistrictConfigurationService with storage from StorageProviderFactory if not provided
-    let config = configService
-    if (!config) {
-      config = new DistrictConfigurationService(
-        storageProviders.districtConfigStorage
-      )
-    }
-    const rankingCalculator = this.createRankingCalculator()
-
-    const service = new BackfillService(
-      refresh,
-      store,
-      config,
-      undefined, // alertManager
-      undefined, // circuitBreakerManager
-      rankingCalculator
-    )
-    // BackfillService doesn't have dispose method, so we don't track it
     return service
   }
 
@@ -722,19 +568,13 @@ export const ServiceTokens = {
     'RawCSVCacheService',
     RawCSVCacheService
   ),
-  AnalyticsEngine: createServiceToken('AnalyticsEngine', AnalyticsEngine),
   CircuitBreakerManager: createServiceToken(
     'CircuitBreakerManager',
     CircuitBreakerManager
   ),
   Logger: createServiceToken('Logger', ProductionLogger),
   SnapshotStore: createServiceToken('SnapshotStore', FileSnapshotStore),
-  RankingCalculator: createServiceToken(
-    'RankingCalculator',
-    BordaCountRankingCalculator
-  ),
   RefreshService: createServiceToken('RefreshService', RefreshService),
-  BackfillService: createServiceToken('BackfillService', BackfillService),
 }
 
 /**
@@ -762,6 +602,19 @@ export const InterfaceTokens = {
    * based on the STORAGE_PROVIDER environment variable.
    */
   IRawCSVStorage: createInterfaceToken<IRawCSVStorage>('IRawCSVStorage'),
+
+  /**
+   * Token for ITimeSeriesIndexStorage interface
+   *
+   * Resolves to either LocalTimeSeriesIndexStorage or FirestoreTimeSeriesIndexStorage
+   * based on the STORAGE_PROVIDER environment variable.
+   * Includes deleteSnapshotEntries for cascading deletion support.
+   *
+   * Requirements: 4.1, 4.4, 4.5
+   */
+  ITimeSeriesIndexStorage: createInterfaceToken<ITimeSeriesIndexStorage>(
+    'ITimeSeriesIndexStorage'
+  ),
 }
 
 /**

@@ -43,31 +43,50 @@ let middlewareInvocations: Array<{
   timestamp: number
 }> = []
 
+// Use vi.hoisted to ensure mock factory is available when vi.mock is hoisted
+const { mockFactory, setTestSnapshotStore, setTempDir } = vi.hoisted(() => {
+  let hoistedSnapshotStore: unknown = null
+  let hoistedTempDir = ''
+  return {
+    mockFactory: {
+      createSnapshotStorage: () => hoistedSnapshotStore,
+      createCacheConfigService: () => ({
+        getConfiguration: () => ({
+          baseDirectory: hoistedTempDir,
+          source: 'test',
+          isConfigured: true,
+          validationStatus: {
+            isValid: true,
+            isAccessible: true,
+            isSecure: true,
+          },
+        }),
+        getCacheDirectory: () => hoistedTempDir,
+        initialize: () => Promise.resolve(),
+      }),
+      createRefreshService: () => ({
+        isRefreshing: () => false,
+        getLastRefreshTime: () => null,
+      }),
+    },
+    setTestSnapshotStore: (store: unknown) => {
+      hoistedSnapshotStore = store
+    },
+    setTempDir: (dir: string) => {
+      hoistedTempDir = dir
+    },
+  }
+})
+
 // Mock the production service factory to use our test snapshot store
 // Routes now use createSnapshotStorage() which returns ISnapshotStorage
-const mockFactory = {
-  createSnapshotStorage: () => testSnapshotStore as unknown as ISnapshotStorage,
-  createSnapshotStore: () => testSnapshotStore,
-  createCacheConfigService: () => ({
-    getConfiguration: () => ({
-      baseDirectory: tempDir,
-      source: 'test',
-      isConfigured: true,
-      validationStatus: {
-        isValid: true,
-        isAccessible: true,
-        isSecure: true,
-      },
-    }),
-  }),
-  createRefreshService: () => ({
-    isRefreshing: () => false,
-    getLastRefreshTime: () => null,
-  }),
-}
-
 vi.mock('../../../services/ProductionServiceFactory.js', () => ({
   getProductionServiceFactory: () => mockFactory,
+}))
+
+// Mock the main index.js to prevent server initialization side effects
+vi.mock('../../../index.js', () => ({
+  getUnifiedBackfillServiceInstance: vi.fn(),
 }))
 
 // Mock logger to track middleware invocations
@@ -129,6 +148,7 @@ describe('Middleware Application Consistency Property Tests', () => {
     tempDir = await fs.mkdtemp(
       path.join(os.tmpdir(), `middleware-test-${uniqueId}-`)
     )
+    setTempDir(tempDir)
 
     // Create test snapshot store
     testSnapshotStore = new FileSnapshotStore({
@@ -137,6 +157,7 @@ describe('Middleware Application Consistency Property Tests', () => {
       maxAgeDays: 7,
       enableCompression: false,
     })
+    setTestSnapshotStore(testSnapshotStore)
 
     // Create test app with admin routes
     app = express()

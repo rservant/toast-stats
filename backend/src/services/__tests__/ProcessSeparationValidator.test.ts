@@ -125,13 +125,13 @@ describe('ProcessSeparationValidator', () => {
     const initialSnapshot = createTestSnapshot('1704067200000')
     await snapshotStore.writeSnapshot(initialSnapshot)
 
-    // Mock snapshot store to simulate blocking behavior with shorter delay
+    // Mock snapshot store to simulate blocking behavior with delay exceeding threshold
     const originalGetLatestSuccessful =
       snapshotStore.getLatestSuccessful.bind(snapshotStore)
     vi.spyOn(snapshotStore, 'getLatestSuccessful').mockImplementation(
       async () => {
-        // Simulate blocking with a shorter delay that still exceeds threshold
-        await new Promise(resolve => setTimeout(resolve, 1500))
+        // Simulate blocking with a delay that clearly exceeds the 1500ms threshold
+        await new Promise(resolve => setTimeout(resolve, 2000))
         return originalGetLatestSuccessful()
       }
     )

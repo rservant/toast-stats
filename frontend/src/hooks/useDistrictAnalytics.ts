@@ -1,10 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../services/api'
+import type { ClubHealthStatus } from '@toastmasters/shared-contracts'
 
-export type ClubHealthStatus =
-  | 'thriving'
-  | 'vulnerable'
-  | 'intervention-required'
+// Re-export for backward compatibility with existing imports
+export type { ClubHealthStatus }
 
 export interface ClubTrend {
   clubId: string
@@ -114,6 +113,7 @@ export interface DistrictAnalytics {
   dateRange: { start: string; end: string }
   totalMembership: number
   membershipChange: number
+  memberCountChange?: number
   membershipTrend: Array<{ date: string; count: number }>
   paymentsTrend?: Array<{ date: string; payments: number }>
   topGrowthClubs: Array<{ clubId: string; clubName: string; growth: number }>
@@ -128,7 +128,21 @@ export interface DistrictAnalytics {
     distinguished: number
     total: number
   }
-  distinguishedProjection: number
+  /**
+   * Distinguished projection - can be a number (from analytics-summary)
+   * or an object (from full analytics endpoint)
+   */
+  distinguishedProjection:
+    | number
+    | {
+        projectedDistinguished: number
+        projectedSelect: number
+        projectedPresident: number
+        currentDistinguished?: number
+        currentSelect?: number
+        currentPresident?: number
+        projectionDate?: string
+      }
   divisionRankings: DivisionAnalytics[]
   topPerformingAreas: AreaAnalytics[]
   divisionRecognition?: DivisionRecognition[]
@@ -208,6 +222,9 @@ export const useDistrictAnalytics = (
   startDate?: string,
   endDate?: string
 ) => {
+  // Validate date range - don't make request if startDate > endDate
+  const hasValidDateRange = !startDate || !endDate || startDate <= endDate
+
   return useQuery<DistrictAnalytics, Error>({
     queryKey: ['districtAnalytics', districtId, startDate, endDate],
     queryFn: async () => {
@@ -224,7 +241,7 @@ export const useDistrictAnalytics = (
       )
       return response.data
     },
-    enabled: !!districtId,
+    enabled: !!districtId && hasValidDateRange,
     staleTime: 10 * 60 * 1000, // 10 minutes - cache analytics calculations longer
     gcTime: 30 * 60 * 1000, // 30 minutes - keep in cache for common date ranges
     retry: (failureCount, error: unknown) => {

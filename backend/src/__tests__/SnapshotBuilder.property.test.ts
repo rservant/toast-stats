@@ -26,10 +26,7 @@ import crypto from 'crypto'
 import { SnapshotBuilder } from '../services/SnapshotBuilder.js'
 import type { IRawCSVStorage } from '../types/storageInterfaces.js'
 import type { DistrictConfigurationService } from '../services/DistrictConfigurationService.js'
-import type {
-  FileSnapshotStore,
-  PerDistrictFileSnapshotStore,
-} from '../services/SnapshotStore.js'
+import type { FileSnapshotStore } from '../services/SnapshotStore.js'
 import { CSVType, type RawCSVCacheMetadata } from '../types/rawCSVCache.js'
 import { TestLogger } from '../services/TestServiceFactory.js'
 
@@ -423,9 +420,9 @@ function createMockDistrictConfigService(
 }
 
 /**
- * Mock PerDistrictFileSnapshotStore
+ * Mock FileSnapshotStore
  */
-function createMockSnapshotStore(): PerDistrictFileSnapshotStore {
+function createMockSnapshotStore(): FileSnapshotStore {
   return {
     writeSnapshot: vi.fn(async () => {}),
     getLatestSuccessful: vi.fn(async () => null),
@@ -438,7 +435,7 @@ function createMockSnapshotStore(): PerDistrictFileSnapshotStore {
     getAllDistrictsRankings: vi.fn(async () => null),
     listSnapshotDates: vi.fn(async () => []),
     dispose: vi.fn(async () => {}),
-  } as unknown as PerDistrictFileSnapshotStore
+  } as unknown as FileSnapshotStore
 }
 
 /**
@@ -507,7 +504,6 @@ describe('Property 10: SnapshotBuilder Isolation', () => {
             mockDistrictConfig,
             mockSnapshotStore,
             undefined, // validator
-            undefined, // rankingCalculator
             undefined, // closingPeriodDetector
             undefined, // dataNormalizer
             testLogger
@@ -603,7 +599,6 @@ describe('Property 10: SnapshotBuilder Isolation', () => {
             undefined,
             undefined,
             undefined,
-            undefined,
             testLogger
           )
 
@@ -656,7 +651,6 @@ describe('Property 10: SnapshotBuilder Isolation', () => {
             mockCacheService,
             mockDistrictConfig,
             mockSnapshotStore,
-            undefined,
             undefined,
             undefined,
             undefined,
@@ -774,7 +768,6 @@ describe('Property 12: Partial Snapshot Creation', () => {
             undefined,
             undefined,
             undefined,
-            undefined,
             testLogger
           )
 
@@ -867,7 +860,6 @@ describe('Property 12: Partial Snapshot Creation', () => {
             undefined,
             undefined,
             undefined,
-            undefined,
             testLogger
           )
 
@@ -940,7 +932,6 @@ describe('Property 12: Partial Snapshot Creation', () => {
             mockCacheService,
             mockDistrictConfig,
             mockSnapshotStore,
-            undefined,
             undefined,
             undefined,
             undefined,
@@ -1024,7 +1015,6 @@ describe('Property 16: Cache Integrity Validation', () => {
             mockCacheService,
             mockDistrictConfig,
             mockSnapshotStore,
-            undefined,
             undefined,
             undefined,
             undefined,
@@ -1126,7 +1116,6 @@ describe('Property 16: Cache Integrity Validation', () => {
             undefined,
             undefined,
             undefined,
-            undefined,
             testLogger
           )
 
@@ -1200,7 +1189,6 @@ describe('Property 16: Cache Integrity Validation', () => {
             mockCacheService,
             mockDistrictConfig,
             mockSnapshotStore,
-            undefined,
             undefined,
             undefined,
             undefined,

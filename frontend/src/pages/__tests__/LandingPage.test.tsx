@@ -250,8 +250,8 @@ describe('LandingPage - Error Handling', () => {
       )
     ).toBeInTheDocument()
 
-    // Check for backfill button
-    expect(screen.getByText('Backfill Data')).toBeInTheDocument()
+    // Check for Admin Panel link (BackfillButton was removed, now directs to Admin Panel)
+    expect(screen.getByText('Go to Admin Panel')).toBeInTheDocument()
 
     // Check for "Check Again" button
     expect(screen.getByText('Check Again')).toBeInTheDocument()
@@ -259,9 +259,7 @@ describe('LandingPage - Error Handling', () => {
     // Check for setup instructions
     expect(screen.getByText('What happens next:')).toBeInTheDocument()
     expect(
-      screen.getByText(
-        'Click "Backfill Data" to fetch current and historical data'
-      )
+      screen.getByText('Go to the Admin page to manage data collection')
     ).toBeInTheDocument()
   })
 

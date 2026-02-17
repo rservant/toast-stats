@@ -35,7 +35,7 @@ export const DCPGoalAnalysis: React.FC<DCPGoalAnalysisProps> = ({
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
         <p className="text-gray-600">
-          No DCP goal analysis available. Please initiate a backfill to fetch
+          No DCP goal analysis available. Please use the Admin Panel to collect
           historical data.
         </p>
       </div>

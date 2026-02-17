@@ -1,545 +1,619 @@
-# Design Document
+# Design Document: Unified Backfill Service
 
 ## Overview
 
-The BackfillService is a complete rewrite that replaces the existing BackfillService and DistrictBackfillService with a modern, unified system. The new service leverages RefreshService methods as the primary data acquisition mechanism for historical data collection, providing:
+The Unified Backfill Service consolidates two existing backfill mechanisms into a single, resilient backend service with persistent job state, automatic recovery, and a consolidated Admin UI. The service handles both data collection (fetching historical Toastmasters dashboard data) and analytics generation (computing pre-computed analytics for existing snapshots).
 
-1. **RefreshService Integration**: Direct use of proven RefreshService methods for reliable historical data acquisition
-2. **Intelligent Collection**: Automatic selection of optimal collection strategies based on scope and requirements
-3. **Clean Architecture**: Modern TypeScript implementation without legacy compatibility concerns
-4. **Unified Storage**: Consistent use of PerDistrictFileSnapshotStore for all historical data
-
-The BackfillService maintains clear operational separation from RefreshService while leveraging its proven capabilities for historical data collection.
+The design follows the existing storage abstraction pattern established in the codebase, enabling environment-based selection between local filesystem and Firestore/GCS storage backends.
 
 ## Architecture
-
-### Core Components
 
 ```mermaid
 graph TB
     subgraph "Frontend"
-        UI[BackfillButton]
-        HOOKS[API Hooks]
-        CTX[BackfillContext]
-        TYPES[TypeScript Types]
+        AdminPanel[Admin Panel - Backfill Section]
+        JobHistory[Job History Component]
+        ProgressDisplay[Progress Display Component]
+        RateLimitConfig[Rate Limit Config Component]
     end
 
-    subgraph "BackfillService"
-        UBS[BackfillService]
-        JM[JobManager]
-        DSS[DataSourceSelector]
-        SM[ScopeManager]
+    subgraph "API Layer"
+        BackfillRoutes[/api/admin/backfill/*]
     end
 
-    subgraph "Data Sources"
-        SCRAPER[ToastmastersScraper]
-        ALLCSV[All Districts CSV]
-        PERCSV[Per-District CSVs]
-        REFRESH[RefreshService Methods]
+    subgraph "Service Layer"
+        UnifiedBackfillService[UnifiedBackfillService]
+        JobManager[JobManager]
+        DataCollector[DataCollector]
+        AnalyticsGenerator[AnalyticsGenerator]
+        RecoveryManager[RecoveryManager]
     end
 
-    subgraph "Storage Layer"
-        PDSS[PerDistrictFileSnapshotStore]
-        DCM[DistrictCacheManager]
-        DCS[DistrictConfigurationService]
+    subgraph "Storage Abstraction"
+        IBackfillJobStorage[IBackfillJobStorage Interface]
+        LocalJobStorage[LocalBackfillJobStorage]
+        FirestoreJobStorage[FirestoreBackfillJobStorage]
     end
 
     subgraph "Existing Services"
-        REFRESHSVC[RefreshService]
-        CLI[refresh-cli.ts]
-        ADMIN[Admin Endpoints]
+        RefreshService[RefreshService]
+        SnapshotStorage[ISnapshotStorage]
+        TimeSeriesStorage[ITimeSeriesIndexStorage]
     end
 
-    UI --> HOOKS
-    HOOKS --> CTX
-    HOOKS --> UBS
+    AdminPanel --> BackfillRoutes
+    JobHistory --> BackfillRoutes
+    ProgressDisplay --> BackfillRoutes
+    RateLimitConfig --> BackfillRoutes
 
-    UBS --> JM
-    UBS --> DSS
-    UBS --> SM
+    BackfillRoutes --> UnifiedBackfillService
+    UnifiedBackfillService --> JobManager
+    UnifiedBackfillService --> DataCollector
+    UnifiedBackfillService --> AnalyticsGenerator
+    UnifiedBackfillService --> RecoveryManager
 
-    DSS --> SCRAPER
-    DSS --> REFRESH
+    JobManager --> IBackfillJobStorage
+    IBackfillJobStorage --> LocalJobStorage
+    IBackfillJobStorage --> FirestoreJobStorage
 
-    SCRAPER --> ALLCSV
-    SCRAPER --> PERCSV
-    REFRESH --> SCRAPER
-
-    ALLCSV --> DASH
-    PERCSV --> DASH
-
-    UBS --> PDSS
-    UBS --> DCM
-    SM --> DCS
-
-    subgraph "External Systems"
-        DASH[Toastmasters Dashboard]
-        FS[File System]
-    end
-
-    REFRESHSVC --> PDSS
-    CLI --> REFRESHSVC
-    ADMIN --> REFRESHSVC
-
-    PDSS --> FS
-    DCM --> FS
+    DataCollector --> RefreshService
+    DataCollector --> SnapshotStorage
+    AnalyticsGenerator --> SnapshotStorage
+    AnalyticsGenerator --> TimeSeriesStorage
 ```
-
-### Service Integration
-
-The unified service integrates with existing infrastructure components:
-
-- **PerDistrictFileSnapshotStore**: Primary storage mechanism for all snapshot operations
-- **DistrictConfigurationService**: Provides district scoping and validation
-- **AlertManager**: Handles error notifications and monitoring alerts
-- **CircuitBreaker**: Protects against external service failures
-- **RetryManager**: Implements resilient retry logic for transient failures
 
 ## Components and Interfaces
 
-### Frontend Components
+### IBackfillJobStorage Interface
 
-#### BackfillButton Component
-
-Enhanced React component for initiating and monitoring backfill operations:
+The storage abstraction interface for persisting backfill job state. Follows the existing pattern from `storageInterfaces.ts`.
 
 ```typescript
-interface BackfillButtonProps {
-  className?: string
-  onBackfillStart?: (backfillId: string) => void
-  districtId?: string // For district-specific backfills
-  showAdvancedOptions?: boolean // Show targeting and performance options
+interface IBackfillJobStorage {
+  // Job CRUD operations
+  createJob(job: BackfillJob): Promise<void>
+  getJob(jobId: string): Promise<BackfillJob | null>
+  updateJob(jobId: string, updates: Partial<BackfillJob>): Promise<void>
+  deleteJob(jobId: string): Promise<boolean>
+
+  // Job queries
+  listJobs(options?: ListJobsOptions): Promise<BackfillJob[]>
+  getActiveJob(): Promise<BackfillJob | null>
+  getJobsByStatus(status: BackfillJobStatus[]): Promise<BackfillJob[]>
+
+  // Checkpoint operations
+  updateCheckpoint(jobId: string, checkpoint: JobCheckpoint): Promise<void>
+  getCheckpoint(jobId: string): Promise<JobCheckpoint | null>
+
+  // Configuration
+  getRateLimitConfig(): Promise<RateLimitConfig>
+  setRateLimitConfig(config: RateLimitConfig): Promise<void>
+
+  // Maintenance
+  cleanupOldJobs(retentionDays: number): Promise<number>
+  isReady(): Promise<boolean>
 }
 
-interface BackfillRequest {
-  // Targeting options
-  targetDistricts?: string[]
-
-  // Date range
-  startDate?: string
-  endDate?: string
-
-  // Collection preferences
-  collectionType?: 'system-wide' | 'per-district' | 'auto'
-
-  // Performance options
-  concurrency?: number
-  retryFailures?: boolean
-  skipExisting?: boolean
-  rateLimitDelayMs?: number
-  enableCaching?: boolean
-}
-```
-
-#### API Hooks
-
-Updated React Query hooks for the unified API:
-
-```typescript
-// Global backfill operations
-export function useInitiateBackfill()
-export function useBackfillStatus(backfillId: string | null, enabled?: boolean)
-export function useCancelBackfill()
-
-// District-specific backfill operations (legacy compatibility)
-export function useInitiateDistrictBackfill(districtId: string)
-export function useDistrictBackfillStatus(
-  districtId: string,
-  backfillId: string | null,
-  enabled?: boolean
-)
-export function useCancelDistrictBackfill(districtId: string)
-```
-
-#### BackfillContext
-
-Enhanced context for managing multiple concurrent backfill operations:
-
-```typescript
-interface BackfillInfo {
-  backfillId: string
-  type: 'global' | 'district'
-  districtId?: string
-  targetDistricts?: string[]
-  collectionType?: string
-  status?: 'processing' | 'complete' | 'error' | 'cancelled'
-}
-
-interface BackfillContextType {
-  activeBackfills: BackfillInfo[]
-  addBackfill: (info: BackfillInfo) => void
-  updateBackfill: (backfillId: string, updates: Partial<BackfillInfo>) => void
-  removeBackfill: (backfillId: string) => void
-  getBackfill: (backfillId: string) => BackfillInfo | undefined
+interface ListJobsOptions {
+  limit?: number
+  offset?: number
+  status?: BackfillJobStatus[]
+  jobType?: BackfillJobType[]
+  startDateFrom?: string
+  startDateTo?: string
 }
 ```
 
-### Backend Components
+### UnifiedBackfillService
 
-#### BackfillService
-
-The main service class that orchestrates all backfill operations:
+The main orchestrator service that coordinates job execution, delegates to specialized collectors, and manages the job lifecycle.
 
 ```typescript
-export class BackfillService {
-  private jobs: Map<string, BackfillJob>
-  private jobManager: JobManager
-  private dataSourceSelector: DataSourceSelector
-  private scopeManager: ScopeManager
-  private snapshotStore: PerDistrictFileSnapshotStore
-  private alertManager: AlertManager
-  private refreshService: RefreshService
+class UnifiedBackfillService {
+  constructor(
+    jobStorage: IBackfillJobStorage,
+    snapshotStorage: ISnapshotStorage,
+    timeSeriesStorage: ITimeSeriesIndexStorage,
+    refreshService: RefreshService,
+    configService: DistrictConfigurationService
+  )
 
-  async initiateBackfill(request: BackfillRequest): Promise<string>
-  async getBackfillStatus(backfillId: string): Promise<BackfillResponse | null>
-  async cancelBackfill(backfillId: string): Promise<boolean>
-  async cleanupOldJobs(): Promise<void>
+  // Job operations
+  createJob(request: CreateJobRequest): Promise<BackfillJob>
+  getJobStatus(jobId: string): Promise<BackfillJobStatus | null>
+  cancelJob(jobId: string): Promise<boolean>
+
+  // Preview/dry run
+  previewJob(request: CreateJobRequest): Promise<JobPreview>
+
+  // Job history
+  listJobs(options?: ListJobsOptions): Promise<BackfillJob[]>
+
+  // Configuration
+  getRateLimitConfig(): Promise<RateLimitConfig>
+  updateRateLimitConfig(config: Partial<RateLimitConfig>): Promise<void>
+
+  // Recovery (called on startup)
+  recoverIncompleteJobs(): Promise<void>
 }
 ```
 
 ### JobManager
 
-Handles job lifecycle, progress tracking, and cleanup:
+Handles job lifecycle, progress tracking, and checkpoint management.
 
 ```typescript
-export class JobManager {
-  private jobs: Map<string, BackfillJob>
+class JobManager {
+  constructor(jobStorage: IBackfillJobStorage)
 
-  createJob(request: BackfillRequest, scope: BackfillScope): BackfillJob
-  updateProgress(jobId: string, progress: Partial<BackfillProgress>): void
-  getJob(jobId: string): BackfillJob | null
-  cancelJob(jobId: string): boolean
-  cleanupCompletedJobs(maxAge: number): void
+  createJob(request: CreateJobRequest): Promise<BackfillJob>
+  updateProgress(jobId: string, progress: Partial<JobProgress>): Promise<void>
+  updateCheckpoint(jobId: string, checkpoint: JobCheckpoint): Promise<void>
+  completeJob(jobId: string, result: JobResult): Promise<void>
+  failJob(jobId: string, error: string): Promise<void>
+  cancelJob(jobId: string): Promise<boolean>
+
+  // Deduplication
+  canStartNewJob(): Promise<boolean>
+  getActiveJob(): Promise<BackfillJob | null>
 }
 ```
 
-### DataSourceSelector
+### DataCollector
 
-Manages collection strategy selection and delegates to RefreshService methods:
+Handles data collection backfill operations, reusing logic from existing BackfillService.
 
 ```typescript
-export class DataSourceSelector {
-  constructor(private refreshService: RefreshService)
+class DataCollector {
+  constructor(
+    refreshService: RefreshService,
+    snapshotStorage: ISnapshotStorage,
+    configService: DistrictConfigurationService
+  )
 
-  selectCollectionStrategy(request: BackfillRequest): CollectionStrategy
-  async executeCollection(strategy: CollectionStrategy, date: string, districts?: string[]): Promise<BackfillData>
-  private async delegateToRefreshService(method: RefreshMethod, params: RefreshParams): Promise<RefreshServiceData>
-}
+  collectForDateRange(
+    startDate: string,
+    endDate: string,
+    options: CollectionOptions,
+    progressCallback: (progress: CollectionProgress) => void
+  ): Promise<CollectionResult>
 
-export interface CollectionStrategy {
-  type: 'system-wide' | 'per-district' | 'targeted'
-  refreshMethod: RefreshMethod
-  rationale: string
-  estimatedEfficiency: number
-  targetDistricts?: string[]
-}
-
-export interface RefreshMethod {
-  name: 'getAllDistricts' | 'getDistrictPerformance' | 'getMultipleDistricts'
-  params: RefreshParams
-}
-
-export interface BackfillData {
-  source: 'refresh-service'
-  method: RefreshMethod
-  date: string
-  districts: string[]
-  snapshotData: DistrictStatistics[]
-  metadata: CollectionMetadata
+  previewCollection(
+    startDate: string,
+    endDate: string,
+    options: CollectionOptions
+  ): Promise<CollectionPreview>
 }
 ```
 
-````
+### AnalyticsGenerator
 
-### ScopeManager
-
-Manages district targeting and configuration validation:
+Handles analytics generation backfill operations.
 
 ```typescript
-export class ScopeManager {
-  constructor(private configService: DistrictConfigurationService)
+class AnalyticsGenerator {
+  constructor(
+    snapshotStorage: ISnapshotStorage,
+    timeSeriesStorage: ITimeSeriesIndexStorage
+  )
 
-  async validateScope(request: BackfillRequest): Promise<BackfillScope>
-  async getTargetDistricts(request: BackfillRequest): Promise<string[]>
-  isDistrictInScope(districtId: string, configuredDistricts: string[]): boolean
-}
+  generateForSnapshots(
+    snapshotIds: string[],
+    progressCallback: (progress: GenerationProgress) => void
+  ): Promise<GenerationResult>
 
-export interface BackfillScope {
-  targetDistricts: string[]
-  configuredDistricts: string[]
-  scopeType: 'system-wide' | 'targeted' | 'single-district'
-  validationPassed: boolean
+  previewGeneration(
+    startDate?: string,
+    endDate?: string
+  ): Promise<GenerationPreview>
 }
-````
+```
+
+### RecoveryManager
+
+Handles automatic recovery of incomplete jobs on server startup.
+
+```typescript
+class RecoveryManager {
+  constructor(
+    jobStorage: IBackfillJobStorage,
+    unifiedBackfillService: UnifiedBackfillService
+  )
+
+  recoverIncompleteJobs(): Promise<RecoveryResult>
+  getRecoveryStatus(): RecoveryStatus
+}
+```
 
 ## Data Models
-
-### BackfillRequest
-
-```typescript
-export interface BackfillRequest {
-  // Targeting options
-  targetDistricts?: string[] // Specific districts to process
-
-  // Date range
-  startDate: string // ISO date string (required)
-  endDate?: string // ISO date string (defaults to startDate)
-
-  // Collection preferences
-  collectionType?: 'system-wide' | 'per-district' | 'auto'
-
-  // Processing options
-  concurrency?: number // Max concurrent operations (default: 3)
-  retryFailures?: boolean // Retry failed districts (default: true)
-  skipExisting?: boolean // Skip already cached dates (default: true)
-}
-```
 
 ### BackfillJob
 
 ```typescript
-export interface BackfillJob {
-  backfillId: string
-  status: 'processing' | 'complete' | 'error' | 'cancelled'
-  scope: BackfillScope
-  progress: BackfillProgress
-  collectionStrategy: CollectionStrategy
-  error?: string
-  createdAt: number
-  completedAt?: number
-  snapshotIds: string[] // Created snapshots
+interface BackfillJob {
+  jobId: string
+  jobType: BackfillJobType
+  status: BackfillJobStatus
+
+  // Configuration
+  config: JobConfig
+
+  // Progress tracking
+  progress: JobProgress
+
+  // Checkpoint for recovery
+  checkpoint: JobCheckpoint | null
+
+  // Timing
+  createdAt: string // ISO timestamp
+  startedAt: string | null
+  completedAt: string | null
+  resumedAt: string | null // Set if job was recovered
+
+  // Results
+  result: JobResult | null
+  error: string | null
 }
-```
 
-### BackfillProgress
+type BackfillJobType = 'data-collection' | 'analytics-generation'
 
-```typescript
-export interface BackfillProgress {
-  total: number // Total operations to perform
-  completed: number // Completed operations
-  skipped: number // Skipped (already cached)
-  unavailable: number // Data not available
-  failed: number // Failed operations
-  current: string // Current date being processed
+type BackfillJobStatus =
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
+  | 'recovering' // Being resumed after restart
 
-  // District-level tracking with enhanced error information
+interface JobConfig {
+  // Date range (for both job types)
+  startDate?: string
+  endDate?: string
+
+  // For data-collection
+  targetDistricts?: string[]
+  skipExisting?: boolean
+
+  // Rate limiting overrides
+  rateLimitOverrides?: Partial<RateLimitConfig>
+}
+
+interface JobProgress {
+  totalItems: number
+  processedItems: number
+  failedItems: number
+  skippedItems: number
+  currentItem: string | null
+
+  // Per-district breakdown (for expandable detail)
   districtProgress: Map<string, DistrictProgress>
 
-  // Enhanced error tracking
-  partialSnapshots: number // Snapshots created with some failures
-  totalErrors: number // Total error count across all districts
-  retryableErrors: number // Errors that can be retried
-  permanentErrors: number // Errors that cannot be retried
+  // Error tracking
+  errors: JobError[]
 }
 
-export interface DistrictProgress {
+interface DistrictProgress {
   districtId: string
   status: 'pending' | 'processing' | 'completed' | 'failed' | 'skipped'
-  datesProcessed: number
-  datesTotal: number
-  lastError?: string
-  errorTracker?: DistrictErrorTracker
-  successfulDates: string[]
-  failedDates: string[]
-  retryCount: number
+  itemsProcessed: number
+  itemsTotal: number
+  lastError: string | null
+}
+
+interface JobCheckpoint {
+  lastProcessedItem: string
+  lastProcessedAt: string
+  itemsCompleted: string[] // List of completed item IDs for skip-on-resume
+}
+
+interface JobResult {
+  itemsProcessed: number
+  itemsFailed: number
+  itemsSkipped: number
+  snapshotIds: string[] // For data-collection
+  duration: number // milliseconds
+}
+
+interface JobError {
+  itemId: string
+  message: string
+  occurredAt: string
+  isRetryable: boolean
 }
 ```
 
-### BackfillResponse
-
-Enhanced response format for frontend consumption:
+### RateLimitConfig
 
 ```typescript
-export interface BackfillResponse {
-  backfillId: string
-  status: 'processing' | 'complete' | 'error' | 'cancelled' | 'partial_success'
-  scope: BackfillScope
-  progress: BackfillProgress
-  collectionStrategy: CollectionStrategy
-  error?: string
-  snapshotIds: string[]
+interface RateLimitConfig {
+  maxRequestsPerMinute: number
+  maxConcurrent: number
+  minDelayMs: number
+  maxDelayMs: number
+  backoffMultiplier: number
+}
+```
 
-  // Enhanced error information for frontend display
-  errorSummary?: {
-    totalErrors: number
-    retryableErrors: number
-    permanentErrors: number
-    affectedDistricts: string[]
-    partialSnapshots: number
+### JobPreview (Dry Run Response)
+
+```typescript
+interface JobPreview {
+  jobType: BackfillJobType
+  totalItems: number
+  dateRange: {
+    startDate: string
+    endDate: string
   }
-  partialSnapshots?: PartialSnapshotResult[]
-
-  // Performance optimization status for frontend monitoring
-  performanceStatus?: {
-    rateLimiter: {
-      currentCount: number
-      maxRequests: number
-      windowMs: number
-      nextResetAt: string
-    }
-    concurrencyLimiter: {
-      activeSlots: number
-      maxConcurrent: number
-      queueLength: number
-    }
-    intermediateCache: {
-      hitRate: number
-      entryCount: number
-      sizeBytes: number
-    }
+  affectedDistricts: string[]
+  estimatedDuration: number // milliseconds
+  itemBreakdown: {
+    dates?: string[] // For data-collection
+    snapshotIds?: string[] // For analytics-generation
   }
 }
 ```
 
-````
-
-### BackfillData
+### API Request/Response Types
 
 ```typescript
-export interface BackfillData {
-  source: 'refresh-service'
-  method: RefreshMethod
-  date: string
-  districts: string[]
-  snapshotData: DistrictStatistics[]
-  metadata: CollectionMetadata
+interface CreateJobRequest {
+  jobType: BackfillJobType
+  startDate?: string
+  endDate?: string
+  targetDistricts?: string[]
+  skipExisting?: boolean
+  rateLimitOverrides?: Partial<RateLimitConfig>
 }
 
-export interface CollectionMetadata {
-  collectionStrategy: CollectionStrategy
-  processingTime: number
-  successCount: number
-  failureCount: number
-  errors?: DistrictError[]
+interface CreateJobResponse {
+  jobId: string
+  status: BackfillJobStatus
+  message: string
+  metadata: {
+    operationId: string
+    createdAt: string
+  }
 }
-````
+
+interface JobStatusResponse {
+  jobId: string
+  jobType: BackfillJobType
+  status: BackfillJobStatus
+  config: JobConfig
+  progress: JobProgress
+  checkpoint: JobCheckpoint | null
+  createdAt: string
+  startedAt: string | null
+  completedAt: string | null
+  resumedAt: string | null
+  result: JobResult | null
+  error: string | null
+  metadata: {
+    operationId: string
+    retrievedAt: string
+  }
+}
+
+interface ListJobsResponse {
+  jobs: BackfillJob[]
+  total: number
+  limit: number
+  offset: number
+  metadata: {
+    operationId: string
+    retrievedAt: string
+  }
+}
+```
 
 ## Correctness Properties
 
-_A property is a characteristic or behavior that should hold true across all valid executions of a system-essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
+_A property is a characteristic or behavior that should hold true across all valid executions of a system—essentially, a formal statement about what the system should do. Properties serve as the bridge between human-readable specifications and machine-verifiable correctness guarantees._
 
-Based on the prework analysis, I've identified several key properties that can be combined and consolidated to avoid redundancy:
+Per the property-testing-guidance steering document, property-based tests are reserved for cases with mathematical invariants, complex input spaces, or universal business rules. Many requirements are better validated with well-chosen example-based unit tests.
 
-### Property 1: Job Queue Unification
+### Property 1: Job Persistence Round-Trip
 
-_For any_ backfill operation type (system-wide, targeted, or single-district), all jobs should be managed through a single job queue with unique identifiers across all types
-**Validates: Requirements 1.4, 4.1, 4.2**
+_For any_ valid BackfillJob, creating the job via Job_Storage and then retrieving it by jobId SHALL return an equivalent job object.
 
-### Property 2: Targeting Scope Validation
+**Validates: Requirements 1.2**
 
-_For any_ backfill request with target districts specified, all target districts should be validated against the current configuration scope before processing begins
-**Validates: Requirements 2.3, 7.4**
+_Rationale: This is a serialization/deserialization round-trip property - a classic PBT use case per the guidance._
 
-### Property 3: Collection Strategy Selection
+### Property 2: Job Listing Order Invariant
 
-_For any_ backfill request, the selected collection strategy should match the scope and detail requirements (system-wide for multiple districts with summary data, per-district for detailed data or small district counts)
-**Validates: Requirements 3.1, 3.2, 3.3, 3.4**
+_For any_ set of BackfillJobs created at different times, listing jobs SHALL return them sorted by creation time with newest first.
 
-### Property 4: Snapshot Storage Consistency
+**Validates: Requirements 1.6**
 
-_For any_ completed backfill operation, the resulting data should be stored using PerDistrictFileSnapshotStore with directory-based structure and appropriate metadata
-**Validates: Requirements 5.1, 5.2, 5.5**
+_Rationale: This is a sorting invariant - the output must maintain a specific ordering property regardless of input order._
 
-### Property 5: Scope-Based Snapshot Content
+### Property 3: Date Range Validation
 
-_For any_ backfill operation, the created snapshot should contain exactly the districts specified by the operation scope (all configured districts for system-wide, only requested districts for targeted)
-**Validates: Requirements 5.3, 5.4**
+_For any_ CreateJobRequest with startDate and endDate, if startDate > endDate OR endDate >= today, the request SHALL be rejected with a validation error.
 
-### Property 6: Error Resilience and Partial Success
+**Validates: Requirements 4.3, 4.4**
 
-_For any_ backfill operation where some districts fail, processing should continue with remaining districts and create partial snapshots with detailed error tracking
-**Validates: Requirements 6.1, 6.2, 6.3, 6.4**
+_Rationale: Input validation with boundary conditions benefits from PBT to explore edge cases around date boundaries._
 
-### Property 7: Configuration Scope Enforcement
+### Property 4: Job Filtering By Status
 
-_For any_ backfill operation, processing should be restricted to districts within the current configuration scope, with out-of-scope districts logged and excluded
-**Validates: Requirements 7.3, 7.5**
+_For any_ status filter applied to listJobs, all returned jobs SHALL have a status matching one of the filter values.
 
-### Property 8: API Backward Compatibility
+**Validates: Requirements 6.3**
 
-_For any_ legacy API endpoint request, the response format and behavior should match the original service implementation
-**Validates: Requirements 8.3, 8.5, 10.3**
+_Rationale: This is a universal property about filtering - the invariant must hold for all possible filter combinations._
 
-### Property 9: Concurrent Processing Limits
+### Property 5: Rate Limit Config Persistence Round-Trip
 
-_For any_ backfill operation with concurrency limits configured, the number of simultaneous district processing operations should not exceed the specified limit
-**Validates: Requirements 9.2**
+_For any_ valid RateLimitConfig, setting the config via Job_Storage and then retrieving it SHALL return an equivalent config object.
 
-### Property 10: Rate Limiting Protection
+**Validates: Requirements 12.5**
 
-_For any_ sequence of rapid backfill requests, rate limiting should be applied to prevent overwhelming external data sources
-**Validates: Requirements 9.1**
+_Rationale: Another serialization round-trip property._
 
-### Property 11: Frontend API Compatibility
+### Example-Based Tests (Not Property Tests)
 
-_For any_ frontend backfill request, the API response should include all necessary data for proper UI state management and progress display
-**Validates: Requirements 12.1, 12.3, 12.4**
+The following requirements are better validated with specific example-based unit tests per the property-testing-guidance:
+
+| Requirement             | Test Approach                         | Rationale                                |
+| ----------------------- | ------------------------------------- | ---------------------------------------- |
+| 1.7 Job retention       | 3-4 examples with dates at boundaries | Simple date comparison, examples clearer |
+| 3.1 One-job-at-a-time   | 2-3 examples (running, pending, none) | Bounded state space, examples sufficient |
+| 3.4 Stale job override  | 2 examples (stale vs fresh)           | Simple time comparison                   |
+| 5.4 Error recording     | 1-2 examples verifying fields         | Structural validation, not complex input |
+| 7.2, 7.3 Cancellation   | Integration test with mock            | Behavior verification, not invariant     |
+| 9.5 Pagination          | 3-4 examples with edge cases          | Bounded input space                      |
+| 10.1, 10.3 Recovery     | Integration test with checkpoint      | Complex interaction, not pure function   |
+| 11.2, 11.3 Preview      | 2-3 examples                          | Simple CRUD-like operation               |
+| 12.3 Rate limit applied | 1-2 examples                          | Configuration wiring                     |
 
 ## Error Handling
 
-The unified service implements comprehensive error handling at multiple levels:
+### Storage Errors
 
-### District-Level Error Handling
+| Error Type                | Handling Strategy                                     |
+| ------------------------- | ----------------------------------------------------- |
+| Job not found             | Return null or 404 response                           |
+| Storage unavailable       | Retry with exponential backoff, fail after 3 attempts |
+| Concurrent modification   | Use optimistic locking, retry on conflict             |
+| Serialization error       | Log error, return 500 with details                    |
+| Config file missing       | Create with defaults, log info message                |
+| Storage directory missing | Create directory structure, continue                  |
 
-- Individual district failures don't stop processing of other districts
-- Detailed error context is captured including error type, timestamp, and retry eligibility
-- Partial snapshots are created when some districts succeed and others fail
+### Graceful Initialization
 
-### Job-Level Error Handling
+When the application starts:
 
-- Jobs can be cancelled at any point during processing
-- Progress tracking continues even when errors occur
-- Cleanup processes handle both successful and failed jobs
+1. **Storage Directory**: If the job storage directory doesn't exist, create it automatically
+2. **Rate Limit Config**: If no rate limit configuration exists, create one with sensible defaults:
+   ```typescript
+   const DEFAULT_RATE_LIMIT_CONFIG: RateLimitConfig = {
+     maxRequestsPerMinute: 10,
+     maxConcurrent: 3,
+     minDelayMs: 2000,
+     maxDelayMs: 30000,
+     backoffMultiplier: 2,
+   }
+   ```
+3. **Job Index**: If no job index exists, create an empty one
+4. **Never fail on missing config**: Log informational messages, create defaults, continue startup
 
-### System-Level Error Handling
+### Job Execution Errors
 
-- Circuit breakers protect against external service failures
-- Retry logic with exponential backoff handles transient failures
-- Alert notifications are sent for critical errors
+| Error Type                   | Handling Strategy                                        |
+| ---------------------------- | -------------------------------------------------------- |
+| Data fetch failure           | Record error, continue with next item, mark as retryable |
+| Analytics generation failure | Record error, continue with next snapshot                |
+| Rate limit exceeded          | Apply backoff, retry after delay                         |
+| Timeout                      | Record error, mark as retryable, continue                |
+| Checkpoint save failure      | Log warning, continue (will re-process on restart)       |
 
-### Error Recovery
+### Recovery Errors
 
-- Failed districts can be retried individually without reprocessing successful districts
-- Snapshot recovery mechanisms handle corrupted or incomplete snapshots
-- Rollback capabilities allow reverting to previous service versions if issues arise
+| Error Type            | Handling Strategy                          |
+| --------------------- | ------------------------------------------ |
+| Corrupted checkpoint  | Log error, restart job from beginning      |
+| Missing job data      | Mark job as failed, allow new jobs         |
+| Storage inconsistency | Log error, attempt repair, fail gracefully |
+
+### API Error Responses
+
+```typescript
+interface ErrorResponse {
+  error: {
+    code: string
+    message: string
+    details?: string
+    retryable?: boolean
+  }
+  metadata: {
+    operationId: string
+    timestamp: string
+  }
+}
+
+// Error codes
+const ERROR_CODES = {
+  JOB_NOT_FOUND: 'JOB_NOT_FOUND',
+  JOB_ALREADY_RUNNING: 'JOB_ALREADY_RUNNING',
+  INVALID_DATE_RANGE: 'INVALID_DATE_RANGE',
+  INVALID_JOB_TYPE: 'INVALID_JOB_TYPE',
+  CANCELLATION_FAILED: 'CANCELLATION_FAILED',
+  STORAGE_ERROR: 'STORAGE_ERROR',
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+}
+```
 
 ## Testing Strategy
 
-The unified backfill service requires comprehensive testing across multiple dimensions:
+### Unit Tests
 
-### Unit Testing
+Unit tests focus on individual component logic with well-chosen examples:
 
-- **Component Testing**: Test individual components (JobManager, DataSourceSelector, ScopeManager) in isolation
-- **Error Handling**: Test error scenarios and edge cases for each component
-- **Configuration**: Test various configuration combinations and validation logic
-- **Data Transformation**: Test conversion between different data formats
+- **JobManager**: Job lifecycle state transitions, deduplication logic, checkpoint management
+- **DataCollector**: Date range generation, skip logic, progress calculation
+- **AnalyticsGenerator**: Snapshot selection, analytics computation delegation
+- **RecoveryManager**: Recovery detection, checkpoint restoration
+- **Validation**: Date range validation edge cases, job type validation
 
-### Property-Based Testing
+### Property-Based Tests
 
-- **Property Tests**: Implement the 10 correctness properties identified above using a property-based testing framework
-- **Input Generation**: Generate random backfill requests, district configurations, and data scenarios
-- **Invariant Validation**: Verify that system invariants hold across all generated test cases
-- **Concurrency Testing**: Test concurrent operations with randomly generated timing and load patterns
+Per property-testing-guidance, property tests are limited to cases with genuine invariants:
 
-### Integration Testing
+| Property                     | Test Focus                | Iterations |
+| ---------------------------- | ------------------------- | ---------- |
+| Job Persistence Round-Trip   | Serialization correctness | 100        |
+| Job Listing Order Invariant  | Sorting correctness       | 100        |
+| Date Range Validation        | Boundary conditions       | 100        |
+| Job Filtering By Status      | Filter correctness        | 100        |
+| Rate Limit Config Round-Trip | Serialization correctness | 100        |
 
-- **Snapshot Store Integration**: Test integration with PerDistrictFileSnapshotStore across all operation types
-- **External Service Integration**: Test integration with ToastmastersAPIService and ToastmastersScraper
-- **Configuration Service Integration**: Test integration with DistrictConfigurationService for scope validation
-- **End-to-End Workflows**: Test complete backfill workflows from request to snapshot creation
+Tag format: **Feature: unified-backfill-service, Property {number}: {property_text}**
 
-### Performance Testing
+### Integration Tests
 
-- **Concurrency Limits**: Verify that concurrency controls work correctly under load
-- **Rate Limiting**: Test rate limiting behavior with various request patterns
-- **Memory Usage**: Monitor memory usage during large-scale operations
-- **Processing Time**: Measure processing time for different operation types and scales
+Integration tests verify component interactions:
 
-### Compatibility Testing
+- Storage implementations (Local and Firestore) against IBackfillJobStorage interface
+- API endpoints with mock services
+- Recovery flow with simulated restart
+- End-to-end job execution with test data
+- Graceful initialization with missing config files
 
-- **API Compatibility**: Test that legacy endpoints continue to work correctly
-- **Data Format Compatibility**: Verify that existing snapshots remain readable
-- **Migration Testing**: Test migration utilities with real legacy data
-- **Rollback Testing**: Verify that rollback mechanisms work correctly
+### Test Configuration
 
-Each property-based test should run a minimum of 100 iterations to ensure comprehensive coverage of the input space. Tests should be tagged with the format: **Feature: unified-backfill-service, Property {number}: {property_text}** to maintain traceability to the design properties.
+```typescript
+// Property test configuration
+const PROPERTY_TEST_CONFIG = {
+  numRuns: 100,
+  seed: undefined, // Random seed for reproducibility when debugging
+  verbose: false,
+}
+
+// Test data generators for property tests
+const jobIdArbitrary = fc.uuid()
+const jobTypeArbitrary = fc.constantFrom(
+  'data-collection',
+  'analytics-generation'
+)
+const dateArbitrary = fc
+  .date({ min: new Date('2020-01-01'), max: new Date() })
+  .map(d => d.toISOString().split('T')[0])
+const jobStatusArbitrary = fc.constantFrom(
+  'pending',
+  'running',
+  'completed',
+  'failed',
+  'cancelled'
+)
+```
+
+### Test Isolation Requirements
+
+Per testing.md steering document:
+
+- Each test uses unique job IDs and isolated storage instances
+- Tests clean up all created resources in afterEach hooks
+- No shared state between tests
+- Tests must pass when run in parallel with `--run` flag

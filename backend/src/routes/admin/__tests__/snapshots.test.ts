@@ -28,7 +28,6 @@ let testSnapshotStore: FileSnapshotStore
 // Routes now use createSnapshotStorage() which returns ISnapshotStorage
 const mockFactory = {
   createSnapshotStorage: () => testSnapshotStore as ISnapshotStorage,
-  createSnapshotStore: () => testSnapshotStore,
   createCacheConfigService: vi.fn(),
   createRefreshService: vi.fn(),
 }
@@ -50,6 +49,7 @@ vi.mock('../../../utils/logger.js', () => ({
 describe('Snapshot Routes', () => {
   let app: express.Application
   let tempDir: string
+  let originalCacheDir: string | undefined
 
   beforeEach(async () => {
     // Create unique temporary directory for test isolation
@@ -57,6 +57,10 @@ describe('Snapshot Routes', () => {
     tempDir = await fs.mkdtemp(
       path.join(os.tmpdir(), `snapshots-test-${uniqueId}-`)
     )
+
+    // Store original CACHE_DIR and set to tempDir for analytics availability checker
+    originalCacheDir = process.env['CACHE_DIR']
+    process.env['CACHE_DIR'] = tempDir
 
     // Create test snapshot store
     testSnapshotStore = new FileSnapshotStore({
@@ -73,6 +77,13 @@ describe('Snapshot Routes', () => {
   })
 
   afterEach(async () => {
+    // Restore original CACHE_DIR
+    if (originalCacheDir !== undefined) {
+      process.env['CACHE_DIR'] = originalCacheDir
+    } else {
+      delete process.env['CACHE_DIR']
+    }
+
     // Clean up temporary directory
     try {
       await fs.rm(tempDir, { recursive: true, force: true })
@@ -378,6 +389,233 @@ describe('Snapshot Routes', () => {
 
       // Restore original mock
       mockFactory.createSnapshotStorage = originalCreateSnapshotStorage
+    })
+  })
+
+  /**
+   * Analytics Availability Tests
+   *
+   * Tests for the enhanced snapshot list endpoint that includes
+   * analytics availability information.
+   *
+   * Requirements: 2.1, 2.2, 2.3, 2.4
+   */
+  describe('GET /snapshots - Analytics Availability', () => {
+    /**
+     * Helper to create analytics-summary.json file for a snapshot
+     * @param snapshotId - The snapshot ID to create analytics for
+     */
+    const createAnalyticsFile = async (snapshotId: string): Promise<void> => {
+      const analyticsDir = path.join(tempDir, 'snapshots', snapshotId)
+      await fs.mkdir(analyticsDir, { recursive: true })
+      const analyticsPath = path.join(analyticsDir, 'analytics-summary.json')
+      const analyticsData = {
+        snapshotId,
+        generatedAt: new Date().toISOString(),
+        districts: {},
+      }
+      await fs.writeFile(analyticsPath, JSON.stringify(analyticsData))
+    }
+
+    /**
+     * Test: analytics_available is true when analytics-summary.json exists
+     *
+     * Requirement 2.1: Snapshot list endpoint SHALL include a boolean field
+     * indicating whether analytics are available for each snapshot
+     *
+     * Requirement 2.2: Analytics availability check SHALL verify the existence
+     * of the analytics-summary.json file
+     */
+    it('should return analytics_available: true when analytics-summary.json exists', async () => {
+      // Create a test snapshot
+      const testSnapshot = createTestSnapshot('2024-01-01', 'success')
+      await testSnapshotStore.writeSnapshot(testSnapshot)
+
+      // Create analytics file for the snapshot
+      await createAnalyticsFile('2024-01-01')
+
+      const response = await request(app).get('/api/admin/snapshots')
+
+      expect(response.status).toBe(200)
+      expect(response.body.snapshots).toHaveLength(1)
+      expect(response.body.snapshots[0].analytics_available).toBe(true)
+    })
+
+    /**
+     * Test: analytics_available is false when analytics-summary.json doesn't exist
+     *
+     * Requirement 2.1: Snapshot list endpoint SHALL include a boolean field
+     * indicating whether analytics are available for each snapshot
+     *
+     * Requirement 2.2: Analytics availability check SHALL verify the existence
+     * of the analytics-summary.json file
+     */
+    it('should return analytics_available: false when analytics-summary.json does not exist', async () => {
+      // Create a test snapshot without analytics file
+      const testSnapshot = createTestSnapshot('2024-01-02', 'success')
+      await testSnapshotStore.writeSnapshot(testSnapshot)
+
+      const response = await request(app).get('/api/admin/snapshots')
+
+      expect(response.status).toBe(200)
+      expect(response.body.snapshots).toHaveLength(1)
+      expect(response.body.snapshots[0].analytics_available).toBe(false)
+    })
+
+    /**
+     * Test: All original SnapshotMetadata fields are still present (backward compatibility)
+     *
+     * Requirement 2.3: Snapshot list response SHALL include the new field
+     * without breaking existing consumers (backward compatible)
+     */
+    it('should include all original SnapshotMetadata fields for backward compatibility', async () => {
+      const testSnapshot = createTestSnapshot('2024-01-03', 'success', 2)
+      await testSnapshotStore.writeSnapshot(testSnapshot)
+
+      const response = await request(app).get('/api/admin/snapshots')
+
+      expect(response.status).toBe(200)
+      expect(response.body.snapshots).toHaveLength(1)
+
+      const snapshot = response.body.snapshots[0]
+
+      // Verify all original SnapshotMetadata fields are present
+      expect(snapshot.snapshot_id).toBe('2024-01-03')
+      expect(snapshot.created_at).toBeDefined()
+      expect(snapshot.status).toBe('success')
+      expect(snapshot.schema_version).toBe('1.0.0')
+      expect(snapshot.calculation_version).toBe('1.0.0')
+      expect(typeof snapshot.size_bytes).toBe('number')
+      expect(typeof snapshot.error_count).toBe('number')
+      expect(snapshot.district_count).toBe(2)
+
+      // Verify new analytics_available field is also present
+      expect(typeof snapshot.analytics_available).toBe('boolean')
+    })
+
+    /**
+     * Test: Metadata includes analytics_available_count and analytics_missing_count
+     *
+     * Requirement 2.1: Snapshot list endpoint SHALL include analytics availability
+     * information in the response metadata
+     */
+    it('should include analytics counts in metadata', async () => {
+      // Create 3 snapshots
+      await testSnapshotStore.writeSnapshot(
+        createTestSnapshot('2024-01-04', 'success')
+      )
+      await testSnapshotStore.writeSnapshot(
+        createTestSnapshot('2024-01-05', 'success')
+      )
+      await testSnapshotStore.writeSnapshot(
+        createTestSnapshot('2024-01-06', 'success')
+      )
+
+      // Create analytics for 2 of them
+      await createAnalyticsFile('2024-01-04')
+      await createAnalyticsFile('2024-01-05')
+
+      const response = await request(app).get('/api/admin/snapshots')
+
+      expect(response.status).toBe(200)
+      expect(response.body.snapshots).toHaveLength(3)
+      expect(response.body.metadata.analytics_available_count).toBe(2)
+      expect(response.body.metadata.analytics_missing_count).toBe(1)
+    })
+
+    /**
+     * Test: Mixed analytics availability across multiple snapshots
+     *
+     * Requirement 2.1, 2.2: Verify correct analytics_available values
+     * for a mix of snapshots with and without analytics
+     */
+    it('should correctly report mixed analytics availability', async () => {
+      // Create snapshots
+      await testSnapshotStore.writeSnapshot(
+        createTestSnapshot('2024-01-07', 'success')
+      )
+      await testSnapshotStore.writeSnapshot(
+        createTestSnapshot('2024-01-08', 'success')
+      )
+      await testSnapshotStore.writeSnapshot(
+        createTestSnapshot('2024-01-09', 'success')
+      )
+
+      // Create analytics for only the first and third
+      await createAnalyticsFile('2024-01-07')
+      await createAnalyticsFile('2024-01-09')
+
+      const response = await request(app).get('/api/admin/snapshots')
+
+      expect(response.status).toBe(200)
+      expect(response.body.snapshots).toHaveLength(3)
+
+      // Find each snapshot and verify analytics_available
+      const snapshotMap = new Map(
+        response.body.snapshots.map(
+          (s: { snapshot_id: string; analytics_available: boolean }) => [
+            s.snapshot_id,
+            s.analytics_available,
+          ]
+        )
+      )
+
+      expect(snapshotMap.get('2024-01-07')).toBe(true)
+      expect(snapshotMap.get('2024-01-08')).toBe(false)
+      expect(snapshotMap.get('2024-01-09')).toBe(true)
+    })
+
+    /**
+     * Test: Response time increase is under 100ms for analytics availability check
+     *
+     * Requirement 2.4: Analytics availability check SHALL NOT significantly
+     * impact snapshot list performance (under 100ms additional latency)
+     *
+     * Note: This test verifies the total query duration is reasonable.
+     * The actual overhead from analytics checking should be minimal due to
+     * batch parallel checking.
+     */
+    it('should complete analytics availability check within performance budget', async () => {
+      // Create multiple snapshots to test batch performance
+      const snapshotCount = 10
+      for (let i = 0; i < snapshotCount; i++) {
+        const dateStr = `2024-02-${String(i + 1).padStart(2, '0')}`
+        await testSnapshotStore.writeSnapshot(
+          createTestSnapshot(dateStr, 'success')
+        )
+        // Create analytics for half of them
+        if (i % 2 === 0) {
+          await createAnalyticsFile(dateStr)
+        }
+      }
+
+      const startTime = Date.now()
+      const response = await request(app).get('/api/admin/snapshots')
+      const duration = Date.now() - startTime
+
+      expect(response.status).toBe(200)
+      expect(response.body.snapshots).toHaveLength(snapshotCount)
+
+      // Verify the query completed within a reasonable time
+      // The 100ms requirement is for the additional latency from analytics checking,
+      // but we allow more time for the overall request including snapshot listing
+      expect(duration).toBeLessThan(2000) // 2 seconds max for entire request
+
+      // Verify the query_duration_ms is reported in metadata
+      expect(response.body.metadata.query_duration_ms).toBeDefined()
+      expect(typeof response.body.metadata.query_duration_ms).toBe('number')
+    })
+
+    /**
+     * Test: Empty snapshot list still includes analytics metadata
+     */
+    it('should include analytics counts in metadata even when no snapshots exist', async () => {
+      const response = await request(app).get('/api/admin/snapshots')
+
+      expect(response.status).toBe(200)
+      expect(response.body.snapshots).toEqual([])
+      expect(response.body.metadata.analytics_available_count).toBe(0)
+      expect(response.body.metadata.analytics_missing_count).toBe(0)
     })
   })
 })

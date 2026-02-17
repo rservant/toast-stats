@@ -1,13 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
+import type { ClubHealthStatus } from '@toastmasters/shared-contracts'
 import { apiClient } from '../services/api'
 
-/**
- * Type for club health status values
- */
-export type ClubHealthStatus =
-  | 'thriving'
-  | 'vulnerable'
-  | 'intervention-required'
+// Re-export for backward compatibility with existing imports
+export type { ClubHealthStatus }
 
 /**
  * Interface for club trend data

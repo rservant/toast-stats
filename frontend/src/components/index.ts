@@ -37,22 +37,9 @@ export { DivisionCriteriaExplanation } from './DivisionCriteriaExplanation'
 export type { DivisionCriteriaExplanationProps } from './DivisionCriteriaExplanation'
 
 // Division and Area Recognition Panel
-export {
-  DivisionAreaRecognitionPanel,
-  AreaRecognitionPanel, // Deprecated alias for backward compatibility
-} from './DivisionAreaRecognitionPanel'
-export type {
-  DivisionAreaRecognitionPanelProps,
-  AreaRecognitionPanelProps, // Deprecated alias for backward compatibility
-} from './DivisionAreaRecognitionPanel'
+export { DivisionAreaRecognitionPanel } from './DivisionAreaRecognitionPanel'
+export type { DivisionAreaRecognitionPanelProps } from './DivisionAreaRecognitionPanel'
 
 // Division and Area Progress Summary
-export {
-  DivisionAreaProgressSummary,
-  AreaProgressSummary, // Deprecated alias for backward compatibility
-} from './DivisionAreaProgressSummary'
-export type {
-  DivisionAreaProgressSummaryProps,
-  AreaProgressSummaryProps, // Deprecated alias for backward compatibility
-  AreaWithDivision, // Deprecated - use DivisionPerformance[] instead
-} from './DivisionAreaProgressSummary'
+export { DivisionAreaProgressSummary } from './DivisionAreaProgressSummary'
+export type { DivisionAreaProgressSummaryProps } from './DivisionAreaProgressSummary'

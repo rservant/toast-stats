@@ -97,7 +97,18 @@ The DCP consists of **10 goals** that clubs work toward during the program year:
 
 ## 4. Membership Requirements
 
-### 4.1 Paid Club Definition
+### 4.1 Membership Dues Payment Schedule
+
+Members pay dues **twice per year**, aligned with the two renewal periods:
+
+- **October Renewal** (Oct–Mar period): Dues for the first half of the program year
+- **April Renewal** (Apr–Sep period): Dues for the second half of the program year
+
+This means a club's `paymentsCount` (total dues payments) can be **up to 2× its membership count**, depending on when members joined and which renewal periods have passed. For example, a club with 10 members that has been through both renewal periods could have up to 20 payments.
+
+The `paymentBase` at the district level represents the baseline payment count at the start of the program year. Payment growth (`totalPayments - paymentBase`) reflects both new member joins and renewal completions.
+
+### 4.2 Paid Club Definition
 
 A club is considered "paid" (in good standing) when:
 
@@ -110,7 +121,7 @@ A club is NOT considered paid when status is:
 - "Ineligible"
 - "Low"
 
-### 4.2 Membership Thresholds
+### 4.3 Membership Thresholds
 
 | Threshold              | Count                         | Purpose                             |
 | ---------------------- | ----------------------------- | ----------------------------------- |
@@ -120,7 +131,7 @@ A club is NOT considered paid when status is:
 | Low Membership Warning | < 12 members                  | Club health concern                 |
 | Intervention Required  | < 12 members + net growth < 3 | Critical club health                |
 
-### 4.3 Net Growth Calculation
+### 4.4 Net Growth Calculation
 
 ```typescript
 netGrowth = currentActiveMembers - membershipBase
@@ -306,9 +317,10 @@ When calculating recognition status, apply rules in this order:
 
 ## 13. Version History
 
-| Version | Date         | Changes                           |
-| ------- | ------------ | --------------------------------- |
-| 1.0     | January 2026 | Initial canonical rules reference |
+| Version | Date          | Changes                                       |
+| ------- | ------------- | --------------------------------------------- |
+| 1.0     | January 2026  | Initial canonical rules reference             |
+| 1.1     | February 2026 | Added membership dues payment schedule (§4.1) |
 
 ---
 

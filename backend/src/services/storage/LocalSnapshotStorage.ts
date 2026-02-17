@@ -234,4 +234,49 @@ export class LocalSnapshotStorage implements ISnapshotStorage {
   async hasAllDistrictsRankings(snapshotId: string): Promise<boolean> {
     return this.store.hasAllDistrictsRankings(snapshotId)
   }
+
+  // ============================================================================
+  // Write Completion Check
+  // ============================================================================
+
+  /**
+   * Check if a snapshot write completed fully
+   *
+   * For local filesystem storage, writes are atomic (single operation),
+   * so if a snapshot exists, it was written completely. This method
+   * checks if the snapshot exists and returns true if it does.
+   *
+   * This differs from Firestore storage where chunked writes may result
+   * in partial snapshots due to timeout failures.
+   *
+   * @param snapshotId - The snapshot ID (ISO date format: YYYY-MM-DD)
+   * @returns true if the snapshot exists (local writes are always complete),
+   *          false if the snapshot doesn't exist
+   *
+   * Requirements: 5.5
+   */
+  async isSnapshotWriteComplete(snapshotId: string): Promise<boolean> {
+    // For local storage, if the snapshot exists, it was written completely
+    // Local writes are atomic - they either succeed fully or fail completely
+    const metadata = await this.store.getSnapshotMetadata(snapshotId)
+    return metadata !== null
+  }
+
+  // ============================================================================
+  // Deletion Operations
+  // ============================================================================
+
+  /**
+   * Delete a snapshot and all its associated data
+   *
+   * Removes the snapshot directory and all district data.
+   * Does NOT handle cascading deletion of time-series or analytics data.
+   *
+   * @param snapshotId - The snapshot ID (ISO date format: YYYY-MM-DD)
+   * @returns true if snapshot was deleted, false if it didn't exist
+   * @throws StorageOperationError on deletion failure
+   */
+  async deleteSnapshot(snapshotId: string): Promise<boolean> {
+    return this.store.deleteSnapshot(snapshotId)
+  }
 }

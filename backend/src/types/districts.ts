@@ -354,6 +354,23 @@ export interface DistrictCacheEntry {
   divisionPerformance: ScrapedRecord[] // From Division.aspx
   clubPerformance: ScrapedRecord[] // From Club.aspx
   fetchedAt: string
+  /**
+   * Optional time-series summary data when loaded from time-series index
+   * Contains pre-computed metrics for efficient trend calculations
+   * Requirement 2.3: Support efficient range queries via time-series index
+   */
+  _timeSeriesSummary?: {
+    membership: number
+    payments: number
+    dcpGoals: number
+    distinguishedTotal: number
+    clubCounts: {
+      total: number
+      thriving: number
+      vulnerable: number
+      interventionRequired: number
+    }
+  }
 }
 
 export interface DistrictDataRange {

@@ -53,6 +53,24 @@ export interface LeadershipInsights {
 }
 
 /**
+ * API response structure from /leadership-insights endpoint
+ * The actual LeadershipInsights data is nested under the 'insights' property
+ */
+interface LeadershipInsightsApiResponse {
+  districtId: string
+  dateRange: {
+    start: string
+    end: string
+  }
+  officerCompletionRate: number
+  trainingCompletionRate: number
+  leadershipEffectivenessScore: number
+  topPerformingDivisions: unknown[]
+  areasNeedingSupport: unknown[]
+  insights: LeadershipInsights
+}
+
+/**
  * Hook to fetch leadership insights for a district
  */
 export const useLeadershipInsights = (
@@ -71,10 +89,11 @@ export const useLeadershipInsights = (
       if (startDate) params.append('startDate', startDate)
       if (endDate) params.append('endDate', endDate)
 
-      const response = await apiClient.get<LeadershipInsights>(
+      const response = await apiClient.get<LeadershipInsightsApiResponse>(
         `/districts/${districtId}/leadership-insights${params.toString() ? `?${params.toString()}` : ''}`
       )
-      return response.data
+      // Extract the nested insights object from the API response
+      return response.data.insights
     },
     enabled: !!districtId,
     staleTime: 5 * 60 * 1000, // 5 minutes

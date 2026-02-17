@@ -5,8 +5,14 @@
  * It uses SnapshotBuilder to create snapshots without performing any scraping.
  * Scraping is handled separately by the scraper-cli tool.
  *
+ * IMPORTANT: This service is READ-ONLY. All computation (time-series data points,
+ * rankings, analytics) is performed by scraper-cli during the data pipeline.
+ * The backend does NOT perform any computation per the data-computation-separation
+ * steering document.
+ *
  * Requirements: 4.1, 4.2, 4.3, 4.4, 8.1, 8.2
  * Storage Abstraction: Requirements 1.3, 1.4
+ * Pre-Computed Analytics: Requirements 1.1, 1.4
  */
 
 import { logger } from '../utils/logger.js'
@@ -15,7 +21,7 @@ import { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import { ClosingPeriodDetector } from './ClosingPeriodDetector.js'
 import { DataNormalizer } from './DataNormalizer.js'
 import { SnapshotBuilder, type BuildResult } from './SnapshotBuilder.js'
-import type { RankingCalculator } from './RankingCalculator.js'
+import type { PreComputedAnalyticsService } from './PreComputedAnalyticsService.js'
 import type { SnapshotStore } from '../types/snapshots.js'
 import type {
   ISnapshotStorage,
@@ -66,6 +72,10 @@ export interface RefreshResult {
  * Storage Abstraction (Requirements 1.3, 1.4):
  * - Uses ISnapshotStorage interface for snapshot operations
  * - Supports both local filesystem and cloud storage backends
+ *
+ * Pre-Computed Analytics (Requirements 1.1, 1.4):
+ * - Computes and stores analytics summaries during snapshot creation
+ * - Handles errors gracefully - logs and continues if individual district fails
  */
 export class RefreshService {
   private readonly snapshotBuilder: SnapshotBuilder
@@ -75,28 +85,38 @@ export class RefreshService {
   /**
    * Create a new RefreshService instance
    *
+   * IMPORTANT: This service is READ-ONLY. All computation (time-series data points,
+   * rankings, analytics) is performed by scraper-cli during the data pipeline.
+   * The backend does NOT perform any computation per the data-computation-separation
+   * steering document.
+   *
    * @param snapshotStorage - Storage interface for snapshot operations (ISnapshotStorage)
    *                          Supports both local filesystem and cloud storage backends
    * @param rawCSVCache - Storage interface for raw CSV data (IRawCSVStorage)
    *                      Supports both local filesystem and cloud storage backends
    * @param districtConfigService - Optional district configuration service
-   * @param rankingCalculator - Optional ranking calculator for BordaCount rankings
+   * @param _rankingCalculator - DEPRECATED: Rankings are pre-computed by scraper-cli (kept for backward compatibility)
    * @param closingPeriodDetector - Optional closing period detector
    * @param dataNormalizer - Optional data normalizer
    * @param validator - Optional data validator
+   * @param _preComputedAnalyticsService - DEPRECATED: Analytics are now pre-computed by scraper-cli
    */
   constructor(
     snapshotStorage: ISnapshotStorage | SnapshotStore,
     rawCSVCache: IRawCSVStorage,
     districtConfigService?: DistrictConfigurationService,
-    rankingCalculator?: RankingCalculator,
+    _rankingCalculator?: unknown, // DEPRECATED: Rankings are pre-computed by scraper-cli
     closingPeriodDetector?: ClosingPeriodDetector,
     dataNormalizer?: DataNormalizer,
-    validator?: DataValidator
+    validator?: DataValidator,
+    _preComputedAnalyticsService?: PreComputedAnalyticsService
   ) {
     // Store the snapshot storage - ISnapshotStorage is a superset of SnapshotStore
     // so we can safely cast SnapshotStore to ISnapshotStorage for backward compatibility
     this.snapshotStorage = snapshotStorage as ISnapshotStorage
+
+    // NOTE: preComputedAnalyticsService parameter is kept for backward compatibility
+    // but is no longer used. Analytics are now pre-computed by scraper-cli.
 
     // Create DistrictConfigurationService with storage from StorageProviderFactory if not provided
     if (districtConfigService) {
@@ -122,18 +142,18 @@ export class RefreshService {
 
     // Initialize SnapshotBuilder with all dependencies
     // SnapshotBuilder accepts ISnapshotStorage for storage operations
+    // Note: Rankings are now pre-computed by scraper-cli, so no RankingCalculator is needed
     this.snapshotBuilder = new SnapshotBuilder(
       rawCSVCache,
       this.districtConfigService,
       this.snapshotStorage,
       validator ?? new DataValidator(),
-      rankingCalculator,
       detector,
       normalizer
     )
 
     logger.debug('RefreshService initialized with SnapshotBuilder', {
-      hasRankingCalculator: !!rankingCalculator,
+      hasPreComputedAnalyticsService: !!_preComputedAnalyticsService,
     })
   }
 
@@ -321,14 +341,25 @@ export class RefreshService {
 
   /**
    * Convert SnapshotBuilder BuildResult to RefreshResult
+   *
+   * Also triggers pre-computed analytics generation if the service is available.
+   * Requirement 1.1: Compute and store analytics summaries for each district in the snapshot
+   * Requirement 1.4: Log errors and continue if individual district fails
+   *
+   * NOTE: Time-series index updates are now handled by scraper-cli during the
+   * compute-analytics pipeline per the data-computation-separation steering document.
    */
-  private convertBuildResultToRefreshResult(
+  private async convertBuildResultToRefreshResult(
     buildResult: BuildResult,
     startTime: number,
     startedAt: string
-  ): RefreshResult {
+  ): Promise<RefreshResult> {
     const completedAt = new Date().toISOString()
     const duration_ms = Date.now() - startTime
+
+    // NOTE: Pre-computed analytics and time-series index updates are now handled
+    // by scraper-cli during the compute-analytics pipeline. The backend no longer
+    // performs any computation per the data-computation-separation steering document.
 
     logger.info('Refresh completed', {
       operation: 'executeRefresh',

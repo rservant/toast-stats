@@ -1,42 +1,74 @@
 /**
  * Analytics routes module
  * Handles analytics, trends, division/area comparison, and year-over-year endpoints
- * Requirements: 2.2
+ * Requirements: 2.2, 4.1, 4.2, 4.5, 4.6, 10.4
  */
 
+import * as path from 'path'
 import { Router, type Request, type Response } from 'express'
 import { cacheMiddleware } from '../../middleware/cache.js'
 import { generateDistrictCacheKey } from '../../utils/cacheKeys.js'
 import { logger } from '../../utils/logger.js'
 import { transformErrorResponse } from '../../utils/transformers.js'
-import type {
-  DistrictAnalytics,
-  ClubTrend,
-  DivisionAnalytics,
-  AreaAnalytics,
-} from '../../types/analytics.js'
+import type { DistrictAnalytics as AnalyticsCoreDistrictAnalytics } from '@toastmasters/analytics-core'
 import {
   validateDistrictId,
   getValidDistrictId,
   validateDateFormat,
-  getAnalyticsEngine,
   extractStringParam,
+  snapshotStore,
+  cacheDirectory,
+  getSnapshotForDate,
+  getTimeSeriesIndexService,
 } from './shared.js'
+import {
+  PreComputedAnalyticsReader,
+  SchemaVersionError,
+  CorruptedFileError,
+} from '../../services/PreComputedAnalyticsReader.js'
+import { ANALYTICS_SCHEMA_VERSION } from '@toastmasters/analytics-core'
+import {
+  isLegacyDistinguishedClubsFormat,
+  transformLegacyDistinguishedClubs,
+} from '../../utils/legacyTransformation.js'
+import { transformPerformanceTargets } from '../../utils/performanceTargetsTransformation.js'
 
 export const analyticsRouter = Router()
 
+// Create PreComputedAnalyticsReader instance for serving pre-computed analytics
+// Requirement 4.1: THE Backend SHALL read pre-computed analytics from the file system
+const preComputedAnalyticsReader = new PreComputedAnalyticsReader({
+  cacheDir: cacheDirectory,
+})
+
 /**
  * GET /api/districts/:districtId/membership-analytics
- * Generate comprehensive membership analytics for a district
+ * Serve pre-computed membership analytics for a district
  * Query params: startDate (optional), endDate (optional)
+ *
+ * Requirements:
+ * - 1.4: Read from pre-computed file
+ * - 1.5: Return 404 with helpful message if file missing
+ * - 8.1: Route SHALL read from pre-computed files only
  */
 analyticsRouter.get(
   '/:districtId/membership-analytics',
+  cacheMiddleware({
+    ttl: 300, // 5 minutes cache
+    keyGenerator: req => {
+      const districtId = extractStringParam(
+        req.params['districtId'],
+        'districtId'
+      )
+      return generateDistrictCacheKey(districtId, 'membership-analytics', {
+        startDate: req.query['startDate'],
+        endDate: req.query['endDate'],
+      })
+    },
+  }),
   async (req: Request, res: Response) => {
     try {
       const districtId = getValidDistrictId(req)
-      const startDate = req.query['startDate']
-      const endDate = req.query['endDate']
 
       // Validate district ID
       if (!districtId) {
@@ -49,84 +81,124 @@ analyticsRouter.get(
         return
       }
 
-      // Validate date formats if provided
-      if (
-        startDate &&
-        typeof startDate === 'string' &&
-        !validateDateFormat(startDate!)
-      ) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_DATE_FORMAT',
-            message: 'startDate must be in YYYY-MM-DD format',
-          },
-        })
+      // Use date-aware snapshot selection to respect endDate query parameter
+      // Requirements: 2.1, 2.2, 2.3 (Analytics Date Selection Fix)
+      const endDate =
+        typeof req.query['endDate'] === 'string'
+          ? req.query['endDate']
+          : undefined
+      const {
+        snapshot,
+        snapshotDate,
+        error: snapshotError,
+      } = await getSnapshotForDate(endDate)
+
+      // Handle error when requested snapshot doesn't exist (Requirement 2.3)
+      if (snapshotError) {
+        res.status(404).json({ error: snapshotError })
         return
       }
 
-      if (
-        endDate &&
-        typeof endDate === 'string' &&
-        !validateDateFormat(endDate!)
-      ) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_DATE_FORMAT',
-            message: 'endDate must be in YYYY-MM-DD format',
-          },
-        })
-        return
-      }
-
-      // Validate date range
-      if (
-        startDate &&
-        endDate &&
-        typeof startDate === 'string' &&
-        typeof endDate === 'string'
-      ) {
-        const start = new Date(startDate)
-        const end = new Date(endDate)
-
-        if (start > end) {
-          res.status(400).json({
-            error: {
-              code: 'INVALID_DATE_RANGE',
-              message: 'startDate must be before or equal to endDate',
-            },
-          })
-          return
-        }
-      }
-
-      // Generate membership analytics
-      const analyticsEngine = await getAnalyticsEngine()
-      const analytics = await analyticsEngine.generateMembershipAnalytics(
-        districtId,
-        startDate as string | undefined,
-        endDate as string | undefined
-      )
-
-      res.json(analytics)
-    } catch (error) {
-      const errorResponse = transformErrorResponse(error)
-
-      // Check for specific error messages
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to generate membership analytics'
-
-      if (errorMessage.includes('No cached data available')) {
+      if (!snapshot || !snapshotDate) {
         res.status(404).json({
           error: {
             code: 'NO_DATA_AVAILABLE',
-            message: errorMessage,
-            details: 'Consider initiating a backfill to fetch historical data',
+            message: 'No snapshot data available',
+            details: 'Run scraper-cli to fetch data',
           },
         })
         return
       }
+
+      logger.info('Reading pre-computed membership analytics', {
+        operation: 'getMembershipAnalytics',
+        districtId,
+        snapshotDate,
+      })
+
+      // Requirement 1.4: Read from pre-computed file
+      const analytics =
+        await preComputedAnalyticsReader.readMembershipAnalytics(
+          snapshotDate,
+          districtId
+        )
+
+      // Requirement 1.5: Return 404 with helpful message if file missing
+      if (!analytics) {
+        logger.info('Pre-computed membership analytics not found', {
+          operation: 'getMembershipAnalytics',
+          districtId,
+          snapshotDate,
+        })
+
+        res.status(404).json({
+          error: {
+            code: 'ANALYTICS_NOT_FOUND',
+            message: 'Pre-computed membership analytics not found',
+            details: 'Run scraper-cli compute-analytics to generate analytics',
+          },
+        })
+        return
+      }
+
+      logger.info('Successfully served pre-computed membership analytics', {
+        operation: 'getMembershipAnalytics',
+        districtId,
+        snapshotDate,
+      })
+
+      // Set cache control headers
+      res.set('Cache-Control', 'public, max-age=300') // 5 minutes
+
+      res.json(analytics)
+    } catch (error) {
+      // Handle schema version errors
+      if (error instanceof SchemaVersionError) {
+        logger.error('Schema version mismatch in membership analytics', {
+          operation: 'getMembershipAnalytics',
+          fileVersion: error.fileVersion,
+          filePath: error.filePath,
+        })
+
+        res.status(500).json({
+          error: {
+            code: 'SCHEMA_VERSION_MISMATCH',
+            message: 'Incompatible analytics schema version',
+            details: `Re-run scraper-cli compute-analytics to regenerate analytics files.`,
+          },
+        })
+        return
+      }
+
+      // Handle corrupted file errors
+      if (error instanceof CorruptedFileError) {
+        logger.error('Corrupted membership analytics file', {
+          operation: 'getMembershipAnalytics',
+          filePath: error.filePath,
+          cause: error.cause.message,
+        })
+
+        res.status(500).json({
+          error: {
+            code: 'CORRUPTED_FILE',
+            message: 'Corrupted analytics file',
+            details:
+              'Re-run scraper-cli compute-analytics to regenerate analytics files.',
+          },
+        })
+        return
+      }
+
+      const errorResponse = transformErrorResponse(error)
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to read membership analytics'
+
+      logger.error('Failed to serve membership analytics', {
+        operation: 'getMembershipAnalytics',
+        error: errorMessage,
+      })
 
       res.status(500).json({
         error: {
@@ -141,9 +213,12 @@ analyticsRouter.get(
 
 /**
  * GET /api/districts/:districtId/analytics
- * Generate comprehensive district analytics
+ * Serve pre-computed district analytics from the file system
  * Query params: startDate (optional), endDate (optional)
- * Requirements: 3.1, 3.2, 4.4, 5.1, 6.1, 7.1, 8.1
+ * Requirements: 4.1, 4.2, 4.5, 4.6 (Pre-Computed Analytics Pipeline)
+ *
+ * This endpoint serves pre-computed analytics files generated by the scraper-cli.
+ * The backend does NOT compute analytics on-demand to avoid memory issues in Cloud Run.
  */
 analyticsRouter.get(
   '/:districtId/analytics',
@@ -226,70 +301,217 @@ analyticsRouter.get(
         }
       }
 
-      // Generate comprehensive district analytics
-      const analyticsEngine = await getAnalyticsEngine()
-      const analytics = await analyticsEngine.generateDistrictAnalytics(
-        districtId,
-        startDate as string | undefined,
-        endDate as string | undefined
-      )
+      // Requirement 4.1: Read pre-computed analytics from the file system
+      // Use date-aware snapshot selection to respect endDate query parameter
+      // Requirements: 1.1, 1.2, 1.3, 1.4 (Analytics Date Selection Fix)
+      const endDateParam = typeof endDate === 'string' ? endDate : undefined
+      const {
+        snapshot,
+        snapshotDate,
+        error: snapshotError,
+      } = await getSnapshotForDate(endDateParam)
 
-      // Set cache control headers
-      res.set('Cache-Control', 'public, max-age=300') // 5 minutes
+      // Handle error when requested snapshot doesn't exist (Requirement 1.3)
+      if (snapshotError) {
+        res.status(404).json({ error: snapshotError })
+        return
+      }
 
-      res.json(analytics)
-    } catch (error) {
-      const errorResponse = transformErrorResponse(error)
-
-      // Check for specific error messages
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to generate district analytics'
-
-      // Requirement 6.1: Return 404 with NO_DATA_AVAILABLE when no snapshot data exists
-      if (
-        errorMessage.includes('No cached data available') ||
-        errorMessage.includes('No snapshot data found') ||
-        errorMessage.includes('No district data found')
-      ) {
+      if (!snapshot || !snapshotDate) {
+        // No snapshots available at all
         res.status(404).json({
           error: {
             code: 'NO_DATA_AVAILABLE',
             message: 'No cached data available for analytics',
-            details: 'Consider initiating a backfill to fetch historical data',
+            details: 'Run scraper-cli to collect historical data',
           },
         })
         return
       }
 
-      // Requirement 6.2: Return 503 with SERVICE_UNAVAILABLE when snapshot store is unavailable
-      if (
-        errorMessage.includes('ENOENT') ||
-        errorMessage.includes('EACCES') ||
-        errorMessage.includes('snapshot store') ||
-        errorMessage.includes('Failed to read') ||
-        errorMessage.includes('Connection refused') ||
-        errorMessage.includes('timeout')
-      ) {
-        res.status(503).json({
+      logger.info('Reading pre-computed analytics', {
+        operation: 'getDistrictAnalytics',
+        districtId,
+        snapshotDate,
+      })
+
+      // Read pre-computed analytics from file system
+      // Requirement 4.1: THE Backend SHALL read pre-computed analytics from the file system
+      const analytics = await preComputedAnalyticsReader.readDistrictAnalytics(
+        snapshotDate,
+        districtId
+      )
+
+      // Requirement 4.2: IF pre-computed analytics are not available, return 404
+      if (analytics === null) {
+        logger.info('Pre-computed analytics not found', {
+          operation: 'getDistrictAnalytics',
+          districtId,
+          snapshotDate,
+        })
+
+        res.status(404).json({
           error: {
-            code: 'SERVICE_UNAVAILABLE',
-            message: 'Snapshot store is temporarily unavailable',
-            details: 'Please try again later',
+            code: 'NO_DATA_AVAILABLE',
+            message: `Analytics not available for district ${districtId} on ${snapshotDate}`,
+            details:
+              'Pre-computed analytics have not been generated for this district. Run the compute-analytics command in scraper-cli.',
           },
         })
         return
       }
 
-      // Requirement 6.3: Include actionable details in error responses
+      // Read performance targets for per-metric rankings (world rank, percentile, region rank)
+      // Per-metric-rankings spec: Include rankings in analytics response
+      const performanceTargets =
+        await preComputedAnalyticsReader.readPerformanceTargets(
+          snapshotDate,
+          districtId
+        )
+
+      // Read payments trend from time-series index (pre-computed by scraper-cli)
+      // Requirements 1.1, 1.2, 1.3, 1.4: Use time-series index instead of single snapshot
+      let paymentsTrend: Array<{ date: string; payments: number }> | undefined
+      if (typeof startDate === 'string' && typeof endDate === 'string') {
+        try {
+          const timeSeriesIndexService = await getTimeSeriesIndexService()
+          const timeSeriesData = await timeSeriesIndexService.getTrendData(
+            districtId,
+            startDate,
+            endDate
+          )
+          if (timeSeriesData.length > 0) {
+            paymentsTrend = timeSeriesData.map(dp => ({
+              date: dp.date,
+              payments: dp.payments,
+            }))
+          }
+        } catch (trendError) {
+          logger.debug('Could not read payments trend from time-series index', {
+            operation: 'getDistrictAnalytics',
+            districtId,
+            error:
+              trendError instanceof Error
+                ? trendError.message
+                : 'Unknown error',
+          })
+        }
+      }
+
+      // Requirement 4.1: Transform legacy distinguishedClubs array format to counts object
+      // Note: Legacy pre-computed files may have distinguishedClubs as an array instead of counts object.
+      // The type guard checks the runtime data format, not the TypeScript type.
+      if (isLegacyDistinguishedClubsFormat(analytics.distinguishedClubs)) {
+        // Requirement 4.3: Log warning when transforming legacy data
+        logger.warn('Transforming legacy distinguishedClubs format', {
+          operation: 'getDistrictAnalytics',
+          districtId,
+          snapshotDate,
+        })
+
+        // Transform the legacy array to counts object
+        // Type assertion needed because runtime data doesn't match declared type for legacy files
+        const legacyData = analytics.distinguishedClubs
+
+        // Use type assertion to mutate the object - the runtime data is in legacy format
+        // but we need to transform it to the new format before serving
+        const mutableAnalytics = analytics as unknown as Record<string, unknown>
+        mutableAnalytics['distinguishedClubs'] =
+          transformLegacyDistinguishedClubs(legacyData)
+        // Preserve the list in the new field
+        mutableAnalytics['distinguishedClubsList'] = legacyData
+      }
+
+      // Requirement 10.4: Log when serving pre-computed analytics, including file path and schema version
+      const analyticsFilePath = path.join(
+        cacheDirectory,
+        'snapshots',
+        snapshotDate,
+        'analytics',
+        `district_${districtId}_analytics.json`
+      )
+      logger.info('Successfully served pre-computed analytics', {
+        operation: 'getDistrictAnalytics',
+        districtId,
+        snapshotDate,
+        filePath: analyticsFilePath,
+        schemaVersion: ANALYTICS_SCHEMA_VERSION,
+        hasPerformanceTargets: performanceTargets !== null,
+        hasPaymentsTrend:
+          paymentsTrend !== undefined && paymentsTrend.length > 0,
+      })
+
+      // Set cache control headers
+      res.set('Cache-Control', 'public, max-age=300') // 5 minutes
+
+      // Include performanceTargets and paymentsTrend in response if available
+      // Per-metric-rankings spec: Frontend expects performanceTargets with rankings
+      // Transform from analytics-core format to frontend-expected format
+      const response = {
+        ...analytics,
+        ...(performanceTargets && {
+          performanceTargets: transformPerformanceTargets(performanceTargets),
+        }),
+        ...(paymentsTrend && { paymentsTrend }),
+      }
+
+      res.json(response)
+    } catch (error) {
+      // Requirement 4.5: IF the schema version is incompatible, return 500
+      if (error instanceof SchemaVersionError) {
+        logger.error('Schema version mismatch in pre-computed analytics', {
+          operation: 'getDistrictAnalytics',
+          fileVersion: error.fileVersion,
+          filePath: error.filePath,
+        })
+
+        res.status(500).json({
+          error: {
+            code: 'SCHEMA_VERSION_MISMATCH',
+            message: 'Incompatible analytics schema version',
+            details: `The pre-computed analytics file has schema version ${error.fileVersion} which is incompatible with the current backend version. Re-run compute-analytics to regenerate.`,
+          },
+        })
+        return
+      }
+
+      // Requirement 4.6: IF the analytics file is corrupted, return 500
+      if (error instanceof CorruptedFileError) {
+        logger.error('Corrupted pre-computed analytics file', {
+          operation: 'getDistrictAnalytics',
+          filePath: error.filePath,
+          cause: error.cause.message,
+        })
+
+        res.status(500).json({
+          error: {
+            code: 'CORRUPTED_FILE',
+            message: 'Corrupted analytics file',
+            details:
+              'The pre-computed analytics file is corrupted or contains invalid JSON. Re-run compute-analytics to regenerate.',
+          },
+        })
+        return
+      }
+
+      const errorResponse = transformErrorResponse(error)
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to read district analytics'
+
+      logger.error('Failed to serve pre-computed analytics', {
+        operation: 'getDistrictAnalytics',
+        error: errorMessage,
+      })
+
       res.status(500).json({
         error: {
           code: errorResponse.code || 'ANALYTICS_ERROR',
-          message: errorMessage,
+          message: 'Failed to read analytics',
           details:
             errorResponse.details ||
-            'An unexpected error occurred while generating analytics. Please try again or contact support if the issue persists.',
+            'An unexpected error occurred while reading analytics. Please try again or contact support if the issue persists.',
         },
       })
     }
@@ -298,8 +520,12 @@ analyticsRouter.get(
 
 /**
  * GET /api/districts/:districtId/clubs/:clubId/trends
- * Get club-specific trend data
- * Requirements: 3.2
+ * Serve pre-computed club-specific trend data
+ *
+ * Requirements:
+ * - 2.4: Read from pre-computed data
+ * - 2.5: Return 404 with helpful message if file missing
+ * - 8.2: Route SHALL read from pre-computed files only
  */
 analyticsRouter.get(
   '/:districtId/clubs/:clubId/trends',
@@ -342,42 +568,114 @@ analyticsRouter.get(
         return
       }
 
-      // Get club trends
-      const analyticsEngine = await getAnalyticsEngine()
-      const clubTrend = await analyticsEngine.getClubTrends(districtId, clubId)
+      // Get the latest successful snapshot to determine the snapshot date
+      const latestSnapshot = await snapshotStore.getLatestSuccessful()
 
-      if (!clubTrend) {
+      if (!latestSnapshot) {
         res.status(404).json({
           error: {
-            code: 'CLUB_NOT_FOUND',
-            message: 'Club not found in district analytics',
-            details: 'The club may not exist or no cached data is available',
+            code: 'NO_DATA_AVAILABLE',
+            message: 'No snapshot data available',
+            details: 'Run scraper-cli to fetch data',
           },
         })
         return
       }
+
+      const snapshotDate = latestSnapshot.snapshot_id
+
+      logger.info('Reading pre-computed club trends', {
+        operation: 'getClubTrends',
+        districtId,
+        clubId,
+        snapshotDate,
+      })
+
+      // Requirement 2.4: Read from pre-computed data
+      const clubTrend = await preComputedAnalyticsReader.readClubTrends(
+        snapshotDate,
+        districtId,
+        clubId
+      )
+
+      // Requirement 2.5: Return 404 with helpful message if file missing
+      if (!clubTrend) {
+        logger.info('Club trends not found', {
+          operation: 'getClubTrends',
+          districtId,
+          clubId,
+          snapshotDate,
+        })
+
+        res.status(404).json({
+          error: {
+            code: 'CLUB_NOT_FOUND',
+            message: 'Club not found in district analytics',
+            details:
+              'The club may not exist or pre-computed analytics have not been generated. Run scraper-cli compute-analytics.',
+          },
+        })
+        return
+      }
+
+      logger.info('Successfully served pre-computed club trends', {
+        operation: 'getClubTrends',
+        districtId,
+        clubId,
+        snapshotDate,
+      })
 
       // Set cache control headers
       res.set('Cache-Control', 'public, max-age=300') // 5 minutes
 
       res.json(clubTrend)
     } catch (error) {
-      const errorResponse = transformErrorResponse(error)
+      // Handle schema version errors
+      if (error instanceof SchemaVersionError) {
+        logger.error('Schema version mismatch in club trends', {
+          operation: 'getClubTrends',
+          fileVersion: error.fileVersion,
+          filePath: error.filePath,
+        })
 
-      // Check for specific error messages
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to get club trends'
-
-      if (errorMessage.includes('No cached data available')) {
-        res.status(404).json({
+        res.status(500).json({
           error: {
-            code: 'NO_DATA_AVAILABLE',
-            message: errorMessage,
-            details: 'Consider initiating a backfill to fetch historical data',
+            code: 'SCHEMA_VERSION_MISMATCH',
+            message: 'Incompatible analytics schema version',
+            details:
+              'Re-run scraper-cli compute-analytics to regenerate analytics files.',
           },
         })
         return
       }
+
+      // Handle corrupted file errors
+      if (error instanceof CorruptedFileError) {
+        logger.error('Corrupted club trends file', {
+          operation: 'getClubTrends',
+          filePath: error.filePath,
+          cause: error.cause.message,
+        })
+
+        res.status(500).json({
+          error: {
+            code: 'CORRUPTED_FILE',
+            message: 'Corrupted analytics file',
+            details:
+              'Re-run scraper-cli compute-analytics to regenerate analytics files.',
+          },
+        })
+        return
+      }
+
+      const errorResponse = transformErrorResponse(error)
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to get club trends'
+
+      logger.error('Failed to serve club trends', {
+        operation: 'getClubTrends',
+        error: errorMessage,
+      })
 
       res.status(500).json({
         error: {
@@ -392,8 +690,12 @@ analyticsRouter.get(
 
 /**
  * GET /api/districts/:districtId/vulnerable-clubs
- * Get list of vulnerable clubs for a district
- * Requirements: 4.4
+ * Serve pre-computed list of vulnerable clubs for a district
+ *
+ * Requirements:
+ * - 3.4: Read from pre-computed file
+ * - 3.5: Return 404 with helpful message if file missing
+ * - 8.3: Route SHALL read from pre-computed files only
  *
  * Note: Renamed from at-risk-clubs to vulnerable-clubs to align with
  * internal terminology shift documented in the codebase.
@@ -425,66 +727,138 @@ analyticsRouter.get(
         return
       }
 
-      // Identify vulnerable clubs (formerly at-risk)
-      const analyticsEngine = await getAnalyticsEngine()
-      const vulnerableClubs =
-        await analyticsEngine.identifyAtRiskClubs(districtId)
+      // Use date-aware snapshot selection to respect endDate query parameter
+      // Requirements: 5.1, 5.2, 5.3 (Analytics Date Selection Fix)
+      const endDate =
+        typeof req.query['endDate'] === 'string'
+          ? req.query['endDate']
+          : undefined
+      const {
+        snapshot,
+        snapshotDate,
+        error: snapshotError,
+      } = await getSnapshotForDate(endDate)
 
-      // Get intervention-required clubs separately - only if we have vulnerable clubs data
-      let interventionRequiredCount = 0
-      let allClubs: ClubTrend[] = [...vulnerableClubs]
-
-      if (vulnerableClubs.length > 0) {
-        try {
-          const analytics =
-            await analyticsEngine.generateDistrictAnalytics(districtId)
-          interventionRequiredCount = analytics.interventionRequiredClubs.length
-          allClubs = [
-            ...vulnerableClubs,
-            ...analytics.interventionRequiredClubs,
-          ]
-        } catch (error) {
-          // If analytics fails, just use vulnerable clubs
-          logger.warn(
-            'Failed to get intervention-required clubs, using vulnerable only',
-            {
-              districtId,
-              error,
-            }
-          )
-        }
+      // Handle error when requested snapshot doesn't exist (Requirement 5.3)
+      if (snapshotError) {
+        res.status(404).json({ error: snapshotError })
+        return
       }
+
+      if (!snapshot || !snapshotDate) {
+        res.status(404).json({
+          error: {
+            code: 'NO_DATA_AVAILABLE',
+            message: 'No snapshot data available',
+            details: 'Run scraper-cli to fetch data',
+          },
+        })
+        return
+      }
+
+      logger.info('Reading pre-computed vulnerable clubs', {
+        operation: 'getVulnerableClubs',
+        districtId,
+        snapshotDate,
+      })
+
+      // Requirement 3.4: Read from pre-computed file
+      const vulnerableClubsData =
+        await preComputedAnalyticsReader.readVulnerableClubs(
+          snapshotDate,
+          districtId
+        )
+
+      // Requirement 3.5: Return 404 with helpful message if file missing
+      if (!vulnerableClubsData) {
+        logger.info('Pre-computed vulnerable clubs not found', {
+          operation: 'getVulnerableClubs',
+          districtId,
+          snapshotDate,
+        })
+
+        res.status(404).json({
+          error: {
+            code: 'ANALYTICS_NOT_FOUND',
+            message: 'Pre-computed vulnerable clubs data not found',
+            details: 'Run scraper-cli compute-analytics to generate analytics',
+          },
+        })
+        return
+      }
+
+      logger.info('Successfully served pre-computed vulnerable clubs', {
+        operation: 'getVulnerableClubs',
+        districtId,
+        snapshotDate,
+        totalVulnerable: vulnerableClubsData.totalVulnerableClubs,
+        interventionRequired: vulnerableClubsData.interventionRequiredClubs,
+      })
 
       // Set cache control headers
       res.set('Cache-Control', 'public, max-age=300') // 5 minutes
 
       // Response uses new terminology aligned with frontend expectations
       res.json({
-        districtId,
-        totalVulnerableClubs: vulnerableClubs.length,
-        interventionRequiredClubs: interventionRequiredCount,
-        vulnerableClubs: vulnerableClubs.length,
-        clubs: allClubs,
+        districtId: vulnerableClubsData.districtId,
+        totalVulnerableClubs: vulnerableClubsData.totalVulnerableClubs,
+        interventionRequiredClubs:
+          vulnerableClubsData.interventionRequiredClubs,
+        vulnerableClubs: vulnerableClubsData.vulnerableClubs.length,
+        clubs: [
+          ...vulnerableClubsData.vulnerableClubs,
+          ...vulnerableClubsData.interventionRequired,
+        ],
       })
     } catch (error) {
-      const errorResponse = transformErrorResponse(error)
+      // Handle schema version errors
+      if (error instanceof SchemaVersionError) {
+        logger.error('Schema version mismatch in vulnerable clubs', {
+          operation: 'getVulnerableClubs',
+          fileVersion: error.fileVersion,
+          filePath: error.filePath,
+        })
 
-      // Check for specific error messages
+        res.status(500).json({
+          error: {
+            code: 'SCHEMA_VERSION_MISMATCH',
+            message: 'Incompatible analytics schema version',
+            details:
+              'Re-run scraper-cli compute-analytics to regenerate analytics files.',
+          },
+        })
+        return
+      }
+
+      // Handle corrupted file errors
+      if (error instanceof CorruptedFileError) {
+        logger.error('Corrupted vulnerable clubs file', {
+          operation: 'getVulnerableClubs',
+          filePath: error.filePath,
+          cause: error.cause.message,
+        })
+
+        res.status(500).json({
+          error: {
+            code: 'CORRUPTED_FILE',
+            message: 'Corrupted analytics file',
+            details:
+              'Re-run scraper-cli compute-analytics to regenerate analytics files.',
+          },
+        })
+        return
+      }
+
+      const errorResponse = transformErrorResponse(error)
       const errorMessage =
         error instanceof Error
           ? error.message
           : 'Failed to identify vulnerable clubs'
 
-      if (errorMessage.includes('No cached data available')) {
-        res.status(404).json({
-          error: {
-            code: 'NO_DATA_AVAILABLE',
-            message: errorMessage,
-            details: 'Consider initiating a backfill to fetch historical data',
-          },
-        })
-        return
-      }
+      logger.error('Failed to serve vulnerable clubs', {
+        operation: 'getVulnerableClubs',
+        error: errorMessage,
+      })
 
       res.status(500).json({
         error: {
@@ -499,9 +873,13 @@ analyticsRouter.get(
 
 /**
  * GET /api/districts/:districtId/leadership-insights
- * Generate comprehensive leadership effectiveness analytics
+ * Serve pre-computed leadership effectiveness analytics
  * Query params: startDate (optional), endDate (optional)
- * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
+ *
+ * Requirements:
+ * - 4.3: Read from pre-computed file
+ * - 4.4: Return 404 with helpful message if file missing
+ * - 8.4: Route SHALL read from pre-computed files only
  */
 analyticsRouter.get(
   '/:districtId/leadership-insights',
@@ -521,7 +899,6 @@ analyticsRouter.get(
   async (req: Request, res: Response) => {
     try {
       const { districtId } = req.params
-      const { startDate, endDate } = req.query
 
       // Validate district ID - ensure it's a string first
       if (
@@ -538,87 +915,124 @@ analyticsRouter.get(
         return
       }
 
-      // Validate date formats if provided
-      if (
-        startDate &&
-        typeof startDate === 'string' &&
-        !validateDateFormat(startDate!)
-      ) {
-        res.status(400).json({
+      // Use date-aware snapshot selection to respect endDate query parameter
+      // Requirements: 3.1, 3.2, 3.3 (Analytics Date Selection Fix)
+      const endDate =
+        typeof req.query['endDate'] === 'string'
+          ? req.query['endDate']
+          : undefined
+      const {
+        snapshot,
+        snapshotDate,
+        error: snapshotError,
+      } = await getSnapshotForDate(endDate)
+
+      // Handle error when requested snapshot doesn't exist (Requirement 3.3)
+      if (snapshotError) {
+        res.status(404).json({ error: snapshotError })
+        return
+      }
+
+      if (!snapshot || !snapshotDate) {
+        res.status(404).json({
           error: {
-            code: 'INVALID_DATE_FORMAT',
-            message: 'startDate must be in YYYY-MM-DD format',
+            code: 'NO_DATA_AVAILABLE',
+            message: 'No snapshot data available',
+            details: 'Run scraper-cli to fetch data',
           },
         })
         return
       }
 
-      if (
-        endDate &&
-        typeof endDate === 'string' &&
-        !validateDateFormat(endDate!)
-      ) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_DATE_FORMAT',
-            message: 'endDate must be in YYYY-MM-DD format',
-          },
-        })
-        return
-      }
-
-      // Validate date range
-      if (
-        startDate &&
-        endDate &&
-        typeof startDate === 'string' &&
-        typeof endDate === 'string'
-      ) {
-        const start = new Date(startDate)
-        const end = new Date(endDate)
-
-        if (start > end) {
-          res.status(400).json({
-            error: {
-              code: 'INVALID_DATE_RANGE',
-              message: 'startDate must be before or equal to endDate',
-            },
-          })
-          return
-        }
-      }
-
-      // Generate leadership insights
-      const analyticsEngine = await getAnalyticsEngine()
-      const insights = await analyticsEngine.generateLeadershipInsights(
+      logger.info('Reading pre-computed leadership insights', {
+        operation: 'getLeadershipInsights',
         districtId,
-        startDate as string | undefined,
-        endDate as string | undefined
+        snapshotDate,
+      })
+
+      // Requirement 4.3: Read from pre-computed file
+      const insights = await preComputedAnalyticsReader.readLeadershipInsights(
+        snapshotDate,
+        districtId
       )
+
+      // Requirement 4.4: Return 404 with helpful message if file missing
+      if (!insights) {
+        logger.info('Pre-computed leadership insights not found', {
+          operation: 'getLeadershipInsights',
+          districtId,
+          snapshotDate,
+        })
+
+        res.status(404).json({
+          error: {
+            code: 'ANALYTICS_NOT_FOUND',
+            message: 'Pre-computed leadership insights not found',
+            details: 'Run scraper-cli compute-analytics to generate analytics',
+          },
+        })
+        return
+      }
+
+      logger.info('Successfully served pre-computed leadership insights', {
+        operation: 'getLeadershipInsights',
+        districtId,
+        snapshotDate,
+      })
 
       // Set cache control headers
       res.set('Cache-Control', 'public, max-age=300') // 5 minutes
 
       res.json(insights)
     } catch (error) {
-      const errorResponse = transformErrorResponse(error)
+      // Handle schema version errors
+      if (error instanceof SchemaVersionError) {
+        logger.error('Schema version mismatch in leadership insights', {
+          operation: 'getLeadershipInsights',
+          fileVersion: error.fileVersion,
+          filePath: error.filePath,
+        })
 
-      // Check for specific error messages
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to generate leadership insights'
-
-      if (errorMessage.includes('No cached data available')) {
-        res.status(404).json({
+        res.status(500).json({
           error: {
-            code: 'NO_DATA_AVAILABLE',
-            message: errorMessage,
-            details: 'Consider initiating a backfill to fetch historical data',
+            code: 'SCHEMA_VERSION_MISMATCH',
+            message: 'Incompatible analytics schema version',
+            details:
+              'Re-run scraper-cli compute-analytics to regenerate analytics files.',
           },
         })
         return
       }
+
+      // Handle corrupted file errors
+      if (error instanceof CorruptedFileError) {
+        logger.error('Corrupted leadership insights file', {
+          operation: 'getLeadershipInsights',
+          filePath: error.filePath,
+          cause: error.cause.message,
+        })
+
+        res.status(500).json({
+          error: {
+            code: 'CORRUPTED_FILE',
+            message: 'Corrupted analytics file',
+            details:
+              'Re-run scraper-cli compute-analytics to regenerate analytics files.',
+          },
+        })
+        return
+      }
+
+      const errorResponse = transformErrorResponse(error)
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to read leadership insights'
+
+      logger.error('Failed to serve leadership insights', {
+        operation: 'getLeadershipInsights',
+        error: errorMessage,
+      })
 
       res.status(500).json({
         error: {
@@ -633,9 +1047,13 @@ analyticsRouter.get(
 
 /**
  * GET /api/districts/:districtId/distinguished-club-analytics
- * Generate comprehensive distinguished club analytics
+ * Serve pre-computed distinguished club analytics
  * Query params: startDate (optional), endDate (optional)
- * Requirements: 7.1, 7.2, 7.3, 7.4, 7.5
+ *
+ * Requirements:
+ * - 5.3: Read from pre-computed file
+ * - 5.4: Return 404 with helpful message if file missing
+ * - 8.5: Route SHALL read from pre-computed files only
  */
 analyticsRouter.get(
   '/:districtId/distinguished-club-analytics',
@@ -659,7 +1077,6 @@ analyticsRouter.get(
   async (req: Request, res: Response) => {
     try {
       const { districtId } = req.params
-      const { startDate, endDate } = req.query
 
       // Validate district ID - ensure it's a string first
       if (
@@ -676,88 +1093,131 @@ analyticsRouter.get(
         return
       }
 
-      // Validate date formats if provided
-      if (
-        startDate &&
-        typeof startDate === 'string' &&
-        !validateDateFormat(startDate!)
-      ) {
-        res.status(400).json({
+      // Use date-aware snapshot selection to respect endDate query parameter
+      // Requirements: 4.1, 4.2, 4.3 (Analytics Date Selection Fix)
+      const endDate =
+        typeof req.query['endDate'] === 'string'
+          ? req.query['endDate']
+          : undefined
+      const {
+        snapshot,
+        snapshotDate,
+        error: snapshotError,
+      } = await getSnapshotForDate(endDate)
+
+      // Handle error when requested snapshot doesn't exist (Requirement 4.3)
+      if (snapshotError) {
+        res.status(404).json({ error: snapshotError })
+        return
+      }
+
+      if (!snapshot || !snapshotDate) {
+        res.status(404).json({
           error: {
-            code: 'INVALID_DATE_FORMAT',
-            message: 'startDate must be in YYYY-MM-DD format',
+            code: 'NO_DATA_AVAILABLE',
+            message: 'No snapshot data available',
+            details: 'Run scraper-cli to fetch data',
           },
         })
         return
       }
 
-      if (
-        endDate &&
-        typeof endDate === 'string' &&
-        !validateDateFormat(endDate!)
-      ) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_DATE_FORMAT',
-            message: 'endDate must be in YYYY-MM-DD format',
-          },
-        })
-        return
-      }
+      logger.info('Reading pre-computed distinguished club analytics', {
+        operation: 'getDistinguishedClubAnalytics',
+        districtId,
+        snapshotDate,
+      })
 
-      // Validate date range
-      if (
-        startDate &&
-        endDate &&
-        typeof startDate === 'string' &&
-        typeof endDate === 'string'
-      ) {
-        const start = new Date(startDate)
-        const end = new Date(endDate)
-
-        if (start > end) {
-          res.status(400).json({
-            error: {
-              code: 'INVALID_DATE_RANGE',
-              message: 'startDate must be before or equal to endDate',
-            },
-          })
-          return
-        }
-      }
-
-      // Generate distinguished club analytics
-      const analyticsEngine = await getAnalyticsEngine()
+      // Requirement 5.3: Read from pre-computed file
       const analytics =
-        await analyticsEngine.generateDistinguishedClubAnalytics(
-          districtId,
-          startDate as string | undefined,
-          endDate as string | undefined
+        await preComputedAnalyticsReader.readDistinguishedClubAnalytics(
+          snapshotDate,
+          districtId
         )
+
+      // Requirement 5.4: Return 404 with helpful message if file missing
+      if (!analytics) {
+        logger.info('Pre-computed distinguished club analytics not found', {
+          operation: 'getDistinguishedClubAnalytics',
+          districtId,
+          snapshotDate,
+        })
+
+        res.status(404).json({
+          error: {
+            code: 'ANALYTICS_NOT_FOUND',
+            message: 'Pre-computed distinguished club analytics not found',
+            details: 'Run scraper-cli compute-analytics to generate analytics',
+          },
+        })
+        return
+      }
+
+      logger.info(
+        'Successfully served pre-computed distinguished club analytics',
+        {
+          operation: 'getDistinguishedClubAnalytics',
+          districtId,
+          snapshotDate,
+        }
+      )
 
       // Set cache control headers
       res.set('Cache-Control', 'public, max-age=300') // 5 minutes
 
       res.json(analytics)
     } catch (error) {
-      const errorResponse = transformErrorResponse(error)
+      // Handle schema version errors
+      if (error instanceof SchemaVersionError) {
+        logger.error(
+          'Schema version mismatch in distinguished club analytics',
+          {
+            operation: 'getDistinguishedClubAnalytics',
+            fileVersion: error.fileVersion,
+            filePath: error.filePath,
+          }
+        )
 
-      // Check for specific error messages
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to generate distinguished club analytics'
-
-      if (errorMessage.includes('No cached data available')) {
-        res.status(404).json({
+        res.status(500).json({
           error: {
-            code: 'NO_DATA_AVAILABLE',
-            message: errorMessage,
-            details: 'Consider initiating a backfill to fetch historical data',
+            code: 'SCHEMA_VERSION_MISMATCH',
+            message: 'Incompatible analytics schema version',
+            details:
+              'Re-run scraper-cli compute-analytics to regenerate analytics files.',
           },
         })
         return
       }
+
+      // Handle corrupted file errors
+      if (error instanceof CorruptedFileError) {
+        logger.error('Corrupted distinguished club analytics file', {
+          operation: 'getDistinguishedClubAnalytics',
+          filePath: error.filePath,
+          cause: error.cause.message,
+        })
+
+        res.status(500).json({
+          error: {
+            code: 'CORRUPTED_FILE',
+            message: 'Corrupted analytics file',
+            details:
+              'Re-run scraper-cli compute-analytics to regenerate analytics files.',
+          },
+        })
+        return
+      }
+
+      const errorResponse = transformErrorResponse(error)
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to read distinguished club analytics'
+
+      logger.error('Failed to serve distinguished club analytics', {
+        operation: 'getDistinguishedClubAnalytics',
+        error: errorMessage,
+      })
 
       res.status(500).json({
         error: {
@@ -772,8 +1232,12 @@ analyticsRouter.get(
 
 /**
  * GET /api/districts/:districtId/year-over-year/:date
- * Calculate year-over-year comparison for a specific date
- * Requirements: 9.1, 9.2, 9.3, 9.4, 9.5
+ * Serve pre-computed year-over-year comparison for a specific date
+ *
+ * Requirements:
+ * - 6.4: Read from pre-computed file
+ * - 6.5: Return 404 with helpful message if file missing
+ * - 8.6: Route SHALL read from pre-computed files only
  */
 analyticsRouter.get(
   '/:districtId/year-over-year/:date',
@@ -816,25 +1280,114 @@ analyticsRouter.get(
         return
       }
 
-      // Calculate year-over-year comparison
-      const analyticsEngine = await getAnalyticsEngine()
-      const comparison = await analyticsEngine.calculateYearOverYear(
+      // Get the latest successful snapshot to determine the snapshot date
+      const latestSnapshot = await snapshotStore.getLatestSuccessful()
+
+      if (!latestSnapshot) {
+        res.status(404).json({
+          error: {
+            code: 'NO_DATA_AVAILABLE',
+            message: 'No snapshot data available',
+            details: 'Run scraper-cli to fetch data',
+          },
+        })
+        return
+      }
+
+      const snapshotDate = latestSnapshot.snapshot_id
+
+      logger.info('Reading pre-computed year-over-year data', {
+        operation: 'getYearOverYear',
         districtId,
-        date
+        requestedDate: date,
+        snapshotDate,
+      })
+
+      // Requirement 6.4: Read from pre-computed file
+      const comparison = await preComputedAnalyticsReader.readYearOverYear(
+        snapshotDate,
+        districtId
       )
+
+      // Requirement 6.5: Return 404 with helpful message if file missing
+      if (!comparison) {
+        logger.info('Pre-computed year-over-year data not found', {
+          operation: 'getYearOverYear',
+          districtId,
+          snapshotDate,
+        })
+
+        res.status(404).json({
+          error: {
+            code: 'ANALYTICS_NOT_FOUND',
+            message: 'Pre-computed year-over-year data not found',
+            details:
+              'Run scraper-cli compute-analytics to generate analytics. Year-over-year comparison requires historical data from the previous program year.',
+          },
+        })
+        return
+      }
+
+      logger.info('Successfully served pre-computed year-over-year data', {
+        operation: 'getYearOverYear',
+        districtId,
+        snapshotDate,
+        dataAvailable: comparison.dataAvailable,
+      })
 
       // Set cache control headers
       res.set('Cache-Control', 'public, max-age=300') // 5 minutes
 
       res.json(comparison)
     } catch (error) {
-      const errorResponse = transformErrorResponse(error)
+      // Handle schema version errors
+      if (error instanceof SchemaVersionError) {
+        logger.error('Schema version mismatch in year-over-year data', {
+          operation: 'getYearOverYear',
+          fileVersion: error.fileVersion,
+          filePath: error.filePath,
+        })
 
-      // Check for specific error messages
+        res.status(500).json({
+          error: {
+            code: 'SCHEMA_VERSION_MISMATCH',
+            message: 'Incompatible analytics schema version',
+            details:
+              'Re-run scraper-cli compute-analytics to regenerate analytics files.',
+          },
+        })
+        return
+      }
+
+      // Handle corrupted file errors
+      if (error instanceof CorruptedFileError) {
+        logger.error('Corrupted year-over-year file', {
+          operation: 'getYearOverYear',
+          filePath: error.filePath,
+          cause: error.cause.message,
+        })
+
+        res.status(500).json({
+          error: {
+            code: 'CORRUPTED_FILE',
+            message: 'Corrupted analytics file',
+            details:
+              'Re-run scraper-cli compute-analytics to regenerate analytics files.',
+          },
+        })
+        return
+      }
+
+      const errorResponse = transformErrorResponse(error)
       const errorMessage =
         error instanceof Error
           ? error.message
-          : 'Failed to calculate year-over-year comparison'
+          : 'Failed to read year-over-year comparison'
+
+      logger.error('Failed to serve year-over-year data', {
+        operation: 'getYearOverYear',
+        error: errorMessage,
+      })
 
       res.status(500).json({
         error: {
@@ -849,16 +1402,21 @@ analyticsRouter.get(
 
 /**
  * GET /api/districts/:districtId/export
- * Export district data to CSV format
+ * Export district data to CSV format from pre-computed analytics
  * Query params: format (csv), startDate (optional), endDate (optional)
- * Requirements: 10.1, 10.3
+ *
+ * Requirements:
+ * - 8.7: Route SHALL read from pre-computed files only
+ * - 11.1: Read from pre-computed analytics files
+ * - 11.2: Transform pre-computed JSON data to CSV format
+ * - 11.4: Return 404 if pre-computed data is missing
  */
 analyticsRouter.get(
   '/:districtId/export',
   async (req: Request, res: Response) => {
     try {
       const { districtId } = req.params
-      const { format, startDate, endDate } = req.query
+      const { format } = req.query
 
       // Validate district ID - ensure it's a string first
       if (
@@ -886,73 +1444,64 @@ analyticsRouter.get(
         return
       }
 
-      // Validate date formats if provided
-      if (
-        startDate &&
-        typeof startDate === 'string' &&
-        !validateDateFormat(startDate!)
-      ) {
-        res.status(400).json({
+      // Get the latest successful snapshot to determine the snapshot date
+      const latestSnapshot = await snapshotStore.getLatestSuccessful()
+
+      if (!latestSnapshot) {
+        res.status(404).json({
           error: {
-            code: 'INVALID_DATE_FORMAT',
-            message: 'startDate must be in YYYY-MM-DD format',
+            code: 'NO_DATA_AVAILABLE',
+            message: 'No snapshot data available',
+            details: 'Run scraper-cli to fetch data',
           },
         })
         return
       }
 
-      if (
-        endDate &&
-        typeof endDate === 'string' &&
-        !validateDateFormat(endDate!)
-      ) {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_DATE_FORMAT',
-            message: 'endDate must be in YYYY-MM-DD format',
-          },
-        })
-        return
-      }
+      const snapshotDate = latestSnapshot.snapshot_id
 
-      // Validate date range
-      if (
-        startDate &&
-        endDate &&
-        typeof startDate === 'string' &&
-        typeof endDate === 'string'
-      ) {
-        const start = new Date(startDate)
-        const end = new Date(endDate)
-
-        if (start > end) {
-          res.status(400).json({
-            error: {
-              code: 'INVALID_DATE_RANGE',
-              message: 'startDate must be before or equal to endDate',
-            },
-          })
-          return
-        }
-      }
-
-      // Generate analytics data for export
-      const analyticsEngine = await getAnalyticsEngine()
-      const analytics = await analyticsEngine.generateDistrictAnalytics(
+      logger.info('Reading pre-computed analytics for export', {
+        operation: 'exportDistrictAnalytics',
         districtId,
-        startDate as string | undefined,
-        endDate as string | undefined
+        snapshotDate,
+      })
+
+      // Requirement 11.1: Read from pre-computed analytics files
+      const analytics = await preComputedAnalyticsReader.readDistrictAnalytics(
+        snapshotDate,
+        districtId
       )
 
-      // Generate CSV content
+      // Requirement 11.4: Return 404 if pre-computed data is missing
+      if (!analytics) {
+        logger.info('Pre-computed analytics not found for export', {
+          operation: 'exportDistrictAnalytics',
+          districtId,
+          snapshotDate,
+        })
+
+        res.status(404).json({
+          error: {
+            code: 'ANALYTICS_NOT_FOUND',
+            message: 'Pre-computed analytics not found',
+            details: 'Run scraper-cli compute-analytics to generate analytics',
+          },
+        })
+        return
+      }
+
+      // Requirement 11.2: Transform pre-computed JSON data to CSV format
       const csvContent = generateDistrictAnalyticsCSV(analytics, districtId)
 
       // Generate filename with date range
-      const dateRangeStr =
-        startDate && endDate
-          ? `_${startDate}_to_${endDate}`
-          : `_${analytics.dateRange.start}_to_${analytics.dateRange.end}`
+      const dateRangeStr = `_${analytics.dateRange.start}_to_${analytics.dateRange.end}`
       const filename = `district_${districtId}_analytics${dateRangeStr}.csv`
+
+      logger.info('Successfully generated CSV export from pre-computed data', {
+        operation: 'exportDistrictAnalytics',
+        districtId,
+        snapshotDate,
+      })
 
       // Set headers for CSV download
       res.setHeader('Content-Type', 'text/csv;charset=utf-8')
@@ -962,24 +1511,54 @@ analyticsRouter.get(
       // Stream the CSV content
       res.send(csvContent)
     } catch (error) {
-      const errorResponse = transformErrorResponse(error)
+      // Handle schema version errors
+      if (error instanceof SchemaVersionError) {
+        logger.error('Schema version mismatch in analytics export', {
+          operation: 'exportDistrictAnalytics',
+          fileVersion: error.fileVersion,
+          filePath: error.filePath,
+        })
 
-      // Check for specific error messages
+        res.status(500).json({
+          error: {
+            code: 'SCHEMA_VERSION_MISMATCH',
+            message: 'Incompatible analytics schema version',
+            details:
+              'Re-run scraper-cli compute-analytics to regenerate analytics files.',
+          },
+        })
+        return
+      }
+
+      // Handle corrupted file errors
+      if (error instanceof CorruptedFileError) {
+        logger.error('Corrupted analytics file for export', {
+          operation: 'exportDistrictAnalytics',
+          filePath: error.filePath,
+          cause: error.cause.message,
+        })
+
+        res.status(500).json({
+          error: {
+            code: 'CORRUPTED_FILE',
+            message: 'Corrupted analytics file',
+            details:
+              'Re-run scraper-cli compute-analytics to regenerate analytics files.',
+          },
+        })
+        return
+      }
+
+      const errorResponse = transformErrorResponse(error)
       const errorMessage =
         error instanceof Error
           ? error.message
           : 'Failed to export district data'
 
-      if (errorMessage.includes('No cached data available')) {
-        res.status(404).json({
-          error: {
-            code: 'NO_DATA_AVAILABLE',
-            message: errorMessage,
-            details: 'Consider initiating a backfill to fetch historical data',
-          },
-        })
-        return
-      }
+      logger.error('Failed to export district analytics', {
+        operation: 'exportDistrictAnalytics',
+        error: errorMessage,
+      })
 
       res.status(500).json({
         error: {
@@ -994,9 +1573,10 @@ analyticsRouter.get(
 
 /**
  * Helper function to generate CSV content from district analytics
+ * Uses the analytics-core DistrictAnalytics type for pre-computed data
  */
 function generateDistrictAnalyticsCSV(
-  analytics: DistrictAnalytics,
+  analytics: AnalyticsCoreDistrictAnalytics,
   districtId: string
 ): string {
   const lines: string[] = []
@@ -1041,7 +1621,10 @@ function generateDistrictAnalyticsCSV(
   lines.push(
     `Distinguished Clubs (Distinguished),${analytics.distinguishedClubs.distinguished}`
   )
-  lines.push(`Distinguished Projection,${analytics.distinguishedProjection}`)
+  // Handle distinguishedProjection - use the single projected value
+  const projectionValue =
+    analytics.distinguishedProjection.projectedDistinguished
+  lines.push(`Distinguished Projection,${projectionValue}`)
   lines.push('')
 
   // Membership trend
@@ -1054,27 +1637,13 @@ function generateDistrictAnalyticsCSV(
   )
   lines.push('')
 
-  // Top growth clubs
-  if (analytics.topGrowthClubs && analytics.topGrowthClubs.length > 0) {
-    lines.push('Top Growth Clubs')
-    lines.push('Club ID,Club Name,Growth')
-    analytics.topGrowthClubs.forEach(
-      (club: { clubId: string; clubName: string; growth: number }) => {
-        lines.push(
-          `${escapeCSV(club.clubId)},${escapeCSV(club.clubName)},${club.growth}`
-        )
-      }
-    )
-    lines.push('')
-  }
-
-  // Vulnerable clubs (formerly at-risk)
+  // Vulnerable clubs
   if (analytics.vulnerableClubs && analytics.vulnerableClubs.length > 0) {
     lines.push('Vulnerable Clubs')
     lines.push(
       'Club ID,Club Name,Status,Current Membership,Current DCP Goals,Risk Factors'
     )
-    analytics.vulnerableClubs.forEach((club: ClubTrend) => {
+    analytics.vulnerableClubs.forEach(club => {
       const currentMembership =
         club.membershipTrend[club.membershipTrend.length - 1]?.count || 0
       const currentDcpGoals =
@@ -1093,7 +1662,7 @@ function generateDistrictAnalyticsCSV(
     lines.push(
       'Club ID,Club Name,Division,Area,Current Membership,Current DCP Goals,Status,Distinguished Level'
     )
-    analytics.allClubs.forEach((club: ClubTrend) => {
+    analytics.allClubs.forEach(club => {
       const currentMembership =
         club.membershipTrend[club.membershipTrend.length - 1]?.count || 0
       const currentDcpGoals =
@@ -1105,29 +1674,29 @@ function generateDistrictAnalyticsCSV(
     lines.push('')
   }
 
-  // Division rankings
+  // Division rankings (using analytics-core DivisionRanking type)
   if (analytics.divisionRankings && analytics.divisionRankings.length > 0) {
     lines.push('Division Rankings')
     lines.push(
-      'Rank,Division ID,Division Name,Total Clubs,Total DCP Goals,Average Club Health,Trend'
+      'Rank,Division ID,Division Name,Club Count,Membership Total,Score'
     )
-    analytics.divisionRankings.forEach((division: DivisionAnalytics) => {
+    analytics.divisionRankings.forEach(division => {
       lines.push(
-        `${division.rank},${escapeCSV(division.divisionId)},${escapeCSV(division.divisionName)},${division.totalClubs},${division.totalDcpGoals},${division.averageClubHealth.toFixed(2)},${escapeCSV(division.trend)}`
+        `${division.rank},${escapeCSV(division.divisionId)},${escapeCSV(division.divisionName)},${division.clubCount},${division.membershipTotal},${division.score.toFixed(2)}`
       )
     })
     lines.push('')
   }
 
-  // Top performing areas
+  // Top performing areas (using analytics-core AreaPerformance type)
   if (analytics.topPerformingAreas && analytics.topPerformingAreas.length > 0) {
     lines.push('Top Performing Areas')
     lines.push(
-      'Area ID,Area Name,Division ID,Total Clubs,Total DCP Goals,Average Club Health,Normalized Score'
+      'Area ID,Area Name,Division ID,Club Count,Membership Total,Score'
     )
-    analytics.topPerformingAreas.forEach((area: AreaAnalytics) => {
+    analytics.topPerformingAreas.forEach(area => {
       lines.push(
-        `${escapeCSV(area.areaId)},${escapeCSV(area.areaName)},${escapeCSV(area.divisionId)},${area.totalClubs},${area.totalDcpGoals},${area.averageClubHealth.toFixed(2)},${area.normalizedScore.toFixed(2)}`
+        `${escapeCSV(area.areaId)},${escapeCSV(area.areaName)},${escapeCSV(area.divisionId)},${area.clubCount},${area.membershipTotal},${area.score.toFixed(2)}`
       )
     })
   }

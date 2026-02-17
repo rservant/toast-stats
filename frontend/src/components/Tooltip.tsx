@@ -92,15 +92,15 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const getArrowClasses = () => {
     switch (position) {
       case 'top':
-        return 'top-full left-1/2 -translate-x-1/2 border-t-tm-black border-l-transparent border-r-transparent border-b-transparent'
+        return 'top-full left-1/2 -translate-x-1/2 border-t-gray-900 border-l-transparent border-r-transparent border-b-transparent'
       case 'bottom':
-        return 'bottom-full left-1/2 -translate-x-1/2 border-b-tm-black border-l-transparent border-r-transparent border-t-transparent'
+        return 'bottom-full left-1/2 -translate-x-1/2 border-b-gray-900 border-l-transparent border-r-transparent border-t-transparent'
       case 'left':
-        return 'left-full top-1/2 -translate-y-1/2 border-l-tm-black border-t-transparent border-b-transparent border-r-transparent'
+        return 'left-full top-1/2 -translate-y-1/2 border-l-gray-900 border-t-transparent border-b-transparent border-r-transparent'
       case 'right':
-        return 'right-full top-1/2 -translate-y-1/2 border-r-tm-black border-t-transparent border-b-transparent border-l-transparent'
+        return 'right-full top-1/2 -translate-y-1/2 border-r-gray-900 border-t-transparent border-b-transparent border-l-transparent'
       default:
-        return 'top-full left-1/2 -translate-x-1/2 border-t-tm-black border-l-transparent border-r-transparent border-b-transparent'
+        return 'top-full left-1/2 -translate-x-1/2 border-t-gray-900 border-l-transparent border-r-transparent border-b-transparent'
     }
   }
 
@@ -121,7 +121,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
         <div
           id={tooltipId}
           role="tooltip"
-          className={`absolute z-50 px-4 py-3 tm-body-small tm-text-white tm-bg-black tm-rounded-lg shadow-lg w-96 ${getPositionClasses()} ${className} animate-fade-in`}
+          className={`absolute z-50 px-4 py-3 text-sm text-white bg-gray-900 rounded-lg shadow-lg w-80 ${getPositionClasses()} ${className} animate-fade-in`}
         >
           {content}
           <div
@@ -153,7 +153,7 @@ export const InfoIcon: React.FC<{ className?: string }> = ({
 }) => {
   return (
     <svg
-      className={`w-4 h-4 tm-text-cool-gray hover:tm-text-loyal-blue transition-colors cursor-help ${className}`}
+      className={`w-4 h-4 text-gray-500 hover:text-gray-700 transition-colors cursor-help ${className}`}
       fill="currentColor"
       viewBox="0 0 20 20"
       aria-hidden="true"

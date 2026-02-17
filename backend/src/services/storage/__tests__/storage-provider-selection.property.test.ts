@@ -9,7 +9,7 @@
  * For any value of the `STORAGE_PROVIDER` environment variable, the
  * `StorageProviderFactory.createFromEnvironment()` method SHALL return
  * the correct storage implementation:
- * - When `STORAGE_PROVIDER=gcp`: Returns `FirestoreSnapshotStorage`
+ * - When `STORAGE_PROVIDER=gcp`: Returns `GCSSnapshotStorage`
  * - When `STORAGE_PROVIDER=local` or unset: Returns `LocalSnapshotStorage`
  *
  * Test Isolation Requirements (per testing steering document):
@@ -38,9 +38,10 @@ const PROPERTY_TEST_TIMEOUT = 60000 // 1 minute
 // ============================================================================
 
 // Track constructor calls for verification
-interface MockFirestoreConfig {
+interface MockGCSSnapshotConfig {
   projectId: string
-  collectionName?: string
+  bucketName: string
+  prefix?: string
 }
 
 interface MockGCSConfig {
@@ -48,19 +49,19 @@ interface MockGCSConfig {
   bucketName: string
 }
 
-const firestoreConstructorCalls: MockFirestoreConfig[] = []
+const gcsSnapshotConstructorCalls: MockGCSSnapshotConfig[] = []
 const gcsConstructorCalls: MockGCSConfig[] = []
 
 // Mock the GCP provider modules to avoid actual GCP connections
-vi.mock('../FirestoreSnapshotStorage.js', () => {
+vi.mock('../GCSSnapshotStorage.js', () => {
   return {
-    FirestoreSnapshotStorage: class MockFirestoreSnapshotStorage {
-      _mockType = 'FirestoreSnapshotStorage'
-      _config: MockFirestoreConfig
+    GCSSnapshotStorage: class MockGCSSnapshotStorage {
+      _mockType = 'GCSSnapshotStorage'
+      _config: MockGCSSnapshotConfig
 
-      constructor(config: MockFirestoreConfig) {
+      constructor(config: MockGCSSnapshotConfig) {
         this._config = config
-        firestoreConstructorCalls.push(config)
+        gcsSnapshotConstructorCalls.push(config)
       }
 
       getLatestSuccessful = vi.fn()
@@ -77,6 +78,8 @@ vi.mock('../FirestoreSnapshotStorage.js', () => {
       writeAllDistrictsRankings = vi.fn()
       readAllDistrictsRankings = vi.fn()
       hasAllDistrictsRankings = vi.fn()
+      isSnapshotWriteComplete = vi.fn()
+      deleteSnapshot = vi.fn()
     },
   }
 })
@@ -215,7 +218,7 @@ describe('Storage Provider Selection Property Tests', () => {
     vi.clearAllMocks()
 
     // Clear constructor call tracking arrays
-    firestoreConstructorCalls.length = 0
+    gcsSnapshotConstructorCalls.length = 0
     gcsConstructorCalls.length = 0
   })
 
@@ -245,7 +248,7 @@ describe('Storage Provider Selection Property Tests', () => {
             generateLocalProviderValue(),
             async providerValue => {
               // Reset tracking
-              firestoreConstructorCalls.length = 0
+              gcsSnapshotConstructorCalls.length = 0
               gcsConstructorCalls.length = 0
 
               // Set environment
@@ -261,7 +264,7 @@ describe('Storage Provider Selection Property Tests', () => {
               expect(result.rawCSVStorage).toBeInstanceOf(LocalRawCSVStorage)
 
               // Verify GCP providers were NOT created
-              expect(firestoreConstructorCalls).toHaveLength(0)
+              expect(gcsSnapshotConstructorCalls).toHaveLength(0)
               expect(gcsConstructorCalls).toHaveLength(0)
 
               return true
@@ -274,16 +277,16 @@ describe('Storage Provider Selection Property Tests', () => {
     )
 
     /**
-     * Property 1b: STORAGE_PROVIDER=gcp uses FirestoreSnapshotStorage
+     * Property 1b: STORAGE_PROVIDER=gcp uses GCSSnapshotStorage
      *
      * For any valid "gcp" provider value (case-insensitive, with whitespace),
      * when valid GCP configuration is provided, the factory SHALL return
-     * FirestoreSnapshotStorage.
+     * GCSSnapshotStorage.
      *
      * **Validates: Requirement 1.1**
      */
     it(
-      'Property 1b: STORAGE_PROVIDER=gcp (any case/whitespace) uses FirestoreSnapshotStorage',
+      'Property 1b: STORAGE_PROVIDER=gcp (any case/whitespace) uses GCSSnapshotStorage',
       async () => {
         await fc.assert(
           fc.asyncProperty(
@@ -292,7 +295,7 @@ describe('Storage Provider Selection Property Tests', () => {
             generateBucketName(),
             async (providerValue, projectId, bucketName) => {
               // Reset tracking
-              firestoreConstructorCalls.length = 0
+              gcsSnapshotConstructorCalls.length = 0
               gcsConstructorCalls.length = 0
 
               // Set environment
@@ -303,9 +306,9 @@ describe('Storage Provider Selection Property Tests', () => {
               // Create providers
               const result = StorageProviderFactory.createFromEnvironment()
 
-              // Verify FirestoreSnapshotStorage is used (via mock)
-              expect(firestoreConstructorCalls).toHaveLength(1)
-              expect(firestoreConstructorCalls[0]?.projectId).toBe(projectId)
+              // Verify GCSSnapshotStorage is used (via mock)
+              expect(gcsSnapshotConstructorCalls).toHaveLength(1)
+              expect(gcsSnapshotConstructorCalls[0]?.projectId).toBe(projectId)
 
               // Verify GCSRawCSVStorage is used (via mock)
               expect(gcsConstructorCalls).toHaveLength(1)
@@ -316,7 +319,7 @@ describe('Storage Provider Selection Property Tests', () => {
               expect(
                 (result.snapshotStorage as unknown as { _mockType: string })
                   ._mockType
-              ).toBe('FirestoreSnapshotStorage')
+              ).toBe('GCSSnapshotStorage')
               expect(
                 (result.rawCSVStorage as unknown as { _mockType: string })
                   ._mockType
@@ -348,7 +351,7 @@ describe('Storage Provider Selection Property Tests', () => {
             generateDefaultToLocalValue(),
             async providerValue => {
               // Reset tracking
-              firestoreConstructorCalls.length = 0
+              gcsSnapshotConstructorCalls.length = 0
               gcsConstructorCalls.length = 0
 
               // Set environment (or leave unset)
@@ -368,7 +371,7 @@ describe('Storage Provider Selection Property Tests', () => {
               expect(result.rawCSVStorage).toBeInstanceOf(LocalRawCSVStorage)
 
               // Verify GCP providers were NOT created
-              expect(firestoreConstructorCalls).toHaveLength(0)
+              expect(gcsSnapshotConstructorCalls).toHaveLength(0)
               expect(gcsConstructorCalls).toHaveLength(0)
 
               return true
@@ -402,7 +405,7 @@ describe('Storage Provider Selection Property Tests', () => {
             ),
             async providerValue => {
               // Reset tracking
-              firestoreConstructorCalls.length = 0
+              gcsSnapshotConstructorCalls.length = 0
               gcsConstructorCalls.length = 0
 
               // Set environment
@@ -419,7 +422,7 @@ describe('Storage Provider Selection Property Tests', () => {
               const result1 = StorageProviderFactory.createFromEnvironment()
 
               // Reset tracking for second call
-              const firstFirestoreCalls = firestoreConstructorCalls.length
+              const firstGCSSnapshotCalls = gcsSnapshotConstructorCalls.length
               const firstGCSCalls = gcsConstructorCalls.length
 
               const result2 = StorageProviderFactory.createFromEnvironment()
@@ -429,14 +432,14 @@ describe('Storage Provider Selection Property Tests', () => {
                 expect(
                   (result1.snapshotStorage as unknown as { _mockType: string })
                     ._mockType
-                ).toBe('FirestoreSnapshotStorage')
+                ).toBe('GCSSnapshotStorage')
                 expect(
                   (result2.snapshotStorage as unknown as { _mockType: string })
                     ._mockType
-                ).toBe('FirestoreSnapshotStorage')
+                ).toBe('GCSSnapshotStorage')
                 // Verify constructors were called for both
-                expect(firestoreConstructorCalls.length).toBe(
-                  firstFirestoreCalls + 1
+                expect(gcsSnapshotConstructorCalls.length).toBe(
+                  firstGCSSnapshotCalls + 1
                 )
                 expect(gcsConstructorCalls.length).toBe(firstGCSCalls + 1)
               } else {
@@ -447,7 +450,7 @@ describe('Storage Provider Selection Property Tests', () => {
                   LocalSnapshotStorage
                 )
                 // Verify GCP constructors were NOT called
-                expect(firestoreConstructorCalls.length).toBe(0)
+                expect(gcsSnapshotConstructorCalls.length).toBe(0)
                 expect(gcsConstructorCalls.length).toBe(0)
               }
 
@@ -478,27 +481,27 @@ describe('Storage Provider Selection Property Tests', () => {
 
       expect(result.snapshotStorage).toBeInstanceOf(LocalSnapshotStorage)
       expect(result.rawCSVStorage).toBeInstanceOf(LocalRawCSVStorage)
-      expect(firestoreConstructorCalls).toHaveLength(0)
+      expect(gcsSnapshotConstructorCalls).toHaveLength(0)
       expect(gcsConstructorCalls).toHaveLength(0)
     })
 
     /**
-     * Integration test: Verify STORAGE_PROVIDER=gcp uses FirestoreSnapshotStorage
+     * Integration test: Verify STORAGE_PROVIDER=gcp uses GCSSnapshotStorage
      *
      * **Validates: Requirement 1.1**
      */
-    it('should use FirestoreSnapshotStorage when STORAGE_PROVIDER=gcp', () => {
+    it('should use GCSSnapshotStorage when STORAGE_PROVIDER=gcp', () => {
       process.env['STORAGE_PROVIDER'] = 'gcp'
       process.env['GCP_PROJECT_ID'] = 'test-project'
       process.env['GCS_BUCKET_NAME'] = 'test-bucket'
 
       const result = StorageProviderFactory.createFromEnvironment()
 
-      expect(firestoreConstructorCalls).toHaveLength(1)
+      expect(gcsSnapshotConstructorCalls).toHaveLength(1)
       expect(gcsConstructorCalls).toHaveLength(1)
       expect(
         (result.snapshotStorage as unknown as { _mockType: string })._mockType
-      ).toBe('FirestoreSnapshotStorage')
+      ).toBe('GCSSnapshotStorage')
       expect(
         (result.rawCSVStorage as unknown as { _mockType: string })._mockType
       ).toBe('GCSRawCSVStorage')
@@ -516,7 +519,7 @@ describe('Storage Provider Selection Property Tests', () => {
 
       expect(result.snapshotStorage).toBeInstanceOf(LocalSnapshotStorage)
       expect(result.rawCSVStorage).toBeInstanceOf(LocalRawCSVStorage)
-      expect(firestoreConstructorCalls).toHaveLength(0)
+      expect(gcsSnapshotConstructorCalls).toHaveLength(0)
       expect(gcsConstructorCalls).toHaveLength(0)
     })
 

@@ -97,18 +97,12 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
       {!isLoading && !error && !analytics && (
         <EmptyState
           title="No Cached Data Available"
-          message="This district doesn't have any cached historical data yet. Initiate a backfill to start collecting performance data over time."
-          icon="backfill"
+          message="This district doesn't have any cached historical data yet. Use the Admin Panel to start collecting performance data over time."
+          icon="data"
           action={{
-            label: 'Initiate Backfill',
+            label: 'Go to Admin Panel',
             onClick: () => {
-              // Trigger backfill button - this will be handled by the parent component
-              const backfillButton = document.querySelector(
-                '[data-backfill-trigger]'
-              ) as HTMLButtonElement
-              if (backfillButton) {
-                backfillButton.click()
-              }
+              window.location.href = '/admin'
             },
           }}
         />
@@ -210,13 +204,18 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
             badges={
               <span
                 className={`text-xs px-2 py-1 rounded ${
-                  analytics.membershipChange >= 0
+                  (analytics.memberCountChange ?? analytics.membershipChange) >=
+                  0
                     ? 'text-green-700 bg-green-100'
                     : 'text-red-700 bg-red-100'
                 }`}
               >
-                {analytics.membershipChange >= 0 ? '+' : ''}
-                {analytics.membershipChange} members
+                {(analytics.memberCountChange ?? analytics.membershipChange) >=
+                0
+                  ? '+'
+                  : ''}
+                {analytics.memberCountChange ?? analytics.membershipChange}{' '}
+                members
               </span>
             }
           />

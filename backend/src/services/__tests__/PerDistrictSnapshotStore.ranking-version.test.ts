@@ -6,17 +6,14 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import {
-  FileSnapshotStore,
-  PerDistrictFileSnapshotStore,
-} from '../SnapshotStore.js'
+import { FileSnapshotStore } from '../SnapshotStore.js'
 import type { Snapshot, NormalizedData } from '../../types/snapshots.js'
 import type { DistrictStatistics } from '../../types/districts.js'
 import fs from 'fs/promises'
 import path from 'path'
 
 describe('PerDistrictSnapshotStore - Ranking Version', () => {
-  let store: PerDistrictFileSnapshotStore
+  let store: FileSnapshotStore
   let testCacheDir: string
 
   beforeEach(async () => {
@@ -28,7 +25,7 @@ describe('PerDistrictSnapshotStore - Ranking Version', () => {
     )
     await fs.mkdir(testCacheDir, { recursive: true })
 
-    store = new PerDistrictFileSnapshotStore({
+    store = new FileSnapshotStore({
       cacheDir: testCacheDir,
       maxSnapshots: 10,
       maxAgeDays: 30,

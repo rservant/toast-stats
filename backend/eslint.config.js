@@ -47,6 +47,8 @@ export default [
           minimumDescriptionLength: 10,
         },
       ],
+      // Disable no-undef for TypeScript — the TS compiler handles this better
+      'no-undef': 'off',
     },
   },
   // Test code - relaxed rules
@@ -75,6 +77,8 @@ export default [
       '@typescript-eslint/ban-ts-comment': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-empty-function': 'off',
+      // Disable no-undef for TypeScript — the TS compiler handles this better
+      'no-undef': 'off',
     },
   },
   {

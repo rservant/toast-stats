@@ -18,10 +18,8 @@ import {
 } from '../types/serviceContainer.js'
 import {
   ICacheConfigService,
-  IAnalyticsEngine,
   ILogger,
   ICircuitBreakerManager,
-  IAnalyticsDataSource,
 } from '../types/serviceInterfaces.js'
 import type {
   ISnapshotStorage,
@@ -34,21 +32,11 @@ import {
   createInterfaceToken,
 } from './ServiceContainer.js'
 import { CacheConfigService } from './CacheConfigService.js'
-import { AnalyticsEngine } from './AnalyticsEngine.js'
-import { AnalyticsDataSourceAdapter } from './AnalyticsDataSourceAdapter.js'
 import { CircuitBreakerManager } from '../utils/CircuitBreaker.js'
-import {
-  BordaCountRankingCalculator,
-  type RankingCalculator,
-} from './RankingCalculator.js'
 import { RefreshService } from './RefreshService.js'
-import { BackfillService } from './UnifiedBackfillService.js'
-import { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import { FileSnapshotStore } from './SnapshotStore.js'
-import { createDistrictDataAggregator } from './DistrictDataAggregator.js'
 import { SnapshotStore } from '../types/snapshots.js'
 import { RawCSVCacheService } from './RawCSVCacheService.js'
-import { LocalDistrictConfigStorage } from './storage/LocalDistrictConfigStorage.js'
 import { createMockCacheService } from '../__tests__/utils/mockCacheService.js'
 import { LocalSnapshotStorage } from './storage/LocalSnapshotStorage.js'
 import { LocalRawCSVStorage } from './storage/LocalRawCSVStorage.js'
@@ -141,45 +129,19 @@ export interface TestServiceFactory {
   ): ICacheConfigService
 
   /**
-   * Create AnalyticsEngine instance with dependency injection
-   */
-  createAnalyticsEngine(dataSource?: IAnalyticsDataSource): IAnalyticsEngine
-
-  /**
-   * Create AnalyticsDataSource instance
-   */
-  createAnalyticsDataSource(
-    cacheConfig?: ICacheConfigService
-  ): IAnalyticsDataSource
-
-  /**
    * Create CircuitBreakerManager instance
    */
   createCircuitBreakerManager(): ICircuitBreakerManager
 
   /**
-   * Create SnapshotStore instance
+   * Create ISnapshotStorage instance
    */
-  createSnapshotStore(cacheConfig?: ICacheConfigService): SnapshotStore
+  createSnapshotStorage(): ISnapshotStorage
 
   /**
    * Create RefreshService instance
    */
   createRefreshService(snapshotStore?: SnapshotStore): RefreshService
-
-  /**
-   * Create RankingCalculator instance
-   */
-  createRankingCalculator(): RankingCalculator
-
-  /**
-   * Create BackfillService instance
-   */
-  createBackfillService(
-    refreshService?: RefreshService,
-    snapshotStore?: SnapshotStore,
-    configService?: DistrictConfigurationService
-  ): BackfillService
 
   /**
    * Create a fully configured service container with all services registered
@@ -255,33 +217,6 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
   }
 
   /**
-   * Create AnalyticsEngine instance with dependency injection
-   */
-  createAnalyticsEngine(dataSource?: IAnalyticsDataSource): IAnalyticsEngine {
-    const source = dataSource || this.createAnalyticsDataSource()
-    const service = new AnalyticsEngine(source)
-    this.services.push(service)
-    return service
-  }
-
-  /**
-   * Create AnalyticsDataSource instance
-   */
-  createAnalyticsDataSource(
-    cacheConfig?: ICacheConfigService
-  ): IAnalyticsDataSource {
-    const config = cacheConfig || this.createCacheConfigService()
-    const cacheDir = config.getCacheDirectory()
-    const snapshotStore = new FileSnapshotStore({
-      cacheDir,
-      maxSnapshots: 10, // Lower limit for tests
-      maxAgeDays: 1, // Shorter retention for tests
-    })
-    const districtDataAggregator = createDistrictDataAggregator(snapshotStore)
-    return new AnalyticsDataSourceAdapter(districtDataAggregator, snapshotStore)
-  }
-
-  /**
    * Create CircuitBreakerManager instance
    */
   createCircuitBreakerManager(): ICircuitBreakerManager {
@@ -291,9 +226,11 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
   }
 
   /**
-   * Create SnapshotStore instance
+   * Create SnapshotStore instance (private helper for internal use)
    */
-  createSnapshotStore(cacheConfig?: ICacheConfigService): SnapshotStore {
+  private createSnapshotStoreInstance(
+    cacheConfig?: ICacheConfigService
+  ): SnapshotStore {
     const config = cacheConfig || this.createCacheConfigService()
     const service = new FileSnapshotStore({
       cacheDir: config.getCacheDirectory(),
@@ -305,62 +242,31 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
   }
 
   /**
+   * Create ISnapshotStorage instance for test environments
+   */
+  createSnapshotStorage(): ISnapshotStorage {
+    const cacheConfig = this.createCacheConfigService()
+    return new LocalSnapshotStorage({
+      cacheDir: cacheConfig.getCacheDirectory(),
+    })
+  }
+
+  /**
    * Create RefreshService instance
    */
   createRefreshService(snapshotStore?: SnapshotStore): RefreshService {
-    const store = snapshotStore || this.createSnapshotStore()
-    const rankingCalculator = this.createRankingCalculator()
+    const store = snapshotStore || this.createSnapshotStoreInstance()
     const mockCacheService = createMockCacheService()
 
     // RefreshService now uses SnapshotBuilder internally (no scraping)
+    // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
     const service = new RefreshService(
       store,
       mockCacheService as unknown as RawCSVCacheService,
       undefined, // districtConfigService
-      rankingCalculator
+      undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
     )
     // RefreshService doesn't have dispose method, so we don't track it
-    return service
-  }
-
-  /**
-   * Create RankingCalculator instance
-   */
-  createRankingCalculator(): RankingCalculator {
-    const calculator = new BordaCountRankingCalculator()
-    // RankingCalculator doesn't have dispose method, so we don't track it
-    return calculator
-  }
-
-  /**
-   * Create BackfillService instance
-   */
-  createBackfillService(
-    refreshService?: RefreshService,
-    snapshotStore?: SnapshotStore,
-    configService?: DistrictConfigurationService
-  ): BackfillService {
-    const refresh = refreshService || this.createRefreshService()
-    const store = snapshotStore || this.createSnapshotStore()
-    // Create DistrictConfigurationService with storage if not provided
-    let config = configService
-    if (!config) {
-      const cacheDir =
-        this.createTestConfiguration().getConfiguration().cacheDirectory
-      const storage = new LocalDistrictConfigStorage(cacheDir)
-      config = new DistrictConfigurationService(storage)
-    }
-    const rankingCalculator = this.createRankingCalculator()
-
-    const service = new BackfillService(
-      refresh,
-      store as FileSnapshotStore,
-      config,
-      undefined, // alertManager
-      undefined, // circuitBreakerManager
-      rankingCalculator
-    )
-    // BackfillService doesn't have dispose method, so we don't track it
     return service
   }
 
@@ -399,34 +305,6 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
       )
     )
 
-    // Register AnalyticsEngine
-    container.register(
-      ServiceTokens.AnalyticsEngine,
-      createServiceFactory(
-        (container: ServiceContainer) => {
-          const cacheConfig = container.resolve(
-            ServiceTokens.CacheConfigService
-          )
-          const cacheDir = cacheConfig.getCacheDirectory()
-          const snapshotStore = new FileSnapshotStore({
-            cacheDir,
-            maxSnapshots: 10,
-            maxAgeDays: 1,
-          })
-          const districtDataAggregator =
-            createDistrictDataAggregator(snapshotStore)
-          const dataSource = new AnalyticsDataSourceAdapter(
-            districtDataAggregator,
-            snapshotStore
-          )
-          return new AnalyticsEngine(dataSource)
-        },
-        async (instance: AnalyticsEngine) => {
-          await instance.dispose()
-        }
-      )
-    )
-
     // Register CircuitBreakerManager
     container.register(
       ServiceTokens.CircuitBreakerManager,
@@ -458,26 +336,13 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
       )
     )
 
-    // Register RankingCalculator
-    container.register(
-      ServiceTokens.RankingCalculator,
-      createServiceFactory(
-        () => new BordaCountRankingCalculator(),
-        async () => {
-          // RankingCalculator doesn't have dispose method
-        }
-      )
-    )
-
     // Register RefreshService
+    // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
     container.register(
       ServiceTokens.RefreshService,
       createServiceFactory(
         (container: ServiceContainer) => {
           const snapshotStore = container.resolve(ServiceTokens.SnapshotStore)
-          const rankingCalculator = container.resolve(
-            ServiceTokens.RankingCalculator
-          )
           const mockCacheService = createMockCacheService()
 
           // RefreshService now uses SnapshotBuilder internally (no scraping)
@@ -485,44 +350,11 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
             snapshotStore,
             mockCacheService as unknown as RawCSVCacheService,
             undefined, // districtConfigService
-            rankingCalculator
+            undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
           )
         },
         async () => {
           // RefreshService doesn't have dispose method
-        }
-      )
-    )
-
-    // Register BackfillService
-    container.register(
-      ServiceTokens.BackfillService,
-      createServiceFactory(
-        (container: ServiceContainer) => {
-          const refreshService = container.resolve(ServiceTokens.RefreshService)
-          const snapshotStore = container.resolve(ServiceTokens.SnapshotStore)
-          const rankingCalculator = container.resolve(
-            ServiceTokens.RankingCalculator
-          )
-          // Create DistrictConfigurationService with storage
-          const cacheConfig = container.resolve(
-            ServiceTokens.CacheConfigService
-          )
-          const cacheDir = cacheConfig.getCacheDirectory()
-          const storage = new LocalDistrictConfigStorage(cacheDir)
-          const configService = new DistrictConfigurationService(storage)
-
-          return new BackfillService(
-            refreshService,
-            snapshotStore as FileSnapshotStore,
-            configService,
-            undefined, // alertManager
-            undefined, // circuitBreakerManager
-            rankingCalculator
-          )
-        },
-        async () => {
-          // BackfillService doesn't have dispose method
         }
       )
     )
@@ -575,15 +407,6 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
       )
     )
 
-    // Register IAnalyticsEngine
-    container.registerInterface(
-      'IAnalyticsEngine',
-      createServiceFactory(
-        () => this.createAnalyticsEngine(),
-        async instance => await instance.dispose()
-      )
-    )
-
     // Register ICircuitBreakerManager
     container.registerInterface(
       'ICircuitBreakerManager',
@@ -597,20 +420,9 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
     container.registerInterface(
       'SnapshotStore',
       createServiceFactory(
-        () => this.createSnapshotStore(),
+        () => this.createSnapshotStoreInstance(),
         async _instance => {
           // FileSnapshotStore doesn't have dispose method
-        }
-      )
-    )
-
-    // Register RankingCalculator
-    container.registerInterface(
-      'RankingCalculator',
-      createServiceFactory(
-        () => this.createRankingCalculator(),
-        async _instance => {
-          // RankingCalculator doesn't have dispose method
         }
       )
     )
@@ -622,17 +434,6 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
         () => this.createRefreshService(),
         async _instance => {
           // RefreshService doesn't have dispose method
-        }
-      )
-    )
-
-    // Register BackfillService
-    container.registerInterface(
-      'BackfillService',
-      createServiceFactory(
-        () => this.createBackfillService(),
-        async _instance => {
-          // BackfillService doesn't have dispose method
         }
       )
     )
@@ -713,19 +514,13 @@ export const ServiceTokens = {
     'CacheConfigService',
     CacheConfigService
   ),
-  AnalyticsEngine: createServiceToken('AnalyticsEngine', AnalyticsEngine),
   CircuitBreakerManager: createServiceToken(
     'CircuitBreakerManager',
     CircuitBreakerManager
   ),
   Logger: createServiceToken('Logger', TestLogger),
   SnapshotStore: createServiceToken('SnapshotStore', FileSnapshotStore),
-  RankingCalculator: createServiceToken(
-    'RankingCalculator',
-    BordaCountRankingCalculator
-  ),
   RefreshService: createServiceToken('RefreshService', RefreshService),
-  BackfillService: createServiceToken('BackfillService', BackfillService),
 }
 
 /**
@@ -735,16 +530,12 @@ export const InterfaceTokens = {
   ICacheConfigService: createInterfaceToken<ICacheConfigService>(
     'ICacheConfigService'
   ),
-  IAnalyticsEngine: createInterfaceToken<IAnalyticsEngine>('IAnalyticsEngine'),
   ICircuitBreakerManager: createInterfaceToken<ICircuitBreakerManager>(
     'ICircuitBreakerManager'
   ),
   ILogger: createInterfaceToken<ILogger>('ILogger'),
   SnapshotStore: createInterfaceToken<SnapshotStore>('SnapshotStore'),
-  RankingCalculator:
-    createInterfaceToken<RankingCalculator>('RankingCalculator'),
   RefreshService: createInterfaceToken<RefreshService>('RefreshService'),
-  BackfillService: createInterfaceToken<BackfillService>('BackfillService'),
 
   // Storage abstraction layer interface tokens
   // Requirements: 1.3, 1.4

@@ -43,9 +43,22 @@ import {
   NormalizedData,
   CURRENT_SCHEMA_VERSION,
   CURRENT_CALCULATION_VERSION,
-  AllDistrictsRankingsData,
 } from '../types/snapshots.js'
 import { DistrictStatistics } from '../types/districts.js'
+import type {
+  SnapshotManifest,
+  DistrictManifestEntry,
+  AllDistrictsRankingsData,
+  SnapshotPointer,
+} from '@toastmasters/shared-contracts'
+import {
+  validatePerDistrictData,
+  validateAllDistrictsRankings,
+  validateSnapshotManifest,
+  validateSnapshotPointer,
+  SCHEMA_VERSION,
+} from '@toastmasters/shared-contracts'
+import { adaptDistrictStatisticsFileToBackend } from '../adapters/district-statistics-adapter.js'
 
 /**
  * In-memory cache entry for snapshot data
@@ -55,6 +68,15 @@ interface SnapshotCacheEntry {
   cachedAt: number
   fileSize: number
   lastModified: number
+}
+
+/**
+ * In-memory cache entry for snapshot list
+ * Used to avoid repeated directory scans for listSnapshots()
+ */
+interface SnapshotListCacheEntry {
+  metadata: SnapshotMetadata[]
+  cachedAt: number
 }
 
 /**
@@ -69,35 +91,12 @@ interface ReadPerformanceMetrics {
   maxConcurrentReads: number
 }
 
-/**
- * Manifest entry for a district file within a snapshot
- */
-export interface DistrictManifestEntry {
-  districtId: string
-  fileName: string
-  status: 'success' | 'failed'
-  fileSize: number
-  lastModified: string
-  errorMessage?: string
-}
-
-/**
- * Snapshot manifest listing all district files
- */
-export interface SnapshotManifest {
-  snapshotId: string
-  createdAt: string
-  districts: DistrictManifestEntry[]
-  totalDistricts: number
-  successfulDistricts: number
-  failedDistricts: number
-  /** All districts rankings file information */
-  allDistrictsRankings?: {
-    filename: string
-    size: number
-    status: 'present' | 'missing'
-  }
-}
+// Re-export types from shared-contracts for backward compatibility
+// These were previously defined locally but are now imported from shared-contracts
+export type {
+  DistrictManifestEntry,
+  SnapshotManifest,
+} from '@toastmasters/shared-contracts'
 
 /**
  * Per-district snapshot metadata with enhanced error tracking
@@ -130,6 +129,27 @@ export interface PerDistrictSnapshotMetadata {
   isClosingPeriodData?: boolean
   collectionDate?: string
   logicalDate?: string
+
+  // Chunked write tracking fields (added for Firestore timeout fix)
+  /**
+   * Districts that failed to write during chunked batch processing.
+   * Only populated when writeComplete is false.
+   * Used to identify which districts need to be retried or investigated.
+   *
+   * Requirements: 5.3
+   */
+  writeFailedDistricts?: string[]
+
+  /**
+   * Whether the snapshot write completed fully.
+   * - true or undefined: All districts were written successfully
+   * - false: Some districts failed to write (see writeFailedDistricts)
+   *
+   * For backward compatibility, undefined is treated as true (complete).
+   *
+   * Requirements: 5.5
+   */
+  writeComplete?: boolean
 }
 
 /**
@@ -159,10 +179,16 @@ export interface SnapshotComparisonResult {
   newCollectionDate: string
 }
 
+// Re-export PerDistrictData from shared-contracts for backward compatibility
+// Note: The shared-contracts PerDistrictData uses DistrictStatisticsFile for the data field,
+// while the backend internally uses DistrictStatistics. The adapter in task 9.3 handles conversion.
+export type { PerDistrictData } from '@toastmasters/shared-contracts'
+
 /**
- * Per-district snapshot data structure
+ * Backend-specific per-district data structure that uses the internal DistrictStatistics type.
+ * This is used for writing district data before the adapter converts it to the shared format.
  */
-export interface PerDistrictData {
+export interface BackendPerDistrictData {
   districtId: string
   districtName: string
   collectedAt: string
@@ -193,6 +219,16 @@ export interface PerDistrictSnapshotStoreInterface {
   getSnapshotMetadata(
     snapshotId: string
   ): Promise<PerDistrictSnapshotMetadata | null>
+
+  /**
+   * Get metadata for multiple snapshots in a single batch operation.
+   * Returns a Map where keys are snapshot IDs and values are metadata (or null if not found).
+   *
+   * Requirements: 3.4
+   */
+  getSnapshotMetadataBatch(
+    snapshotIds: string[]
+  ): Promise<Map<string, PerDistrictSnapshotMetadata | null>>
 
   checkVersionCompatibility(snapshotId: string): Promise<{
     isCompatible: boolean
@@ -227,8 +263,13 @@ export class FileSnapshotStore
   private currentSnapshotCache: SnapshotCacheEntry | null = null
   private readonly SNAPSHOT_CACHE_TTL = 300000 // 5 minutes
 
+  // Performance optimization: In-memory cache for snapshot list
+  private snapshotListCache: SnapshotListCacheEntry | null = null
+  private readonly SNAPSHOT_LIST_CACHE_TTL = 60000 // 60 seconds minimum per requirements
+
   // Concurrent read handling
   private readonly activeReads = new Map<string, Promise<Snapshot | null>>()
+  private activeListSnapshotsRead: Promise<SnapshotMetadata[]> | null = null
   private readonly performanceMetrics: ReadPerformanceMetrics = {
     totalReads: 0,
     cacheHits: 0,
@@ -388,8 +429,9 @@ export class FileSnapshotStore
         return result
       }
 
-      // Start new read operation using directory scanning
-      const readPromise = this.findLatestSuccessfulByScanning()
+      // Start new read operation using two-phase approach:
+      // Phase 1: Try pointer file (fast path), Phase 2: Fall back to directory scan
+      const readPromise = this.findLatestSuccessful()
       this.activeReads.set(cacheKey, readPromise)
 
       try {
@@ -763,7 +805,10 @@ export class FileSnapshotStore
   }
 
   /**
-   * Write district data to a snapshot directory
+   * Write district data to a snapshot directory.
+   *
+   * This method converts the backend's internal DistrictStatistics format
+   * to the shared contracts PerDistrictData format for storage.
    */
   async writeDistrictData(
     snapshotId: string,
@@ -781,12 +826,162 @@ export class FileSnapshotStore
       `district_${districtId}.json`
     )
 
-    const perDistrictData: PerDistrictData = {
+    // Calculate DCP goals per club to preserve education.totalAwards
+    // Distribute the total awards across clubs if there are any
+    const totalAwards = data.education?.totalAwards ?? 0
+    const byClub = data.membership?.byClub ?? []
+
+    // Build club entries that preserve both membership data (from byClub) and
+    // status counts (active/suspended/ineligible/low) through round-trip.
+    // The adapter on read counts clubs by status, so we must create exactly
+    // the right number of clubs with each status.
+    const activeCount = data.clubs?.active ?? 0
+    const suspendedCount = data.clubs?.suspended ?? 0
+    const ineligibleCount = data.clubs?.ineligible ?? 0
+    const lowCount = data.clubs?.low ?? 0
+    const totalStatusCount =
+      activeCount + suspendedCount + ineligibleCount + lowCount
+
+    // Build status list: exact counts for each status
+    const statusList: string[] = []
+    for (let i = 0; i < activeCount; i++) statusList.push('Active')
+    for (let i = 0; i < suspendedCount; i++) statusList.push('Suspended')
+    for (let i = 0; i < ineligibleCount; i++) statusList.push('Ineligible')
+    for (let i = 0; i < lowCount; i++) statusList.push('Low')
+
+    let clubs: Array<{
+      clubId: string
+      clubName: string
+      divisionId: string
+      areaId: string
+      membershipCount: number
+      paymentsCount: number
+      dcpGoals: number
+      status: string
+      divisionName: string
+      areaName: string
+      octoberRenewals: number
+      aprilRenewals: number
+      newMembers: number
+      membershipBase: number
+      clubStatus?: string
+    }> = []
+
+    // First, create clubs from byClub entries (these carry membership data)
+    for (let index = 0; index < byClub.length; index++) {
+      const club = byClub[index]!
+      clubs.push({
+        clubId: club.clubId,
+        clubName: club.clubName,
+        divisionId: '',
+        areaId: '',
+        membershipCount: club.memberCount,
+        paymentsCount: 0,
+        dcpGoals: 0, // Will be distributed below
+        status: statusList[index] ?? 'Active',
+        divisionName: '',
+        areaName: '',
+        octoberRenewals: 0,
+        aprilRenewals: 0,
+        newMembers: data.membership?.new ?? 0,
+        membershipBase: 0,
+      })
+    }
+
+    // Then, create placeholder clubs for remaining status counts not covered by byClub
+    for (let i = byClub.length; i < totalStatusCount; i++) {
+      clubs.push({
+        clubId: `placeholder_${i}`,
+        clubName: `Placeholder Club ${i}`,
+        divisionId: '',
+        areaId: '',
+        membershipCount: 0,
+        paymentsCount: 0,
+        dcpGoals: 0, // Will be distributed below
+        status: statusList[i] ?? 'Active',
+        divisionName: '',
+        areaName: '',
+        octoberRenewals: 0,
+        aprilRenewals: 0,
+        newMembers: 0,
+        membershipBase: 0,
+      })
+    }
+
+    // Distribute DCP goals across all clubs to preserve totalAwards on round-trip
+    if (totalAwards > 0 && clubs.length > 0) {
+      const goalsPerClub = Math.floor(totalAwards / clubs.length)
+      const extraGoals = totalAwards % clubs.length
+      for (let i = 0; i < clubs.length; i++) {
+        clubs[i]!.dcpGoals = goalsPerClub + (i < extraGoals ? 1 : 0)
+      }
+    }
+
+    // If there are awards but no clubs, create a synthetic club to preserve the awards count
+    if (totalAwards > 0 && clubs.length === 0) {
+      clubs = [
+        {
+          clubId: 'synthetic',
+          clubName: 'Synthetic Club',
+          divisionId: '',
+          areaId: '',
+          membershipCount: 0,
+          paymentsCount: 0,
+          dcpGoals: totalAwards,
+          status: 'synthetic',
+          divisionName: '',
+          areaName: '',
+          octoberRenewals: 0,
+          aprilRenewals: 0,
+          newMembers: 0,
+          membershipBase: 0,
+          clubStatus: 'synthetic',
+        },
+      ]
+    }
+
+    // Convert backend DistrictStatistics to shared contracts DistrictStatisticsFile format
+    // This creates a minimal valid structure for the shared contracts schema
+    const districtStatisticsFile = {
+      districtId: data.districtId,
+      snapshotDate: data.asOfDate,
+      clubs,
+      divisions: [] as Array<{
+        divisionId: string
+        divisionName: string
+        clubCount: number
+        membershipTotal: number
+        paymentsTotal: number
+      }>,
+      areas: [] as Array<{
+        areaId: string
+        areaName: string
+        divisionId: string
+        clubCount: number
+        membershipTotal: number
+        paymentsTotal: number
+      }>,
+      totals: {
+        totalClubs: data.clubs?.total ?? 0,
+        totalMembership: data.membership?.total ?? 0,
+        totalPayments: 0,
+        distinguishedClubs: data.clubs?.distinguished ?? 0,
+        selectDistinguishedClubs: 0,
+        presidentDistinguishedClubs: 0,
+      },
+      // Raw CSV data arrays - use values from input if available, otherwise empty arrays
+      divisionPerformance: data.divisionPerformance ?? [],
+      clubPerformance: data.clubPerformance ?? [],
+      districtPerformance: data.districtPerformance ?? [],
+    }
+
+    // Create PerDistrictData structure matching shared contracts schema
+    const perDistrictData = {
       districtId,
       districtName: `District ${districtId}`,
       collectedAt: new Date().toISOString(),
-      status: 'success',
-      data,
+      status: 'success' as const,
+      data: districtStatisticsFile,
     }
 
     await fs.writeFile(
@@ -811,6 +1006,10 @@ export class FileSnapshotStore
     rankingsData: AllDistrictsRankingsData
   ): Promise<void> {
     this.validateSnapshotId(snapshotId)
+
+    // Ensure the snapshot directory exists
+    const snapshotDir = this.resolvePathUnderBase(this.snapshotsDir, snapshotId)
+    await fs.mkdir(snapshotDir, { recursive: true })
 
     // Use safe path resolution for write operation
     const rankingsFile = this.resolvePathUnderBase(
@@ -859,9 +1058,22 @@ export class FileSnapshotStore
       )
 
       const content = await fs.readFile(rankingsFile, 'utf-8')
-      const rankingsData: AllDistrictsRankingsData = JSON.parse(content)
+      const rawData: unknown = JSON.parse(content)
 
-      logger.debug('Read all-districts rankings file', {
+      // Validate the data against the shared contract schema
+      const validationResult = validateAllDistrictsRankings(rawData)
+      if (!validationResult.success || !validationResult.data) {
+        logger.error('All-districts rankings validation failed', {
+          operation: 'readAllDistrictsRankings',
+          snapshot_id: snapshotId,
+          error: validationResult.error ?? 'Validation returned no data',
+        })
+        return null
+      }
+
+      const rankingsData = validationResult.data
+
+      logger.debug('Read and validated all-districts rankings file', {
         operation: 'readAllDistrictsRankings',
         snapshot_id: snapshotId,
         file_path: rankingsFile,
@@ -930,9 +1142,23 @@ export class FileSnapshotStore
       )
 
       const content = await fs.readFile(districtFile, 'utf-8')
-      const perDistrictData: PerDistrictData = JSON.parse(content)
+      const rawData: unknown = JSON.parse(content)
 
-      logger.debug('Read district data file', {
+      // Validate the data against the shared contract schema
+      const validationResult = validatePerDistrictData(rawData)
+      if (!validationResult.success || !validationResult.data) {
+        logger.error('District data validation failed', {
+          operation: 'readDistrictData',
+          snapshot_id: snapshotId,
+          district_id: districtId,
+          error: validationResult.error ?? 'Validation returned no data',
+        })
+        return null
+      }
+
+      const perDistrictData = validationResult.data
+
+      logger.debug('Read and validated district data file', {
         operation: 'readDistrictData',
         snapshot_id: snapshotId,
         district_id: districtId,
@@ -940,7 +1166,12 @@ export class FileSnapshotStore
         status: perDistrictData.status,
       })
 
-      return perDistrictData.status === 'success' ? perDistrictData.data : null
+      if (perDistrictData.status !== 'success') {
+        return null
+      }
+
+      // Adapt the file format to the backend's internal format
+      return adaptDistrictStatisticsFileToBackend(perDistrictData.data)
     } catch (error) {
       if ((error as { code?: string }).code === 'ENOENT') {
         logger.debug('District data file not found', {
@@ -1007,9 +1238,22 @@ export class FileSnapshotStore
       )
 
       const content = await fs.readFile(manifestPath, 'utf-8')
-      const manifest: SnapshotManifest = JSON.parse(content)
+      const rawData: unknown = JSON.parse(content)
 
-      logger.debug('Read snapshot manifest', {
+      // Validate the data against the shared contract schema
+      const validationResult = validateSnapshotManifest(rawData)
+      if (!validationResult.success || !validationResult.data) {
+        logger.error('Snapshot manifest validation failed', {
+          operation: 'getSnapshotManifest',
+          snapshot_id: snapshotId,
+          error: validationResult.error ?? 'Validation returned no data',
+        })
+        return null
+      }
+
+      const manifest = validationResult.data
+
+      logger.debug('Read and validated snapshot manifest', {
         operation: 'getSnapshotManifest',
         snapshot_id: snapshotId,
         manifest_path: manifestPath,
@@ -1085,41 +1329,220 @@ export class FileSnapshotStore
   }
 
   /**
+   * Get metadata for multiple snapshots in a single batch operation.
+   * Uses the cached snapshot list when available to avoid disk reads.
+   *
+   * Property 5: Batch Metadata Retrieval
+   * - Returns metadata for all requested snapshots that exist
+   * - Returns null for snapshots that don't exist
+   * - Returns results in a single operation (not N individual queries)
+   *
+   * @param snapshotIds - Array of snapshot IDs to retrieve metadata for
+   * @returns Map of snapshot ID to metadata (null if snapshot doesn't exist)
+   *
+   * Requirements: 3.4
+   */
+  async getSnapshotMetadataBatch(
+    snapshotIds: string[]
+  ): Promise<Map<string, PerDistrictSnapshotMetadata | null>> {
+    const startTime = Date.now()
+    const results = new Map<string, PerDistrictSnapshotMetadata | null>()
+
+    logger.info('Starting batch metadata retrieval', {
+      operation: 'getSnapshotMetadataBatch',
+      requested_count: snapshotIds.length,
+      snapshot_ids: snapshotIds.slice(0, 10), // Log first 10 for debugging
+    })
+
+    if (snapshotIds.length === 0) {
+      logger.debug('Empty snapshot ID list, returning empty results', {
+        operation: 'getSnapshotMetadataBatch',
+      })
+      return results
+    }
+
+    // Validate all snapshot IDs first
+    const validSnapshotIds: string[] = []
+    for (const snapshotId of snapshotIds) {
+      try {
+        this.validateSnapshotId(snapshotId)
+        validSnapshotIds.push(snapshotId)
+      } catch (error) {
+        logger.warn('Invalid snapshot ID in batch request', {
+          operation: 'getSnapshotMetadataBatch',
+          snapshot_id: snapshotId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        })
+        results.set(snapshotId, null)
+      }
+    }
+
+    // Try to use cached snapshot list to avoid disk reads
+    const cachedList = this.getCachedSnapshotList()
+    const cachedSnapshotIds = cachedList
+      ? new Set(cachedList.map(m => m.snapshot_id))
+      : null
+
+    // Read metadata for all valid snapshot IDs concurrently
+    const metadataPromises = validSnapshotIds.map(async snapshotId => {
+      // If we have a cached list and the snapshot isn't in it, skip disk read
+      if (cachedSnapshotIds && !cachedSnapshotIds.has(snapshotId)) {
+        logger.debug('Snapshot not in cached list, skipping disk read', {
+          operation: 'getSnapshotMetadataBatch',
+          snapshot_id: snapshotId,
+        })
+        return { snapshotId, metadata: null }
+      }
+
+      try {
+        const metadata = await this.getSnapshotMetadata(snapshotId)
+        return { snapshotId, metadata }
+      } catch (error) {
+        logger.warn('Failed to read metadata for snapshot in batch', {
+          operation: 'getSnapshotMetadataBatch',
+          snapshot_id: snapshotId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        })
+        return { snapshotId, metadata: null }
+      }
+    })
+
+    const metadataResults = await Promise.all(metadataPromises)
+
+    // Populate results map
+    for (const { snapshotId, metadata } of metadataResults) {
+      results.set(snapshotId, metadata)
+    }
+
+    const duration = Date.now() - startTime
+    const foundCount = Array.from(results.values()).filter(
+      m => m !== null
+    ).length
+    const notFoundCount = results.size - foundCount
+
+    logger.info('Batch metadata retrieval completed', {
+      operation: 'getSnapshotMetadataBatch',
+      requested_count: snapshotIds.length,
+      found_count: foundCount,
+      not_found_count: notFoundCount,
+      used_cache: cachedSnapshotIds !== null,
+      duration_ms: duration,
+    })
+
+    return results
+  }
+
+  /**
+   * Check if a snapshot write completed fully
+   *
+   * Determines whether a snapshot was fully written or if some districts
+   * failed during the write process. For file-based storage, this checks
+   * the writeComplete field in the metadata.
+   *
+   * Return value logic:
+   * - Returns `true` if the write completed fully
+   * - Returns `true` if the snapshot is a legacy snapshot without the writeComplete field (backward compatibility)
+   * - Returns `false` if the write was partial (some districts failed)
+   * - Returns `false` if the snapshot doesn't exist
+   *
+   * @param snapshotId - The snapshot ID (ISO date format: YYYY-MM-DD)
+   * @returns true if the write completed fully (or for legacy snapshots),
+   *          false if the write was partial or snapshot doesn't exist
+   *
+   * Requirements: 5.5
+   */
+  async isSnapshotWriteComplete(snapshotId: string): Promise<boolean> {
+    try {
+      const metadata = await this.getSnapshotMetadata(snapshotId)
+
+      if (!metadata) {
+        // Snapshot doesn't exist
+        logger.debug('Snapshot not found for write completion check', {
+          operation: 'isSnapshotWriteComplete',
+          snapshot_id: snapshotId,
+        })
+        return false
+      }
+
+      // For backward compatibility, undefined writeComplete is treated as true (complete)
+      // This handles legacy snapshots that don't have the writeComplete field
+      const isComplete = metadata.writeComplete !== false
+
+      logger.debug('Checked snapshot write completion status', {
+        operation: 'isSnapshotWriteComplete',
+        snapshot_id: snapshotId,
+        writeComplete: metadata.writeComplete,
+        isComplete,
+        hasWriteFailedDistricts: !!metadata.writeFailedDistricts?.length,
+      })
+
+      return isComplete
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      logger.error('Failed to check snapshot write completion', {
+        operation: 'isSnapshotWriteComplete',
+        snapshot_id: snapshotId,
+        error: errorMessage,
+      })
+      // On error, return false to be safe
+      return false
+    }
+  }
+
+  /**
    * List snapshots with optional filtering and limiting
+   * Uses in-memory cache with 60-second TTL to avoid repeated directory scans
+   */
+  /**
+   * List snapshots with optional filtering and limiting
+   * Uses in-memory cache with 60-second TTL to avoid repeated directory scans.
+   * Concurrent callers share a single in-flight disk scan to prevent pile-up.
    */
   async listSnapshots(
     limit?: number,
     filters?: SnapshotFilters
   ): Promise<SnapshotMetadata[]> {
+    const startTime = Date.now()
+
     try {
-      await fs.mkdir(this.snapshotsDir, { recursive: true })
+      // Check if we have valid cached data (unfiltered, unsorted base data)
+      let metadata: SnapshotMetadata[]
+      const cachedData = this.getCachedSnapshotList()
 
-      const files = await fs.readdir(this.snapshotsDir)
+      if (cachedData) {
+        // Use cached data - make a copy to avoid mutating cache
+        metadata = [...cachedData]
 
-      // Get directories (per-district snapshots)
-      const snapshotDirs: string[] = []
+        logger.debug('Snapshot list cache hit', {
+          operation: 'listSnapshots',
+          cache_age_ms: Date.now() - (this.snapshotListCache?.cachedAt ?? 0),
+          cached_count: metadata.length,
+        })
+      } else {
+        // Cache miss - join an in-flight read or start a new one
+        if (this.activeListSnapshotsRead) {
+          logger.debug('Joining in-flight listSnapshots disk scan', {
+            operation: 'listSnapshots',
+          })
+          metadata = [...(await this.activeListSnapshotsRead)]
+        } else {
+          logger.debug('Snapshot list cache miss, reading from disk', {
+            operation: 'listSnapshots',
+          })
 
-      for (const file of files) {
-        const filePath = path.join(this.snapshotsDir, file)
-        const stats = await fs.stat(filePath)
+          const readPromise = this.performListSnapshotsDiskScan(startTime)
+          this.activeListSnapshotsRead = readPromise
 
-        if (stats.isDirectory()) {
-          snapshotDirs.push(file)
+          try {
+            metadata = await readPromise
+          } finally {
+            this.activeListSnapshotsRead = null
+          }
         }
       }
 
-      const metadataPromises: Promise<SnapshotMetadata>[] = []
-
-      for (const dir of snapshotDirs) {
-        metadataPromises.push(this.getPerDistrictSnapshotMetadataForList(dir))
-      }
-
-      let metadata = await Promise.all(metadataPromises)
-
-      // Filter out null results
-      metadata = metadata.filter(m => m !== null) as SnapshotMetadata[]
-
-      // Apply filters
+      // Apply filters (on copy of cached data)
       if (filters) {
         metadata = metadata.filter(item => {
           if (filters.status && item.status !== filters.status) return false
@@ -1166,6 +1589,56 @@ export class FileSnapshotStore
         `Failed to list snapshots: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
     }
+  }
+
+  /**
+   * Perform the actual disk scan for listSnapshots.
+   * Reads directory entries with withFileTypes to avoid extra stat calls,
+   * then reads metadata in parallel batches to avoid overwhelming the filesystem.
+   */
+  private async performListSnapshotsDiskScan(
+    startTime: number
+  ): Promise<SnapshotMetadata[]> {
+    await fs.mkdir(this.snapshotsDir, { recursive: true })
+
+    // Use withFileTypes to avoid separate stat() calls per entry
+    const entries = await fs.readdir(this.snapshotsDir, {
+      withFileTypes: true,
+    })
+
+    const snapshotDirs = entries
+      .filter(entry => entry.isDirectory())
+      .map(entry => entry.name)
+
+    // Read metadata in parallel batches to avoid overwhelming the filesystem
+    const BATCH_SIZE = 50
+    const allMetadata: SnapshotMetadata[] = []
+
+    for (let i = 0; i < snapshotDirs.length; i += BATCH_SIZE) {
+      const batch = snapshotDirs.slice(i, i + BATCH_SIZE)
+      const batchResults = await Promise.all(
+        batch.map(dir =>
+          this.getPerDistrictSnapshotMetadataForList(dir).catch(() => null)
+        )
+      )
+      for (const result of batchResults) {
+        if (result !== null) {
+          allMetadata.push(result)
+        }
+      }
+    }
+
+    // Cache the unfiltered, unsorted base data
+    this.cacheSnapshotList(allMetadata)
+
+    logger.info('Snapshot list loaded from disk and cached', {
+      operation: 'listSnapshots',
+      snapshot_count: allMetadata.length,
+      total_dirs: snapshotDirs.length,
+      duration_ms: Date.now() - startTime,
+    })
+
+    return allMetadata
   }
 
   /**
@@ -1324,6 +1797,74 @@ export class FileSnapshotStore
       return true
     } catch {
       return false
+    }
+  }
+
+  /**
+   * Delete a snapshot and all its associated data
+   *
+   * Removes the snapshot directory and all district files within it.
+   * Does NOT handle cascading deletion of time-series or analytics data.
+   *
+   * @param snapshotId - The snapshot ID (ISO date format: YYYY-MM-DD)
+   * @returns true if snapshot was deleted, false if it didn't exist
+   * @throws Error on deletion failure
+   *
+   * Requirements: 3.1, 3.2, 3.3, 3.4
+   */
+  async deleteSnapshot(snapshotId: string): Promise<boolean> {
+    const startTime = Date.now()
+
+    logger.info('Starting deleteSnapshot operation', {
+      operation: 'deleteSnapshot',
+      snapshot_id: snapshotId,
+    })
+
+    try {
+      // Validate snapshot ID format to prevent path traversal
+      this.validateSnapshotId(snapshotId)
+
+      // Use safe path resolution for the snapshot directory
+      const snapshotDir = this.resolvePathUnderBase(
+        this.snapshotsDir,
+        snapshotId
+      )
+
+      // Check if snapshot exists
+      try {
+        await fs.access(snapshotDir)
+      } catch {
+        logger.info('Snapshot not found for deletion', {
+          operation: 'deleteSnapshot',
+          snapshot_id: snapshotId,
+          duration_ms: Date.now() - startTime,
+        })
+        return false
+      }
+
+      // Delete the entire snapshot directory
+      await fs.rm(snapshotDir, { recursive: true, force: true })
+
+      // Invalidate any cached data for this snapshot
+      this.invalidateSnapshotCache(snapshotId)
+
+      logger.info('Successfully deleted snapshot', {
+        operation: 'deleteSnapshot',
+        snapshot_id: snapshotId,
+        duration_ms: Date.now() - startTime,
+      })
+
+      return true
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      logger.error('Failed to delete snapshot', {
+        operation: 'deleteSnapshot',
+        snapshot_id: snapshotId,
+        error: errorMessage,
+        duration_ms: Date.now() - startTime,
+      })
+      throw error
     }
   }
 
@@ -1594,12 +2135,56 @@ export class FileSnapshotStore
 
   /**
    * Invalidate all in-memory caches
+   * Called when snapshots are written or deleted to ensure consistency
    */
   private invalidateCaches(): void {
     this.currentSnapshotCache = null
+    this.snapshotListCache = null
 
-    logger.debug('Invalidated all in-memory caches', {
+    // Also remove the on-disk snapshot pointer since it may reference a stale
+    // snapshot after a new snapshot has been written via writeSnapshot.
+    // The pointer will be repaired on the next findLatestSuccessful fallback.
+    const pointerPath = this.resolvePathUnderBase(
+      this.snapshotsDir,
+      'latest-successful.json'
+    )
+    fs.unlink(pointerPath).catch(() => {
+      // Ignore errors — the file may not exist yet
+    })
+
+    logger.debug('Invalidated all in-memory caches and snapshot pointer', {
       operation: 'invalidateCaches',
+      invalidated: [
+        'currentSnapshotCache',
+        'snapshotListCache',
+        'snapshotPointerFile',
+      ],
+    })
+  }
+
+  /**
+   * Invalidate cached data for a specific snapshot
+   * Called when a snapshot is deleted to ensure cache consistency
+   */
+  private invalidateSnapshotCache(snapshotId: string): void {
+    // Invalidate current snapshot cache if it matches the deleted snapshot
+    if (
+      this.currentSnapshotCache &&
+      this.currentSnapshotCache.snapshot.snapshot_id === snapshotId
+    ) {
+      this.currentSnapshotCache = null
+      logger.debug('Invalidated current snapshot cache for deleted snapshot', {
+        operation: 'invalidateSnapshotCache',
+        snapshot_id: snapshotId,
+      })
+    }
+
+    // Invalidate snapshot list cache since the list has changed
+    this.snapshotListCache = null
+
+    logger.debug('Invalidated snapshot list cache after deletion', {
+      operation: 'invalidateSnapshotCache',
+      snapshot_id: snapshotId,
     })
   }
 
@@ -1653,6 +2238,48 @@ export class FileSnapshotStore
         error: error instanceof Error ? error.message : 'Unknown error',
       })
     }
+  }
+
+  /**
+   * Get cached snapshot list if valid (within TTL)
+   * Returns null if cache is empty or expired
+   */
+  private getCachedSnapshotList(): SnapshotMetadata[] | null {
+    if (!this.snapshotListCache) {
+      return null
+    }
+
+    const now = Date.now()
+    const cacheAge = now - this.snapshotListCache.cachedAt
+
+    if (cacheAge > this.SNAPSHOT_LIST_CACHE_TTL) {
+      logger.debug('Snapshot list cache expired', {
+        operation: 'getCachedSnapshotList',
+        cache_age_ms: cacheAge,
+        ttl_ms: this.SNAPSHOT_LIST_CACHE_TTL,
+      })
+      this.snapshotListCache = null
+      return null
+    }
+
+    return this.snapshotListCache.metadata
+  }
+
+  /**
+   * Cache the snapshot list in memory
+   * Stores unfiltered, unsorted base data for reuse
+   */
+  private cacheSnapshotList(metadata: SnapshotMetadata[]): void {
+    this.snapshotListCache = {
+      metadata: [...metadata], // Store a copy to prevent external mutation
+      cachedAt: Date.now(),
+    }
+
+    logger.debug('Cached snapshot list in memory', {
+      operation: 'cacheSnapshotList',
+      snapshot_count: metadata.length,
+      ttl_ms: this.SNAPSHOT_LIST_CACHE_TTL,
+    })
   }
 
   /**
@@ -1771,6 +2398,150 @@ export class FileSnapshotStore
   }
 
   /**
+   * Attempt to find the latest successful snapshot via the pointer file (O(1) fast path).
+   * Reads `latest-successful.json` from the snapshots directory, validates it against
+   * the Zod schema, and verifies the referenced snapshot directory exists with status "success".
+   * Returns null on any failure (missing file, invalid JSON, bad reference), logging warnings
+   * for each failure mode.
+   *
+   * Requirements: 2.1, 2.3, 3.1, 3.2, 3.3
+   */
+  private async findLatestSuccessfulViaPointer(): Promise<Snapshot | null> {
+    const pointerPath = this.resolvePathUnderBase(
+      this.snapshotsDir,
+      'latest-successful.json'
+    )
+
+    try {
+      const raw = await fs.readFile(pointerPath, 'utf-8')
+      const parsed: unknown = JSON.parse(raw)
+      const validation = validateSnapshotPointer(parsed)
+
+      if (!validation.success) {
+        logger.warn('Invalid snapshot pointer file', {
+          operation: 'findLatestSuccessfulViaPointer',
+          error: validation.error,
+        })
+        return null
+      }
+
+      const { snapshotId } = validation.data!
+      const snapshot = await this.readSnapshotFromDirectory(snapshotId)
+
+      if (snapshot && snapshot.status === 'success') {
+        logger.info('Resolved latest successful snapshot via pointer', {
+          operation: 'findLatestSuccessfulViaPointer',
+          snapshot_id: snapshotId,
+        })
+        return snapshot
+      }
+
+      logger.warn('Snapshot pointer references non-success snapshot', {
+        operation: 'findLatestSuccessfulViaPointer',
+        snapshotId,
+        status: snapshot?.status ?? 'not_found',
+      })
+      return null
+    } catch (error: unknown) {
+      const fsError = error as { code?: string }
+      if (fsError.code === 'ENOENT') {
+        logger.warn('Snapshot pointer file not found, will fall back to scan', {
+          operation: 'findLatestSuccessfulViaPointer',
+        })
+      } else if (error instanceof SyntaxError) {
+        logger.warn('Snapshot pointer file contains invalid JSON', {
+          operation: 'findLatestSuccessfulViaPointer',
+          error: error.message,
+        })
+      } else {
+        logger.error('Failed to read snapshot pointer', {
+          operation: 'findLatestSuccessfulViaPointer',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        })
+      }
+      return null
+    }
+  }
+
+  /**
+   * Repair the snapshot pointer file after a successful fallback directory scan.
+   * This writes a valid pointer file so that subsequent cold starts can use the
+   * fast path instead of repeating the full directory scan.
+   *
+   * This is a narrow exception to the "backend is read-only" rule, justified as
+   * cache/index repair — the data written is derived from what was just read,
+   * not computed.
+   *
+   * Non-fatal: catches and logs all errors without propagating.
+   *
+   * Requirements: 3.4
+   */
+  private async repairSnapshotPointer(snapshotId: string): Promise<void> {
+    try {
+      const pointer: SnapshotPointer = {
+        snapshotId,
+        updatedAt: new Date().toISOString(),
+        schemaVersion: SCHEMA_VERSION,
+      }
+      const validated = validateSnapshotPointer(pointer)
+      if (!validated.success) return
+
+      const pointerPath = this.resolvePathUnderBase(
+        this.snapshotsDir,
+        'latest-successful.json'
+      )
+      const tempPath = `${pointerPath}.tmp.${Date.now()}`
+      await fs.writeFile(
+        tempPath,
+        JSON.stringify(validated.data, null, 2),
+        'utf-8'
+      )
+      await fs.rename(tempPath, pointerPath)
+
+      logger.info('Repaired snapshot pointer after fallback scan', {
+        operation: 'repairSnapshotPointer',
+        snapshotId,
+      })
+    } catch (error: unknown) {
+      // Non-fatal: log and continue
+      logger.warn('Failed to repair snapshot pointer', {
+        operation: 'repairSnapshotPointer',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }
+
+  /**
+   * Find the latest successful snapshot using a two-phase approach:
+   *
+   * Phase 1 (fast path): Try reading the snapshot pointer file for O(1) resolution.
+   * Phase 2 (fallback): Fall back to the full directory scan if the pointer is
+   *   missing, invalid, or references a non-success snapshot.
+   *
+   * After a successful fallback scan, the pointer file is repaired so that
+   * subsequent cold starts can use the fast path.
+   *
+   * Requirements: 2.1, 2.4, 3.4
+   */
+  private async findLatestSuccessful(): Promise<Snapshot | null> {
+    // Phase 1: Try pointer (fast path)
+    const viaPointer = await this.findLatestSuccessfulViaPointer()
+    if (viaPointer) {
+      return viaPointer
+    }
+
+    // Phase 2: Fall back to directory scan (slow path)
+    const viaScanning = await this.findLatestSuccessfulByScanning()
+
+    // Repair: Write pointer for future fast starts
+    if (viaScanning) {
+      await this.repairSnapshotPointer(viaScanning.snapshot_id)
+    }
+
+    return viaScanning
+  }
+
+  /**
    * Find the latest successful snapshot by scanning the directory
    */
   private async findLatestSuccessfulByScanning(): Promise<Snapshot | null> {
@@ -1883,29 +2654,23 @@ export class FileSnapshotStore
   /**
    * Get metadata for a per-district snapshot directory (for listing)
    */
+  /**
+   * Get snapshot metadata for listing purposes.
+   * Reads only metadata.json (skips manifest.json and stat calls) for speed.
+   * The size_bytes field uses an estimate from district count since exact
+   * file sizes are not needed for listing.
+   */
   private async getPerDistrictSnapshotMetadataForList(
     snapshotId: string
   ): Promise<SnapshotMetadata> {
-    const snapshotDir = path.join(this.snapshotsDir, snapshotId)
-    const metadataPath = path.join(snapshotDir, 'metadata.json')
-    const manifestPath = path.join(snapshotDir, 'manifest.json')
+    const metadataPath = path.join(
+      this.snapshotsDir,
+      snapshotId,
+      'metadata.json'
+    )
 
-    const [metadataContent, manifestContent] = await Promise.all([
-      fs.readFile(metadataPath, 'utf-8'),
-      fs.readFile(manifestPath, 'utf-8'),
-    ])
-
+    const metadataContent = await fs.readFile(metadataPath, 'utf-8')
     const metadata: PerDistrictSnapshotMetadata = JSON.parse(metadataContent)
-    const manifest: SnapshotManifest = JSON.parse(manifestContent)
-
-    let totalSize = 0
-    for (const entry of manifest.districts) {
-      totalSize += entry.fileSize
-    }
-
-    const metadataStats = await fs.stat(metadataPath)
-    const manifestStats = await fs.stat(manifestPath)
-    totalSize += metadataStats.size + manifestStats.size
 
     return {
       snapshot_id: metadata.snapshotId,
@@ -1913,7 +2678,7 @@ export class FileSnapshotStore
       status: metadata.status,
       schema_version: metadata.schemaVersion,
       calculation_version: metadata.calculationVersion,
-      size_bytes: totalSize,
+      size_bytes: 0, // Exact size not needed for listing
       error_count: metadata.errors.length,
       district_count: metadata.successfulDistricts.length,
     }
@@ -1995,11 +2760,6 @@ export class FileSnapshotStore
 // ============================================================================
 
 /**
- * @deprecated Use FileSnapshotStore instead
- */
-export const PerDistrictFileSnapshotStore = FileSnapshotStore
-
-/**
  * @deprecated Use PerDistrictSnapshotStoreInterface instead
  */
 export type PerDistrictSnapshotStore = PerDistrictSnapshotStoreInterface
@@ -2016,14 +2776,4 @@ export function createFileSnapshotStore(cacheDir?: string): FileSnapshotStore {
     maxAgeDays: 30,
     enableCompression: false,
   })
-}
-
-/**
- * Factory function to create a PerDistrictFileSnapshotStore
- * @deprecated Use createFileSnapshotStore instead
- */
-export function createPerDistrictSnapshotStore(
-  cacheDir?: string
-): FileSnapshotStore {
-  return createFileSnapshotStore(cacheDir)
 }

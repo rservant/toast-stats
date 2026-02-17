@@ -11,31 +11,45 @@ import express from 'express'
 import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
-import adminRoutes from '../admin.js'
+import adminRoutes from '../admin/index.js'
+
+// Use vi.hoisted to ensure mock factory is available when vi.mock is hoisted
+const { mockFactory, setTestCacheDir } = vi.hoisted(() => {
+  let testCacheDir = ''
+  const mockCacheConfigService = {
+    getConfiguration: () => ({
+      baseDirectory: testCacheDir,
+      source: 'test',
+      isConfigured: true,
+      validationStatus: {
+        isValid: true,
+        isAccessible: true,
+        isSecure: true,
+      },
+    }),
+    getCacheDirectory: () => testCacheDir,
+    initialize: () => Promise.resolve(),
+  }
+  return {
+    mockFactory: {
+      createCacheConfigService: () => mockCacheConfigService,
+      createSnapshotStorage: () => ({}), // Not used in district config tests
+    },
+    setTestCacheDir: (dir: string) => {
+      testCacheDir = dir
+    },
+  }
+})
 
 // Mock the production service factory to use our test cache directory
 let testCacheDir: string
-const mockCacheConfigService = {
-  getConfiguration: () => ({
-    baseDirectory: testCacheDir,
-    source: 'test',
-    isConfigured: true,
-    validationStatus: {
-      isValid: true,
-      isAccessible: true,
-      isSecure: true,
-    },
-  }),
-}
-
-const mockFactory = {
-  createCacheConfigService: () => mockCacheConfigService,
-  createSnapshotStore: () => ({}), // Not used in district config tests
-}
 
 vi.mock('../../services/ProductionServiceFactory.js', () => ({
   getProductionServiceFactory: () => mockFactory,
 }))
+
+// Mock the main index.js to prevent server initialization side effects
+vi.mock('../../index.js', () => ({}))
 
 // Mock logger
 vi.mock('../../utils/logger.js', () => ({
@@ -58,6 +72,7 @@ describe('Admin District Configuration Integration', () => {
       path.join(os.tmpdir(), 'district-config-integration-test-')
     )
     testCacheDir = tempDir
+    setTestCacheDir(tempDir)
 
     // Set CACHE_DIR environment variable for StorageProviderFactory
     originalCacheDir = process.env['CACHE_DIR']

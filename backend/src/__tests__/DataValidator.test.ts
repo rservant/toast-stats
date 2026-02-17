@@ -279,7 +279,9 @@ describe('DataValidator', () => {
       )
     })
 
-    it('should warn about old data', async () => {
+    it('should accept historical data without freshness warnings', async () => {
+      // This system stores historical snapshots going back years,
+      // so data age relative to current date is not a validation concern
       const oldDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)
         .toISOString()
         .split('T')[0] // 10 days ago
@@ -324,11 +326,12 @@ describe('DataValidator', () => {
       const result = await validator.validate(dataWithOldDate)
 
       expect(result.isValid).toBe(true)
+      // No freshness warning should be generated for historical data
       expect(
         result.warnings.some(warning =>
           warning.includes('Data is older than 7 days')
         )
-      ).toBe(true)
+      ).toBe(false)
     })
 
     it('should warn about long processing duration', async () => {

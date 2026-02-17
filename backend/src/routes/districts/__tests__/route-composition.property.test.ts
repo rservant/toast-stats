@@ -69,7 +69,7 @@ describe('Route Module Composition Property Tests', () => {
       expect(typeof districtRoutes).toBe('function')
 
       // Verify we have a reasonable number of route handlers
-      // (4 sub-routers: snapshots, backfill, core, analytics)
+      // (5 sub-routers: snapshots, core, rankings, analyticsSummary, analytics)
       expect(routerStack.length).toBeGreaterThanOrEqual(4)
     })
 
@@ -144,41 +144,6 @@ describe('Route Module Composition Property Tests', () => {
       )
     })
 
-    it('should respond with proper error format for invalid backfill IDs', async () => {
-      // Property: For any invalid backfill ID, the response should have consistent error format
-      await fc.assert(
-        fc.asyncProperty(
-          fc.string({ minLength: 0, maxLength: 10 }).filter(
-            s =>
-              // Filter to strings that would be invalid backfill IDs
-              s.length === 0 || /[^a-zA-Z0-9\-_]/.test(s)
-          ),
-          async invalidBackfillId => {
-            // Skip empty strings
-            if (invalidBackfillId.length === 0) return true
-
-            const response = await request(app).get(
-              `/api/districts/backfill/${encodeURIComponent(invalidBackfillId)}`
-            )
-
-            // Should return 400 for invalid format or 404 for not found
-            expect([400, 404]).toContain(response.status)
-
-            // Response should have error structure
-            expect(response.body).toHaveProperty('error')
-            expect(response.body.error).toHaveProperty('code')
-            expect(response.body.error).toHaveProperty('message')
-
-            return true
-          }
-        ),
-        {
-          numRuns: 20, // Limit runs since we're making HTTP requests
-          seed: 34567, // Deterministic seed for reproducibility
-        }
-      )
-    })
-
     it('should respond with consistent structure for valid alphanumeric district IDs', async () => {
       // Property: For any valid alphanumeric district ID format,
       // the response structure should be consistent
@@ -218,60 +183,6 @@ describe('Route Module Composition Property Tests', () => {
         {
           numRuns: 20, // Limit runs since we're making HTTP requests
           seed: 45678, // Deterministic seed for reproducibility
-        }
-      )
-    })
-
-    it('should handle backfill request validation consistently', async () => {
-      // Property: For any backfill request body, validation should be consistent
-      await fc.assert(
-        fc.asyncProperty(
-          fc.record({
-            startDate: fc.oneof(
-              fc.constant(undefined),
-              fc.string({ minLength: 0, maxLength: 20 }),
-              fc.date().map(d => d.toISOString().split('T')[0])
-            ),
-            endDate: fc.oneof(
-              fc.constant(undefined),
-              fc.string({ minLength: 0, maxLength: 20 }),
-              fc.date().map(d => d.toISOString().split('T')[0])
-            ),
-            targetDistricts: fc.oneof(
-              fc.constant(undefined),
-              fc.array(fc.string({ minLength: 1, maxLength: 5 }), {
-                maxLength: 3,
-              })
-            ),
-          }),
-          async requestBody => {
-            const response = await request(app)
-              .post('/api/districts/backfill')
-              .send(requestBody)
-              .set('Content-Type', 'application/json')
-
-            // Should return either:
-            // - 202 (accepted)
-            // - 400 (validation error)
-            // - 422 (configuration error)
-            // - 500 (internal error)
-            expect([202, 400, 422, 500]).toContain(response.status)
-
-            // Response should have proper structure
-            expect(response.body).toBeDefined()
-
-            if (response.status === 400) {
-              // Validation error should have detailed error info
-              expect(response.body).toHaveProperty('error')
-              expect(response.body.error).toHaveProperty('code')
-            }
-
-            return true
-          }
-        ),
-        {
-          numRuns: 15, // Limit runs since we're making HTTP requests
-          seed: 56789, // Deterministic seed for reproducibility
         }
       )
     })

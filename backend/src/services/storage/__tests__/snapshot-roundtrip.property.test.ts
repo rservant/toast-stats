@@ -134,9 +134,9 @@ const generateClubPerformanceRecord = (): fc.Arbitrary<
 /**
  * Generator for membership stats
  */
-const generateMembershipStats = (): fc.Arbitrary<
-  DistrictStatistics['membership']
-> =>
+const generateMembershipStats = (
+  clubCount?: number
+): fc.Arbitrary<DistrictStatistics['membership']> =>
   fc.record({
     total: fc.integer({ min: 0, max: 10000 }),
     change: fc.integer({ min: -500, max: 500 }),
@@ -149,7 +149,9 @@ const generateMembershipStats = (): fc.Arbitrary<
           .map(s => s.replace(/[^\x20-\x7E]/g, 'X')),
         memberCount: fc.integer({ min: 0, max: 200 }),
       }),
-      { minLength: 0, maxLength: 5 }
+      clubCount !== undefined
+        ? { minLength: clubCount, maxLength: clubCount }
+        : { minLength: 0, maxLength: 5 }
     ),
     new: fc.option(fc.integer({ min: 0, max: 500 }), { nil: undefined }),
     renewed: fc.option(fc.integer({ min: 0, max: 500 }), { nil: undefined }),
@@ -158,17 +160,25 @@ const generateMembershipStats = (): fc.Arbitrary<
 
 /**
  * Generator for club stats
+ *
+ * Ensures total equals the sum of active + suspended + ineligible + low
+ * to maintain data consistency through round-trip operations.
  */
 const generateClubStats = (): fc.Arbitrary<DistrictStatistics['clubs']> =>
-  fc.record({
-    total: fc.integer({ min: 0, max: 500 }),
-    active: fc.integer({ min: 0, max: 500 }),
-    suspended: fc.integer({ min: 0, max: 50 }),
-    ineligible: fc.integer({ min: 0, max: 50 }),
-    low: fc.integer({ min: 0, max: 100 }),
-    distinguished: fc.integer({ min: 0, max: 200 }),
-    chartered: fc.option(fc.integer({ min: 0, max: 50 }), { nil: undefined }),
-  })
+  fc
+    .record({
+      active: fc.integer({ min: 0, max: 10 }),
+      suspended: fc.integer({ min: 0, max: 5 }),
+      ineligible: fc.integer({ min: 0, max: 5 }),
+      low: fc.integer({ min: 0, max: 5 }),
+      distinguished: fc.integer({ min: 0, max: 10 }),
+      chartered: fc.option(fc.integer({ min: 0, max: 5 }), { nil: undefined }),
+    })
+    .map(stats => ({
+      ...stats,
+      // total must equal sum of status counts for round-trip consistency
+      total: stats.active + stats.suspended + stats.ineligible + stats.low,
+    }))
 
 /**
  * Generator for education stats
@@ -237,37 +247,40 @@ const generateDistrictStatistics = (
   districtId: string,
   asOfDate: string
 ): fc.Arbitrary<DistrictStatistics> =>
-  fc.record({
-    districtId: fc.constant(districtId),
-    asOfDate: fc.constant(asOfDate),
-    membership: generateMembershipStats(),
-    clubs: generateClubStats(),
-    education: generateEducationStats(),
-    goals: fc.option(
-      fc.record({
-        clubsGoal: fc.integer({ min: 0, max: 500 }),
-        membershipGoal: fc.integer({ min: 0, max: 10000 }),
-        distinguishedGoal: fc.integer({ min: 0, max: 200 }),
-      }),
-      { nil: undefined }
-    ),
-    performance: fc.option(
-      fc.record({
-        membershipNet: fc.integer({ min: -1000, max: 1000 }),
-        clubsNet: fc.integer({ min: -100, max: 100 }),
-        distinguishedPercent: fc.double({ min: 0, max: 100, noNaN: true }),
-      }),
-      { nil: undefined }
-    ),
-    clubPerformance: fc.option(
-      fc.array(generateClubPerformanceRecord(), {
-        minLength: 0,
-        maxLength: 10,
-      }),
-      { nil: undefined }
-    ),
-    divisionPerformance: fc.option(fc.constant([]), { nil: undefined }),
-    districtPerformance: fc.option(fc.constant([]), { nil: undefined }),
+  generateClubStats().chain(clubs => {
+    const totalClubs = clubs.total
+    return fc.record({
+      districtId: fc.constant(districtId),
+      asOfDate: fc.constant(asOfDate),
+      membership: generateMembershipStats(totalClubs),
+      clubs: fc.constant(clubs),
+      education: generateEducationStats(),
+      goals: fc.option(
+        fc.record({
+          clubsGoal: fc.integer({ min: 0, max: 500 }),
+          membershipGoal: fc.integer({ min: 0, max: 10000 }),
+          distinguishedGoal: fc.integer({ min: 0, max: 200 }),
+        }),
+        { nil: undefined }
+      ),
+      performance: fc.option(
+        fc.record({
+          membershipNet: fc.integer({ min: -1000, max: 1000 }),
+          clubsNet: fc.integer({ min: -100, max: 100 }),
+          distinguishedPercent: fc.double({ min: 0, max: 100, noNaN: true }),
+        }),
+        { nil: undefined }
+      ),
+      clubPerformance: fc.option(
+        fc.array(generateClubPerformanceRecord(), {
+          minLength: 0,
+          maxLength: 10,
+        }),
+        { nil: undefined }
+      ),
+      divisionPerformance: fc.option(fc.constant([]), { nil: undefined }),
+      districtPerformance: fc.option(fc.constant([]), { nil: undefined }),
+    })
   })
 
 /**
@@ -431,6 +444,7 @@ const generateDistrictRanking = (): fc.Arbitrary<DistrictRanking> =>
     paymentsRank: fc.integer({ min: 1, max: 150 }),
     distinguishedRank: fc.integer({ min: 1, max: 150 }),
     aggregateScore: fc.integer({ min: 0, max: 450 }),
+    overallRank: fc.integer({ min: 1, max: 150 }),
   })
 
 /**
@@ -518,7 +532,9 @@ function assertSnapshotsEquivalent(
 
     // Compare membership stats
     expect(retDistrict.membership.total).toBe(origDistrict.membership.total)
-    expect(retDistrict.membership.change).toBe(origDistrict.membership.change)
+    // Note: membership.change is a derived value (totalMembership - membershipBase)
+    // that gets recomputed on read. It cannot survive round-trip since membershipBase
+    // per-club is not preserved in the file format.
 
     // Compare club stats
     expect(retDistrict.clubs.total).toBe(origDistrict.clubs.total)

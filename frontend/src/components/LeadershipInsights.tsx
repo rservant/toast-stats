@@ -77,8 +77,8 @@ export const LeadershipInsights: React.FC<LeadershipInsightsProps> = ({
     return (
       <div className="bg-white rounded-lg shadow-md p-6">
         <p className="text-gray-600">
-          No leadership insights available. Please initiate a backfill to fetch
-          historical data.
+          No leadership insights available. Please use the Admin Panel to
+          collect historical data.
         </p>
       </div>
     )

@@ -1,14 +1,12 @@
 /**
- * Unit Tests for Backend overallRank Calculation in Rank History Endpoint
+ * Unit Tests for Backend overallRank in Rank History Endpoint
  *
- * Tests the overallRank calculation logic in the rank-history endpoint:
- * - District ranked #1 (highest aggregateScore) gets overallRank = 1
- * - District in middle position gets correct overallRank
- * - District ranked last gets overallRank = totalDistricts
- * - Tied aggregate scores get same overallRank
- * - District not found in snapshot is excluded from history
+ * Tests the overallRank field in the rank-history endpoint:
+ * - Requirement 17.3: Route SHALL NOT compute overallRank by sorting rankings
+ * - Requirement 17.4: overallRank SHALL be pre-computed and stored in rankings files
  *
- * **Validates: Requirements 2.2**
+ * The overallRank is now read directly from pre-computed rankings data,
+ * not computed on-demand by sorting.
  *
  * Test Isolation:
  * - Each test uses a fresh Express app instance
@@ -38,6 +36,7 @@ interface MockDistrictRanking {
   clubsRank: number
   paymentsRank: number
   distinguishedRank: number
+  overallRank: number // Pre-computed overall rank (Requirement 17.4)
 }
 
 interface MockRankingsData {
@@ -122,7 +121,7 @@ const mockHelpers = sharedModule as typeof sharedModule & {
   __clearMocks: () => void
 }
 
-describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
+describe('Rank History Endpoint - overallRank Read from Pre-computed Data', () => {
   let app: Express
 
   beforeAll(() => {
@@ -145,15 +144,15 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
   })
 
   /**
-   * Test Suite: overallRank Calculation Based on Aggregate Score Position
-   * **Validates: Requirements 2.2**
+   * Test Suite: overallRank Read from Pre-computed Rankings
+   * **Validates: Requirements 17.3, 17.4**
    *
-   * Tests that overallRank is correctly calculated by sorting all districts
-   * by aggregateScore in descending order and assigning position (1-indexed).
+   * Tests that overallRank is read directly from pre-computed rankings data,
+   * not computed on-demand by sorting.
    */
-  describe('overallRank Calculation Based on Aggregate Score Position', () => {
-    it('should assign overallRank = 1 to district with highest aggregateScore', async () => {
-      // Setup: Create rankings where district 101 has the highest score
+  describe('overallRank Read from Pre-computed Rankings', () => {
+    it('should read overallRank = 1 from pre-computed data for top-ranked district (Req 17.3, 17.4)', async () => {
+      // Setup: Create rankings where district 101 has pre-computed overallRank = 1
       const rankings: MockDistrictRanking[] = [
         {
           districtId: '101',
@@ -162,6 +161,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 1,
           paymentsRank: 1,
           distinguishedRank: 1,
+          overallRank: 1, // Pre-computed
         },
         {
           districtId: '102',
@@ -170,6 +170,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 2,
           paymentsRank: 2,
           distinguishedRank: 2,
+          overallRank: 2, // Pre-computed
         },
         {
           districtId: '103',
@@ -178,6 +179,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 3,
           paymentsRank: 3,
           distinguishedRank: 3,
+          overallRank: 3, // Pre-computed
         },
       ]
 
@@ -195,12 +197,13 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
 
       expect(response.status).toBe(200)
       expect(response.body.history).toHaveLength(1)
+      // Verify overallRank is read from pre-computed data, not computed
       expect(response.body.history[0].overallRank).toBe(1)
       expect(response.body.history[0].aggregateScore).toBe(300)
     })
 
-    it('should assign correct overallRank to district in middle position', async () => {
-      // Setup: Create 10 districts where district 105 is ranked 5th
+    it('should read correct overallRank from pre-computed data for middle-ranked district (Req 17.3, 17.4)', async () => {
+      // Setup: Create 10 districts where district 105 has pre-computed overallRank = 5
       const rankings: MockDistrictRanking[] = Array.from(
         { length: 10 },
         (_, i) => ({
@@ -210,6 +213,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: i + 1,
           paymentsRank: i + 1,
           distinguishedRank: i + 1,
+          overallRank: i + 1, // Pre-computed
         })
       )
 
@@ -221,7 +225,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
         new Map([[snapshotId, createMockRankingsData(rankings, snapshotId)]])
       )
 
-      // District 105 has aggregateScore 260 (5th highest)
+      // District 105 has pre-computed overallRank = 5
       const response = await request(app).get(
         '/api/districts/105/rank-history?startDate=2024-01-01&endDate=2024-12-31'
       )
@@ -232,8 +236,8 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
       expect(response.body.history[0].aggregateScore).toBe(260)
     })
 
-    it('should assign overallRank = totalDistricts to district ranked last', async () => {
-      // Setup: Create rankings where district 103 has the lowest score
+    it('should read overallRank = totalDistricts from pre-computed data for last-ranked district (Req 17.3, 17.4)', async () => {
+      // Setup: Create rankings where district 103 has pre-computed overallRank = 3 (last)
       const rankings: MockDistrictRanking[] = [
         {
           districtId: '101',
@@ -242,6 +246,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 1,
           paymentsRank: 1,
           distinguishedRank: 1,
+          overallRank: 1,
         },
         {
           districtId: '102',
@@ -250,6 +255,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 2,
           paymentsRank: 2,
           distinguishedRank: 2,
+          overallRank: 2,
         },
         {
           districtId: '103',
@@ -258,6 +264,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 3,
           paymentsRank: 3,
           distinguishedRank: 3,
+          overallRank: 3, // Pre-computed as last
         },
       ]
 
@@ -280,80 +287,6 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
       expect(response.body.history[0].aggregateScore).toBe(100)
     })
 
-    it('should assign same overallRank to districts with tied aggregate scores', async () => {
-      // Setup: Create rankings where districts 102 and 103 have the same score
-      const rankings: MockDistrictRanking[] = [
-        {
-          districtId: '101',
-          districtName: 'District 101',
-          aggregateScore: 300,
-          clubsRank: 1,
-          paymentsRank: 1,
-          distinguishedRank: 1,
-        },
-        {
-          districtId: '102',
-          districtName: 'District 102',
-          aggregateScore: 250, // Tied with 103
-          clubsRank: 2,
-          paymentsRank: 2,
-          distinguishedRank: 2,
-        },
-        {
-          districtId: '103',
-          districtName: 'District 103',
-          aggregateScore: 250, // Tied with 102
-          clubsRank: 3,
-          paymentsRank: 3,
-          distinguishedRank: 3,
-        },
-        {
-          districtId: '104',
-          districtName: 'District 104',
-          aggregateScore: 200,
-          clubsRank: 4,
-          paymentsRank: 4,
-          distinguishedRank: 4,
-        },
-      ]
-
-      const snapshotId = '2024-01-15'
-      mockHelpers.__setMockSnapshots([
-        { snapshot_id: snapshotId, status: 'success', created_at: snapshotId },
-      ])
-      mockHelpers.__setMockRankingsData(
-        new Map([[snapshotId, createMockRankingsData(rankings, snapshotId)]])
-      )
-
-      // Get rank history for district 102
-      const response102 = await request(app).get(
-        '/api/districts/102/rank-history?startDate=2024-01-01&endDate=2024-12-31'
-      )
-
-      // Get rank history for district 103
-      const response103 = await request(app).get(
-        '/api/districts/103/rank-history?startDate=2024-01-01&endDate=2024-12-31'
-      )
-
-      expect(response102.status).toBe(200)
-      expect(response103.status).toBe(200)
-
-      // Both districts with tied scores should have the same overallRank
-      // Note: The current implementation uses findIndex which gives position 2 to the first
-      // found district with score 250. The second one gets position 3.
-      // This is the expected behavior based on the current implementation.
-      // If true tie-breaking is needed, the implementation would need to be updated.
-      const rank102 = response102.body.history[0].overallRank
-      const rank103 = response103.body.history[0].overallRank
-
-      // Both should be ranked 2nd (after district 101 with score 300)
-      // The implementation uses findIndex, so the first one found gets rank 2
-      expect(rank102).toBeGreaterThanOrEqual(2)
-      expect(rank103).toBeGreaterThanOrEqual(2)
-      expect(rank102).toBeLessThanOrEqual(3)
-      expect(rank103).toBeLessThanOrEqual(3)
-    })
-
     it('should exclude district not found in snapshot from history', async () => {
       // Setup: Create rankings that don't include district 999
       const rankings: MockDistrictRanking[] = [
@@ -364,6 +297,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 1,
           paymentsRank: 1,
           distinguishedRank: 1,
+          overallRank: 1,
         },
         {
           districtId: '102',
@@ -372,6 +306,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 2,
           paymentsRank: 2,
           distinguishedRank: 2,
+          overallRank: 2,
         },
       ]
 
@@ -397,13 +332,13 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
 
   /**
    * Test Suite: overallRank Consistency Across Multiple Snapshots
-   * **Validates: Requirements 2.2, 2.3**
+   * **Validates: Requirements 17.3, 17.4**
    *
-   * Tests that overallRank is correctly calculated for each snapshot
+   * Tests that overallRank is correctly read from pre-computed data for each snapshot
    * when a district's position changes over time.
    */
   describe('overallRank Consistency Across Multiple Snapshots', () => {
-    it('should calculate correct overallRank for each snapshot when position changes', async () => {
+    it('should read correct pre-computed overallRank for each snapshot when position changes (Req 17.3, 17.4)', async () => {
       // Setup: Create two snapshots where district 102 improves from rank 3 to rank 1
       const rankings1: MockDistrictRanking[] = [
         {
@@ -413,6 +348,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 1,
           paymentsRank: 1,
           distinguishedRank: 1,
+          overallRank: 1,
         },
         {
           districtId: '103',
@@ -421,6 +357,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 2,
           paymentsRank: 2,
           distinguishedRank: 2,
+          overallRank: 2,
         },
         {
           districtId: '102',
@@ -429,6 +366,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 3,
           paymentsRank: 3,
           distinguishedRank: 3,
+          overallRank: 3,
         },
       ]
 
@@ -440,6 +378,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 1,
           paymentsRank: 1,
           distinguishedRank: 1,
+          overallRank: 1,
         },
         {
           districtId: '101',
@@ -448,6 +387,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 2,
           paymentsRank: 2,
           distinguishedRank: 2,
+          overallRank: 2,
         },
         {
           districtId: '103',
@@ -456,6 +396,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 3,
           paymentsRank: 3,
           distinguishedRank: 3,
+          overallRank: 3,
         },
       ]
 
@@ -505,13 +446,13 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
 
   /**
    * Test Suite: Response Structure Validation
-   * **Validates: Requirements 2.1**
+   * **Validates: Requirements 17.3, 17.4**
    *
    * Tests that the API response includes the overallRank field
-   * with the correct structure.
+   * read from pre-computed data with the correct structure.
    */
   describe('Response Structure Validation', () => {
-    it('should include overallRank field in each history entry', async () => {
+    it('should include overallRank field read from pre-computed data in each history entry (Req 17.3, 17.4)', async () => {
       const rankings: MockDistrictRanking[] = [
         {
           districtId: '101',
@@ -520,6 +461,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 1,
           paymentsRank: 1,
           distinguishedRank: 1,
+          overallRank: 1,
         },
       ]
 
@@ -564,6 +506,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 1,
           paymentsRank: 1,
           distinguishedRank: 1,
+          overallRank: 1,
         },
       ]
 
@@ -592,12 +535,12 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
 
   /**
    * Test Suite: Edge Cases
-   * **Validates: Requirements 2.2**
+   * **Validates: Requirements 17.3, 17.4**
    *
-   * Tests edge cases for overallRank calculation.
+   * Tests edge cases for overallRank read from pre-computed data.
    */
   describe('Edge Cases', () => {
-    it('should handle single district in rankings', async () => {
+    it('should handle single district in rankings with pre-computed overallRank (Req 17.3, 17.4)', async () => {
       const rankings: MockDistrictRanking[] = [
         {
           districtId: '101',
@@ -606,6 +549,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 1,
           paymentsRank: 1,
           distinguishedRank: 1,
+          overallRank: 1,
         },
       ]
 
@@ -640,7 +584,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
       expect(response.body.history).toHaveLength(0)
     })
 
-    it('should handle district with zero aggregate score', async () => {
+    it('should handle district with zero aggregate score and pre-computed overallRank (Req 17.3, 17.4)', async () => {
       const rankings: MockDistrictRanking[] = [
         {
           districtId: '101',
@@ -649,6 +593,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 1,
           paymentsRank: 1,
           distinguishedRank: 1,
+          overallRank: 1,
         },
         {
           districtId: '102',
@@ -657,6 +602,7 @@ describe('Rank History Endpoint - overallRank Calculation Unit Tests', () => {
           clubsRank: 2,
           paymentsRank: 2,
           distinguishedRank: 2,
+          overallRank: 2, // Pre-computed as last
         },
       ]
 

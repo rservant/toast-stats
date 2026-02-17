@@ -10,6 +10,7 @@
  * - LocalDistrictConfigStorage: Local filesystem district config storage (development)
  * - FirestoreSnapshotStorage: Cloud Firestore storage (production)
  * - GCSRawCSVStorage: Cloud Storage CSV cache (production)
+ * - GCSSnapshotStorage: Cloud Storage snapshot storage (production)
  *
  * Factory:
  * - StorageProviderFactory: Creates storage providers from environment or explicit config
@@ -18,15 +19,25 @@
 export { LocalSnapshotStorage } from './LocalSnapshotStorage.js'
 export { LocalRawCSVStorage } from './LocalRawCSVStorage.js'
 export { LocalDistrictConfigStorage } from './LocalDistrictConfigStorage.js'
+export { LocalTimeSeriesIndexStorage } from './LocalTimeSeriesIndexStorage.js'
+export type { LocalTimeSeriesIndexStorageConfig } from './LocalTimeSeriesIndexStorage.js'
 export { FirestoreSnapshotStorage } from './FirestoreSnapshotStorage.js'
 export type {
   FirestoreSnapshotStorageConfig,
   IndexHealthResult,
+  BatchWriteConfig,
+  BatchWriteResult,
+  SnapshotWriteResult,
 } from './FirestoreSnapshotStorage.js'
+export { DEFAULT_BATCH_WRITE_CONFIG } from './FirestoreSnapshotStorage.js'
 export { FirestoreDistrictConfigStorage } from './FirestoreDistrictConfigStorage.js'
 export type { FirestoreDistrictConfigStorageConfig } from './FirestoreDistrictConfigStorage.js'
+export { FirestoreTimeSeriesIndexStorage } from './FirestoreTimeSeriesIndexStorage.js'
+export type { FirestoreTimeSeriesIndexStorageConfig } from './FirestoreTimeSeriesIndexStorage.js'
 export { GCSRawCSVStorage } from './GCSRawCSVStorage.js'
 export type { GCSRawCSVStorageConfig } from './GCSRawCSVStorage.js'
+export { GCSSnapshotStorage } from './GCSSnapshotStorage.js'
+export type { GCSSnapshotStorageConfig } from './GCSSnapshotStorage.js'
 export { StorageProviderFactory } from './StorageProviderFactory.js'
 export type { StorageProviders } from './StorageProviderFactory.js'
 
@@ -35,6 +46,7 @@ export type {
   ISnapshotStorage,
   IRawCSVStorage,
   IDistrictConfigStorage,
+  ITimeSeriesIndexStorage,
   StorageConfig,
   StorageProviderType,
   LocalStorageConfig,

@@ -39,10 +39,7 @@ import React, { useMemo } from 'react'
 import { DivisionPerformance } from '../utils/divisionStatus'
 import { DivisionCriteriaExplanation } from './DivisionCriteriaExplanation'
 import { CriteriaExplanation } from './CriteriaExplanation'
-import {
-  AreaProgressSummary,
-  AreaWithDivision,
-} from './DivisionAreaProgressSummary'
+import { DivisionAreaProgressSummary } from './DivisionAreaProgressSummary'
 import { LoadingSkeleton } from './LoadingSkeleton'
 
 /**
@@ -93,16 +90,14 @@ export const DivisionAreaRecognitionPanel: React.FC<
    *
    * Requirement 5.1: Display all areas in the district with their current progress
    */
-  const areasWithDivision: AreaWithDivision[] = useMemo(() => {
+  const totalAreaCount = useMemo(() => {
     if (isLoading || !divisions || divisions.length === 0) {
-      return []
+      return 0
     }
 
-    return divisions.flatMap(division =>
-      division.areas.map(area => ({
-        ...area,
-        divisionId: division.divisionId,
-      }))
+    return divisions.reduce(
+      (count, division) => count + division.areas.length,
+      0
     )
   }, [divisions, isLoading])
 
@@ -223,7 +218,7 @@ export const DivisionAreaRecognitionPanel: React.FC<
       <CriteriaExplanation defaultExpanded={false} />
 
       {/* Area Progress Summary - Requirements 5, 6, 10.2, 10.3 */}
-      <AreaProgressSummary areas={areasWithDivision} isLoading={false} />
+      <DivisionAreaProgressSummary divisions={divisions} isLoading={false} />
 
       {/* Summary Footer - Requirement 1.3: Consistent styling */}
       <div className="bg-white rounded-lg shadow-md p-4">
@@ -231,23 +226,13 @@ export const DivisionAreaRecognitionPanel: React.FC<
           className="font-tm-body text-gray-600 text-center"
           style={{ fontSize: '14px' }}
         >
-          Showing {areasWithDivision.length} area
-          {areasWithDivision.length !== 1 ? 's' : ''} across {divisions.length}{' '}
-          division{divisions.length !== 1 ? 's' : ''}
+          Showing {totalAreaCount} area
+          {totalAreaCount !== 1 ? 's' : ''} across {divisions.length} division
+          {divisions.length !== 1 ? 's' : ''}
         </p>
       </div>
     </section>
   )
 }
-
-/**
- * @deprecated Use DivisionAreaRecognitionPanel instead. This alias is provided for backward compatibility.
- */
-export const AreaRecognitionPanel = DivisionAreaRecognitionPanel
-
-/**
- * @deprecated Use DivisionAreaRecognitionPanelProps instead. This alias is provided for backward compatibility.
- */
-export type AreaRecognitionPanelProps = DivisionAreaRecognitionPanelProps
 
 export default DivisionAreaRecognitionPanel

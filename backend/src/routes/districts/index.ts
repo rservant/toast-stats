@@ -7,7 +7,7 @@
 import { Router } from 'express'
 import { coreRouter } from './core.js'
 import { analyticsRouter } from './analytics.js'
-import { backfillRouter } from './backfill.js'
+import { analyticsSummaryRouter } from './analyticsSummary.js'
 import { snapshotsRouter } from './snapshots.js'
 import { rankingsRouter } from './rankings.js'
 
@@ -19,14 +19,15 @@ const router = Router()
 // Snapshots routes (includes /cache/dates which must come before /:districtId)
 router.use('/', snapshotsRouter)
 
-// Backfill routes (includes /backfill which must come before /:districtId)
-router.use('/', backfillRouter)
-
 // Core routes (includes / and /:districtId routes)
 router.use('/', coreRouter)
 
 // Rankings routes (/:districtId/available-ranking-years)
 router.use('/', rankingsRouter)
+
+// Analytics summary routes (/:districtId/analytics-summary - aggregated endpoint)
+// Must come before general analytics routes to ensure specific route matches first
+router.use('/', analyticsSummaryRouter)
 
 // Analytics routes (all are /:districtId/* routes)
 router.use('/', analyticsRouter)
@@ -41,9 +42,6 @@ export {
   perDistrictSnapshotStore,
   districtDataAggregator,
   snapshotStore,
-  getBackfillService,
   getRefreshService,
-  getAnalyticsEngine,
-  startBackfillCleanupInterval,
-  stopBackfillCleanupInterval,
+  getTimeSeriesIndexService,
 } from './shared.js'

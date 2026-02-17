@@ -226,6 +226,7 @@ export function findComparablePayment(
  * @param districtId - The district ID to fetch data for
  * @param programYearStartDate - Optional start date (defaults to current program year)
  * @param endDate - Optional end date
+ * @param selectedProgramYear - Optional program year to use as the current year for grouping and statistics
  * @returns UsePaymentsTrendResult with payment trend data, loading, and error states
  *
  * Requirements: 2.1, 2.4, 6.2
@@ -233,9 +234,10 @@ export function findComparablePayment(
 export function usePaymentsTrend(
   districtId: string | null,
   programYearStartDate?: string,
-  endDate?: string
+  endDate?: string,
+  selectedProgramYear?: ProgramYear
 ): UsePaymentsTrendResult {
-  const currentProgramYear = getCurrentProgramYear()
+  const currentProgramYear = selectedProgramYear ?? getCurrentProgramYear()
 
   // Calculate date range for fetching data (3 years back for comparison)
   const startDate =
@@ -262,11 +264,12 @@ export function usePaymentsTrend(
     const paymentBase =
       analyticsData.performanceTargets?.membershipPayments.base ?? null
 
-    // Build trend data from paymentsTrend if available, otherwise return empty
-    // Requirements: 3.1, 3.2, 3.3
-    const trendData = analyticsData.paymentsTrend
+    // Build trend data from multi-year analytics data
+    // Requirements: 1.1
+    const rawTrend = analyticsData.paymentsTrend
+    const trendData = rawTrend
       ? buildPaymentTrend(
-          analyticsData.paymentsTrend.map(point => ({
+          rawTrend.map(point => ({
             date: point.date,
             totalPayments: point.payments,
           }))

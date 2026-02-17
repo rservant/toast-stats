@@ -9,12 +9,6 @@ import { cacheMiddleware } from '../../middleware/cache.js'
 import { generateDistrictCacheKey } from '../../utils/cacheKeys.js'
 import { logger } from '../../utils/logger.js'
 import {
-  transformDistrictsResponse,
-  transformDistrictStatisticsResponse,
-  transformMembershipHistoryResponse,
-  transformClubsResponse,
-  transformDailyReportsResponse,
-  transformDailyReportDetailResponse,
   transformEducationalAwardsResponse,
   transformErrorResponse,
 } from '../../utils/transformers.js'
@@ -39,6 +33,7 @@ import {
   findNearestSnapshot,
   getProgramYearInfo,
   extractStringParam,
+  extractQueryParam,
 } from './shared.js'
 
 export const coreRouter = Router()
@@ -84,7 +79,7 @@ coreRouter.get(
           lastUpdated: summary.lastUpdated,
         }))
 
-        return transformDistrictsResponse({ districts }) as DistrictsResponse
+        return { districts } as DistrictsResponse
       },
       'fetch districts from per-district snapshot'
     )
@@ -126,7 +121,7 @@ coreRouter.get(
   }),
   async (req: Request, res: Response) => {
     const requestId = `rankings_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const requestedDate = req.query['date'] as string | undefined
+    const requestedDate = extractQueryParam(req.query['date'])
     const enableFallback = req.query['fallback'] !== 'false' // Default to true
 
     logger.info('Received request for district rankings', {
@@ -334,7 +329,7 @@ coreRouter.get(
         req.params['districtId'],
         'districtId'
       )
-      const date = req.query['date'] as string | undefined
+      const date = extractQueryParam(req.query['date'])
       // Include date in cache key for proper cache invalidation (Requirement 6.1)
       return generateDistrictCacheKey(
         districtId,
@@ -345,7 +340,7 @@ coreRouter.get(
   }),
   async (req: Request, res: Response) => {
     const rawDistrictId = req.params['districtId']
-    const requestedDate = req.query['date'] as string | undefined
+    const requestedDate = extractQueryParam(req.query['date'])
 
     // Handle string | string[] type from Express
     const districtIdStr = Array.isArray(rawDistrictId)
@@ -416,9 +411,7 @@ coreRouter.get(
           }
         )
 
-        return transformDistrictStatisticsResponse(
-          district
-        ) as DistrictStatistics
+        return district as DistrictStatistics
       },
       'fetch district statistics from per-district snapshot'
     )
@@ -492,9 +485,9 @@ coreRouter.get(
         const membershipHistory =
           (district as DistrictStatistics & { membershipHistory?: unknown[] })
             .membershipHistory || []
-        return transformMembershipHistoryResponse({
-          membershipHistory,
-        }) as MembershipHistoryResponse
+        return {
+          data: membershipHistory as MembershipHistoryResponse['data'],
+        } satisfies MembershipHistoryResponse
       },
       'fetch membership history from per-district snapshot'
     )
@@ -539,9 +532,9 @@ coreRouter.get(
       res,
       districtId,
       district =>
-        transformClubsResponse({
-          clubs: district.clubs || [],
-        }) as ClubsResponse,
+        ({
+          clubs: (district.clubs || []) as unknown as ClubsResponse['clubs'],
+        }) satisfies Record<string, unknown> as ClubsResponse,
       'fetch clubs from per-district snapshot'
     )
 
@@ -720,9 +713,9 @@ coreRouter.get(
         const dailyReports =
           (district as DistrictStatistics & { dailyReports?: unknown[] })
             .dailyReports || []
-        return transformDailyReportsResponse({
-          dailyReports,
-        }) as DailyReportsResponse
+        return {
+          reports: dailyReports as DailyReportsResponse['reports'],
+        } satisfies DailyReportsResponse
       },
       'fetch daily reports from snapshot'
     )
@@ -753,8 +746,7 @@ coreRouter.get(
   }),
   async (req: Request, res: Response) => {
     const districtId = getValidDistrictId(req)
-    const rawDate = req.params['date']
-    const date = Array.isArray(rawDate) ? rawDate[0] : rawDate
+    const date = extractQueryParam(req.params['date'])
 
     // Validate district ID
     if (!districtId) {
@@ -806,9 +798,7 @@ coreRouter.get(
         }
         const dailyReportDetail =
           districtAny.dailyReportDetail || districtAny.dailyReports?.[0] || {}
-        return transformDailyReportDetailResponse(
-          dailyReportDetail
-        ) as DailyReportDetailResponse
+        return dailyReportDetail as DailyReportDetailResponse
       },
       'fetch daily report detail from snapshot'
     )
@@ -827,8 +817,12 @@ coreRouter.get(
  * Returns RankHistoryResponse format expected by frontend:
  * - districtId: string
  * - districtName: string
- * - history: HistoricalRankPoint[] (date, aggregateScore, clubsRank, paymentsRank, distinguishedRank)
+ * - history: HistoricalRankPoint[] (date, aggregateScore, clubsRank, paymentsRank, distinguishedRank, overallRank)
  * - programYear: ProgramYearInfo (startDate, endDate, year)
+ *
+ * Requirements:
+ * - 17.3: Route SHALL NOT compute overallRank by sorting rankings
+ * - 17.4: overallRank SHALL be pre-computed and stored in rankings files
  */
 coreRouter.get(
   '/:districtId/rank-history',
@@ -956,16 +950,10 @@ coreRouter.get(
             districtName = districtRanking.districtName
           }
 
-          // Calculate overallRank by sorting all districts by aggregateScore descending
-          // and finding the target district's position (1-indexed)
-          const sortedRankings = [...rankings.rankings].sort(
-            (a, b) => b.aggregateScore - a.aggregateScore
-          )
-          const overallRankPosition = sortedRankings.findIndex(
-            r => r.districtId === districtId
-          )
-          const overallRank =
-            overallRankPosition >= 0 ? overallRankPosition + 1 : 0
+          // Read pre-computed overallRank from rankings data
+          // Requirement 17.3: Route SHALL NOT compute overallRank by sorting rankings
+          // Requirement 17.4: overallRank SHALL be pre-computed and stored in rankings files
+          const overallRank = districtRanking.overallRank ?? 0
 
           history.push({
             date,

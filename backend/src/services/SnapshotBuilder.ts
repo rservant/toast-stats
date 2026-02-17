@@ -6,7 +6,7 @@
  * - Scraper CLI: Handles data collection and caching
  * - SnapshotBuilder: Creates snapshots from cached data
  *
- * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.7, 6.3, 6.4
+ * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.7, 6.3, 6.4, 9.4, 9.5
  */
 
 import * as crypto from 'crypto'
@@ -18,7 +18,10 @@ import {
   type RawData,
   type RawDistrictData,
 } from './DataNormalizer.js'
-import type { RankingCalculator } from './RankingCalculator.js'
+import {
+  DistrictIdValidator,
+  type IDistrictIdValidator,
+} from './DistrictIdValidator.js'
 import type {
   IRawCSVStorage,
   ISnapshotStorage,
@@ -29,11 +32,16 @@ import type {
   Snapshot,
   NormalizedData,
   SnapshotStatus,
-  AllDistrictsRankingsData,
 } from '../types/snapshots.js'
 import type { ScrapedRecord } from '../types/districts.js'
 import { CSVType, type RawCSVCacheMetadata } from '../types/rawCSVCache.js'
+import {
+  AllDistrictsRankingsDataSchema,
+  type AllDistrictsRankingsData,
+} from '@toastmasters/shared-contracts'
 import { parse } from 'csv-parse/sync'
+import * as fs from 'fs/promises'
+import * as path from 'path'
 
 /**
  * Configuration for SnapshotBuilder
@@ -73,6 +81,18 @@ export interface BuildResult {
   errors: string[]
   /** Duration of the build operation in milliseconds */
   duration_ms: number
+  /** Validation summary for rejected records (Requirement 9.5) */
+  validation?: {
+    totalRecords: number
+    validRecords: number
+    rejectedRecords: number
+    rejectionDetails?: Array<{ districtId: string; reason: string }>
+  }
+  /**
+   * District data from the snapshot (includes clubPerformance for time-series calculations)
+   * This is the original data before storage transformation, preserving all fields
+   */
+  districtData?: import('../types/districts.js').DistrictStatistics[]
 }
 
 /**
@@ -132,6 +152,8 @@ export interface ILogger {
  * - 3.7: Preserve closing period metadata from cache
  * - 6.3: Validate cache data integrity before processing
  * - 6.4: Skip corrupted files with appropriate error logging
+ * - 9.4: Log warnings for rejected records during validation
+ * - 9.5: Provide rejection count in snapshot metadata
  *
  * Storage Abstraction (Requirements 1.3, 1.4):
  * - Uses ISnapshotStorage interface for snapshot persistence
@@ -143,9 +165,10 @@ export class SnapshotBuilder {
   private readonly districtConfigService: DistrictConfigurationService
   private readonly snapshotStorage: ISnapshotStorage
   private readonly validator: DataValidator
+  private readonly districtIdValidator: IDistrictIdValidator
   private readonly closingPeriodDetector: ClosingPeriodDetector
   private readonly dataNormalizer: DataNormalizer
-  private readonly rankingCalculator?: RankingCalculator
+  private readonly cacheDir: string
   private readonly log: ILogger
 
   /**
@@ -157,20 +180,22 @@ export class SnapshotBuilder {
    * @param snapshotStorage - Storage interface for snapshot operations (ISnapshotStorage or FileSnapshotStore)
    *                          Supports both local filesystem and cloud storage backends
    * @param validator - Optional data validator
-   * @param rankingCalculator - Optional ranking calculator for BordaCount rankings
    * @param closingPeriodDetector - Optional closing period detector
    * @param dataNormalizer - Optional data normalizer
    * @param customLogger - Optional custom logger
+   * @param districtIdValidator - Optional district ID validator for filtering invalid records
+   * @param cacheDir - Optional cache directory path for reading pre-computed rankings
    */
   constructor(
     rawCSVCache: IRawCSVStorage,
     districtConfigService: DistrictConfigurationService,
     snapshotStorage: ISnapshotStorage | FileSnapshotStore,
     validator?: DataValidator,
-    rankingCalculator?: RankingCalculator,
     closingPeriodDetector?: ClosingPeriodDetector,
     dataNormalizer?: DataNormalizer,
-    customLogger?: ILogger
+    customLogger?: ILogger,
+    districtIdValidator?: IDistrictIdValidator,
+    cacheDir?: string
   ) {
     this.rawCSVCache = rawCSVCache
     this.districtConfigService = districtConfigService
@@ -178,7 +203,9 @@ export class SnapshotBuilder {
     // so we can safely cast for backward compatibility
     this.snapshotStorage = snapshotStorage as ISnapshotStorage
     this.validator = validator ?? new DataValidator()
+    this.districtIdValidator = districtIdValidator ?? new DistrictIdValidator()
     this.log = customLogger ?? logger
+    this.cacheDir = cacheDir ?? ''
 
     // Initialize ClosingPeriodDetector
     this.closingPeriodDetector =
@@ -192,13 +219,7 @@ export class SnapshotBuilder {
         closingPeriodDetector: this.closingPeriodDetector,
       })
 
-    if (rankingCalculator !== undefined) {
-      this.rankingCalculator = rankingCalculator
-    }
-
-    this.log.info('SnapshotBuilder initialized', {
-      hasRankingCalculator: !!this.rankingCalculator,
-    })
+    this.log.info('SnapshotBuilder initialized')
   }
 
   /**
@@ -254,28 +275,30 @@ export class SnapshotBuilder {
       const normalizationResult = await this.dataNormalizer.normalize(rawData)
       const normalizedData = normalizationResult.normalizedData
 
-      // Step 4: Calculate rankings if calculator is available
+      // Step 4: Read pre-computed rankings from file (if available)
+      // Rankings are pre-computed by scraper-cli during the transform command
       let allDistrictsRankings: AllDistrictsRankingsData | undefined
-      if (this.rankingCalculator && rawData.allDistricts.length > 0) {
-        this.log.info('Calculating all-districts rankings', {
-          buildId,
-          districtCount: rawData.allDistricts.length,
-        })
-
-        try {
-          allDistrictsRankings = await this.calculateAllDistrictsRankings(
-            rawData.allDistricts,
-            rawData.allDistrictsMetadata
-          )
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error'
-          this.log.error('Rankings calculation failed', {
+      try {
+        allDistrictsRankings = await this.readPreComputedRankings(targetDate)
+        if (allDistrictsRankings) {
+          this.log.info('Loaded pre-computed rankings', {
             buildId,
-            error: errorMessage,
+            rankingsCount: allDistrictsRankings.rankings.length,
           })
-          // Continue without rankings - don't fail the entire build
+        } else {
+          this.log.info('No pre-computed rankings available', {
+            buildId,
+            targetDate,
+          })
         }
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error'
+        this.log.warn('Failed to read pre-computed rankings', {
+          buildId,
+          error: errorMessage,
+        })
+        // Continue without rankings - don't fail the entire build
       }
 
       // Step 5: Validate normalized data
@@ -310,6 +333,7 @@ export class SnapshotBuilder {
           status: 'failed',
           errors: validationResult.errors,
           duration_ms: Date.now() - startTime,
+          validation: rawData.validationSummary,
         }
       }
 
@@ -346,6 +370,8 @@ export class SnapshotBuilder {
         districtsIncluded: availability.cachedDistricts.length,
         districtsMissing: availability.missingDistricts.length,
         duration_ms: Date.now() - startTime,
+        validationRejectedRecords:
+          rawData.validationSummary?.rejectedRecords ?? 0,
       })
 
       return {
@@ -357,6 +383,8 @@ export class SnapshotBuilder {
         status: snapshotStatus,
         errors: allErrors,
         duration_ms: Date.now() - startTime,
+        validation: rawData.validationSummary,
+        districtData: normalizedData.districts,
       }
     } catch (error) {
       const errorMessage =
@@ -473,6 +501,7 @@ export class SnapshotBuilder {
 
     // Read all-districts data with checksum validation (Requirements 6.3, 6.4)
     let allDistricts: ScrapedRecord[] = []
+    let validationSummary: RawData['validationSummary'] = undefined
     const {
       content: allDistrictsCSV,
       validationResult: allDistrictsValidation,
@@ -492,10 +521,38 @@ export class SnapshotBuilder {
 
     if (allDistrictsCSV) {
       try {
-        allDistricts = this.parseCSV(allDistrictsCSV)
+        const parsedRecords = this.parseCSV(allDistrictsCSV)
+
+        // Filter out invalid district IDs (Requirements 9.4, 9.5)
+        const districtIdValidationResult =
+          this.districtIdValidator.filterValidRecords(parsedRecords)
+        allDistricts = districtIdValidationResult.valid
+
+        // Build validation summary for metadata (Requirement 9.5)
+        validationSummary = {
+          totalRecords: parsedRecords.length,
+          validRecords: districtIdValidationResult.valid.length,
+          rejectedRecords: districtIdValidationResult.rejected.length,
+          rejectionDetails: districtIdValidationResult.rejected,
+        }
+
+        // Track rejected records for metadata
+        if (districtIdValidationResult.rejected.length > 0) {
+          this.log.info(
+            'Filtered invalid district records from all-districts data',
+            {
+              date,
+              totalRecords: parsedRecords.length,
+              validRecords: districtIdValidationResult.valid.length,
+              rejectedRecords: districtIdValidationResult.rejected.length,
+            }
+          )
+        }
+
         this.log.debug('Parsed all-districts CSV', {
           date,
           recordCount: allDistricts.length,
+          rejectedCount: districtIdValidationResult.rejected.length,
         })
       } catch (error) {
         const errorMessage =
@@ -564,6 +621,7 @@ export class SnapshotBuilder {
         successfulDistricts,
         failedDistricts,
       },
+      validationSummary,
     }
 
     this.log.info('Cached data read completed', {
@@ -576,6 +634,7 @@ export class SnapshotBuilder {
       corruptedFiles: corruptedFiles.length > 0 ? corruptedFiles : undefined,
       isClosingPeriod: cacheMetadata?.isClosingPeriod,
       dataMonth: cacheMetadata?.dataMonth,
+      validationRejectedRecords: validationSummary?.rejectedRecords ?? 0,
     })
 
     return rawData
@@ -773,88 +832,75 @@ export class SnapshotBuilder {
   }
 
   /**
-   * Calculate all-districts rankings
+   * Read pre-computed rankings from the snapshot directory
    *
-   * @param allDistricts - All districts data
-   * @param metadata - All districts metadata
-   * @returns Rankings data or undefined
+   * Rankings are pre-computed by scraper-cli during the transform command
+   * and stored in all-districts-rankings.json in the snapshot directory.
+   *
+   * Requirements: 3.3 - Read pre-computed rankings from transform output
+   * Requirements: 3.4 - Handle missing rankings gracefully
+   *
+   * @param date - Target date (YYYY-MM-DD format)
+   * @returns Rankings data or undefined if not available
    */
-  private async calculateAllDistrictsRankings(
-    allDistricts: ScrapedRecord[],
-    metadata: RawData['allDistrictsMetadata']
+  private async readPreComputedRankings(
+    date: string
   ): Promise<AllDistrictsRankingsData | undefined> {
-    if (!this.rankingCalculator || allDistricts.length === 0) {
+    // If no cache directory is configured, we can't read pre-computed rankings
+    if (!this.cacheDir) {
+      this.log.debug('No cache directory configured, skipping rankings read')
       return undefined
     }
 
-    // Convert ScrapedRecord to DistrictStatistics for ranking calculation
-    const districtStats = allDistricts.map(record => ({
-      districtId: String(record['DISTRICT'] ?? record['District'] ?? ''),
-      asOfDate: metadata.csvDate,
-      membership: {
-        total: 0,
-        change: 0,
-        changePercent: 0,
-        byClub: [],
-      },
-      clubs: {
-        total: 0,
-        active: 0,
-        suspended: 0,
-        ineligible: 0,
-        low: 0,
-        distinguished: 0,
-      },
-      education: {
-        totalAwards: 0,
-        byType: [],
-        topClubs: [],
-      },
-      districtPerformance: [record],
-      divisionPerformance: [],
-      clubPerformance: [],
-    }))
+    const rankingsFilePath = path.join(
+      this.cacheDir,
+      'snapshots',
+      date,
+      'all-districts-rankings.json'
+    )
 
-    const rankedDistricts =
-      await this.rankingCalculator.calculateRankings(districtStats)
+    try {
+      const content = await fs.readFile(rankingsFilePath, 'utf-8')
+      const parsed: unknown = JSON.parse(content)
 
-    // Build rankings data structure
-    const rankings = rankedDistricts
-      .filter(d => d.ranking)
-      .map(d => ({
-        districtId: d.districtId,
-        districtName: d.ranking?.districtName ?? d.districtId,
-        region: d.ranking?.region ?? 'Unknown',
-        paidClubs: d.ranking?.paidClubs ?? 0,
-        paidClubBase: d.ranking?.paidClubBase ?? 0,
-        clubGrowthPercent: d.ranking?.clubGrowthPercent ?? 0,
-        totalPayments: d.ranking?.totalPayments ?? 0,
-        paymentBase: d.ranking?.paymentBase ?? 0,
-        paymentGrowthPercent: d.ranking?.paymentGrowthPercent ?? 0,
-        activeClubs: d.ranking?.activeClubs ?? 0,
-        distinguishedClubs: d.ranking?.distinguishedClubs ?? 0,
-        selectDistinguished: d.ranking?.selectDistinguished ?? 0,
-        presidentsDistinguished: d.ranking?.presidentsDistinguished ?? 0,
-        distinguishedPercent: d.ranking?.distinguishedPercent ?? 0,
-        clubsRank: d.ranking?.clubsRank ?? 0,
-        paymentsRank: d.ranking?.paymentsRank ?? 0,
-        distinguishedRank: d.ranking?.distinguishedRank ?? 0,
-        aggregateScore: d.ranking?.aggregateScore ?? 0,
-      }))
+      // Validate the parsed data against the schema
+      const validationResult = AllDistrictsRankingsDataSchema.safeParse(parsed)
 
-    return {
-      metadata: {
-        snapshotId: '', // Will be set when snapshot is created
-        calculatedAt: new Date().toISOString(),
-        schemaVersion: '1.0.0',
-        calculationVersion: '1.0.0',
-        rankingVersion: this.rankingCalculator.getRankingVersion(),
-        sourceCsvDate: metadata.csvDate,
-        csvFetchedAt: metadata.fetchedAt,
-        totalDistricts: rankings.length,
-        fromCache: true,
-      },
-      rankings,
+      if (!validationResult.success) {
+        this.log.warn('Pre-computed rankings validation failed', {
+          date,
+          filePath: rankingsFilePath,
+          error: validationResult.error.message,
+        })
+        return undefined
+      }
+
+      this.log.debug('Successfully read pre-computed rankings', {
+        date,
+        filePath: rankingsFilePath,
+        rankingsCount: validationResult.data.rankings.length,
+      })
+
+      return validationResult.data
+    } catch (error) {
+      // File not found is expected when rankings haven't been pre-computed yet
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        this.log.debug('Pre-computed rankings file not found', {
+          date,
+          filePath: rankingsFilePath,
+        })
+        return undefined
+      }
+
+      // Log other errors but don't fail the build
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
+      this.log.warn('Error reading pre-computed rankings', {
+        date,
+        filePath: rankingsFilePath,
+        error: errorMessage,
+      })
+      return undefined
     }
   }
 
@@ -918,6 +964,16 @@ export class SnapshotBuilder {
               timestamp: err.timestamp,
             })
           }
+        }
+      }
+
+      // Add validation summary to metadata (Requirement 9.5)
+      if (rawData.validationSummary) {
+        normalizedData.metadata.validation = {
+          totalRecords: rawData.validationSummary.totalRecords,
+          validRecords: rawData.validationSummary.validRecords,
+          rejectedRecords: rawData.validationSummary.rejectedRecords,
+          rejectionDetails: rawData.validationSummary.rejectionDetails,
         }
       }
     }

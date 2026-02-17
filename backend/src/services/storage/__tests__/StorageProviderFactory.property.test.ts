@@ -30,9 +30,10 @@ import { StorageConfigurationError } from '../../../types/storageInterfaces.js'
 // ============================================================================
 
 // Track constructor calls for verification
-interface MockFirestoreSnapshotConfig {
+interface MockGCSSnapshotConfig {
   projectId: string
-  collectionName?: string
+  bucketName: string
+  prefix?: string
 }
 
 interface MockFirestoreDistrictConfig {
@@ -44,21 +45,21 @@ interface MockGCSConfig {
   bucketName: string
 }
 
-const firestoreSnapshotConstructorCalls: MockFirestoreSnapshotConfig[] = []
+const gcsSnapshotConstructorCalls: MockGCSSnapshotConfig[] = []
 const firestoreDistrictConfigConstructorCalls: MockFirestoreDistrictConfig[] =
   []
 const gcsConstructorCalls: MockGCSConfig[] = []
 
 // Mock the GCP provider modules to avoid actual GCP connections
-vi.mock('../FirestoreSnapshotStorage.js', () => {
+vi.mock('../GCSSnapshotStorage.js', () => {
   return {
-    FirestoreSnapshotStorage: class MockFirestoreSnapshotStorage {
-      _mockType = 'FirestoreSnapshotStorage'
-      _config: MockFirestoreSnapshotConfig
+    GCSSnapshotStorage: class MockGCSSnapshotStorage {
+      _mockType = 'GCSSnapshotStorage'
+      _config: MockGCSSnapshotConfig
 
-      constructor(config: MockFirestoreSnapshotConfig) {
+      constructor(config: MockGCSSnapshotConfig) {
         this._config = config
-        firestoreSnapshotConstructorCalls.push(config)
+        gcsSnapshotConstructorCalls.push(config)
       }
 
       getLatestSuccessful = vi.fn()
@@ -75,6 +76,8 @@ vi.mock('../FirestoreSnapshotStorage.js', () => {
       writeAllDistrictsRankings = vi.fn()
       readAllDistrictsRankings = vi.fn()
       hasAllDistrictsRankings = vi.fn()
+      isSnapshotWriteComplete = vi.fn()
+      deleteSnapshot = vi.fn()
     },
   }
 })
@@ -220,7 +223,7 @@ describe('Property 2: Storage Provider Selection Consistency', () => {
     vi.clearAllMocks()
 
     // Clear constructor call tracking arrays
-    firestoreSnapshotConstructorCalls.length = 0
+    gcsSnapshotConstructorCalls.length = 0
     firestoreDistrictConfigConstructorCalls.length = 0
     gcsConstructorCalls.length = 0
   })
@@ -240,7 +243,7 @@ describe('Property 2: Storage Provider Selection Consistency', () => {
     fc.assert(
       fc.property(localProviderValueArbitrary, providerValue => {
         // Clear tracking arrays for each iteration
-        firestoreSnapshotConstructorCalls.length = 0
+        gcsSnapshotConstructorCalls.length = 0
         firestoreDistrictConfigConstructorCalls.length = 0
         gcsConstructorCalls.length = 0
 
@@ -269,7 +272,7 @@ describe('Property 2: Storage Provider Selection Consistency', () => {
         expect(result.rawCSVStorage).toBeInstanceOf(LocalRawCSVStorage)
 
         // Property: No GCP providers should be created
-        expect(firestoreSnapshotConstructorCalls).toHaveLength(0)
+        expect(gcsSnapshotConstructorCalls).toHaveLength(0)
         expect(firestoreDistrictConfigConstructorCalls).toHaveLength(0)
         expect(gcsConstructorCalls).toHaveLength(0)
 
@@ -293,7 +296,7 @@ describe('Property 2: Storage Provider Selection Consistency', () => {
         gcsBucketNameArbitrary,
         (providerValue, projectId, bucketName) => {
           // Clear tracking arrays for each iteration
-          firestoreSnapshotConstructorCalls.length = 0
+          gcsSnapshotConstructorCalls.length = 0
           firestoreDistrictConfigConstructorCalls.length = 0
           gcsConstructorCalls.length = 0
 
@@ -323,11 +326,11 @@ describe('Property 2: Storage Provider Selection Consistency', () => {
             projectId
           )
 
-          // Property: snapshotStorage must be FirestoreSnapshotStorage (mocked)
+          // Property: snapshotStorage must be GCSSnapshotStorage (mocked)
           expect(
             (result.snapshotStorage as unknown as { _mockType: string })
               ._mockType
-          ).toBe('FirestoreSnapshotStorage')
+          ).toBe('GCSSnapshotStorage')
 
           // Property: rawCSVStorage must be GCSRawCSVStorage (mocked)
           expect(
@@ -354,7 +357,7 @@ describe('Property 2: Storage Provider Selection Consistency', () => {
         fc.boolean(), // Whether to include GCP config
         (providerValue, includeGcpConfig) => {
           // Clear tracking arrays for each iteration
-          firestoreSnapshotConstructorCalls.length = 0
+          gcsSnapshotConstructorCalls.length = 0
           firestoreDistrictConfigConstructorCalls.length = 0
           gcsConstructorCalls.length = 0
 
@@ -454,7 +457,7 @@ describe('Property 2: Storage Provider Selection Consistency', () => {
 
           for (let i = 0; i < numCalls; i++) {
             // Clear tracking arrays for each call
-            firestoreSnapshotConstructorCalls.length = 0
+            gcsSnapshotConstructorCalls.length = 0
             firestoreDistrictConfigConstructorCalls.length = 0
             gcsConstructorCalls.length = 0
 
@@ -500,7 +503,7 @@ describe('Property 2: Storage Provider Selection Consistency', () => {
         fc.constantFrom('missing-project', 'missing-bucket', 'missing-both'),
         (providerValue, missingConfig) => {
           // Clear tracking arrays for each iteration
-          firestoreSnapshotConstructorCalls.length = 0
+          gcsSnapshotConstructorCalls.length = 0
           firestoreDistrictConfigConstructorCalls.length = 0
           gcsConstructorCalls.length = 0
 
@@ -528,7 +531,7 @@ describe('Property 2: Storage Provider Selection Consistency', () => {
           )
 
           // Property: No GCP providers should be created
-          expect(firestoreSnapshotConstructorCalls).toHaveLength(0)
+          expect(gcsSnapshotConstructorCalls).toHaveLength(0)
           expect(firestoreDistrictConfigConstructorCalls).toHaveLength(0)
           expect(gcsConstructorCalls).toHaveLength(0)
 
@@ -553,7 +556,7 @@ describe('Property 2: Storage Provider Selection Consistency', () => {
         gcsBucketNameArbitrary,
         (provider, projectId, bucketName) => {
           // Clear tracking arrays for each iteration
-          firestoreSnapshotConstructorCalls.length = 0
+          gcsSnapshotConstructorCalls.length = 0
           firestoreDistrictConfigConstructorCalls.length = 0
           gcsConstructorCalls.length = 0
 

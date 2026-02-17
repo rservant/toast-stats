@@ -2,17 +2,16 @@
  * RefreshService Tests
  *
  * Tests for RefreshService functionality using SnapshotBuilder
- * The rankings calculation is now handled by SnapshotBuilder
+ *
+ * NOTE: Rankings are now pre-computed by scraper-cli during the transform command.
+ * The backend no longer performs ranking calculations per the data-computation-separation
+ * steering document.
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { RefreshService } from '../RefreshService.js'
 import { RawCSVCacheService } from '../RawCSVCacheService.js'
-import { BordaCountRankingCalculator } from '../RankingCalculator.js'
-import {
-  FileSnapshotStore,
-  PerDistrictFileSnapshotStore,
-} from '../SnapshotStore.js'
+import { FileSnapshotStore } from '../SnapshotStore.js'
 import {
   createTestSelfCleanup,
   type TestSelfCleanup,
@@ -20,9 +19,8 @@ import {
 
 describe('RefreshService', () => {
   let refreshService: RefreshService
-  let mockSnapshotStore: PerDistrictFileSnapshotStore
+  let mockSnapshotStore: FileSnapshotStore
   let mockRawCSVCache: RawCSVCacheService
-  let rankingCalculator: BordaCountRankingCalculator
   let testCleanup: { cleanup: TestSelfCleanup; afterEach: () => Promise<void> }
 
   beforeEach(async () => {
@@ -36,7 +34,7 @@ describe('RefreshService', () => {
       listSnapshots: vi.fn(),
       getSnapshot: vi.fn(),
       isReady: vi.fn().mockResolvedValue(true),
-    } as unknown as PerDistrictFileSnapshotStore
+    } as unknown as FileSnapshotStore
 
     mockRawCSVCache = {
       getAllDistrictsCached: vi.fn(),
@@ -46,13 +44,12 @@ describe('RefreshService', () => {
       getCacheMetadata: vi.fn().mockResolvedValue(null),
     } as unknown as RawCSVCacheService
 
-    rankingCalculator = new BordaCountRankingCalculator()
-
+    // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
     refreshService = new RefreshService(
       mockSnapshotStore,
       mockRawCSVCache,
       undefined, // districtConfigService
-      rankingCalculator
+      undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
     )
   })
 

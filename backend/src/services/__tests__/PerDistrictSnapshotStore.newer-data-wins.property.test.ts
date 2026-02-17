@@ -11,10 +11,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as fc from 'fast-check'
 import fs from 'fs/promises'
 import path from 'path'
-import {
-  FileSnapshotStore,
-  PerDistrictFileSnapshotStore,
-} from '../SnapshotStore.js'
+import { FileSnapshotStore } from '../SnapshotStore.js'
 import type { Snapshot, NormalizedData } from '../../types/snapshots.js'
 
 // Test configuration
@@ -24,7 +21,7 @@ const TEST_TIMEOUT = 30000
 
 describe('PerDistrictSnapshotStore - Newer Data Wins Property Tests', () => {
   let testCacheDir: string
-  let store: PerDistrictFileSnapshotStore
+  let store: FileSnapshotStore
 
   beforeEach(async () => {
     // Create unique test cache directory for each test run
@@ -38,7 +35,7 @@ describe('PerDistrictSnapshotStore - Newer Data Wins Property Tests', () => {
 
     await fs.mkdir(testCacheDir, { recursive: true })
 
-    store = new PerDistrictFileSnapshotStore({
+    store = new FileSnapshotStore({
       cacheDir: testCacheDir,
       maxSnapshots: 50,
       maxAgeDays: 7,

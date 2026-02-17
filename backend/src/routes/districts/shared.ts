@@ -5,17 +5,19 @@
 
 import { type Request, type Response } from 'express'
 import { logger } from '../../utils/logger.js'
-import { BackfillService } from '../../services/UnifiedBackfillService.js'
 import { RefreshService } from '../../services/RefreshService.js'
 import { DistrictConfigurationService } from '../../services/DistrictConfigurationService.js'
 import { getProductionServiceFactory } from '../../services/ProductionServiceFactory.js'
-import { AnalyticsEngine } from '../../services/AnalyticsEngine.js'
-import { AnalyticsDataSourceAdapter } from '../../services/AnalyticsDataSourceAdapter.js'
 import {
   DistrictDataAggregator,
   createDistrictDataAggregator,
 } from '../../services/DistrictDataAggregator.js'
 import { StorageProviderFactory } from '../../services/storage/StorageProviderFactory.js'
+import { PreComputedAnalyticsService } from '../../services/PreComputedAnalyticsService.js'
+import {
+  TimeSeriesIndexService,
+  type ITimeSeriesIndexService,
+} from '../../services/TimeSeriesIndexService.js'
 import type { ISnapshotStorage } from '../../types/storageInterfaces.js'
 import type { PerDistrictSnapshotStoreInterface } from '../../services/SnapshotStore.js'
 import { transformErrorResponse } from '../../utils/transformers.js'
@@ -64,47 +66,37 @@ export const districtConfigService = new DistrictConfigurationService(
   storageProviders.districtConfigStorage
 )
 
-// Initialize ranking calculator and services (async initialization)
-let _rankingCalculator:
-  | Awaited<
-      typeof import('../../services/RankingCalculator.js')
-    >['BordaCountRankingCalculator']['prototype']
-  | null = null
+// Initialize services (async initialization)
 let _refreshService: RefreshService | null = null
-let _backfillService: BackfillService | null = null
-let _analyticsEngine: AnalyticsEngine | null = null
+let _preComputedAnalyticsService: PreComputedAnalyticsService | null = null
+let _timeSeriesIndexService: ITimeSeriesIndexService | null = null
 
 // Async initialization function
 async function initializeServices(): Promise<void> {
-  if (_rankingCalculator) return // Already initialized
+  if (_refreshService) return // Already initialized
 
-  const { BordaCountRankingCalculator } =
-    await import('../../services/RankingCalculator.js')
-  _rankingCalculator = new BordaCountRankingCalculator()
+  // Initialize PreComputedAnalyticsService
+  const snapshotsDir = `${cacheDirectory}/snapshots`
+  _preComputedAnalyticsService = new PreComputedAnalyticsService({
+    snapshotsDir,
+  })
 
+  // Initialize TimeSeriesIndexService (read-only, for serving pre-computed data)
+  _timeSeriesIndexService = new TimeSeriesIndexService({
+    cacheDir: cacheDirectory,
+  })
+
+  // RefreshService no longer takes timeSeriesIndexService or rankingCalculator
+  // Time-series data and rankings are now pre-computed by scraper-cli
   _refreshService = new RefreshService(
     snapshotStore,
     rawCSVCacheService,
     districtConfigService,
-    _rankingCalculator
-  )
-
-  _backfillService = new BackfillService(
-    _refreshService,
-    // BackfillService now accepts ISnapshotStorage, supporting both local and cloud storage
-    snapshotStore,
-    districtConfigService,
-    undefined, // alertManager
-    undefined, // circuitBreakerManager
-    _rankingCalculator
-  )
-
-  _analyticsEngine = new AnalyticsEngine(
-    new AnalyticsDataSourceAdapter(
-      districtDataAggregator,
-      // AnalyticsDataSourceAdapter now accepts ISnapshotStorage, supporting both local and cloud storage
-      snapshotStore
-    )
+    undefined, // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
+    undefined, // closingPeriodDetector
+    undefined, // dataNormalizer
+    undefined, // validator
+    _preComputedAnalyticsService
   )
 }
 
@@ -114,14 +106,9 @@ export async function getRefreshService(): Promise<RefreshService> {
   return _refreshService!
 }
 
-export async function getBackfillService(): Promise<BackfillService> {
+export async function getTimeSeriesIndexService(): Promise<ITimeSeriesIndexService> {
   await initializeServices()
-  return _backfillService!
-}
-
-export async function getAnalyticsEngine(): Promise<AnalyticsEngine> {
-  await initializeServices()
-  return _analyticsEngine!
+  return _timeSeriesIndexService!
 }
 
 // Initialize cache configuration asynchronously (validation happens lazily)
@@ -165,6 +152,20 @@ export function extractStringParam(
     )
   }
   return value
+}
+
+/**
+ * Extract an optional string from an Express query parameter.
+ * Handles the full `string | ParsedQs | string[] | ParsedQs[] | undefined` union
+ * that `req.query[key]` produces, returning `string | undefined`.
+ */
+export function extractQueryParam(value: unknown): string | undefined {
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) {
+    const first: unknown = value[0]
+    return typeof first === 'string' ? first : undefined
+  }
+  return undefined
 }
 
 /**
@@ -308,6 +309,85 @@ export interface FindNearestSnapshotResult {
     | 'closing_period_gap'
     | 'future_date'
     | null
+}
+
+/**
+ * Result of getting a snapshot for a specific date
+ * Used by getSnapshotForDate helper for date-aware snapshot selection
+ *
+ * Requirements:
+ * - 1.1, 6.1, 6.2, 6.3, 6.4: Consistent error handling for missing snapshots
+ */
+export interface GetSnapshotForDateResult {
+  snapshot: Snapshot | null
+  snapshotDate: string | null
+  error?: {
+    code: string
+    message: string
+    details: string
+  }
+}
+
+/**
+ * Get a snapshot for a specific date, or the latest successful snapshot if no date provided.
+ *
+ * This helper centralizes date-aware snapshot selection logic for all analytics endpoints.
+ * It ensures consistent behavior:
+ * - When endDate is provided: retrieves the exact snapshot for that date
+ * - When endDate is not provided: retrieves the latest successful snapshot (backward compatible)
+ *
+ * Requirements:
+ * - 1.1, 2.1, 3.1, 4.1, 5.1: Use snapshotStore.getSnapshot(endDate) when date is provided
+ * - 1.2, 2.2, 3.2, 4.2, 5.2: Use snapshotStore.getLatestSuccessful() when no date provided
+ * - 1.3, 2.3, 3.3, 4.3, 5.3, 6.1, 6.2, 6.3, 6.4: Return proper error for non-existent snapshots
+ *
+ * @param endDate - Optional ISO date string (YYYY-MM-DD) for the requested snapshot
+ * @returns The snapshot and its date, or an error if the requested snapshot doesn't exist
+ */
+export async function getSnapshotForDate(
+  endDate?: string
+): Promise<GetSnapshotForDateResult> {
+  // When no endDate is provided, use the latest successful snapshot (backward compatibility)
+  // Requirements: 1.2, 2.2, 3.2, 4.2, 5.2
+  if (!endDate) {
+    const latestSnapshot = await snapshotStore.getLatestSuccessful()
+
+    if (!latestSnapshot) {
+      return {
+        snapshot: null,
+        snapshotDate: null,
+      }
+    }
+
+    return {
+      snapshot: latestSnapshot,
+      snapshotDate: latestSnapshot.snapshot_id,
+    }
+  }
+
+  // When endDate is provided, get the specific snapshot for that date
+  // Requirements: 1.1, 2.1, 3.1, 4.1, 5.1
+  const snapshot = await snapshotStore.getSnapshot(endDate)
+
+  if (!snapshot) {
+    // Return error structure for non-existent snapshot
+    // Requirements: 1.3, 2.3, 3.3, 4.3, 5.3, 6.1, 6.2, 6.3, 6.4
+    return {
+      snapshot: null,
+      snapshotDate: null,
+      error: {
+        code: 'SNAPSHOT_NOT_FOUND',
+        message: `Snapshot not found for date ${endDate}`,
+        details:
+          'The requested snapshot does not exist. Try a different date or check available snapshots.',
+      },
+    }
+  }
+
+  return {
+    snapshot,
+    snapshotDate: snapshot.snapshot_id,
+  }
 }
 
 /**
@@ -1012,318 +1092,6 @@ export async function serveDistrictFromPerDistrictSnapshot<T>(
 }
 
 // ============================================================================
-// Backfill Validation Helpers
-// ============================================================================
-
-import type { BackfillRequest } from '../../services/UnifiedBackfillService.js'
-
-/**
- * Comprehensive backfill request validation with detailed error reporting
- */
-export interface BackfillValidationResult {
-  isValid: boolean
-  errors: Array<{
-    field: string
-    message: string
-    received?: unknown
-    expected?: string
-  }>
-  suggestions: string[]
-  sanitizedRequest: BackfillRequest
-}
-
-export function validateBackfillRequest(
-  body: unknown
-): BackfillValidationResult {
-  const errors: BackfillValidationResult['errors'] = []
-  const suggestions: string[] = []
-
-  // Initialize with defaults
-  const sanitizedRequest: BackfillRequest = {
-    startDate: '',
-    endDate: undefined,
-    targetDistricts: undefined,
-    collectionType: 'auto',
-    concurrency: 3,
-    retryFailures: true,
-    skipExisting: true,
-  }
-
-  // Check if body exists and is an object
-  if (!body || typeof body !== 'object') {
-    errors.push({
-      field: 'body',
-      message: 'Request body must be a JSON object',
-      received: typeof body,
-      expected: 'object',
-    })
-    suggestions.push('Ensure Content-Type header is set to application/json')
-    suggestions.push('Provide a valid JSON object in the request body')
-
-    return {
-      isValid: false,
-      errors,
-      suggestions,
-      sanitizedRequest,
-    }
-  }
-
-  const req = body as Record<string, unknown>
-
-  // Validate startDate (required)
-  if (!req['startDate']) {
-    errors.push({
-      field: 'startDate',
-      message: 'startDate is required',
-      expected: 'YYYY-MM-DD format string',
-    })
-    suggestions.push(
-      'Provide a startDate in YYYY-MM-DD format (e.g., "2024-01-01")'
-    )
-  } else if (typeof req['startDate'] !== 'string') {
-    errors.push({
-      field: 'startDate',
-      message: 'startDate must be a string',
-      received: typeof req['startDate'],
-      expected: 'string in YYYY-MM-DD format',
-    })
-  } else if (!validateDateFormat(req['startDate'])) {
-    errors.push({
-      field: 'startDate',
-      message: 'startDate must be in YYYY-MM-DD format',
-      received: req['startDate'],
-      expected: 'YYYY-MM-DD format (e.g., "2024-01-01")',
-    })
-  } else {
-    sanitizedRequest.startDate = req['startDate']
-  }
-
-  // Validate endDate (optional)
-  if (req['endDate'] !== undefined) {
-    if (typeof req['endDate'] !== 'string') {
-      errors.push({
-        field: 'endDate',
-        message: 'endDate must be a string',
-        received: typeof req['endDate'],
-        expected: 'string in YYYY-MM-DD format or undefined',
-      })
-    } else if (!validateDateFormat(req['endDate'])) {
-      errors.push({
-        field: 'endDate',
-        message: 'endDate must be in YYYY-MM-DD format',
-        received: req['endDate'],
-        expected: 'YYYY-MM-DD format (e.g., "2024-12-31")',
-      })
-    } else {
-      sanitizedRequest.endDate = req['endDate']
-    }
-  }
-
-  // Validate date range if both dates are provided and valid
-  if (sanitizedRequest.startDate && sanitizedRequest.endDate) {
-    const start = new Date(sanitizedRequest.startDate)
-    const end = new Date(sanitizedRequest.endDate)
-
-    if (start > end) {
-      errors.push({
-        field: 'dateRange',
-        message: 'startDate must be before or equal to endDate',
-        received: `${sanitizedRequest.startDate} to ${sanitizedRequest.endDate}`,
-      })
-      suggestions.push(
-        'Ensure startDate is chronologically before or equal to endDate'
-      )
-    }
-
-    // Check for reasonable date range (not too far in the past or future)
-    const now = new Date()
-    const oneYearAgo = new Date(
-      now.getFullYear() - 1,
-      now.getMonth(),
-      now.getDate()
-    )
-    const oneMonthFromNow = new Date(
-      now.getFullYear(),
-      now.getMonth() + 1,
-      now.getDate()
-    )
-
-    if (start < oneYearAgo) {
-      suggestions.push(
-        'Consider that data older than one year may not be available'
-      )
-    }
-    if (end > oneMonthFromNow) {
-      suggestions.push(
-        'Future dates beyond one month may not have data available'
-      )
-    }
-  }
-
-  // Validate targetDistricts (optional)
-  if (req['targetDistricts'] !== undefined) {
-    if (!Array.isArray(req['targetDistricts'])) {
-      errors.push({
-        field: 'targetDistricts',
-        message: 'targetDistricts must be an array',
-        received: typeof req['targetDistricts'],
-        expected: 'array of district ID strings',
-      })
-    } else {
-      const validDistricts: string[] = []
-      req['targetDistricts'].forEach((district, index) => {
-        if (typeof district !== 'string') {
-          errors.push({
-            field: `targetDistricts[${index}]`,
-            message: 'District ID must be a string',
-            received: typeof district,
-            expected: 'string',
-          })
-        } else if (!validateDistrictId(district)) {
-          errors.push({
-            field: `targetDistricts[${index}]`,
-            message: 'Invalid district ID format',
-            received: district,
-            expected: 'alphanumeric string',
-          })
-        } else {
-          validDistricts.push(district)
-        }
-      })
-
-      if (validDistricts.length > 0) {
-        sanitizedRequest.targetDistricts = validDistricts
-      }
-
-      if (req['targetDistricts'].length > 50) {
-        suggestions.push(
-          'Consider processing large numbers of districts in smaller batches'
-        )
-      }
-    }
-  }
-
-  // Validate collectionType (optional)
-  if (req['collectionType'] !== undefined) {
-    const validTypes = ['system-wide', 'per-district', 'auto']
-    if (typeof req['collectionType'] !== 'string') {
-      errors.push({
-        field: 'collectionType',
-        message: 'collectionType must be a string',
-        received: typeof req['collectionType'],
-        expected: `one of: ${validTypes.join(', ')}`,
-      })
-    } else if (!validTypes.includes(req['collectionType'])) {
-      errors.push({
-        field: 'collectionType',
-        message: 'Invalid collectionType',
-        received: req['collectionType'],
-        expected: `one of: ${validTypes.join(', ')}`,
-      })
-    } else {
-      sanitizedRequest.collectionType = req['collectionType'] as
-        | 'system-wide'
-        | 'per-district'
-        | 'auto'
-    }
-  }
-
-  // Validate concurrency (optional)
-  if (req['concurrency'] !== undefined) {
-    if (typeof req['concurrency'] !== 'number') {
-      errors.push({
-        field: 'concurrency',
-        message: 'concurrency must be a number',
-        received: typeof req['concurrency'],
-        expected: 'number between 1 and 10',
-      })
-    } else if (
-      !Number.isInteger(req['concurrency']) ||
-      req['concurrency'] < 1 ||
-      req['concurrency'] > 10
-    ) {
-      errors.push({
-        field: 'concurrency',
-        message: 'concurrency must be an integer between 1 and 10',
-        received: req['concurrency'],
-        expected: 'integer between 1 and 10',
-      })
-    } else {
-      sanitizedRequest.concurrency = req['concurrency']
-    }
-  }
-
-  // Validate boolean fields
-  const booleanFields = ['retryFailures', 'skipExisting'] as const
-  booleanFields.forEach(field => {
-    if (req[field] !== undefined) {
-      if (typeof req[field] !== 'boolean') {
-        errors.push({
-          field,
-          message: `${field} must be a boolean`,
-          received: typeof req[field],
-          expected: 'boolean (true or false)',
-        })
-      } else {
-        sanitizedRequest[field] = req[field] as boolean
-      }
-    }
-  })
-
-  // Add helpful suggestions
-  if (errors.length === 0) {
-    if (!req['targetDistricts']) {
-      suggestions.push(
-        'No target districts specified - will process all configured districts'
-      )
-    }
-    if (!req['endDate']) {
-      suggestions.push(
-        'No end date specified - will process only the start date'
-      )
-    }
-    if (req['collectionType'] === 'auto' || !req['collectionType']) {
-      suggestions.push(
-        'Using auto collection type - system will choose optimal strategy'
-      )
-    }
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-    suggestions,
-    sanitizedRequest,
-  }
-}
-
-/**
- * Estimate completion time for a backfill job based on current progress
- */
-export function estimateCompletionTime(progress: {
-  completed: number
-  total: number
-  current: string
-}): string | undefined {
-  if (progress.total === 0 || progress.completed === 0) {
-    return undefined
-  }
-
-  const completionRate = progress.completed / progress.total
-  if (completionRate === 0) {
-    return undefined
-  }
-
-  // Rough estimate: assume linear progress (not always accurate but helpful)
-  const estimatedTotalMinutes = (progress.total - progress.completed) * 2 // ~2 minutes per date
-  const estimatedCompletion = new Date(
-    Date.now() + estimatedTotalMinutes * 60 * 1000
-  )
-
-  return estimatedCompletion.toISOString()
-}
-
-// ============================================================================
 // Program Year Helper
 // ============================================================================
 
@@ -1351,36 +1119,3 @@ export function getProgramYearInfo(dateStr: string): {
     year: `${programYearStart}-${programYearEnd}`,
   }
 }
-
-// ============================================================================
-// Backfill Job Cleanup
-// ============================================================================
-
-// Cleanup old jobs every hour
-let cleanupIntervalId: ReturnType<typeof setInterval> | null = null
-
-export function startBackfillCleanupInterval(): void {
-  if (cleanupIntervalId) return // Already started
-
-  cleanupIntervalId = setInterval(
-    async () => {
-      try {
-        const backfillService = await getBackfillService()
-        await backfillService.cleanupOldJobs()
-      } catch (error) {
-        console.error('Failed to cleanup old backfill jobs:', error)
-      }
-    },
-    60 * 60 * 1000
-  )
-}
-
-export function stopBackfillCleanupInterval(): void {
-  if (cleanupIntervalId) {
-    clearInterval(cleanupIntervalId)
-    cleanupIntervalId = null
-  }
-}
-
-// Start cleanup interval on module load
-startBackfillCleanupInterval()

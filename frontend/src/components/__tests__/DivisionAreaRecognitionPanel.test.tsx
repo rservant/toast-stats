@@ -927,19 +927,4 @@ describe('DivisionAreaRecognitionPanel', () => {
       ).toBeInTheDocument()
     })
   })
-
-  describe('Backward Compatibility', () => {
-    /**
-     * Validates: Requirement 10.1
-     * The old AreaRecognitionPanel export should still work for backward compatibility
-     */
-    it('should export AreaRecognitionPanel as alias for backward compatibility', async () => {
-      // Import the alias
-      const { AreaRecognitionPanel } =
-        await import('../DivisionAreaRecognitionPanel')
-
-      // Should be the same component
-      expect(AreaRecognitionPanel).toBe(DivisionAreaRecognitionPanel)
-    })
-  })
 })

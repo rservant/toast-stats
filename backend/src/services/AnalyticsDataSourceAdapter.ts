@@ -2,8 +2,8 @@
  * Analytics Data Source Adapter
  *
  * Provides an adapter that wraps DistrictDataAggregator and ISnapshotStorage
- * to implement the IAnalyticsDataSource interface. This enables the AnalyticsEngine
- * to use the new snapshot-based data architecture while maintaining a clean abstraction.
+ * to implement the IAnalyticsDataSource interface. This enables analytics
+ * computation to use the new snapshot-based data architecture while maintaining a clean abstraction.
  *
  * Requirements: 1.1, 2.1, 2.2, 2.3
  * Storage Abstraction: Requirements 1.3, 1.4 (uses ISnapshotStorage for provider flexibility)
@@ -32,7 +32,7 @@ export interface AnalyticsDataSourceAdapterConfig {
  * Analytics Data Source Adapter
  *
  * Wraps DistrictDataAggregator and ISnapshotStorage to provide
- * the IAnalyticsDataSource interface for the AnalyticsEngine.
+ * the IAnalyticsDataSource interface for analytics computation.
  *
  * Storage Abstraction: Uses ISnapshotStorage interface to support both
  * local filesystem and cloud storage backends (Requirements 1.3, 1.4).
