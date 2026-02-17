@@ -21,6 +21,13 @@ export {
   DDP_THRESHOLDS,
 } from './AreaDivisionRecognitionModule.js'
 
+// Club eligibility utilities (shared across modules)
+export {
+  calculateNetGrowth,
+  determineDistinguishedLevel,
+  getCSPStatus,
+} from './ClubEligibilityUtils.js'
+
 // Utility functions
 export {
   parseIntSafe,

@@ -18,17 +18,17 @@
  */
 
 import type { DistrictStatistics, ClubStatistics } from '../interfaces.js'
-import type {
-  ClubTrend,
-  ClubHealthStatus,
-  ClubHealthData,
-  DistinguishedLevel,
-} from '../types.js'
+import type { ClubTrend, ClubHealthStatus, ClubHealthData } from '../types.js'
 import {
   getDCPCheckpoint,
   getCurrentProgramMonth,
   getMonthName,
 } from './AnalyticsUtils.js'
+import {
+  calculateNetGrowth,
+  determineDistinguishedLevel,
+  getCSPStatus,
+} from './ClubEligibilityUtils.js'
 
 /**
  * Simple logger interface for compatibility.
@@ -273,7 +273,7 @@ export class ClubHealthAnalyticsModule {
 
     // Calculate net growth from club data (Requirement 5.3)
     // Net growth = Active Members - Mem. Base
-    const netGrowth = this.calculateNetGrowth(club)
+    const netGrowth = calculateNetGrowth(club)
 
     // Get current program month for DCP checkpoint evaluation
     const currentMonth = getCurrentProgramMonth(snapshotDate)
@@ -282,7 +282,7 @@ export class ClubHealthAnalyticsModule {
     const requiredDcpCheckpoint = getDCPCheckpoint(currentMonth)
 
     // Get CSP status (Requirements 5.4, 5.5: CSP guaranteed in 2025-2026+, absent in prior years)
-    const cspSubmitted = this.getCSPStatus(club)
+    const cspSubmitted = getCSPStatus(club)
 
     // Apply classification rules - mutually exclusive categories
     let status: ClubHealthStatus
@@ -386,7 +386,7 @@ export class ClubHealthAnalyticsModule {
     return snapshot.clubs.filter(club => {
       const membership = club.membershipCount
       const dcpGoals = club.dcpGoals
-      const netGrowth = this.calculateNetGrowth(club)
+      const netGrowth = calculateNetGrowth(club)
 
       // Intervention override: membership < 12 AND net growth < 3 is NOT vulnerable
       if (membership < 12 && netGrowth < 3) {
@@ -421,7 +421,7 @@ export class ClubHealthAnalyticsModule {
   countInterventionRequiredClubs(snapshot: DistrictStatistics): number {
     return snapshot.clubs.filter(club => {
       const membership = club.membershipCount
-      const netGrowth = this.calculateNetGrowth(club)
+      const netGrowth = calculateNetGrowth(club)
 
       // Intervention required: membership < 12 AND net growth < 3
       return membership < 12 && netGrowth < 3
@@ -448,7 +448,7 @@ export class ClubHealthAnalyticsModule {
     return snapshot.clubs.filter(club => {
       const membership = club.membershipCount
       const dcpGoals = club.dcpGoals
-      const netGrowth = this.calculateNetGrowth(club)
+      const netGrowth = calculateNetGrowth(club)
 
       // Intervention override: membership < 12 AND net growth < 3 is NOT thriving
       if (membership < 12 && netGrowth < 3) {
@@ -468,37 +468,8 @@ export class ClubHealthAnalyticsModule {
     }).length
   }
 
-  /**
-   * Get CSP (Club Success Plan) submission status from club data
-   *
-   * CSP data availability by program year:
-   * - 2025-2026 and later: CSP field is guaranteed to be present
-   * - Prior to 2025-2026: CSP field did not exist, defaults to true
-   *
-   * @param _club - Club statistics data (unused - CSP field not yet in ClubStatistics)
-   * @returns true if CSP is submitted or field is absent (historical data), false otherwise
-   */
-  getCSPStatus(_club: ClubStatistics): boolean {
-    // ClubStatistics doesn't have a CSP field currently
-    // For historical data compatibility, default to true
-    // When CSP field is added to ClubStatistics, this method will be updated
-    return true
-  }
-
-  /**
-   * Calculate net growth for a club using available membership data
-   * Net growth = Active Members - Mem. Base
-   * Handles missing, null, or invalid "Mem. Base" values by treating as 0
-   *
-   * @param club - Club statistics data
-   * @returns Net growth value
-   */
-  calculateNetGrowth(club: ClubStatistics): number {
-    const currentMembers = club.membershipCount
-    const membershipBase = club.membershipBase ?? 0
-
-    return currentMembers - membershipBase
-  }
+  // NOTE: calculateNetGrowth, getCSPStatus, and determineDistinguishedLevel
+  // have been extracted to ClubEligibilityUtils.ts as shared pure functions.
 
   /**
    * Extract club status from club statistics
@@ -538,41 +509,6 @@ export class ClubHealthAnalyticsModule {
     }
   }
 
-  // ========== Distinguished Level Helper ==========
-
-  /**
-   * Determine the distinguished level for a club based on DCP goals, membership, and net growth
-   *
-   * @param dcpGoals Number of DCP goals achieved
-   * @param membership Current membership count
-   * @param netGrowth Net membership growth (current - base)
-   * @returns Distinguished level string
-   */
-  private determineDistinguishedLevel(
-    dcpGoals: number,
-    membership: number,
-    netGrowth: number
-  ): DistinguishedLevel {
-    // Smedley Distinguished: 10 goals + 25 members
-    if (dcpGoals >= 10 && membership >= 25) {
-      return 'Smedley'
-    }
-    // President's Distinguished: 9 goals + 20 members
-    if (dcpGoals >= 9 && membership >= 20) {
-      return 'President'
-    }
-    // Select Distinguished: 7 goals + (20 members OR net growth of 5)
-    if (dcpGoals >= 7 && (membership >= 20 || netGrowth >= 5)) {
-      return 'Select'
-    }
-    // Distinguished: 5 goals + (20 members OR net growth of 3)
-    if (dcpGoals >= 5 && (membership >= 20 || netGrowth >= 3)) {
-      return 'Distinguished'
-    }
-
-    return 'NotDistinguished'
-  }
-
   /**
    * Identify distinguished level for a club
    *
@@ -587,7 +523,7 @@ export class ClubHealthAnalyticsModule {
     club: ClubStatistics
   ): void {
     // CSP requirement for 2025-2026+: must have CSP submitted to be distinguished
-    const cspSubmitted = this.getCSPStatus(club)
+    const cspSubmitted = getCSPStatus(club)
 
     if (!cspSubmitted) {
       clubTrend.distinguishedLevel = 'NotDistinguished'
@@ -603,10 +539,10 @@ export class ClubHealthAnalyticsModule {
       club.membershipCount
 
     // Calculate net growth from club data
-    const netGrowth = this.calculateNetGrowth(club)
+    const netGrowth = calculateNetGrowth(club)
 
     // Use the shared distinguished level determination logic
-    clubTrend.distinguishedLevel = this.determineDistinguishedLevel(
+    clubTrend.distinguishedLevel = determineDistinguishedLevel(
       currentDcpGoals,
       currentMembership,
       netGrowth

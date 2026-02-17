@@ -30,6 +30,11 @@ import type {
   DistinguishedProjection,
 } from '../types.js'
 import { ensureString } from './AnalyticsUtils.js'
+import {
+  calculateNetGrowth,
+  determineDistinguishedLevel,
+  getCSPStatus,
+} from './ClubEligibilityUtils.js'
 
 /**
  * Simple logger interface for compatibility.
@@ -211,23 +216,19 @@ export class DistinguishedClubAnalyticsModule {
 
     for (const club of latestSnapshot.clubs) {
       // CSP requirement for 2025-2026+: must have CSP submitted to be distinguished
-      const cspSubmitted = this.getCSPStatus(club)
+      const cspSubmitted = getCSPStatus(club)
       if (!cspSubmitted) {
         continue
       }
 
       const dcpGoals = club.dcpGoals
       const membership = club.membershipCount
-      const netGrowth = this.calculateNetGrowth(club)
+      const netGrowth = calculateNetGrowth(club)
 
-      const level = this.determineDistinguishedLevel(
-        dcpGoals,
-        membership,
-        netGrowth
-      )
+      const level = determineDistinguishedLevel(dcpGoals, membership, netGrowth)
 
       // Only include clubs that have achieved some distinguished level
-      if (level !== 'None') {
+      if (level !== 'NotDistinguished') {
         summaries.push({
           clubId: club.clubId,
           clubName: club.clubName,
@@ -439,7 +440,7 @@ export class DistinguishedClubAnalyticsModule {
 
     for (const club of entry.clubPerformance) {
       // CSP requirement for 2025-2026+: must have CSP submitted to be distinguished
-      const cspSubmitted = this.getCSPStatus(club)
+      const cspSubmitted = getCSPStatus(club)
       if (!cspSubmitted) {
         // Club cannot be distinguished without CSP
         continue
@@ -448,10 +449,10 @@ export class DistinguishedClubAnalyticsModule {
       // Calculate based on DCP goals, membership, and net growth
       const dcpGoals = club.dcpGoals
       const membership = club.membershipCount
-      const netGrowth = this.calculateNetGrowth(club)
+      const netGrowth = calculateNetGrowth(club)
 
       // Use the shared distinguished level determination logic
-      const calculatedLevel = this.determineDistinguishedLevel(
+      const calculatedLevel = determineDistinguishedLevel(
         dcpGoals,
         membership,
         netGrowth
@@ -460,7 +461,7 @@ export class DistinguishedClubAnalyticsModule {
       // Count clubs by distinguished level (Requirements: 4.1, 4.2)
       if (calculatedLevel === 'Smedley') {
         smedley++
-      } else if (calculatedLevel === 'Presidents') {
+      } else if (calculatedLevel === 'President') {
         presidents++
       } else if (calculatedLevel === 'Select') {
         select++
@@ -768,33 +769,8 @@ export class DistinguishedClubAnalyticsModule {
     }
   }
 
-  /**
-   * Determine distinguished level based on DCP goals, membership, and net growth
-   */
-  private determineDistinguishedLevel(
-    dcpGoals: number,
-    membership: number,
-    netGrowth: number
-  ): string {
-    // Smedley Distinguished: 10 goals + 25 members
-    if (dcpGoals >= 10 && membership >= 25) {
-      return 'Smedley'
-    }
-    // President's Distinguished: 9 goals + 20 members
-    else if (dcpGoals >= 9 && membership >= 20) {
-      return 'Presidents'
-    }
-    // Select Distinguished: 7 goals + (20 members OR net growth of 5)
-    else if (dcpGoals >= 7 && (membership >= 20 || netGrowth >= 5)) {
-      return 'Select'
-    }
-    // Distinguished: 5 goals + (20 members OR net growth of 3)
-    else if (dcpGoals >= 5 && (membership >= 20 || netGrowth >= 3)) {
-      return 'Distinguished'
-    }
-
-    return 'None'
-  }
+  // NOTE: calculateNetGrowth, getCSPStatus, and determineDistinguishedLevel
+  // have been extracted to ClubEligibilityUtils.ts as shared pure functions.
 
   /**
    * Check if level1 is higher than level2
@@ -808,33 +784,6 @@ export class DistinguishedClubAnalyticsModule {
   }
 
   /**
-   * Calculate net growth for a club (Active Members - Mem. Base)
-   */
-  private calculateNetGrowth(club: ClubStatistics): number {
-    const currentMembers = club.membershipCount
-    const membershipBase = club.membershipBase ?? 0
-
-    return currentMembers - membershipBase
-  }
-
-  /**
-   * Get CSP (Club Success Plan) submission status from club data
-   *
-   * CSP data availability by program year:
-   * - 2025-2026 and later: CSP field is guaranteed to be present
-   * - Prior to 2025-2026: CSP field did not exist, defaults to true
-   *
-   * @param _club - Club statistics data (CSP field not yet in ClubStatistics)
-   * @returns true if CSP is submitted or field is absent (historical data), false otherwise
-   */
-  private getCSPStatus(_club: ClubStatistics): boolean {
-    // ClubStatistics doesn't have a CSP field currently
-    // For historical data compatibility, default to true
-    // When CSP field is added to ClubStatistics, this method will be updated
-    return true
-  }
-
-  /**
    * Map distinguished level string to status type
    */
   private mapLevelToStatus(
@@ -843,7 +792,7 @@ export class DistinguishedClubAnalyticsModule {
     switch (level) {
       case 'Smedley':
         return 'smedley'
-      case 'Presidents':
+      case 'President':
         return 'president'
       case 'Select':
         return 'select'
