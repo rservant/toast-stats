@@ -38,26 +38,27 @@ const ClubStatusChart: React.FC<ClubStatusChartProps> = ({
     )
 
     const colors = getChartColorPalette(4)
+    const fallback = '#888888'
     return [
       {
         name: 'Active',
         count: distribution['active'] || 0,
-        color: colors[0], // TM Loyal Blue for active status
+        color: colors[0] ?? fallback, // TM Loyal Blue for active status
       },
       {
         name: 'Low',
         count: distribution['low'] || 0,
-        color: colors[3], // TM Happy Yellow for warning status
+        color: colors[3] ?? fallback, // TM Happy Yellow for warning status
       },
       {
         name: 'Suspended',
         count: distribution['suspended'] || 0,
-        color: colors[1], // TM True Maroon for error status
+        color: colors[1] ?? fallback, // TM True Maroon for error status
       },
       {
         name: 'Ineligible',
         count: distribution['ineligible'] || 0,
-        color: colors[2], // TM Cool Gray for neutral status
+        color: colors[2] ?? fallback, // TM Cool Gray for neutral status
       },
     ].filter(item => item.count > 0) // Only show statuses that exist
   }, [clubs])
@@ -78,26 +79,27 @@ const ClubStatusChart: React.FC<ClubStatusChartProps> = ({
     )
 
     const colors = getChartColorPalette(4)
+    const fallback = '#888888'
     return [
       {
         name: 'Regular',
         count: distribution['regular'] || 0,
-        color: colors[2], // TM Cool Gray for regular status
+        color: colors[2] ?? fallback, // TM Cool Gray for regular status
       },
       {
         name: 'Select',
         count: distribution['select'] || 0,
-        color: colors[3], // TM Happy Yellow for select status
+        color: colors[3] ?? fallback, // TM Happy Yellow for select status
       },
       {
         name: 'Distinguished',
         count: distribution['distinguished'] || 0,
-        color: colors[0], // TM Loyal Blue - already compliant
+        color: colors[0] ?? fallback, // TM Loyal Blue - already compliant
       },
       {
         name: "President's",
         count: distribution['president'] || 0,
-        color: colors[1], // TM True Maroon - already compliant
+        color: colors[1] ?? fallback, // TM True Maroon - already compliant
       },
     ].filter(item => item.count > 0)
   }, [clubs])

@@ -119,11 +119,12 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
 
   // Color palette for charts
   const colors = getChartColorPalette(8)
+  const fallbackColor = '#888888'
 
   // Format data for by-type chart
   const byTypeData = data.byType.map((item, index) => ({
     ...item,
-    color: colors[index % colors.length],
+    color: colors[index % colors.length] ?? fallbackColor,
   }))
 
   // Format data for monthly chart
@@ -139,7 +140,7 @@ const EducationalAwardsChart: React.FC<EducationalAwardsChartProps> = ({
   // Format data for top clubs
   const topClubsData = data.topClubs.slice(0, 10).map((club, index) => ({
     ...club,
-    color: colors[index % colors.length],
+    color: colors[index % colors.length] ?? fallbackColor,
   }))
 
   // Generate chart descriptions for accessibility
