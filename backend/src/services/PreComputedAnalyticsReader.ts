@@ -291,17 +291,25 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
   }
 
   /**
-   * Get the snapshot directory path for a date
+   * Get the snapshot directory path for a date.
+   * Ensures the resulting path is contained within the cacheDir/snapshots root.
    */
   private getSnapshotDir(snapshotDate: string): string {
-    return path.join(this.cacheDir, 'snapshots', snapshotDate)
+    // snapshotDate is validated by validateSnapshotDate in callers,
+    // but we still ensure the final path stays within cacheDir.
+    const snapshotsBase = path.resolve(this.cacheDir, 'snapshots')
+    const snapshotDir = path.resolve(snapshotsBase, snapshotDate)
+    return this.validatePathContainment(snapshotDir)
   }
 
   /**
-   * Get the analytics directory path for a date
+   * Get the analytics directory path for a date.
+   * Ensures the resulting path is contained within the cacheDir tree.
    */
   private getAnalyticsDir(snapshotDate: string): string {
-    return path.join(this.getSnapshotDir(snapshotDate), 'analytics')
+    const snapshotDir = this.getSnapshotDir(snapshotDate)
+    const analyticsDir = path.join(snapshotDir, 'analytics')
+    return this.validatePathContainment(analyticsDir)
   }
 
   /**
@@ -347,6 +355,7 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
     }
   }
 
+    // Resolve the candidate path to an absolute path
   /**
    * Validates that a resolved file path is contained within the configured cacheDir.
    * Prevents path traversal attacks by ensuring no user-provided input can escape
@@ -500,7 +509,8 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
     this.validateDistrictId(districtId)
 
     const filename = `district_${districtId}_analytics.json`
-    const filePath = path.join(this.getAnalyticsDir(snapshotDate), filename)
+    const analyticsDir = this.getAnalyticsDir(snapshotDate)
+    const filePath = path.join(analyticsDir, filename)
 
     logger.info('Reading district analytics', {
       operation: 'readDistrictAnalytics',
