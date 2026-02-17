@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for Club Categorization Partition
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Mathematical invariant: partition completeness (every club categorized, no overlaps)
+ *   - Complex input space: generated club data across varied statuses and metrics
+ *
  * Feature: precomputed-analytics-alignment
  * Property 6: Club categorization partitions allClubs
  *
@@ -147,6 +151,9 @@ const districtStatisticsArb = (
     clubs,
     divisions: [],
     areas: [],
+    divisionPerformance: [],
+    clubPerformance: [],
+    districtPerformance: [],
     totals: {
       totalClubs: clubs.length,
       totalMembership,

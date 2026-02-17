@@ -1,6 +1,10 @@
 /**
  * Property-based test for SnapshotPointer schema round-trip.
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Mathematical invariant: schema round-trip (parse(serialize(x)) === x)
+ *   - Complex input space: generated snapshot pointer data with varied date/ID formats
+ *
  * **Property 2: Snapshot pointer schema round-trip**
  * For any valid SnapshotPointer object, serializing to JSON and parsing
  * back through the Zod schema SHALL produce an equivalent object.

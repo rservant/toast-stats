@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for BordaCountRankingCalculator
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Mathematical invariant: Borda count ranking must produce correct ordinal positions
+ *   - Complex input space: generated score vectors across varied district counts
+ *
  * **Property 2: Ranking Algorithm Equivalence**
  * *For any* set of district statistics, the migrated BordaCountRankingCalculator
  * in analytics-core SHALL produce identical rankings (clubsRank, paymentsRank,

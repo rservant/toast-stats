@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for Risk Factors Conversion
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Complex input space: risk factor conversion across generated metric combinations
+ *   - Universal business rule: risk assessment must be deterministic and consistent
+ *
  * Feature: precomputed-analytics-alignment
  * Property 4: Risk factors conversion preserves information
  *

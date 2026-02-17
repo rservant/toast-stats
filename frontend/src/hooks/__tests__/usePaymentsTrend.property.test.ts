@@ -1,5 +1,9 @@
 /**
  * Property-based tests for usePaymentsTrend hook
+ *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Complex input space: financial trend computation over generated multi-year payment data
+ *   - Mathematical invariant: trend calculations must be consistent across all valid inputs
  * **Feature: membership-payments-chart**
  *
  * Tests the pure utility functions exported from usePaymentsTrend

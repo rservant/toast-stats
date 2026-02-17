@@ -1,6 +1,10 @@
 /**
  * Property-Based Tests for MetricRankingsCalculator
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Mathematical invariant: metric ranking must produce correct ordinal positions
+ *   - Complex input space: generated metric values across varied district counts and metrics
+ *
  * **Feature: per-metric-rankings**
  *
  * **Property 1: Percentile calculation correctness**

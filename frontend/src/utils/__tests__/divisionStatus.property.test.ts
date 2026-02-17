@@ -1,6 +1,10 @@
 /**
  * Division Status Property-Based Tests
  *
+ * @pbt-justification Warranted per .kiro/steering/testing.md criteria:
+ *   - Complex input space: status computation across generated club/division data structures
+ *   - Universal business rule: status derivation must be deterministic and consistent
+ *
  * **Feature: division-area-performance-cards**
  *
  * Property-based tests to verify the correctness of division and area
