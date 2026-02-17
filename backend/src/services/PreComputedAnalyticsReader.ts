@@ -356,7 +356,10 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
     const resolvedBase = path.resolve(this.cacheDir)
     const resolvedPath = path.resolve(filePath)
 
-    if (!resolvedPath.startsWith(resolvedBase + path.sep) && resolvedPath !== resolvedBase) {
+    if (
+      !resolvedPath.startsWith(resolvedBase + path.sep) &&
+      resolvedPath !== resolvedBase
+    ) {
       logger.error('Path traversal attempt detected', {
         operation: 'validatePathContainment',
         filePath,
@@ -368,7 +371,6 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
 
     return resolvedPath
   }
-
 
   /**
    * Read and parse a pre-computed analytics file.

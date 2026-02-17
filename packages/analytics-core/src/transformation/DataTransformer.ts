@@ -382,7 +382,7 @@ export class DataTransformer implements IDataTransformer {
     }
 
     // Check if it's in format "Division X"
-    const divisionMatch = value.match(/^Division\s+(.+)$/i)
+    const divisionMatch = value.match(/^Division\s+(\S.*)$/i)
     if (divisionMatch?.[1]) {
       return { id: divisionMatch[1], name: value }
     }
@@ -404,7 +404,7 @@ export class DataTransformer implements IDataTransformer {
     }
 
     // Check if it's in format "Area Y"
-    const areaMatch = value.match(/^Area\s+(.+)$/i)
+    const areaMatch = value.match(/^Area\s+(\S.*)$/i)
     if (areaMatch?.[1]) {
       return { id: areaMatch[1], name: value }
     }
