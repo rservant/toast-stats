@@ -21,12 +21,11 @@
  * └── config/
  *     └── districts.json                    # District configuration
  *
- * Performance optimizations:
- * - In-memory caching of current snapshot content
- * - Concurrent read request handling with shared cache
- * - Optimized file system access patterns
- * - Read performance independence from refresh operations
- * - Directory scanning for latest successful snapshot (no pointer file)
+ * This file is a thin façade that delegates to focused sub-modules:
+ * - SnapshotReader:    Read operations, caching, listings
+ * - SnapshotWriter:    Write and delete operations
+ * - SnapshotDiscovery: Pointer management and directory scanning
+ * - SnapshotPathUtils: Validation and path resolution
  */
 
 import fs from 'fs/promises'
@@ -40,59 +39,24 @@ import {
   SnapshotMetadata,
   SnapshotFilters,
   SnapshotStoreConfig,
-  NormalizedData,
-  CURRENT_SCHEMA_VERSION,
-  CURRENT_CALCULATION_VERSION,
 } from '../types/snapshots.js'
 import { DistrictStatistics } from '../types/districts.js'
 import type {
   SnapshotManifest,
-  DistrictManifestEntry,
   AllDistrictsRankingsData,
-  SnapshotPointer,
 } from '@toastmasters/shared-contracts'
 import {
-  validatePerDistrictData,
-  validateAllDistrictsRankings,
-  validateSnapshotManifest,
-  validateSnapshotPointer,
-  SCHEMA_VERSION,
-} from '@toastmasters/shared-contracts'
-import { adaptDistrictStatisticsFileToBackend } from '../adapters/district-statistics-adapter.js'
-
-/**
- * In-memory cache entry for snapshot data
- */
-interface SnapshotCacheEntry {
-  snapshot: Snapshot
-  cachedAt: number
-  fileSize: number
-  lastModified: number
-}
-
-/**
- * In-memory cache entry for snapshot list
- * Used to avoid repeated directory scans for listSnapshots()
- */
-interface SnapshotListCacheEntry {
-  metadata: SnapshotMetadata[]
-  cachedAt: number
-}
-
-/**
- * Performance metrics for monitoring read operations
- */
-interface ReadPerformanceMetrics {
-  totalReads: number
-  cacheHits: number
-  cacheMisses: number
-  averageReadTime: number
-  concurrentReads: number
-  maxConcurrentReads: number
-}
+  resolvePathUnderBase,
+  validateSnapshotId,
+} from './snapshot/SnapshotPathUtils.js'
+import {
+  findLatestSuccessful,
+  readSnapshotFromDirectory,
+} from './snapshot/index.js'
+import * as reader from './snapshot/SnapshotReader.js'
+import * as writer from './snapshot/SnapshotWriter.js'
 
 // Re-export types from shared-contracts for backward compatibility
-// These were previously defined locally but are now imported from shared-contracts
 export type {
   DistrictManifestEntry,
   SnapshotManifest,
@@ -131,24 +95,7 @@ export interface PerDistrictSnapshotMetadata {
   logicalDate?: string
 
   // Chunked write tracking fields (added for Firestore timeout fix)
-  /**
-   * Districts that failed to write during chunked batch processing.
-   * Only populated when writeComplete is false.
-   * Used to identify which districts need to be retried or investigated.
-   *
-   * Requirements: 5.3
-   */
   writeFailedDistricts?: string[]
-
-  /**
-   * Whether the snapshot write completed fully.
-   * - true or undefined: All districts were written successfully
-   * - false: Some districts failed to write (see writeFailedDistricts)
-   *
-   * For backward compatibility, undefined is treated as true (complete).
-   *
-   * Requirements: 5.5
-   */
   writeComplete?: boolean
 }
 
@@ -156,12 +103,6 @@ export interface PerDistrictSnapshotMetadata {
  * Options for writing snapshots
  */
 export interface WriteSnapshotOptions {
-  /**
-   * Override the snapshot directory date.
-   * Used for closing period data where the snapshot should be dated
-   * as the last day of the data month.
-   * Format: YYYY-MM-DD
-   */
   overrideSnapshotDate?: string
 }
 
@@ -179,14 +120,11 @@ export interface SnapshotComparisonResult {
   newCollectionDate: string
 }
 
-// Re-export PerDistrictData from shared-contracts for backward compatibility
-// Note: The shared-contracts PerDistrictData uses DistrictStatisticsFile for the data field,
-// while the backend internally uses DistrictStatistics. The adapter in task 9.3 handles conversion.
+// Re-export for backward compatibility
 export type { PerDistrictData } from '@toastmasters/shared-contracts'
 
 /**
- * Backend-specific per-district data structure that uses the internal DistrictStatistics type.
- * This is used for writing district data before the adapter converts it to the shared format.
+ * Backend-specific per-district data structure
  */
 export interface BackendPerDistrictData {
   districtId: string
@@ -220,12 +158,6 @@ export interface PerDistrictSnapshotStoreInterface {
     snapshotId: string
   ): Promise<PerDistrictSnapshotMetadata | null>
 
-  /**
-   * Get metadata for multiple snapshots in a single batch operation.
-   * Returns a Map where keys are snapshot IDs and values are metadata (or null if not found).
-   *
-   * Requirements: 3.4
-   */
   getSnapshotMetadataBatch(
     snapshotIds: string[]
   ): Promise<Map<string, PerDistrictSnapshotMetadata | null>>
@@ -245,10 +177,10 @@ export interface PerDistrictSnapshotStoreInterface {
 }
 
 /**
- * Unified file-based snapshot store implementation
+ * Unified file-based snapshot store implementation.
  *
- * Provides directory-based snapshot storage with individual district files
- * and performance optimizations including caching and concurrent read handling.
+ * Thin façade delegating to focused sub-modules while preserving the
+ * existing public API surface for all 50+ consumer import sites.
  */
 export class FileSnapshotStore
   implements SnapshotStore, PerDistrictSnapshotStoreInterface
@@ -259,18 +191,16 @@ export class FileSnapshotStore
   private readonly integrityValidator: SnapshotIntegrityValidator
   private readonly recoveryService: SnapshotRecoveryService
 
-  // Performance optimization: In-memory cache for current snapshot
-  private currentSnapshotCache: SnapshotCacheEntry | null = null
+  // Cache state
+  private currentSnapshotCache: reader.SnapshotCacheEntry | null = null
   private readonly SNAPSHOT_CACHE_TTL = 300000 // 5 minutes
-
-  // Performance optimization: In-memory cache for snapshot list
-  private snapshotListCache: SnapshotListCacheEntry | null = null
-  private readonly SNAPSHOT_LIST_CACHE_TTL = 60000 // 60 seconds minimum per requirements
+  private snapshotListCache: reader.SnapshotListCacheEntry | null = null
+  private readonly SNAPSHOT_LIST_CACHE_TTL = 60000 // 60 seconds
 
   // Concurrent read handling
   private readonly activeReads = new Map<string, Promise<Snapshot | null>>()
   private activeListSnapshotsRead: Promise<SnapshotMetadata[]> | null = null
-  private readonly performanceMetrics: ReadPerformanceMetrics = {
+  private readonly performanceMetrics: reader.ReadPerformanceMetrics = {
     totalReads: 0,
     cacheHits: 0,
     cacheMisses: 0,
@@ -297,79 +227,10 @@ export class FileSnapshotStore
     this.recoveryService = new SnapshotRecoveryService(this.config)
   }
 
-  /**
-   * Resolve a path under a base directory, ensuring it doesn't escape via traversal.
-   * Returns the sanitized path for use in file operations.
-   * This is CodeQL-friendly because it returns a new sanitized value.
-   * @throws Error if the path would escape the base directory
-   */
-  private resolvePathUnderBase(baseDir: string, ...parts: string[]): string {
-    const base = path.resolve(baseDir)
-    const candidate = path.resolve(baseDir, ...parts)
+  // ==========================================================================
+  // Read operations (delegated to SnapshotReader)
+  // ==========================================================================
 
-    const rel = path.relative(base, candidate)
-
-    // Must not be outside base, and must not be absolute (Windows safety)
-    if (rel.startsWith('..') || path.isAbsolute(rel)) {
-      throw new Error(`Path traversal attempt detected: ${candidate}`)
-    }
-
-    return candidate
-  }
-
-  /**
-   * Resolve an existing path under a base directory with symlink protection.
-   * Uses realpath to resolve symlinks and ensure the actual file is within base.
-   * Use this for reads where the file is expected to exist.
-   * @throws Error if the path would escape the base directory or file doesn't exist
-   */
-  private async resolveExistingPathUnderBase(
-    baseDir: string,
-    ...parts: string[]
-  ): Promise<string> {
-    const baseReal = await fs.realpath(baseDir)
-
-    // Resolve the target path lexically first
-    const candidate = path.resolve(baseDir, ...parts)
-
-    // realpath resolves symlinks - prevents "symlink escapes base" attacks
-    const candidateReal = await fs.realpath(candidate)
-
-    const rel = path.relative(baseReal, candidateReal)
-    if (rel.startsWith('..') || path.isAbsolute(rel)) {
-      throw new Error(`Path traversal attempt detected: ${candidateReal}`)
-    }
-
-    return candidateReal
-  }
-
-  /**
-   * Validate a district ID to ensure it is safe to use in file paths.
-   * District IDs are typically numeric (e.g., "42", "15") or alphanumeric (e.g., "F", "NONEXISTENT1").
-   * The pattern prevents path traversal by rejecting special characters like /, \, .., etc.
-   * @throws Error if the district ID format is invalid
-   */
-  private validateDistrictId(districtId: string): void {
-    if (typeof districtId !== 'string' || districtId.length === 0) {
-      throw new Error('Invalid district ID: empty or non-string value')
-    }
-
-    // Allow alphanumeric characters only (no path separators, dots, or special chars)
-    // This prevents path traversal while allowing valid district IDs
-    const DISTRICT_ID_PATTERN = /^[A-Za-z0-9]+$/
-    if (!DISTRICT_ID_PATTERN.test(districtId)) {
-      logger.warn('Rejected district ID with invalid characters', {
-        operation: 'validateDistrictId',
-        district_id: districtId,
-      })
-      throw new Error('Invalid district ID format')
-    }
-  }
-
-  /**
-   * Get the most recent successful snapshot with performance optimizations.
-   * Uses directory scanning to find the latest successful snapshot.
-   */
   async getLatestSuccessful(): Promise<Snapshot | null> {
     const startTime = Date.now()
     const operationId = `read_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -396,11 +257,14 @@ export class FileSnapshotStore
     })
 
     try {
-      // Check if we have a valid cached snapshot
-      const cachedSnapshot = await this.getCachedCurrentSnapshot()
+      // Check cache
+      const cachedSnapshot = reader.getCachedCurrentSnapshot(
+        this.currentSnapshotCache,
+        this.SNAPSHOT_CACHE_TTL
+      )
       if (cachedSnapshot) {
         const duration = Date.now() - startTime
-        this.updatePerformanceMetrics(duration, true)
+        reader.updatePerformanceMetrics(this.performanceMetrics, duration, true)
 
         logger.info('Served snapshot from in-memory cache', {
           operation: 'getLatestSuccessful',
@@ -412,9 +276,12 @@ export class FileSnapshotStore
         })
 
         return cachedSnapshot
+      } else if (this.currentSnapshotCache) {
+        // Cache returned null — expired; clear it
+        this.currentSnapshotCache = null
       }
 
-      // Check for concurrent read of the same operation
+      // Concurrent read dedup
       const cacheKey = 'current_snapshot'
       if (this.activeReads.has(cacheKey)) {
         logger.debug('Joining concurrent read operation', {
@@ -425,22 +292,32 @@ export class FileSnapshotStore
 
         const result = await this.activeReads.get(cacheKey)!
         const duration = Date.now() - startTime
-        this.updatePerformanceMetrics(duration, false)
+        reader.updatePerformanceMetrics(
+          this.performanceMetrics,
+          duration,
+          false
+        )
         return result
       }
 
-      // Start new read operation using two-phase approach:
-      // Phase 1: Try pointer file (fast path), Phase 2: Fall back to directory scan
-      const readPromise = this.findLatestSuccessful()
+      // Start new read using two-phase discovery
+      const readPromise = findLatestSuccessful(
+        this.snapshotsDir,
+        (id: string) => readSnapshotFromDirectory(this.snapshotsDir, id)
+      )
       this.activeReads.set(cacheKey, readPromise)
 
       try {
         const result = await readPromise
         const duration = Date.now() - startTime
-        this.updatePerformanceMetrics(duration, false)
+        reader.updatePerformanceMetrics(
+          this.performanceMetrics,
+          duration,
+          false
+        )
 
         if (result) {
-          await this.cacheCurrentSnapshot(result)
+          this.currentSnapshotCache = reader.createSnapshotCacheEntry(result)
 
           logger.info(
             'Successfully retrieved and cached latest successful snapshot',
@@ -464,7 +341,7 @@ export class FileSnapshotStore
       }
     } catch (error) {
       const duration = Date.now() - startTime
-      this.updatePerformanceMetrics(duration, false)
+      reader.updatePerformanceMetrics(this.performanceMetrics, duration, false)
 
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error'
@@ -482,9 +359,6 @@ export class FileSnapshotStore
     }
   }
 
-  /**
-   * Get the most recent snapshot regardless of status
-   */
   async getLatest(): Promise<Snapshot | null> {
     const startTime = Date.now()
     logger.info('Starting getLatest operation', {
@@ -493,11 +367,9 @@ export class FileSnapshotStore
     })
 
     try {
-      await this.ensureDirectoryExists()
+      await fs.mkdir(this.snapshotsDir, { recursive: true })
 
       const files = await fs.readdir(this.snapshotsDir)
-
-      // Get directories (per-district snapshots) and sort by date (newest first)
       const snapshotDirs: string[] = []
       for (const file of files) {
         const filePath = path.join(this.snapshotsDir, file)
@@ -507,7 +379,6 @@ export class FileSnapshotStore
         }
       }
 
-      // Sort by ISO date string (works for YYYY-MM-DD format)
       snapshotDirs.sort((a, b) => b.localeCompare(a))
 
       logger.info('Found snapshot directories for getLatest', {
@@ -561,1110 +432,8 @@ export class FileSnapshotStore
     }
   }
 
-  /**
-   * Write a snapshot using per-district directory structure
-   */
-  async writeSnapshot(
-    snapshot: Snapshot,
-    allDistrictsRankings?: AllDistrictsRankingsData,
-    options?: WriteSnapshotOptions
-  ): Promise<void> {
-    const startTime = Date.now()
-    logger.info('Starting per-district snapshot write operation', {
-      operation: 'writeSnapshot',
-      snapshot_id: snapshot.snapshot_id,
-      status: snapshot.status,
-      schema_version: snapshot.schema_version,
-      calculation_version: snapshot.calculation_version,
-      district_count: snapshot.payload.districts.length,
-      error_count: snapshot.errors.length,
-      has_rankings: !!allDistrictsRankings,
-      override_snapshot_date: options?.overrideSnapshotDate,
-    })
-
-    try {
-      await fs.mkdir(this.snapshotsDir, { recursive: true })
-
-      // Generate ISO date-based directory name
-      const snapshotDirName = options?.overrideSnapshotDate
-        ? this.generateSnapshotDirectoryName(options.overrideSnapshotDate)
-        : this.generateSnapshotDirectoryName(
-            snapshot.payload.metadata.dataAsOfDate
-          )
-      const snapshotDir = path.join(this.snapshotsDir, snapshotDirName)
-
-      await fs.mkdir(snapshotDir, { recursive: true })
-
-      logger.debug('Created snapshot directory', {
-        operation: 'writeSnapshot',
-        snapshot_id: snapshot.snapshot_id,
-        snapshot_dir: snapshotDir,
-        snapshot_dir_name: snapshotDirName,
-      })
-
-      // Write individual district files
-      const manifestEntries: DistrictManifestEntry[] = []
-      let successfulDistricts = 0
-      let failedDistricts = 0
-
-      for (const district of snapshot.payload.districts) {
-        try {
-          await this.writeDistrictData(
-            snapshotDirName,
-            district.districtId,
-            district
-          )
-
-          const districtFile = path.join(
-            snapshotDir,
-            `district_${district.districtId}.json`
-          )
-          const stats = await fs.stat(districtFile)
-
-          manifestEntries.push({
-            districtId: district.districtId,
-            fileName: `district_${district.districtId}.json`,
-            status: 'success',
-            fileSize: stats.size,
-            lastModified: stats.mtime.toISOString(),
-          })
-
-          successfulDistricts++
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error'
-
-          manifestEntries.push({
-            districtId: district.districtId,
-            fileName: `district_${district.districtId}.json`,
-            status: 'failed',
-            fileSize: 0,
-            lastModified: new Date().toISOString(),
-            errorMessage,
-          })
-
-          failedDistricts++
-
-          logger.warn('Failed to write district data', {
-            operation: 'writeSnapshot',
-            snapshot_id: snapshotDirName,
-            district_id: district.districtId,
-            error: errorMessage,
-          })
-        }
-      }
-
-      // Write manifest.json
-      const manifest: SnapshotManifest = {
-        snapshotId: snapshotDirName,
-        createdAt: snapshot.created_at,
-        districts: manifestEntries,
-        totalDistricts: snapshot.payload.districts.length,
-        successfulDistricts,
-        failedDistricts,
-      }
-
-      // Write all-districts rankings if provided
-      if (allDistrictsRankings) {
-        try {
-          await this.writeAllDistrictsRankings(
-            snapshotDirName,
-            allDistrictsRankings
-          )
-
-          const rankingsFile = path.join(
-            snapshotDir,
-            'all-districts-rankings.json'
-          )
-          const rankingsStats = await fs.stat(rankingsFile)
-          manifest.allDistrictsRankings = {
-            filename: 'all-districts-rankings.json',
-            size: rankingsStats.size,
-            status: 'present',
-          }
-
-          logger.info('Successfully wrote all-districts rankings to snapshot', {
-            operation: 'writeSnapshot',
-            snapshot_id: snapshotDirName,
-            rankings_count: allDistrictsRankings.rankings.length,
-            file_size: rankingsStats.size,
-          })
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error'
-          logger.error('Failed to write all-districts rankings', {
-            operation: 'writeSnapshot',
-            snapshot_id: snapshotDirName,
-            error: errorMessage,
-          })
-          throw new Error(
-            `Failed to write all-districts rankings: ${errorMessage}`
-          )
-        }
-      } else {
-        manifest.allDistrictsRankings = {
-          filename: 'all-districts-rankings.json',
-          size: 0,
-          status: 'missing',
-        }
-      }
-
-      const manifestPath = path.join(snapshotDir, 'manifest.json')
-      await fs.writeFile(
-        manifestPath,
-        JSON.stringify(manifest, null, 2),
-        'utf-8'
-      )
-
-      logger.debug('Wrote snapshot manifest', {
-        operation: 'writeSnapshot',
-        snapshot_id: snapshotDirName,
-        manifest_path: manifestPath,
-        total_districts: manifest.totalDistricts,
-        successful_districts: manifest.successfulDistricts,
-        failed_districts: manifest.failedDistricts,
-      })
-
-      // Write metadata.json
-      const districtErrorsFromSnapshot =
-        this.extractDistrictErrorsFromSnapshot(snapshot)
-
-      const rankingVersion = allDistrictsRankings
-        ? allDistrictsRankings.metadata.rankingVersion
-        : this.extractRankingVersion(snapshot)
-
-      const metadata: PerDistrictSnapshotMetadata = {
-        snapshotId: snapshotDirName,
-        createdAt: snapshot.created_at,
-        schemaVersion: snapshot.schema_version,
-        calculationVersion: snapshot.calculation_version,
-        rankingVersion,
-        status: snapshot.status,
-        configuredDistricts: snapshot.payload.districts.map(d => d.districtId),
-        successfulDistricts: manifestEntries
-          .filter(e => e.status === 'success')
-          .map(e => e.districtId),
-        failedDistricts: manifestEntries
-          .filter(e => e.status === 'failed')
-          .map(e => e.districtId),
-        errors: snapshot.errors,
-        districtErrors: districtErrorsFromSnapshot,
-        processingDuration: Date.now() - startTime,
-        source: snapshot.payload.metadata.source,
-        dataAsOfDate: snapshot.payload.metadata.dataAsOfDate,
-        isClosingPeriodData: snapshot.payload.metadata.isClosingPeriodData,
-        collectionDate: snapshot.payload.metadata.collectionDate,
-        logicalDate: snapshot.payload.metadata.logicalDate,
-      }
-
-      const metadataPath = path.join(snapshotDir, 'metadata.json')
-      await fs.writeFile(
-        metadataPath,
-        JSON.stringify(metadata, null, 2),
-        'utf-8'
-      )
-
-      logger.debug('Wrote snapshot metadata', {
-        operation: 'writeSnapshot',
-        snapshot_id: snapshotDirName,
-        metadata_path: metadataPath,
-        processing_duration: metadata.processingDuration,
-      })
-
-      // Invalidate caches when writing a successful snapshot
-      if (snapshot.status === 'success') {
-        await this.invalidateCaches()
-
-        logger.info('Caches invalidated for successful snapshot', {
-          operation: 'writeSnapshot',
-          snapshot_id: snapshotDirName,
-        })
-      }
-
-      const duration = Date.now() - startTime
-      logger.info('Snapshot write operation completed successfully', {
-        operation: 'writeSnapshot',
-        snapshot_id: snapshotDirName,
-        status: snapshot.status,
-        successful_districts: successfulDistricts,
-        failed_districts: failedDistricts,
-        duration_ms: duration,
-      })
-    } catch (error) {
-      const duration = Date.now() - startTime
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Failed to write snapshot', {
-        operation: 'writeSnapshot',
-        snapshot_id: snapshot.snapshot_id,
-        error: errorMessage,
-        duration_ms: duration,
-      })
-      throw new Error(`Failed to write snapshot: ${errorMessage}`)
-    }
-  }
-
-  /**
-   * Write district data to a snapshot directory.
-   *
-   * This method converts the backend's internal DistrictStatistics format
-   * to the shared contracts PerDistrictData format for storage.
-   */
-  async writeDistrictData(
-    snapshotId: string,
-    districtId: string,
-    data: DistrictStatistics
-  ): Promise<void> {
-    // Validate inputs before constructing paths
-    this.validateSnapshotId(snapshotId)
-    this.validateDistrictId(districtId)
-
-    // Use safe path resolution for write operation
-    const districtFile = this.resolvePathUnderBase(
-      this.snapshotsDir,
-      snapshotId,
-      `district_${districtId}.json`
-    )
-
-    // Calculate DCP goals per club to preserve education.totalAwards
-    // Distribute the total awards across clubs if there are any
-    const totalAwards = data.education?.totalAwards ?? 0
-    const byClub = data.membership?.byClub ?? []
-
-    // Build club entries that preserve both membership data (from byClub) and
-    // status counts (active/suspended/ineligible/low) through round-trip.
-    // The adapter on read counts clubs by status, so we must create exactly
-    // the right number of clubs with each status.
-    const activeCount = data.clubs?.active ?? 0
-    const suspendedCount = data.clubs?.suspended ?? 0
-    const ineligibleCount = data.clubs?.ineligible ?? 0
-    const lowCount = data.clubs?.low ?? 0
-    const totalStatusCount =
-      activeCount + suspendedCount + ineligibleCount + lowCount
-
-    // Build status list: exact counts for each status
-    const statusList: string[] = []
-    for (let i = 0; i < activeCount; i++) statusList.push('Active')
-    for (let i = 0; i < suspendedCount; i++) statusList.push('Suspended')
-    for (let i = 0; i < ineligibleCount; i++) statusList.push('Ineligible')
-    for (let i = 0; i < lowCount; i++) statusList.push('Low')
-
-    let clubs: Array<{
-      clubId: string
-      clubName: string
-      divisionId: string
-      areaId: string
-      membershipCount: number
-      paymentsCount: number
-      dcpGoals: number
-      status: string
-      divisionName: string
-      areaName: string
-      octoberRenewals: number
-      aprilRenewals: number
-      newMembers: number
-      membershipBase: number
-      clubStatus?: string
-    }> = []
-
-    // First, create clubs from byClub entries (these carry membership data)
-    for (let index = 0; index < byClub.length; index++) {
-      const club = byClub[index]!
-      clubs.push({
-        clubId: club.clubId,
-        clubName: club.clubName,
-        divisionId: '',
-        areaId: '',
-        membershipCount: club.memberCount,
-        paymentsCount: 0,
-        dcpGoals: 0, // Will be distributed below
-        status: statusList[index] ?? 'Active',
-        divisionName: '',
-        areaName: '',
-        octoberRenewals: 0,
-        aprilRenewals: 0,
-        newMembers: data.membership?.new ?? 0,
-        membershipBase: 0,
-      })
-    }
-
-    // Then, create placeholder clubs for remaining status counts not covered by byClub
-    for (let i = byClub.length; i < totalStatusCount; i++) {
-      clubs.push({
-        clubId: `placeholder_${i}`,
-        clubName: `Placeholder Club ${i}`,
-        divisionId: '',
-        areaId: '',
-        membershipCount: 0,
-        paymentsCount: 0,
-        dcpGoals: 0, // Will be distributed below
-        status: statusList[i] ?? 'Active',
-        divisionName: '',
-        areaName: '',
-        octoberRenewals: 0,
-        aprilRenewals: 0,
-        newMembers: 0,
-        membershipBase: 0,
-      })
-    }
-
-    // Distribute DCP goals across all clubs to preserve totalAwards on round-trip
-    if (totalAwards > 0 && clubs.length > 0) {
-      const goalsPerClub = Math.floor(totalAwards / clubs.length)
-      const extraGoals = totalAwards % clubs.length
-      for (let i = 0; i < clubs.length; i++) {
-        clubs[i]!.dcpGoals = goalsPerClub + (i < extraGoals ? 1 : 0)
-      }
-    }
-
-    // If there are awards but no clubs, create a synthetic club to preserve the awards count
-    if (totalAwards > 0 && clubs.length === 0) {
-      clubs = [
-        {
-          clubId: 'synthetic',
-          clubName: 'Synthetic Club',
-          divisionId: '',
-          areaId: '',
-          membershipCount: 0,
-          paymentsCount: 0,
-          dcpGoals: totalAwards,
-          status: 'synthetic',
-          divisionName: '',
-          areaName: '',
-          octoberRenewals: 0,
-          aprilRenewals: 0,
-          newMembers: 0,
-          membershipBase: 0,
-          clubStatus: 'synthetic',
-        },
-      ]
-    }
-
-    // Convert backend DistrictStatistics to shared contracts DistrictStatisticsFile format
-    // This creates a minimal valid structure for the shared contracts schema
-    const districtStatisticsFile = {
-      districtId: data.districtId,
-      snapshotDate: data.asOfDate,
-      clubs,
-      divisions: [] as Array<{
-        divisionId: string
-        divisionName: string
-        clubCount: number
-        membershipTotal: number
-        paymentsTotal: number
-      }>,
-      areas: [] as Array<{
-        areaId: string
-        areaName: string
-        divisionId: string
-        clubCount: number
-        membershipTotal: number
-        paymentsTotal: number
-      }>,
-      totals: {
-        totalClubs: data.clubs?.total ?? 0,
-        totalMembership: data.membership?.total ?? 0,
-        totalPayments: 0,
-        distinguishedClubs: data.clubs?.distinguished ?? 0,
-        selectDistinguishedClubs: 0,
-        presidentDistinguishedClubs: 0,
-      },
-      // Raw CSV data arrays - use values from input if available, otherwise empty arrays
-      divisionPerformance: data.divisionPerformance ?? [],
-      clubPerformance: data.clubPerformance ?? [],
-      districtPerformance: data.districtPerformance ?? [],
-    }
-
-    // Create PerDistrictData structure matching shared contracts schema
-    const perDistrictData = {
-      districtId,
-      districtName: `District ${districtId}`,
-      collectedAt: new Date().toISOString(),
-      status: 'success' as const,
-      data: districtStatisticsFile,
-    }
-
-    await fs.writeFile(
-      districtFile,
-      JSON.stringify(perDistrictData, null, 2),
-      'utf-8'
-    )
-
-    logger.debug('Wrote district data file', {
-      operation: 'writeDistrictData',
-      snapshot_id: snapshotId,
-      district_id: districtId,
-      file_path: districtFile,
-    })
-  }
-
-  /**
-   * Write all-districts rankings data to a snapshot directory
-   */
-  async writeAllDistrictsRankings(
-    snapshotId: string,
-    rankingsData: AllDistrictsRankingsData
-  ): Promise<void> {
-    this.validateSnapshotId(snapshotId)
-
-    // Ensure the snapshot directory exists
-    const snapshotDir = this.resolvePathUnderBase(this.snapshotsDir, snapshotId)
-    await fs.mkdir(snapshotDir, { recursive: true })
-
-    // Use safe path resolution for write operation
-    const rankingsFile = this.resolvePathUnderBase(
-      this.snapshotsDir,
-      snapshotId,
-      'all-districts-rankings.json'
-    )
-
-    const updatedRankingsData = {
-      ...rankingsData,
-      metadata: {
-        ...rankingsData.metadata,
-        snapshotId,
-      },
-    }
-
-    await fs.writeFile(
-      rankingsFile,
-      JSON.stringify(updatedRankingsData, null, 2),
-      'utf-8'
-    )
-
-    logger.info('Wrote all-districts rankings file', {
-      operation: 'writeAllDistrictsRankings',
-      snapshot_id: snapshotId,
-      file_path: rankingsFile,
-      district_count: updatedRankingsData.rankings.length,
-      total_districts: updatedRankingsData.metadata.totalDistricts,
-    })
-  }
-
-  /**
-   * Read all-districts rankings data from a snapshot directory
-   */
-  async readAllDistrictsRankings(
-    snapshotId: string
-  ): Promise<AllDistrictsRankingsData | null> {
-    try {
-      this.validateSnapshotId(snapshotId)
-
-      // Use symlink-safe path resolution for existing file read
-      const rankingsFile = await this.resolveExistingPathUnderBase(
-        this.snapshotsDir,
-        snapshotId,
-        'all-districts-rankings.json'
-      )
-
-      const content = await fs.readFile(rankingsFile, 'utf-8')
-      const rawData: unknown = JSON.parse(content)
-
-      // Validate the data against the shared contract schema
-      const validationResult = validateAllDistrictsRankings(rawData)
-      if (!validationResult.success || !validationResult.data) {
-        logger.error('All-districts rankings validation failed', {
-          operation: 'readAllDistrictsRankings',
-          snapshot_id: snapshotId,
-          error: validationResult.error ?? 'Validation returned no data',
-        })
-        return null
-      }
-
-      const rankingsData = validationResult.data
-
-      logger.debug('Read and validated all-districts rankings file', {
-        operation: 'readAllDistrictsRankings',
-        snapshot_id: snapshotId,
-        file_path: rankingsFile,
-        district_count: rankingsData.rankings.length,
-      })
-
-      return rankingsData
-    } catch (error) {
-      if ((error as { code?: string }).code === 'ENOENT') {
-        logger.debug('All-districts rankings file not found', {
-          operation: 'readAllDistrictsRankings',
-          snapshot_id: snapshotId,
-        })
-        return null
-      }
-
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Failed to read all-districts rankings file', {
-        operation: 'readAllDistrictsRankings',
-        snapshot_id: snapshotId,
-        error: errorMessage,
-      })
-      throw new Error(`Failed to read all-districts rankings: ${errorMessage}`)
-    }
-  }
-
-  /**
-   * Check if all-districts rankings file exists for a snapshot
-   */
-  async hasAllDistrictsRankings(snapshotId: string): Promise<boolean> {
-    try {
-      this.validateSnapshotId(snapshotId)
-
-      // Use symlink-safe path resolution for existing file check
-      const rankingsFile = await this.resolveExistingPathUnderBase(
-        this.snapshotsDir,
-        snapshotId,
-        'all-districts-rankings.json'
-      )
-
-      await fs.access(rankingsFile)
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  /**
-   * Read district data from a snapshot directory
-   */
-  async readDistrictData(
-    snapshotId: string,
-    districtId: string
-  ): Promise<DistrictStatistics | null> {
-    try {
-      // Validate inputs before constructing paths
-      this.validateSnapshotId(snapshotId)
-      this.validateDistrictId(districtId)
-
-      // Use symlink-safe path resolution for existing file read
-      const districtFile = await this.resolveExistingPathUnderBase(
-        this.snapshotsDir,
-        snapshotId,
-        `district_${districtId}.json`
-      )
-
-      const content = await fs.readFile(districtFile, 'utf-8')
-      const rawData: unknown = JSON.parse(content)
-
-      // Validate the data against the shared contract schema
-      const validationResult = validatePerDistrictData(rawData)
-      if (!validationResult.success || !validationResult.data) {
-        logger.error('District data validation failed', {
-          operation: 'readDistrictData',
-          snapshot_id: snapshotId,
-          district_id: districtId,
-          error: validationResult.error ?? 'Validation returned no data',
-        })
-        return null
-      }
-
-      const perDistrictData = validationResult.data
-
-      logger.debug('Read and validated district data file', {
-        operation: 'readDistrictData',
-        snapshot_id: snapshotId,
-        district_id: districtId,
-        file_path: districtFile,
-        status: perDistrictData.status,
-      })
-
-      if (perDistrictData.status !== 'success') {
-        return null
-      }
-
-      // Adapt the file format to the backend's internal format
-      return adaptDistrictStatisticsFileToBackend(perDistrictData.data)
-    } catch (error) {
-      if ((error as { code?: string }).code === 'ENOENT') {
-        logger.debug('District data file not found', {
-          operation: 'readDistrictData',
-          snapshot_id: snapshotId,
-          district_id: districtId,
-        })
-        return null
-      }
-
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Failed to read district data', {
-        operation: 'readDistrictData',
-        snapshot_id: snapshotId,
-        district_id: districtId,
-        error: errorMessage,
-      })
-      throw new Error(
-        `Failed to read district data for ${districtId}: ${errorMessage}`
-      )
-    }
-  }
-
-  /**
-   * List all districts in a snapshot
-   */
-  async listDistrictsInSnapshot(snapshotId: string): Promise<string[]> {
-    try {
-      const manifest = await this.getSnapshotManifest(snapshotId)
-      if (!manifest) {
-        return []
-      }
-
-      return manifest.districts
-        .filter(d => d.status === 'success')
-        .map(d => d.districtId)
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Failed to list districts in snapshot', {
-        operation: 'listDistrictsInSnapshot',
-        snapshot_id: snapshotId,
-        error: errorMessage,
-      })
-      return []
-    }
-  }
-
-  /**
-   * Get snapshot manifest
-   */
-  async getSnapshotManifest(
-    snapshotId: string
-  ): Promise<SnapshotManifest | null> {
-    try {
-      this.validateSnapshotId(snapshotId)
-
-      // Use symlink-safe path resolution for existing file read
-      const manifestPath = await this.resolveExistingPathUnderBase(
-        this.snapshotsDir,
-        snapshotId,
-        'manifest.json'
-      )
-
-      const content = await fs.readFile(manifestPath, 'utf-8')
-      const rawData: unknown = JSON.parse(content)
-
-      // Validate the data against the shared contract schema
-      const validationResult = validateSnapshotManifest(rawData)
-      if (!validationResult.success || !validationResult.data) {
-        logger.error('Snapshot manifest validation failed', {
-          operation: 'getSnapshotManifest',
-          snapshot_id: snapshotId,
-          error: validationResult.error ?? 'Validation returned no data',
-        })
-        return null
-      }
-
-      const manifest = validationResult.data
-
-      logger.debug('Read and validated snapshot manifest', {
-        operation: 'getSnapshotManifest',
-        snapshot_id: snapshotId,
-        manifest_path: manifestPath,
-        total_districts: manifest.totalDistricts,
-      })
-
-      return manifest
-    } catch (error) {
-      if ((error as { code?: string }).code === 'ENOENT') {
-        logger.debug('Snapshot manifest not found', {
-          operation: 'getSnapshotManifest',
-          snapshot_id: snapshotId,
-        })
-        return null
-      }
-
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Failed to read snapshot manifest', {
-        operation: 'getSnapshotManifest',
-        snapshot_id: snapshotId,
-        error: errorMessage,
-      })
-      throw new Error(`Failed to read snapshot manifest: ${errorMessage}`)
-    }
-  }
-
-  /**
-   * Get snapshot metadata
-   */
-  async getSnapshotMetadata(
-    snapshotId: string
-  ): Promise<PerDistrictSnapshotMetadata | null> {
-    try {
-      this.validateSnapshotId(snapshotId)
-
-      // Use symlink-safe path resolution for existing file read
-      const metadataPath = await this.resolveExistingPathUnderBase(
-        this.snapshotsDir,
-        snapshotId,
-        'metadata.json'
-      )
-
-      const content = await fs.readFile(metadataPath, 'utf-8')
-      const metadata: PerDistrictSnapshotMetadata = JSON.parse(content)
-
-      logger.debug('Read snapshot metadata', {
-        operation: 'getSnapshotMetadata',
-        snapshot_id: snapshotId,
-        metadata_path: metadataPath,
-        status: metadata.status,
-      })
-
-      return metadata
-    } catch (error) {
-      if ((error as { code?: string }).code === 'ENOENT') {
-        logger.debug('Snapshot metadata not found', {
-          operation: 'getSnapshotMetadata',
-          snapshot_id: snapshotId,
-        })
-        return null
-      }
-
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Failed to read snapshot metadata', {
-        operation: 'getSnapshotMetadata',
-        snapshot_id: snapshotId,
-        error: errorMessage,
-      })
-      throw new Error(`Failed to read snapshot metadata: ${errorMessage}`)
-    }
-  }
-
-  /**
-   * Get metadata for multiple snapshots in a single batch operation.
-   * Uses the cached snapshot list when available to avoid disk reads.
-   *
-   * Property 5: Batch Metadata Retrieval
-   * - Returns metadata for all requested snapshots that exist
-   * - Returns null for snapshots that don't exist
-   * - Returns results in a single operation (not N individual queries)
-   *
-   * @param snapshotIds - Array of snapshot IDs to retrieve metadata for
-   * @returns Map of snapshot ID to metadata (null if snapshot doesn't exist)
-   *
-   * Requirements: 3.4
-   */
-  async getSnapshotMetadataBatch(
-    snapshotIds: string[]
-  ): Promise<Map<string, PerDistrictSnapshotMetadata | null>> {
-    const startTime = Date.now()
-    const results = new Map<string, PerDistrictSnapshotMetadata | null>()
-
-    logger.info('Starting batch metadata retrieval', {
-      operation: 'getSnapshotMetadataBatch',
-      requested_count: snapshotIds.length,
-      snapshot_ids: snapshotIds.slice(0, 10), // Log first 10 for debugging
-    })
-
-    if (snapshotIds.length === 0) {
-      logger.debug('Empty snapshot ID list, returning empty results', {
-        operation: 'getSnapshotMetadataBatch',
-      })
-      return results
-    }
-
-    // Validate all snapshot IDs first
-    const validSnapshotIds: string[] = []
-    for (const snapshotId of snapshotIds) {
-      try {
-        this.validateSnapshotId(snapshotId)
-        validSnapshotIds.push(snapshotId)
-      } catch (error) {
-        logger.warn('Invalid snapshot ID in batch request', {
-          operation: 'getSnapshotMetadataBatch',
-          snapshot_id: snapshotId,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        })
-        results.set(snapshotId, null)
-      }
-    }
-
-    // Try to use cached snapshot list to avoid disk reads
-    const cachedList = this.getCachedSnapshotList()
-    const cachedSnapshotIds = cachedList
-      ? new Set(cachedList.map(m => m.snapshot_id))
-      : null
-
-    // Read metadata for all valid snapshot IDs concurrently
-    const metadataPromises = validSnapshotIds.map(async snapshotId => {
-      // If we have a cached list and the snapshot isn't in it, skip disk read
-      if (cachedSnapshotIds && !cachedSnapshotIds.has(snapshotId)) {
-        logger.debug('Snapshot not in cached list, skipping disk read', {
-          operation: 'getSnapshotMetadataBatch',
-          snapshot_id: snapshotId,
-        })
-        return { snapshotId, metadata: null }
-      }
-
-      try {
-        const metadata = await this.getSnapshotMetadata(snapshotId)
-        return { snapshotId, metadata }
-      } catch (error) {
-        logger.warn('Failed to read metadata for snapshot in batch', {
-          operation: 'getSnapshotMetadataBatch',
-          snapshot_id: snapshotId,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        })
-        return { snapshotId, metadata: null }
-      }
-    })
-
-    const metadataResults = await Promise.all(metadataPromises)
-
-    // Populate results map
-    for (const { snapshotId, metadata } of metadataResults) {
-      results.set(snapshotId, metadata)
-    }
-
-    const duration = Date.now() - startTime
-    const foundCount = Array.from(results.values()).filter(
-      m => m !== null
-    ).length
-    const notFoundCount = results.size - foundCount
-
-    logger.info('Batch metadata retrieval completed', {
-      operation: 'getSnapshotMetadataBatch',
-      requested_count: snapshotIds.length,
-      found_count: foundCount,
-      not_found_count: notFoundCount,
-      used_cache: cachedSnapshotIds !== null,
-      duration_ms: duration,
-    })
-
-    return results
-  }
-
-  /**
-   * Check if a snapshot write completed fully
-   *
-   * Determines whether a snapshot was fully written or if some districts
-   * failed during the write process. For file-based storage, this checks
-   * the writeComplete field in the metadata.
-   *
-   * Return value logic:
-   * - Returns `true` if the write completed fully
-   * - Returns `true` if the snapshot is a legacy snapshot without the writeComplete field (backward compatibility)
-   * - Returns `false` if the write was partial (some districts failed)
-   * - Returns `false` if the snapshot doesn't exist
-   *
-   * @param snapshotId - The snapshot ID (ISO date format: YYYY-MM-DD)
-   * @returns true if the write completed fully (or for legacy snapshots),
-   *          false if the write was partial or snapshot doesn't exist
-   *
-   * Requirements: 5.5
-   */
-  async isSnapshotWriteComplete(snapshotId: string): Promise<boolean> {
-    try {
-      const metadata = await this.getSnapshotMetadata(snapshotId)
-
-      if (!metadata) {
-        // Snapshot doesn't exist
-        logger.debug('Snapshot not found for write completion check', {
-          operation: 'isSnapshotWriteComplete',
-          snapshot_id: snapshotId,
-        })
-        return false
-      }
-
-      // For backward compatibility, undefined writeComplete is treated as true (complete)
-      // This handles legacy snapshots that don't have the writeComplete field
-      const isComplete = metadata.writeComplete !== false
-
-      logger.debug('Checked snapshot write completion status', {
-        operation: 'isSnapshotWriteComplete',
-        snapshot_id: snapshotId,
-        writeComplete: metadata.writeComplete,
-        isComplete,
-        hasWriteFailedDistricts: !!metadata.writeFailedDistricts?.length,
-      })
-
-      return isComplete
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Failed to check snapshot write completion', {
-        operation: 'isSnapshotWriteComplete',
-        snapshot_id: snapshotId,
-        error: errorMessage,
-      })
-      // On error, return false to be safe
-      return false
-    }
-  }
-
-  /**
-   * List snapshots with optional filtering and limiting
-   * Uses in-memory cache with 60-second TTL to avoid repeated directory scans
-   */
-  /**
-   * List snapshots with optional filtering and limiting
-   * Uses in-memory cache with 60-second TTL to avoid repeated directory scans.
-   * Concurrent callers share a single in-flight disk scan to prevent pile-up.
-   */
-  async listSnapshots(
-    limit?: number,
-    filters?: SnapshotFilters
-  ): Promise<SnapshotMetadata[]> {
-    const startTime = Date.now()
-
-    try {
-      // Check if we have valid cached data (unfiltered, unsorted base data)
-      let metadata: SnapshotMetadata[]
-      const cachedData = this.getCachedSnapshotList()
-
-      if (cachedData) {
-        // Use cached data - make a copy to avoid mutating cache
-        metadata = [...cachedData]
-
-        logger.debug('Snapshot list cache hit', {
-          operation: 'listSnapshots',
-          cache_age_ms: Date.now() - (this.snapshotListCache?.cachedAt ?? 0),
-          cached_count: metadata.length,
-        })
-      } else {
-        // Cache miss - join an in-flight read or start a new one
-        if (this.activeListSnapshotsRead) {
-          logger.debug('Joining in-flight listSnapshots disk scan', {
-            operation: 'listSnapshots',
-          })
-          metadata = [...(await this.activeListSnapshotsRead)]
-        } else {
-          logger.debug('Snapshot list cache miss, reading from disk', {
-            operation: 'listSnapshots',
-          })
-
-          const readPromise = this.performListSnapshotsDiskScan(startTime)
-          this.activeListSnapshotsRead = readPromise
-
-          try {
-            metadata = await readPromise
-          } finally {
-            this.activeListSnapshotsRead = null
-          }
-        }
-      }
-
-      // Apply filters (on copy of cached data)
-      if (filters) {
-        metadata = metadata.filter(item => {
-          if (filters.status && item.status !== filters.status) return false
-          if (
-            filters.schema_version &&
-            item.schema_version !== filters.schema_version
-          )
-            return false
-          if (
-            filters.calculation_version &&
-            item.calculation_version !== filters.calculation_version
-          )
-            return false
-          if (filters.created_after && item.created_at < filters.created_after)
-            return false
-          if (
-            filters.created_before &&
-            item.created_at > filters.created_before
-          )
-            return false
-          if (
-            filters.min_district_count &&
-            item.district_count < filters.min_district_count
-          )
-            return false
-          return true
-        })
-      }
-
-      // Sort by creation date (newest first)
-      metadata.sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      )
-
-      // Apply limit
-      if (limit && limit > 0) {
-        metadata = metadata.slice(0, limit)
-      }
-
-      return metadata
-    } catch (error) {
-      throw new Error(
-        `Failed to list snapshots: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
-    }
-  }
-
-  /**
-   * Perform the actual disk scan for listSnapshots.
-   * Reads directory entries with withFileTypes to avoid extra stat calls,
-   * then reads metadata in parallel batches to avoid overwhelming the filesystem.
-   */
-  private async performListSnapshotsDiskScan(
-    startTime: number
-  ): Promise<SnapshotMetadata[]> {
-    await fs.mkdir(this.snapshotsDir, { recursive: true })
-
-    // Use withFileTypes to avoid separate stat() calls per entry
-    const entries = await fs.readdir(this.snapshotsDir, {
-      withFileTypes: true,
-    })
-
-    const snapshotDirs = entries
-      .filter(entry => entry.isDirectory())
-      .map(entry => entry.name)
-
-    // Read metadata in parallel batches to avoid overwhelming the filesystem
-    const BATCH_SIZE = 50
-    const allMetadata: SnapshotMetadata[] = []
-
-    for (let i = 0; i < snapshotDirs.length; i += BATCH_SIZE) {
-      const batch = snapshotDirs.slice(i, i + BATCH_SIZE)
-      const batchResults = await Promise.all(
-        batch.map(dir =>
-          this.getPerDistrictSnapshotMetadataForList(dir).catch(() => null)
-        )
-      )
-      for (const result of batchResults) {
-        if (result !== null) {
-          allMetadata.push(result)
-        }
-      }
-    }
-
-    // Cache the unfiltered, unsorted base data
-    this.cacheSnapshotList(allMetadata)
-
-    logger.info('Snapshot list loaded from disk and cached', {
-      operation: 'listSnapshots',
-      snapshot_count: allMetadata.length,
-      total_dirs: snapshotDirs.length,
-      duration_ms: Date.now() - startTime,
-    })
-
-    return allMetadata
-  }
-
-  /**
-   * Validate a snapshot ID to ensure it is safe to use in file paths.
-   */
-  private validateSnapshotId(snapshotId: string): void {
-    if (typeof snapshotId !== 'string' || snapshotId.length === 0) {
-      throw new Error('Invalid snapshot ID: empty or non-string value')
-    }
-
-    // Allow alphanumeric, underscore, hyphen (for ISO dates like 2024-01-01)
-    const SNAPSHOT_ID_PATTERN = /^[A-Za-z0-9_-]+$/
-    if (!SNAPSHOT_ID_PATTERN.test(snapshotId)) {
-      logger.warn('Rejected snapshot ID with invalid characters', {
-        operation: 'validateSnapshotId',
-        snapshot_id: snapshotId,
-      })
-      throw new Error('Invalid snapshot ID format')
-    }
-  }
-
-  /**
-   * Get a specific snapshot by ID
-   */
   async getSnapshot(snapshotId: string): Promise<Snapshot | null> {
-    this.validateSnapshotId(snapshotId)
+    validateSnapshotId(snapshotId)
 
     const startTime = Date.now()
     const operationId = `read_specific_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
@@ -1683,15 +452,22 @@ export class FileSnapshotStore
     })
 
     try {
-      // Check if this is the current snapshot and we have it cached
+      // Cache hit for current snapshot
       if (
         this.currentSnapshotCache &&
         this.currentSnapshotCache.snapshot.snapshot_id === snapshotId
       ) {
-        const cachedSnapshot = await this.getCachedCurrentSnapshot()
+        const cachedSnapshot = reader.getCachedCurrentSnapshot(
+          this.currentSnapshotCache,
+          this.SNAPSHOT_CACHE_TTL
+        )
         if (cachedSnapshot) {
           const duration = Date.now() - startTime
-          this.updatePerformanceMetrics(duration, true)
+          reader.updatePerformanceMetrics(
+            this.performanceMetrics,
+            duration,
+            true
+          )
 
           logger.info('Served specific snapshot from in-memory cache', {
             operation: 'getSnapshot',
@@ -1707,7 +483,7 @@ export class FileSnapshotStore
         }
       }
 
-      // Check for concurrent read of the same snapshot
+      // Concurrent read dedup
       const cacheKey = `snapshot_${snapshotId}`
       if (this.activeReads.has(cacheKey)) {
         logger.debug(
@@ -1722,12 +498,17 @@ export class FileSnapshotStore
 
         const result = await this.activeReads.get(cacheKey)!
         const duration = Date.now() - startTime
-        this.updatePerformanceMetrics(duration, false)
+        reader.updatePerformanceMetrics(
+          this.performanceMetrics,
+          duration,
+          false
+        )
         return result
       }
 
-      // Start new read operation
-      const readPromise = this.performSpecificSnapshotRead(
+      // New read
+      const readPromise = reader.performSpecificSnapshotRead(
+        this.snapshotsDir,
         snapshotId,
         operationId
       )
@@ -1736,7 +517,11 @@ export class FileSnapshotStore
       try {
         const result = await readPromise
         const duration = Date.now() - startTime
-        this.updatePerformanceMetrics(duration, false)
+        reader.updatePerformanceMetrics(
+          this.performanceMetrics,
+          duration,
+          false
+        )
 
         if (result) {
           logger.info('Successfully retrieved specific snapshot', {
@@ -1766,7 +551,7 @@ export class FileSnapshotStore
       }
     } catch (error) {
       const duration = Date.now() - startTime
-      this.updatePerformanceMetrics(duration, false)
+      reader.updatePerformanceMetrics(this.performanceMetrics, duration, false)
 
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error'
@@ -1783,12 +568,272 @@ export class FileSnapshotStore
     }
   }
 
-  /**
-   * Check if the snapshot store is properly initialized and accessible
-   */
+  async readDistrictData(
+    snapshotId: string,
+    districtId: string
+  ): Promise<DistrictStatistics | null> {
+    return reader.readDistrictData(this.snapshotsDir, snapshotId, districtId)
+  }
+
+  async readAllDistrictsRankings(
+    snapshotId: string
+  ): Promise<AllDistrictsRankingsData | null> {
+    return reader.readAllDistrictsRankings(this.snapshotsDir, snapshotId)
+  }
+
+  async hasAllDistrictsRankings(snapshotId: string): Promise<boolean> {
+    return reader.hasAllDistrictsRankings(this.snapshotsDir, snapshotId)
+  }
+
+  async listDistrictsInSnapshot(snapshotId: string): Promise<string[]> {
+    return reader.listDistrictsInSnapshot(this.snapshotsDir, snapshotId)
+  }
+
+  async getSnapshotManifest(
+    snapshotId: string
+  ): Promise<SnapshotManifest | null> {
+    return reader.getSnapshotManifest(this.snapshotsDir, snapshotId)
+  }
+
+  async getSnapshotMetadata(
+    snapshotId: string
+  ): Promise<PerDistrictSnapshotMetadata | null> {
+    return reader.getSnapshotMetadata(this.snapshotsDir, snapshotId)
+  }
+
+  async getSnapshotMetadataBatch(
+    snapshotIds: string[]
+  ): Promise<Map<string, PerDistrictSnapshotMetadata | null>> {
+    const startTime = Date.now()
+    const results = new Map<string, PerDistrictSnapshotMetadata | null>()
+
+    logger.info('Starting batch metadata retrieval', {
+      operation: 'getSnapshotMetadataBatch',
+      requested_count: snapshotIds.length,
+      snapshot_ids: snapshotIds.slice(0, 10),
+    })
+
+    if (snapshotIds.length === 0) {
+      return results
+    }
+
+    const validSnapshotIds: string[] = []
+    for (const snapshotId of snapshotIds) {
+      try {
+        validateSnapshotId(snapshotId)
+        validSnapshotIds.push(snapshotId)
+      } catch (error) {
+        logger.warn('Invalid snapshot ID in batch request', {
+          operation: 'getSnapshotMetadataBatch',
+          snapshot_id: snapshotId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        })
+        results.set(snapshotId, null)
+      }
+    }
+
+    const cachedList = reader.getCachedSnapshotList(
+      this.snapshotListCache,
+      this.SNAPSHOT_LIST_CACHE_TTL
+    )
+    const cachedSnapshotIds = cachedList
+      ? new Set(cachedList.map(m => m.snapshot_id))
+      : null
+
+    if (!cachedList && this.snapshotListCache) {
+      this.snapshotListCache = null
+    }
+
+    const metadataPromises = validSnapshotIds.map(async snapshotId => {
+      if (cachedSnapshotIds && !cachedSnapshotIds.has(snapshotId)) {
+        return { snapshotId, metadata: null }
+      }
+      try {
+        const metadata = await reader.getSnapshotMetadata(
+          this.snapshotsDir,
+          snapshotId
+        )
+        return { snapshotId, metadata }
+      } catch {
+        return { snapshotId, metadata: null }
+      }
+    })
+
+    const metadataResults = await Promise.all(metadataPromises)
+    for (const { snapshotId, metadata } of metadataResults) {
+      results.set(snapshotId, metadata)
+    }
+
+    const duration = Date.now() - startTime
+    const foundCount = Array.from(results.values()).filter(
+      m => m !== null
+    ).length
+
+    logger.info('Batch metadata retrieval completed', {
+      operation: 'getSnapshotMetadataBatch',
+      requested_count: snapshotIds.length,
+      found_count: foundCount,
+      not_found_count: results.size - foundCount,
+      used_cache: cachedSnapshotIds !== null,
+      duration_ms: duration,
+    })
+
+    return results
+  }
+
+  async isSnapshotWriteComplete(snapshotId: string): Promise<boolean> {
+    return reader.isSnapshotWriteComplete(this.snapshotsDir, snapshotId)
+  }
+
+  async listSnapshots(
+    limit?: number,
+    filters?: SnapshotFilters
+  ): Promise<SnapshotMetadata[]> {
+    const startTime = Date.now()
+
+    try {
+      let metadata: SnapshotMetadata[]
+      const cachedData = reader.getCachedSnapshotList(
+        this.snapshotListCache,
+        this.SNAPSHOT_LIST_CACHE_TTL
+      )
+
+      if (cachedData) {
+        metadata = [...cachedData]
+
+        logger.debug('Snapshot list cache hit', {
+          operation: 'listSnapshots',
+          cache_age_ms: Date.now() - (this.snapshotListCache?.cachedAt ?? 0),
+          cached_count: metadata.length,
+        })
+      } else {
+        if (this.snapshotListCache) {
+          this.snapshotListCache = null
+        }
+
+        if (this.activeListSnapshotsRead) {
+          logger.debug('Joining in-flight listSnapshots disk scan', {
+            operation: 'listSnapshots',
+          })
+          metadata = [...(await this.activeListSnapshotsRead)]
+        } else {
+          logger.debug('Snapshot list cache miss, reading from disk', {
+            operation: 'listSnapshots',
+          })
+
+          const readPromise = reader.performListSnapshotsDiskScan(
+            this.snapshotsDir,
+            startTime
+          )
+          this.activeListSnapshotsRead = readPromise
+
+          try {
+            metadata = await readPromise
+            this.snapshotListCache =
+              reader.createSnapshotListCacheEntry(metadata)
+          } finally {
+            this.activeListSnapshotsRead = null
+          }
+        }
+      }
+
+      return reader.applyFiltersAndLimit(metadata, limit, filters)
+    } catch (error) {
+      throw new Error(
+        `Failed to list snapshots: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
+    }
+  }
+
+  async checkVersionCompatibility(snapshotId: string): Promise<{
+    isCompatible: boolean
+    schemaCompatible: boolean
+    calculationCompatible: boolean
+    rankingCompatible: boolean
+    warnings: string[]
+  }> {
+    return reader.checkVersionCompatibility(this.snapshotsDir, snapshotId)
+  }
+
+  getPerformanceMetrics(): reader.ReadPerformanceMetrics {
+    return { ...this.performanceMetrics }
+  }
+
+  resetPerformanceMetrics(): void {
+    this.performanceMetrics.totalReads = 0
+    this.performanceMetrics.cacheHits = 0
+    this.performanceMetrics.cacheMisses = 0
+    this.performanceMetrics.averageReadTime = 0
+    this.performanceMetrics.concurrentReads = 0
+    this.performanceMetrics.maxConcurrentReads = 0
+  }
+
+  // ==========================================================================
+  // Write operations (delegated to SnapshotWriter)
+  // ==========================================================================
+
+  async writeSnapshot(
+    snapshot: Snapshot,
+    allDistrictsRankings?: AllDistrictsRankingsData,
+    options?: WriteSnapshotOptions
+  ): Promise<void> {
+    return writer.writeSnapshot(
+      this.snapshotsDir,
+      snapshot,
+      () => this.invalidateCaches(),
+      allDistrictsRankings,
+      options
+    )
+  }
+
+  async writeDistrictData(
+    snapshotId: string,
+    districtId: string,
+    data: DistrictStatistics
+  ): Promise<void> {
+    return writer.writeDistrictData(
+      this.snapshotsDir,
+      snapshotId,
+      districtId,
+      data
+    )
+  }
+
+  async writeAllDistrictsRankings(
+    snapshotId: string,
+    rankingsData: AllDistrictsRankingsData
+  ): Promise<void> {
+    return writer.writeAllDistrictsRankings(
+      this.snapshotsDir,
+      snapshotId,
+      rankingsData
+    )
+  }
+
+  async deleteSnapshot(snapshotId: string): Promise<boolean> {
+    return writer.deleteSnapshot(this.snapshotsDir, snapshotId, (id: string) =>
+      this.invalidateSnapshotCache(id)
+    )
+  }
+
+  async shouldUpdateClosingPeriodSnapshot(
+    snapshotDate: string,
+    newCollectionDate: string
+  ): Promise<SnapshotComparisonResult> {
+    return writer.shouldUpdateClosingPeriodSnapshot(
+      this.snapshotsDir,
+      snapshotDate,
+      newCollectionDate
+    )
+  }
+
+  // ==========================================================================
+  // Integrity and recovery (kept inline — already delegated to services)
+  // ==========================================================================
+
   async isReady(): Promise<boolean> {
     try {
-      await this.ensureDirectoryExists()
+      await fs.mkdir(this.snapshotsDir, { recursive: true })
 
       const testFile = path.join(this.snapshotsDir, '.write-test')
       await fs.writeFile(testFile, 'test', 'utf-8')
@@ -1800,77 +845,6 @@ export class FileSnapshotStore
     }
   }
 
-  /**
-   * Delete a snapshot and all its associated data
-   *
-   * Removes the snapshot directory and all district files within it.
-   * Does NOT handle cascading deletion of time-series or analytics data.
-   *
-   * @param snapshotId - The snapshot ID (ISO date format: YYYY-MM-DD)
-   * @returns true if snapshot was deleted, false if it didn't exist
-   * @throws Error on deletion failure
-   *
-   * Requirements: 3.1, 3.2, 3.3, 3.4
-   */
-  async deleteSnapshot(snapshotId: string): Promise<boolean> {
-    const startTime = Date.now()
-
-    logger.info('Starting deleteSnapshot operation', {
-      operation: 'deleteSnapshot',
-      snapshot_id: snapshotId,
-    })
-
-    try {
-      // Validate snapshot ID format to prevent path traversal
-      this.validateSnapshotId(snapshotId)
-
-      // Use safe path resolution for the snapshot directory
-      const snapshotDir = this.resolvePathUnderBase(
-        this.snapshotsDir,
-        snapshotId
-      )
-
-      // Check if snapshot exists
-      try {
-        await fs.access(snapshotDir)
-      } catch {
-        logger.info('Snapshot not found for deletion', {
-          operation: 'deleteSnapshot',
-          snapshot_id: snapshotId,
-          duration_ms: Date.now() - startTime,
-        })
-        return false
-      }
-
-      // Delete the entire snapshot directory
-      await fs.rm(snapshotDir, { recursive: true, force: true })
-
-      // Invalidate any cached data for this snapshot
-      this.invalidateSnapshotCache(snapshotId)
-
-      logger.info('Successfully deleted snapshot', {
-        operation: 'deleteSnapshot',
-        snapshot_id: snapshotId,
-        duration_ms: Date.now() - startTime,
-      })
-
-      return true
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Failed to delete snapshot', {
-        operation: 'deleteSnapshot',
-        snapshot_id: snapshotId,
-        error: errorMessage,
-        duration_ms: Date.now() - startTime,
-      })
-      throw error
-    }
-  }
-
-  /**
-   * Validate the integrity of the snapshot store
-   */
   async validateIntegrity(): Promise<
     import('./SnapshotIntegrityValidator.js').SnapshotStoreIntegrityResult
   > {
@@ -1882,9 +856,6 @@ export class FileSnapshotStore
     return await this.integrityValidator.validateSnapshotStore()
   }
 
-  /**
-   * Perform automatic recovery of corrupted snapshots or pointers
-   */
   async recoverFromCorruption(
     options: {
       createBackups?: boolean
@@ -1901,9 +872,6 @@ export class FileSnapshotStore
     return await this.recoveryService.recoverSnapshotStore(options)
   }
 
-  /**
-   * Get recovery guidance for manual intervention
-   */
   async getRecoveryGuidance(): Promise<{
     integrityStatus: import('./SnapshotIntegrityValidator.js').SnapshotStoreIntegrityResult
     recoverySteps: string[]
@@ -1913,246 +881,22 @@ export class FileSnapshotStore
     return await this.recoveryService.getRecoveryGuidance()
   }
 
-  /**
-   * Check version compatibility for historical snapshots
-   */
-  async checkVersionCompatibility(snapshotId: string): Promise<{
-    isCompatible: boolean
-    schemaCompatible: boolean
-    calculationCompatible: boolean
-    rankingCompatible: boolean
-    warnings: string[]
-  }> {
-    try {
-      const metadata = await this.getSnapshotMetadata(snapshotId)
-      if (!metadata) {
-        return {
-          isCompatible: false,
-          schemaCompatible: false,
-          calculationCompatible: false,
-          rankingCompatible: false,
-          warnings: ['Snapshot metadata not found'],
-        }
-      }
+  // ==========================================================================
+  // Private cache management
+  // ==========================================================================
 
-      const warnings: string[] = []
-      let schemaCompatible = true
-      const calculationCompatible = true
-      const rankingCompatible = true
-
-      if (metadata.schemaVersion !== CURRENT_SCHEMA_VERSION) {
-        schemaCompatible = false
-        warnings.push(
-          `Schema version mismatch: snapshot has ${metadata.schemaVersion}, current is ${CURRENT_SCHEMA_VERSION}`
-        )
-      }
-
-      if (metadata.calculationVersion !== CURRENT_CALCULATION_VERSION) {
-        warnings.push(
-          `Calculation version difference: snapshot has ${metadata.calculationVersion}, current is ${CURRENT_CALCULATION_VERSION}`
-        )
-      }
-
-      if (metadata.rankingVersion) {
-        warnings.push(
-          `Snapshot has ranking version: ${metadata.rankingVersion}`
-        )
-      } else {
-        warnings.push(
-          'Snapshot has no ranking data (pre-ranking implementation)'
-        )
-      }
-
-      const isCompatible =
-        schemaCompatible && calculationCompatible && rankingCompatible
-
-      logger.debug('Version compatibility check completed', {
-        operation: 'checkVersionCompatibility',
-        snapshot_id: snapshotId,
-        is_compatible: isCompatible,
-        schema_compatible: schemaCompatible,
-        calculation_compatible: calculationCompatible,
-        ranking_compatible: rankingCompatible,
-        warnings_count: warnings.length,
-      })
-
-      return {
-        isCompatible,
-        schemaCompatible,
-        calculationCompatible,
-        rankingCompatible,
-        warnings,
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Version compatibility check failed', {
-        operation: 'checkVersionCompatibility',
-        snapshot_id: snapshotId,
-        error: errorMessage,
-      })
-
-      return {
-        isCompatible: false,
-        schemaCompatible: false,
-        calculationCompatible: false,
-        rankingCompatible: false,
-        warnings: [`Compatibility check failed: ${errorMessage}`],
-      }
-    }
-  }
-
-  /**
-   * Compare a new snapshot's collection date against an existing snapshot
-   */
-  async shouldUpdateClosingPeriodSnapshot(
-    snapshotDate: string,
-    newCollectionDate: string
-  ): Promise<SnapshotComparisonResult> {
-    try {
-      const existingMetadata = await this.getSnapshotMetadata(snapshotDate)
-
-      if (!existingMetadata) {
-        logger.debug('No existing snapshot found, should create new', {
-          operation: 'shouldUpdateClosingPeriodSnapshot',
-          snapshot_date: snapshotDate,
-          new_collection_date: newCollectionDate,
-        })
-
-        return {
-          shouldUpdate: true,
-          reason: 'no_existing',
-          newCollectionDate,
-        }
-      }
-
-      const existingCollectionDate =
-        existingMetadata.collectionDate ?? existingMetadata.dataAsOfDate
-
-      const existingDate = new Date(existingCollectionDate)
-      const newDate = new Date(newCollectionDate)
-
-      if (newDate > existingDate) {
-        logger.info('New data is newer, should update snapshot', {
-          operation: 'shouldUpdateClosingPeriodSnapshot',
-          snapshot_date: snapshotDate,
-          existing_collection_date: existingCollectionDate,
-          new_collection_date: newCollectionDate,
-        })
-
-        return {
-          shouldUpdate: true,
-          reason: 'newer_data',
-          existingCollectionDate,
-          newCollectionDate,
-        }
-      } else if (newDate.getTime() === existingDate.getTime()) {
-        logger.info('Same collection date, allowing same-day refresh', {
-          operation: 'shouldUpdateClosingPeriodSnapshot',
-          snapshot_date: snapshotDate,
-          existing_collection_date: existingCollectionDate,
-          new_collection_date: newCollectionDate,
-        })
-
-        return {
-          shouldUpdate: true,
-          reason: 'same_day_refresh',
-          existingCollectionDate,
-          newCollectionDate,
-        }
-      } else {
-        logger.info('Existing snapshot has newer data, skipping update', {
-          operation: 'shouldUpdateClosingPeriodSnapshot',
-          snapshot_date: snapshotDate,
-          existing_collection_date: existingCollectionDate,
-          new_collection_date: newCollectionDate,
-        })
-
-        return {
-          shouldUpdate: false,
-          reason: 'existing_is_newer',
-          existingCollectionDate,
-          newCollectionDate,
-        }
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-
-      logger.warn(
-        'Error reading existing snapshot metadata, treating as no existing',
-        {
-          operation: 'shouldUpdateClosingPeriodSnapshot',
-          snapshot_date: snapshotDate,
-          new_collection_date: newCollectionDate,
-          error: errorMessage,
-        }
-      )
-
-      return {
-        shouldUpdate: true,
-        reason: 'no_existing',
-        newCollectionDate,
-      }
-    }
-  }
-
-  /**
-   * Get performance metrics for monitoring
-   */
-  getPerformanceMetrics(): ReadPerformanceMetrics {
-    return { ...this.performanceMetrics }
-  }
-
-  /**
-   * Reset performance metrics
-   */
-  resetPerformanceMetrics(): void {
-    this.performanceMetrics.totalReads = 0
-    this.performanceMetrics.cacheHits = 0
-    this.performanceMetrics.cacheMisses = 0
-    this.performanceMetrics.averageReadTime = 0
-    this.performanceMetrics.concurrentReads = 0
-    this.performanceMetrics.maxConcurrentReads = 0
-  }
-
-  // ============================================================================
-  // Private helper methods
-  // ============================================================================
-
-  /**
-   * Ensure the snapshots directory exists
-   */
-  private async ensureDirectoryExists(): Promise<void> {
-    try {
-      await fs.mkdir(this.snapshotsDir, { recursive: true })
-    } catch (error) {
-      throw new Error(
-        `Failed to create snapshots directory: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
-    }
-  }
-
-  /**
-   * Invalidate all in-memory caches
-   * Called when snapshots are written or deleted to ensure consistency
-   */
   private async invalidateCaches(): Promise<void> {
     this.currentSnapshotCache = null
     this.snapshotListCache = null
 
-    // Remove the on-disk snapshot pointer since it may reference a stale
-    // snapshot after a new snapshot has been written via writeSnapshot.
-    // The pointer will be repaired on the next findLatestSuccessful fallback.
-    // Must await to prevent race where the next read sees the stale pointer.
-    const pointerPath = this.resolvePathUnderBase(
+    const pointerPath = resolvePathUnderBase(
       this.snapshotsDir,
       'latest-successful.json'
     )
     try {
       await fs.unlink(pointerPath)
     } catch {
-      // Ignore errors — the file may not exist yet
+      // Ignore — file may not exist
     }
 
     logger.debug('Invalidated all in-memory caches and snapshot pointer', {
@@ -2165,12 +909,7 @@ export class FileSnapshotStore
     })
   }
 
-  /**
-   * Invalidate cached data for a specific snapshot
-   * Called when a snapshot is deleted to ensure cache consistency
-   */
   private invalidateSnapshotCache(snapshotId: string): void {
-    // Invalidate current snapshot cache if it matches the deleted snapshot
     if (
       this.currentSnapshotCache &&
       this.currentSnapshotCache.snapshot.snapshot_id === snapshotId
@@ -2182,579 +921,12 @@ export class FileSnapshotStore
       })
     }
 
-    // Invalidate snapshot list cache since the list has changed
     this.snapshotListCache = null
 
     logger.debug('Invalidated snapshot list cache after deletion', {
       operation: 'invalidateSnapshotCache',
       snapshot_id: snapshotId,
     })
-  }
-
-  /**
-   * Get cached current snapshot if valid
-   */
-  private async getCachedCurrentSnapshot(): Promise<Snapshot | null> {
-    if (!this.currentSnapshotCache) {
-      return null
-    }
-
-    const now = Date.now()
-    const cacheAge = now - this.currentSnapshotCache.cachedAt
-
-    if (cacheAge > this.SNAPSHOT_CACHE_TTL) {
-      logger.debug('Snapshot cache expired', {
-        operation: 'getCachedCurrentSnapshot',
-        cache_age_ms: cacheAge,
-        ttl_ms: this.SNAPSHOT_CACHE_TTL,
-      })
-      this.currentSnapshotCache = null
-      return null
-    }
-
-    // For directory-based snapshots, we can't easily check file modification
-    // Just return the cached snapshot if within TTL
-    return this.currentSnapshotCache.snapshot
-  }
-
-  /**
-   * Cache the current snapshot in memory
-   */
-  private async cacheCurrentSnapshot(snapshot: Snapshot): Promise<void> {
-    try {
-      this.currentSnapshotCache = {
-        snapshot,
-        cachedAt: Date.now(),
-        fileSize: 0, // Not applicable for directory-based snapshots
-        lastModified: Date.now(),
-      }
-
-      logger.debug('Cached current snapshot in memory', {
-        operation: 'cacheCurrentSnapshot',
-        snapshot_id: snapshot.snapshot_id,
-        cache_time: this.currentSnapshotCache.cachedAt,
-      })
-    } catch (error) {
-      logger.warn('Failed to cache current snapshot', {
-        operation: 'cacheCurrentSnapshot',
-        snapshot_id: snapshot.snapshot_id,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      })
-    }
-  }
-
-  /**
-   * Get cached snapshot list if valid (within TTL)
-   * Returns null if cache is empty or expired
-   */
-  private getCachedSnapshotList(): SnapshotMetadata[] | null {
-    if (!this.snapshotListCache) {
-      return null
-    }
-
-    const now = Date.now()
-    const cacheAge = now - this.snapshotListCache.cachedAt
-
-    if (cacheAge > this.SNAPSHOT_LIST_CACHE_TTL) {
-      logger.debug('Snapshot list cache expired', {
-        operation: 'getCachedSnapshotList',
-        cache_age_ms: cacheAge,
-        ttl_ms: this.SNAPSHOT_LIST_CACHE_TTL,
-      })
-      this.snapshotListCache = null
-      return null
-    }
-
-    return this.snapshotListCache.metadata
-  }
-
-  /**
-   * Cache the snapshot list in memory
-   * Stores unfiltered, unsorted base data for reuse
-   */
-  private cacheSnapshotList(metadata: SnapshotMetadata[]): void {
-    this.snapshotListCache = {
-      metadata: [...metadata], // Store a copy to prevent external mutation
-      cachedAt: Date.now(),
-    }
-
-    logger.debug('Cached snapshot list in memory', {
-      operation: 'cacheSnapshotList',
-      snapshot_count: metadata.length,
-      ttl_ms: this.SNAPSHOT_LIST_CACHE_TTL,
-    })
-  }
-
-  /**
-   * Perform optimized read of a specific snapshot
-   */
-  private async performSpecificSnapshotRead(
-    snapshotId: string,
-    operationId: string
-  ): Promise<Snapshot | null> {
-    await this.ensureDirectoryExists()
-
-    try {
-      const snapshot = await this.readSnapshotFromDirectory(snapshotId)
-
-      logger.debug('Successfully read specific snapshot', {
-        operation: 'performSpecificSnapshotRead',
-        operation_id: operationId,
-        snapshot_id: snapshotId,
-      })
-
-      return snapshot
-    } catch (error) {
-      if ((error as { code?: string }).code === 'ENOENT') {
-        logger.debug('Specific snapshot not found', {
-          operation: 'performSpecificSnapshotRead',
-          operation_id: operationId,
-          snapshot_id: snapshotId,
-        })
-        return null
-      }
-      throw error
-    }
-  }
-
-  /**
-   * Read a snapshot from its directory structure
-   */
-  private async readSnapshotFromDirectory(
-    snapshotId: string
-  ): Promise<Snapshot | null> {
-    this.validateSnapshotId(snapshotId)
-
-    // Use symlink-safe path resolution - check if metadata file exists
-    let metadataPath: string
-    try {
-      metadataPath = await this.resolveExistingPathUnderBase(
-        this.snapshotsDir,
-        snapshotId,
-        'metadata.json'
-      )
-    } catch {
-      // File doesn't exist or path traversal attempt
-      return null
-    }
-
-    try {
-      await fs.access(metadataPath)
-    } catch {
-      return null
-    }
-
-    const metadata = await this.getSnapshotMetadata(snapshotId)
-    const manifest = await this.getSnapshotManifest(snapshotId)
-
-    if (!metadata || !manifest) {
-      return null
-    }
-
-    // Read all successful district data
-    const districts: DistrictStatistics[] = []
-    for (const entry of manifest.districts) {
-      if (entry.status === 'success') {
-        const districtData = await this.readDistrictData(
-          snapshotId,
-          entry.districtId
-        )
-        if (districtData) {
-          districts.push(districtData)
-        }
-      }
-    }
-
-    // Reconstruct the original Snapshot format
-    const normalizedData: NormalizedData = {
-      districts,
-      metadata: {
-        source: metadata.source,
-        fetchedAt: metadata.createdAt,
-        dataAsOfDate: metadata.dataAsOfDate,
-        districtCount: districts.length,
-        processingDurationMs: metadata.processingDuration,
-        isClosingPeriodData: metadata.isClosingPeriodData,
-        collectionDate: metadata.collectionDate,
-        logicalDate: metadata.logicalDate,
-      },
-    }
-
-    const snapshot: Snapshot = {
-      snapshot_id: metadata.snapshotId,
-      created_at: metadata.createdAt,
-      schema_version: metadata.schemaVersion,
-      calculation_version: metadata.calculationVersion,
-      status: metadata.status,
-      errors: metadata.errors,
-      payload: normalizedData,
-    }
-
-    logger.debug('Reconstructed snapshot from per-district files', {
-      operation: 'readSnapshotFromDirectory',
-      snapshot_id: snapshotId,
-      district_count: districts.length,
-      status: snapshot.status,
-    })
-
-    return snapshot
-  }
-
-  /**
-   * Attempt to find the latest successful snapshot via the pointer file (O(1) fast path).
-   * Reads `latest-successful.json` from the snapshots directory, validates it against
-   * the Zod schema, and verifies the referenced snapshot directory exists with status "success".
-   * Returns null on any failure (missing file, invalid JSON, bad reference), logging warnings
-   * for each failure mode.
-   *
-   * Requirements: 2.1, 2.3, 3.1, 3.2, 3.3
-   */
-  private async findLatestSuccessfulViaPointer(): Promise<Snapshot | null> {
-    const pointerPath = this.resolvePathUnderBase(
-      this.snapshotsDir,
-      'latest-successful.json'
-    )
-
-    try {
-      const raw = await fs.readFile(pointerPath, 'utf-8')
-      const parsed: unknown = JSON.parse(raw)
-      const validation = validateSnapshotPointer(parsed)
-
-      if (!validation.success) {
-        logger.warn('Invalid snapshot pointer file', {
-          operation: 'findLatestSuccessfulViaPointer',
-          error: validation.error,
-        })
-        return null
-      }
-
-      const { snapshotId } = validation.data!
-      const snapshot = await this.readSnapshotFromDirectory(snapshotId)
-
-      if (snapshot && snapshot.status === 'success') {
-        logger.info('Resolved latest successful snapshot via pointer', {
-          operation: 'findLatestSuccessfulViaPointer',
-          snapshot_id: snapshotId,
-        })
-        return snapshot
-      }
-
-      logger.warn('Snapshot pointer references non-success snapshot', {
-        operation: 'findLatestSuccessfulViaPointer',
-        snapshotId,
-        status: snapshot?.status ?? 'not_found',
-      })
-      return null
-    } catch (error: unknown) {
-      const fsError = error as { code?: string }
-      if (fsError.code === 'ENOENT') {
-        logger.warn('Snapshot pointer file not found, will fall back to scan', {
-          operation: 'findLatestSuccessfulViaPointer',
-        })
-      } else if (error instanceof SyntaxError) {
-        logger.warn('Snapshot pointer file contains invalid JSON', {
-          operation: 'findLatestSuccessfulViaPointer',
-          error: error.message,
-        })
-      } else {
-        logger.error('Failed to read snapshot pointer', {
-          operation: 'findLatestSuccessfulViaPointer',
-          error: error instanceof Error ? error.message : 'Unknown error',
-        })
-      }
-      return null
-    }
-  }
-
-  /**
-   * Repair the snapshot pointer file after a successful fallback directory scan.
-   * This writes a valid pointer file so that subsequent cold starts can use the
-   * fast path instead of repeating the full directory scan.
-   *
-   * This is a narrow exception to the "backend is read-only" rule, justified as
-   * cache/index repair — the data written is derived from what was just read,
-   * not computed.
-   *
-   * Non-fatal: catches and logs all errors without propagating.
-   *
-   * Requirements: 3.4
-   */
-  private async repairSnapshotPointer(snapshotId: string): Promise<void> {
-    try {
-      const pointer: SnapshotPointer = {
-        snapshotId,
-        updatedAt: new Date().toISOString(),
-        schemaVersion: SCHEMA_VERSION,
-      }
-      const validated = validateSnapshotPointer(pointer)
-      if (!validated.success) return
-
-      const pointerPath = this.resolvePathUnderBase(
-        this.snapshotsDir,
-        'latest-successful.json'
-      )
-      const tempPath = `${pointerPath}.tmp.${Date.now()}`
-      await fs.writeFile(
-        tempPath,
-        JSON.stringify(validated.data, null, 2),
-        'utf-8'
-      )
-      await fs.rename(tempPath, pointerPath)
-
-      logger.info('Repaired snapshot pointer after fallback scan', {
-        operation: 'repairSnapshotPointer',
-        snapshotId,
-      })
-    } catch (error: unknown) {
-      // Non-fatal: log and continue
-      logger.warn('Failed to repair snapshot pointer', {
-        operation: 'repairSnapshotPointer',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      })
-    }
-  }
-
-  /**
-   * Find the latest successful snapshot using a two-phase approach:
-   *
-   * Phase 1 (fast path): Try reading the snapshot pointer file for O(1) resolution.
-   * Phase 2 (fallback): Fall back to the full directory scan if the pointer is
-   *   missing, invalid, or references a non-success snapshot.
-   *
-   * After a successful fallback scan, the pointer file is repaired so that
-   * subsequent cold starts can use the fast path.
-   *
-   * Requirements: 2.1, 2.4, 3.4
-   */
-  private async findLatestSuccessful(): Promise<Snapshot | null> {
-    // Phase 1: Try pointer (fast path)
-    const viaPointer = await this.findLatestSuccessfulViaPointer()
-    if (viaPointer) {
-      return viaPointer
-    }
-
-    // Phase 2: Fall back to directory scan (slow path)
-    const viaScanning = await this.findLatestSuccessfulByScanning()
-
-    // Repair: Write pointer for future fast starts
-    if (viaScanning) {
-      await this.repairSnapshotPointer(viaScanning.snapshot_id)
-    }
-
-    return viaScanning
-  }
-
-  /**
-   * Find the latest successful snapshot by scanning the directory
-   */
-  private async findLatestSuccessfulByScanning(): Promise<Snapshot | null> {
-    const startTime = Date.now()
-
-    logger.debug('Starting directory scan for latest successful snapshot', {
-      operation: 'findLatestSuccessfulByScanning',
-    })
-
-    // Handle missing directory gracefully (Requirements 3.1, 3.3, 3.4)
-    try {
-      await fs.access(this.snapshotsDir)
-    } catch (error: unknown) {
-      const fsError = error as { code?: string }
-      if (fsError.code === 'ENOENT') {
-        logger.debug('Snapshots directory does not exist, returning null', {
-          operation: 'findLatestSuccessfulByScanning',
-          snapshotsDir: this.snapshotsDir,
-        })
-        return null
-      }
-      throw error
-    }
-
-    const files = await fs.readdir(this.snapshotsDir)
-
-    // Get directories and sort by date (newest first)
-    const snapshotDirs: string[] = []
-    for (const file of files) {
-      const filePath = path.join(this.snapshotsDir, file)
-      const stats = await fs.stat(filePath)
-      if (stats.isDirectory()) {
-        snapshotDirs.push(file)
-      }
-    }
-
-    snapshotDirs.sort((a, b) => b.localeCompare(a))
-
-    logger.debug('Scanning snapshot directories for successful status', {
-      operation: 'findLatestSuccessfulByScanning',
-      total_dirs: snapshotDirs.length,
-      dirs_to_scan: snapshotDirs.slice(0, 10),
-    })
-
-    for (const dir of snapshotDirs) {
-      try {
-        const snapshot = await this.readSnapshotFromDirectory(dir)
-
-        logger.debug('Checking snapshot status', {
-          operation: 'findLatestSuccessfulByScanning',
-          snapshot_id: dir,
-          status: snapshot?.status,
-        })
-
-        if (snapshot && snapshot.status === 'success') {
-          const duration = Date.now() - startTime
-          logger.info('Found latest successful snapshot by scanning', {
-            operation: 'findLatestSuccessfulByScanning',
-            snapshot_id: snapshot.snapshot_id,
-            created_at: snapshot.created_at,
-            schema_version: snapshot.schema_version,
-            calculation_version: snapshot.calculation_version,
-            district_count: snapshot.payload.districts.length,
-            scanned_dirs: snapshotDirs.indexOf(dir) + 1,
-            duration_ms: duration,
-          })
-
-          return snapshot
-        }
-      } catch (error) {
-        logger.warn('Failed to read snapshot during scanning', {
-          operation: 'findLatestSuccessfulByScanning',
-          dir,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        })
-        continue
-      }
-    }
-
-    const duration = Date.now() - startTime
-    logger.info('No successful snapshot found during directory scan', {
-      operation: 'findLatestSuccessfulByScanning',
-      scanned_dirs: snapshotDirs.length,
-      duration_ms: duration,
-    })
-
-    return null
-  }
-
-  /**
-   * Update performance metrics
-   */
-  private updatePerformanceMetrics(duration: number, cacheHit: boolean): void {
-    this.performanceMetrics.totalReads++
-
-    if (cacheHit) {
-      this.performanceMetrics.cacheHits++
-    } else {
-      this.performanceMetrics.cacheMisses++
-    }
-
-    const totalTime =
-      this.performanceMetrics.averageReadTime *
-        (this.performanceMetrics.totalReads - 1) +
-      duration
-    this.performanceMetrics.averageReadTime =
-      totalTime / this.performanceMetrics.totalReads
-  }
-
-  /**
-   * Get metadata for a per-district snapshot directory (for listing)
-   */
-  /**
-   * Get snapshot metadata for listing purposes.
-   * Reads only metadata.json (skips manifest.json and stat calls) for speed.
-   * The size_bytes field uses an estimate from district count since exact
-   * file sizes are not needed for listing.
-   */
-  private async getPerDistrictSnapshotMetadataForList(
-    snapshotId: string
-  ): Promise<SnapshotMetadata> {
-    const metadataPath = path.join(
-      this.snapshotsDir,
-      snapshotId,
-      'metadata.json'
-    )
-
-    const metadataContent = await fs.readFile(metadataPath, 'utf-8')
-    const metadata: PerDistrictSnapshotMetadata = JSON.parse(metadataContent)
-
-    return {
-      snapshot_id: metadata.snapshotId,
-      created_at: metadata.createdAt,
-      status: metadata.status,
-      schema_version: metadata.schemaVersion,
-      calculation_version: metadata.calculationVersion,
-      size_bytes: 0, // Exact size not needed for listing
-      error_count: metadata.errors.length,
-      district_count: metadata.successfulDistricts.length,
-    }
-  }
-
-  /**
-   * Extract detailed district error information from snapshot errors
-   */
-  private extractDistrictErrorsFromSnapshot(snapshot: Snapshot): Array<{
-    districtId: string
-    operation: string
-    error: string
-    timestamp: string
-    shouldRetry: boolean
-  }> {
-    const districtErrors: Array<{
-      districtId: string
-      operation: string
-      error: string
-      timestamp: string
-      shouldRetry: boolean
-    }> = []
-
-    for (const error of snapshot.errors) {
-      const match = error.match(/^([^:]+):\s*([^-]+)\s*-\s*(.+)$/)
-      if (match && match[1] && match[2] && match[3]) {
-        const [, districtId, operation, errorMessage] = match
-        districtErrors.push({
-          districtId: districtId.trim(),
-          operation: operation.trim(),
-          error: errorMessage.trim(),
-          timestamp: snapshot.created_at,
-          shouldRetry: !errorMessage.includes('Circuit breaker'),
-        })
-      }
-    }
-
-    return districtErrors
-  }
-
-  /**
-   * Extract ranking algorithm version from districts with ranking data
-   */
-  private extractRankingVersion(snapshot: Snapshot): string | undefined {
-    for (const district of snapshot.payload.districts) {
-      if (district.ranking?.rankingVersion) {
-        logger.debug('Extracted ranking version from district data', {
-          operation: 'extractRankingVersion',
-          snapshot_id: snapshot.snapshot_id,
-          ranking_version: district.ranking.rankingVersion,
-          district_id: district.districtId,
-        })
-        return district.ranking.rankingVersion
-      }
-    }
-
-    logger.debug('No ranking version found in district data', {
-      operation: 'extractRankingVersion',
-      snapshot_id: snapshot.snapshot_id,
-      district_count: snapshot.payload.districts.length,
-    })
-    return undefined
-  }
-
-  /**
-   * Generate ISO date-based snapshot directory name from dataAsOfDate
-   */
-  private generateSnapshotDirectoryName(dataAsOfDate: string): string {
-    const date = new Date(dataAsOfDate)
-    const year = date.getUTCFullYear()
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0')
-    const day = String(date.getUTCDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
   }
 }
 
