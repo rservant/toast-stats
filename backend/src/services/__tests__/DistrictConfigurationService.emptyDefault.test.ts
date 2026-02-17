@@ -19,108 +19,108 @@ import { DistrictConfigurationService } from '../DistrictConfigurationService.js
 import { LocalDistrictConfigStorage } from '../storage/LocalDistrictConfigStorage.js'
 
 describe('Empty Configuration Default', () => {
-    let testDir: string
+  let testDir: string
 
-    const createTestDir = async (): Promise<string> => {
-        const dir = path.join(
-            os.tmpdir(),
-            `empty-config-unit-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
-        )
-        await fs.mkdir(dir, { recursive: true })
-        return dir
+  const createTestDir = async (): Promise<string> => {
+    const dir = path.join(
+      os.tmpdir(),
+      `empty-config-unit-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
+    )
+    await fs.mkdir(dir, { recursive: true })
+    return dir
+  }
+
+  beforeEach(async () => {
+    testDir = await createTestDir()
+  })
+
+  afterEach(async () => {
+    try {
+      await fs.rm(testDir, { recursive: true, force: true })
+    } catch {
+      // Ignore cleanup errors
     }
+  })
 
-    beforeEach(async () => {
-        testDir = await createTestDir()
-    })
+  it('should return default empty configuration from a fresh directory', async () => {
+    const storage = new LocalDistrictConfigStorage(testDir)
+    const service = new DistrictConfigurationService(storage)
 
-    afterEach(async () => {
-        try {
-            await fs.rm(testDir, { recursive: true, force: true })
-        } catch {
-            // Ignore cleanup errors
-        }
-    })
+    const config = await service.getConfiguration()
 
-    it('should return default empty configuration from a fresh directory', async () => {
-        const storage = new LocalDistrictConfigStorage(testDir)
-        const service = new DistrictConfigurationService(storage)
+    expect(config.configuredDistricts).toEqual([])
+    expect(config.version).toBe(1)
+    expect(config.updatedBy).toBe('system')
+    expect(typeof config.lastUpdated).toBe('string')
+    expect(new Date(config.lastUpdated).toString()).not.toBe('Invalid Date')
+  })
 
-        const config = await service.getConfiguration()
+  it('should return default empty configuration from a directory with empty config subdirectory', async () => {
+    await fs.mkdir(path.join(testDir, 'config'), { recursive: true })
 
-        expect(config.configuredDistricts).toEqual([])
-        expect(config.version).toBe(1)
-        expect(config.updatedBy).toBe('system')
-        expect(typeof config.lastUpdated).toBe('string')
-        expect(new Date(config.lastUpdated).toString()).not.toBe('Invalid Date')
-    })
+    const storage = new LocalDistrictConfigStorage(testDir)
+    const service = new DistrictConfigurationService(storage)
 
-    it('should return default empty configuration from a directory with empty config subdirectory', async () => {
-        await fs.mkdir(path.join(testDir, 'config'), { recursive: true })
+    const config = await service.getConfiguration()
 
-        const storage = new LocalDistrictConfigStorage(testDir)
-        const service = new DistrictConfigurationService(storage)
+    expect(config.configuredDistricts).toEqual([])
+    expect(config.version).toBe(1)
+    expect(config.updatedBy).toBe('system')
+  })
 
-        const config = await service.getConfiguration()
+  it('should return empty array from getConfiguredDistricts when no configuration exists', async () => {
+    const storage = new LocalDistrictConfigStorage(testDir)
+    const service = new DistrictConfigurationService(storage)
 
-        expect(config.configuredDistricts).toEqual([])
-        expect(config.version).toBe(1)
-        expect(config.updatedBy).toBe('system')
-    })
+    const districts = await service.getConfiguredDistricts()
 
-    it('should return empty array from getConfiguredDistricts when no configuration exists', async () => {
-        const storage = new LocalDistrictConfigStorage(testDir)
-        const service = new DistrictConfigurationService(storage)
+    expect(districts).toEqual([])
+    expect(Array.isArray(districts)).toBe(true)
+  })
 
-        const districts = await service.getConfiguredDistricts()
+  it('should report hasConfiguredDistricts as false when no configuration exists', async () => {
+    const storage = new LocalDistrictConfigStorage(testDir)
+    const service = new DistrictConfigurationService(storage)
 
-        expect(districts).toEqual([])
-        expect(Array.isArray(districts)).toBe(true)
-    })
+    const hasDistricts = await service.hasConfiguredDistricts()
+    expect(hasDistricts).toBe(false)
+  })
 
-    it('should report hasConfiguredDistricts as false when no configuration exists', async () => {
-        const storage = new LocalDistrictConfigStorage(testDir)
-        const service = new DistrictConfigurationService(storage)
+  it('should return consistent default configuration across multiple reads', async () => {
+    const storage = new LocalDistrictConfigStorage(testDir)
+    const service = new DistrictConfigurationService(storage)
 
-        const hasDistricts = await service.hasConfiguredDistricts()
-        expect(hasDistricts).toBe(false)
-    })
+    const config1 = await service.getConfiguration()
+    service.clearCache()
+    const config2 = await service.getConfiguration()
+    service.clearCache()
+    const config3 = await service.getConfiguration()
 
-    it('should return consistent default configuration across multiple reads', async () => {
-        const storage = new LocalDistrictConfigStorage(testDir)
-        const service = new DistrictConfigurationService(storage)
+    for (const config of [config1, config2, config3]) {
+      expect(config.configuredDistricts).toEqual([])
+      expect(config.version).toBe(1)
+      expect(config.updatedBy).toBe('system')
+    }
+  })
 
-        const config1 = await service.getConfiguration()
-        service.clearCache()
-        const config2 = await service.getConfiguration()
-        service.clearCache()
-        const config3 = await service.getConfiguration()
+  it('should return null from storage.getConfiguration when no file exists', async () => {
+    const storage = new LocalDistrictConfigStorage(testDir)
+    const config = await storage.getConfiguration()
+    expect(config).toBeNull()
+  })
 
-        for (const config of [config1, config2, config3]) {
-            expect(config.configuredDistricts).toEqual([])
-            expect(config.version).toBe(1)
-            expect(config.updatedBy).toBe('system')
-        }
-    })
+  it('should return identical default configuration from two separate service instances', async () => {
+    const storage1 = new LocalDistrictConfigStorage(testDir)
+    const service1 = new DistrictConfigurationService(storage1)
 
-    it('should return null from storage.getConfiguration when no file exists', async () => {
-        const storage = new LocalDistrictConfigStorage(testDir)
-        const config = await storage.getConfiguration()
-        expect(config).toBeNull()
-    })
+    const storage2 = new LocalDistrictConfigStorage(testDir)
+    const service2 = new DistrictConfigurationService(storage2)
 
-    it('should return identical default configuration from two separate service instances', async () => {
-        const storage1 = new LocalDistrictConfigStorage(testDir)
-        const service1 = new DistrictConfigurationService(storage1)
+    const config1 = await service1.getConfiguration()
+    const config2 = await service2.getConfiguration()
 
-        const storage2 = new LocalDistrictConfigStorage(testDir)
-        const service2 = new DistrictConfigurationService(storage2)
-
-        const config1 = await service1.getConfiguration()
-        const config2 = await service2.getConfiguration()
-
-        expect(config1.configuredDistricts).toEqual(config2.configuredDistricts)
-        expect(config1.version).toBe(config2.version)
-        expect(config1.updatedBy).toBe(config2.updatedBy)
-    })
+    expect(config1.configuredDistricts).toEqual(config2.configuredDistricts)
+    expect(config1.version).toBe(config2.version)
+    expect(config1.updatedBy).toBe(config2.updatedBy)
+  })
 })

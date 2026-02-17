@@ -17,11 +17,11 @@ The decision framework follows the guidance in `testing.md`:
 
 The codebase has **71 property test files** across three areas:
 
-| Area | Count | Files |
-|------|-------|-------|
-| Backend | 38 | Services (17), Storage (10), Routes (5), Top-level (6) |
-| Frontend | 12 | Hooks (3), Utils (6+), Components (3) |
-| Packages | 21 | analytics-core (8+), shared-contracts |
+| Area     | Count | Files                                                  |
+| -------- | ----- | ------------------------------------------------------ |
+| Backend  | 38    | Services (17), Storage (10), Routes (5), Top-level (6) |
+| Frontend | 12    | Hooks (3), Utils (6+), Components (3)                  |
+| Packages | 21    | analytics-core (8+), shared-contracts                  |
 
 > [!IMPORTANT]
 > The original spec referenced `property-testing-guidance.md` as a standalone steering document. This file does not exist — the PBT guidance lives in `.kiro/steering/testing.md`. All references have been corrected.
@@ -121,31 +121,32 @@ interface RedundancyAnalysis {
 
 ### Files to Convert (Phase 1)
 
-| File | Location | Rationale |
-|------|----------|-----------|
-| `concurrent-execution-safety.property.test.ts` | `backend/src/__tests__/` | 5 examples suffice; no complex input space |
-| `resource-isolation.property.test.ts` | `backend/src/__tests__/` | Property restates implementation |
-| `functionality-preservation.property.test.ts` | `backend/src/__tests__/` | Better as integration test with specific endpoints |
-| `migration-pattern-replacement.property.test.tsx` | `frontend/src/__tests__/` | Static file analysis; not PBT domain |
-| `DistrictConfigurationService.property.test.ts` | `backend/src/services/__tests__/` | Input space not genuinely complex |
-| `DistrictConfigurationService.emptyDefault.property.test.ts` | `backend/src/services/__tests__/` | Simple default behavior; merge into unit file |
-| `CacheConfigService.migrated.property.test.ts` | `backend/src/services/__tests__/` | Migration verification; examples suffice |
-| `ServiceContainer.property.test.ts` | `backend/src/services/__tests__/` | DI container wiring; examples suffice |
-| `TestServiceFactory.instance-isolation.property.test.ts` | `backend/src/services/__tests__/` | Factory isolation; examples suffice |
+| File                                                         | Location                          | Rationale                                          |
+| ------------------------------------------------------------ | --------------------------------- | -------------------------------------------------- |
+| `concurrent-execution-safety.property.test.ts`               | `backend/src/__tests__/`          | 5 examples suffice; no complex input space         |
+| `resource-isolation.property.test.ts`                        | `backend/src/__tests__/`          | Property restates implementation                   |
+| `functionality-preservation.property.test.ts`                | `backend/src/__tests__/`          | Better as integration test with specific endpoints |
+| `migration-pattern-replacement.property.test.tsx`            | `frontend/src/__tests__/`         | Static file analysis; not PBT domain               |
+| `DistrictConfigurationService.property.test.ts`              | `backend/src/services/__tests__/` | Input space not genuinely complex                  |
+| `DistrictConfigurationService.emptyDefault.property.test.ts` | `backend/src/services/__tests__/` | Simple default behavior; merge into unit file      |
+| `CacheConfigService.migrated.property.test.ts`               | `backend/src/services/__tests__/` | Migration verification; examples suffice           |
+| `ServiceContainer.property.test.ts`                          | `backend/src/services/__tests__/` | DI container wiring; examples suffice              |
+| `TestServiceFactory.instance-isolation.property.test.ts`     | `backend/src/services/__tests__/` | Factory isolation; examples suffice                |
 
 ### Files with Redundant Coverage (Phase 2)
 
-| Unit Test File | Property Test File | Overlap |
-|---------------|-------------------|---------|
-| `CacheIntegrityValidator.test.ts` | `CacheIntegrityValidator.property.test.ts` | ~70% |
-| `CacheSecurityManager.test.ts` | `CacheSecurityManager.property.test.ts` | ~60% |
-| `DistrictIdValidator.test.ts` | `DistrictIdValidator.property.test.ts` | ~80% |
+| Unit Test File                    | Property Test File                         | Overlap |
+| --------------------------------- | ------------------------------------------ | ------- |
+| `CacheIntegrityValidator.test.ts` | `CacheIntegrityValidator.property.test.ts` | ~70%    |
+| `CacheSecurityManager.test.ts`    | `CacheSecurityManager.property.test.ts`    | ~60%    |
+| `DistrictIdValidator.test.ts`     | `DistrictIdValidator.property.test.ts`     | ~80%    |
 
 ### Files to Triage (Phase 3 — New Since Original Spec)
 
 These backend property tests were **not in the original spec** and need assessment:
 
 **Storage layer (10 files):**
+
 - `csv-roundtrip.property.test.ts`
 - `snapshot-roundtrip.property.test.ts`
 - `snapshot-ordering.property.test.ts`
@@ -159,6 +160,7 @@ These backend property tests were **not in the original spec** and need assessme
 - `LocalDistrictConfigStorage.property.test.ts`
 
 **Route tests (4 files):**
+
 - `districts.closing-period-metadata.property.test.ts`
 - `api-equivalence.property.test.ts`
 - `middleware-consistency.property.test.ts`
@@ -166,6 +168,7 @@ These backend property tests were **not in the original spec** and need assessme
 - `route-composition.property.test.ts`
 
 **Service tests (6 files):**
+
 - `ClosingPeriodDetector.property.test.ts`
 - `DataNormalizer.property.test.ts`
 - `RawCSVCacheService.behavioral-equivalence.property.test.ts`
@@ -175,14 +178,14 @@ These backend property tests were **not in the original spec** and need assessme
 
 ### Files to Preserve (Known Justified)
 
-| File | Location | Justification |
-|------|----------|---------------|
-| `BordaCountRankingCalculator.property.test.ts` | `packages/analytics-core/` | Mathematical/algebraic properties |
-| `SnapshotBuilder.property.test.ts` | `backend/src/__tests__/` | Universal business rules |
-| `CacheIntegrityValidator.property.test.ts` | `backend/src/services/__tests__/` | Mathematical invariants (checksums) |
-| `CacheSecurityManager.property.test.ts` | `backend/src/services/__tests__/` | Complex input spaces (security) |
-| `DistrictIdValidator.property.test.ts` | `backend/src/services/__tests__/` | Input validation, many boundaries |
-| `CacheService.property.test.ts` | `backend/src/services/__tests__/` | Bounded cache invariants (new) |
+| File                                           | Location                          | Justification                       |
+| ---------------------------------------------- | --------------------------------- | ----------------------------------- |
+| `BordaCountRankingCalculator.property.test.ts` | `packages/analytics-core/`        | Mathematical/algebraic properties   |
+| `SnapshotBuilder.property.test.ts`             | `backend/src/__tests__/`          | Universal business rules            |
+| `CacheIntegrityValidator.property.test.ts`     | `backend/src/services/__tests__/` | Mathematical invariants (checksums) |
+| `CacheSecurityManager.property.test.ts`        | `backend/src/services/__tests__/` | Complex input spaces (security)     |
+| `DistrictIdValidator.property.test.ts`         | `backend/src/services/__tests__/` | Input validation, many boundaries   |
+| `CacheService.property.test.ts`                | `backend/src/services/__tests__/` | Bounded cache invariants (new)      |
 
 > [!NOTE]
 > The original spec referenced `RankingCalculator.property.test.ts`. This file was renamed to `BordaCountRankingCalculator.property.test.ts` and moved to `packages/analytics-core/`.

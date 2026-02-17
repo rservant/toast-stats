@@ -17,170 +17,170 @@ import path from 'path'
 import fs from 'fs/promises'
 
 describe('Concurrent Test Execution Safety', () => {
-    let testFactory: DefaultTestServiceFactory
-    let isolationManager: DefaultTestIsolationManager
+  let testFactory: DefaultTestServiceFactory
+  let isolationManager: DefaultTestIsolationManager
 
-    beforeEach(async () => {
-        testFactory = new DefaultTestServiceFactory()
-        isolationManager = new DefaultTestIsolationManager()
-        await isolationManager.setupTestEnvironment()
-    })
+  beforeEach(async () => {
+    testFactory = new DefaultTestServiceFactory()
+    isolationManager = new DefaultTestIsolationManager()
+    await isolationManager.setupTestEnvironment()
+  })
 
-    afterEach(async () => {
-        await testFactory.cleanup()
-        await isolationManager.cleanupTestEnvironment()
-    })
+  afterEach(async () => {
+    await testFactory.cleanup()
+    await isolationManager.cleanupTestEnvironment()
+  })
 
-    it('should prevent resource conflicts when 4 tests run concurrently with 5 operations each', async () => {
-        const concurrentTestCount = 4
-        const operationsPerTest = 5
+  it('should prevent resource conflicts when 4 tests run concurrently with 5 operations each', async () => {
+    const concurrentTestCount = 4
+    const operationsPerTest = 5
 
-        const testPromises = Array.from(
-            { length: concurrentTestCount },
-            async (_, testIndex) => {
-                const testId = `concurrent-test-${testIndex}`
-                const testDir = await isolationManager.createIsolatedDirectory()
-                const cacheDirectory = path.join(testDir, 'cache')
+    const testPromises = Array.from(
+      { length: concurrentTestCount },
+      async (_, testIndex) => {
+        const testId = `concurrent-test-${testIndex}`
+        const testDir = await isolationManager.createIsolatedDirectory()
+        const cacheDirectory = path.join(testDir, 'cache')
 
-                const cacheConfigService = testFactory.createCacheConfigService({
-                    cacheDirectory,
-                })
-                await cacheConfigService.initialize()
-
-                const operations = Array.from(
-                    { length: operationsPerTest },
-                    async (_, opIndex) => {
-                        const opDir = path.join(testDir, `operation-${opIndex}`)
-                        await fs.mkdir(opDir, { recursive: true })
-
-                        const dirStats = await fs.stat(opDir)
-                        expect(dirStats.isDirectory()).toBe(true)
-                        expect(cacheConfigService.getCacheDirectory()).toBe(cacheDirectory)
-                        expect(cacheConfigService.isReady()).toBe(true)
-
-                        return { operationId: `${testId}-op-${opIndex}`, opDir }
-                    }
-                )
-
-                const results = await Promise.all(operations)
-                expect(results).toHaveLength(operationsPerTest)
-
-                await isolationManager.removeIsolatedDirectory(testDir)
-                return { testId, results, cacheDirectory }
-            }
-        )
-
-        const allResults = await Promise.all(testPromises)
-
-        expect(allResults).toHaveLength(concurrentTestCount)
-
-        // Each test should have unique IDs (no cross-contamination)
-        const uniqueTestIds = new Set(allResults.map(r => r.testId))
-        expect(uniqueTestIds.size).toBe(concurrentTestCount)
-
-        allResults.forEach((testResult, testIndex) => {
-            expect(testResult.results).toHaveLength(operationsPerTest)
-            expect(testResult.testId).toBe(`concurrent-test-${testIndex}`)
+        const cacheConfigService = testFactory.createCacheConfigService({
+          cacheDirectory,
         })
-    })
+        await cacheConfigService.initialize()
 
-    it('should handle concurrent directory creation at multiple depths', async () => {
-        const concurrentOperations = 6
-        const directoryDepth = 3
-        const baseTestDir = await isolationManager.createIsolatedDirectory()
+        const operations = Array.from(
+          { length: operationsPerTest },
+          async (_, opIndex) => {
+            const opDir = path.join(testDir, `operation-${opIndex}`)
+            await fs.mkdir(opDir, { recursive: true })
 
-        const directoryPromises = Array.from(
-            { length: concurrentOperations },
-            async (_, index) => {
-                const dirPath = path.join(baseTestDir, `concurrent-dir-${index}`)
-                const nestedPath = Array.from(
-                    { length: directoryDepth },
-                    (_, depth) => `level-${depth}`
-                ).join(path.sep)
-                const fullPath = path.join(dirPath, nestedPath)
+            const dirStats = await fs.stat(opDir)
+            expect(dirStats.isDirectory()).toBe(true)
+            expect(cacheConfigService.getCacheDirectory()).toBe(cacheDirectory)
+            expect(cacheConfigService.isReady()).toBe(true)
 
-                await fs.mkdir(fullPath, { recursive: true })
-
-                const stats = await fs.stat(fullPath)
-                expect(stats.isDirectory()).toBe(true)
-
-                const testFile = path.join(fullPath, `test-file-${index}.txt`)
-                await fs.writeFile(testFile, `test content ${index}`)
-
-                const fileContent = await fs.readFile(testFile, 'utf-8')
-                expect(fileContent).toBe(`test content ${index}`)
-
-                return { dirPath: fullPath, testFile, index }
-            }
+            return { operationId: `${testId}-op-${opIndex}`, opDir }
+          }
         )
 
-        const results = await Promise.all(directoryPromises)
+        const results = await Promise.all(operations)
+        expect(results).toHaveLength(operationsPerTest)
 
-        expect(results).toHaveLength(concurrentOperations)
-        const uniquePaths = new Set(results.map(r => r.dirPath))
-        expect(uniquePaths.size).toBe(concurrentOperations)
+        await isolationManager.removeIsolatedDirectory(testDir)
+        return { testId, results, cacheDirectory }
+      }
+    )
 
-        for (const result of results) {
-            const fileContent = await fs.readFile(result.testFile, 'utf-8')
-            expect(fileContent).toBe(`test content ${result.index}`)
-        }
+    const allResults = await Promise.all(testPromises)
 
-        await isolationManager.removeIsolatedDirectory(baseTestDir)
+    expect(allResults).toHaveLength(concurrentTestCount)
+
+    // Each test should have unique IDs (no cross-contamination)
+    const uniqueTestIds = new Set(allResults.map(r => r.testId))
+    expect(uniqueTestIds.size).toBe(concurrentTestCount)
+
+    allResults.forEach((testResult, testIndex) => {
+      expect(testResult.results).toHaveLength(operationsPerTest)
+      expect(testResult.testId).toBe(`concurrent-test-${testIndex}`)
     })
+  })
 
-    it('should prevent race conditions in service initialization with 4 concurrent services', async () => {
-        const concurrentServices = 4
+  it('should handle concurrent directory creation at multiple depths', async () => {
+    const concurrentOperations = 6
+    const directoryDepth = 3
+    const baseTestDir = await isolationManager.createIsolatedDirectory()
 
-        const servicePromises = Array.from(
-            { length: concurrentServices },
-            async (_, index) => {
-                const testDir = await isolationManager.createIsolatedDirectory()
-                const cacheDirectory = path.join(testDir, 'cache')
+    const directoryPromises = Array.from(
+      { length: concurrentOperations },
+      async (_, index) => {
+        const dirPath = path.join(baseTestDir, `concurrent-dir-${index}`)
+        const nestedPath = Array.from(
+          { length: directoryDepth },
+          (_, depth) => `level-${depth}`
+        ).join(path.sep)
+        const fullPath = path.join(dirPath, nestedPath)
 
-                const cacheConfigService = testFactory.createCacheConfigService({
-                    cacheDirectory,
-                })
-                await cacheConfigService.initialize()
+        await fs.mkdir(fullPath, { recursive: true })
 
-                expect(cacheConfigService.isReady()).toBe(true)
-                expect(cacheConfigService.getCacheDirectory()).toBe(cacheDirectory)
+        const stats = await fs.stat(fullPath)
+        expect(stats.isDirectory()).toBe(true)
 
-                await cacheConfigService.dispose()
-                await isolationManager.removeIsolatedDirectory(testDir)
+        const testFile = path.join(fullPath, `test-file-${index}.txt`)
+        await fs.writeFile(testFile, `test content ${index}`)
 
-                return { serviceId: `service-${index}`, cacheDirectory }
-            }
-        )
+        const fileContent = await fs.readFile(testFile, 'utf-8')
+        expect(fileContent).toBe(`test content ${index}`)
 
-        const results = await Promise.all(servicePromises)
+        return { dirPath: fullPath, testFile, index }
+      }
+    )
 
-        expect(results).toHaveLength(concurrentServices)
+    const results = await Promise.all(directoryPromises)
 
-        const uniqueCacheDirs = new Set(results.map(r => r.cacheDirectory))
-        expect(uniqueCacheDirs.size).toBe(concurrentServices)
+    expect(results).toHaveLength(concurrentOperations)
+    const uniquePaths = new Set(results.map(r => r.dirPath))
+    expect(uniquePaths.size).toBe(concurrentOperations)
 
-        const uniqueServiceIds = new Set(results.map(r => r.serviceId))
-        expect(uniqueServiceIds.size).toBe(concurrentServices)
-    })
+    for (const result of results) {
+      const fileContent = await fs.readFile(result.testFile, 'utf-8')
+      expect(fileContent).toBe(`test content ${result.index}`)
+    }
 
-    it('should handle minimum concurrency of 2 services', async () => {
-        const testDirs: string[] = []
-        const services = await Promise.all(
-            [0, 1].map(async i => {
-                const testDir = await isolationManager.createIsolatedDirectory()
-                testDirs.push(testDir)
-                const cacheDirectory = path.join(testDir, 'cache')
-                const service = testFactory.createCacheConfigService({ cacheDirectory })
-                await service.initialize()
-                return { service, cacheDirectory }
-            })
-        )
+    await isolationManager.removeIsolatedDirectory(baseTestDir)
+  })
 
-        expect(services[0].cacheDirectory).not.toBe(services[1].cacheDirectory)
-        services.forEach(({ service }) => expect(service.isReady()).toBe(true))
+  it('should prevent race conditions in service initialization with 4 concurrent services', async () => {
+    const concurrentServices = 4
 
-        for (const { service } of services) await service.dispose()
-        for (const dir of testDirs)
-            await isolationManager.removeIsolatedDirectory(dir)
-    })
+    const servicePromises = Array.from(
+      { length: concurrentServices },
+      async (_, index) => {
+        const testDir = await isolationManager.createIsolatedDirectory()
+        const cacheDirectory = path.join(testDir, 'cache')
+
+        const cacheConfigService = testFactory.createCacheConfigService({
+          cacheDirectory,
+        })
+        await cacheConfigService.initialize()
+
+        expect(cacheConfigService.isReady()).toBe(true)
+        expect(cacheConfigService.getCacheDirectory()).toBe(cacheDirectory)
+
+        await cacheConfigService.dispose()
+        await isolationManager.removeIsolatedDirectory(testDir)
+
+        return { serviceId: `service-${index}`, cacheDirectory }
+      }
+    )
+
+    const results = await Promise.all(servicePromises)
+
+    expect(results).toHaveLength(concurrentServices)
+
+    const uniqueCacheDirs = new Set(results.map(r => r.cacheDirectory))
+    expect(uniqueCacheDirs.size).toBe(concurrentServices)
+
+    const uniqueServiceIds = new Set(results.map(r => r.serviceId))
+    expect(uniqueServiceIds.size).toBe(concurrentServices)
+  })
+
+  it('should handle minimum concurrency of 2 services', async () => {
+    const testDirs: string[] = []
+    const services = await Promise.all(
+      [0, 1].map(async i => {
+        const testDir = await isolationManager.createIsolatedDirectory()
+        testDirs.push(testDir)
+        const cacheDirectory = path.join(testDir, 'cache')
+        const service = testFactory.createCacheConfigService({ cacheDirectory })
+        await service.initialize()
+        return { service, cacheDirectory }
+      })
+    )
+
+    expect(services[0].cacheDirectory).not.toBe(services[1].cacheDirectory)
+    services.forEach(({ service }) => expect(service.isReady()).toBe(true))
+
+    for (const { service } of services) await service.dispose()
+    for (const dir of testDirs)
+      await isolationManager.removeIsolatedDirectory(dir)
+  })
 })

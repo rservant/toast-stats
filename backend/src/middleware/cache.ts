@@ -34,9 +34,9 @@ export function cacheMiddleware(options: CacheMiddlewareOptions = {}) {
     const cacheKey = options.keyGenerator
       ? options.keyGenerator(req)
       : generateCacheKey(req.path, {
-        ...req.query,
-        ...req.params,
-      })
+          ...req.query,
+          ...req.params,
+        })
 
     // Try to get cached response
     const cachedResponse = cacheService.get<object>(cacheKey)
@@ -52,7 +52,12 @@ export function cacheMiddleware(options: CacheMiddlewareOptions = {}) {
     // Override res.json to cache the response
     res.json = function (body: unknown) {
       // Only cache successful responses (2xx status codes)
-      if (res.statusCode >= 200 && res.statusCode < 300 && body != null && typeof body === 'object') {
+      if (
+        res.statusCode >= 200 &&
+        res.statusCode < 300 &&
+        body != null &&
+        typeof body === 'object'
+      ) {
         const ttl = options.ttl
         cacheService.set(cacheKey, body as object, ttl)
       }

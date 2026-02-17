@@ -13,147 +13,144 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import path from 'path'
 import fs from 'fs/promises'
-import {
-    DefaultTestServiceFactory,
-    ServiceTokens,
-} from '../TestServiceFactory'
+import { DefaultTestServiceFactory, ServiceTokens } from '../TestServiceFactory'
 import { DefaultTestIsolationManager } from '../../utils/TestIsolationManager'
 
 describe('CacheConfigService - Converted Property Tests', () => {
-    let testFactory: DefaultTestServiceFactory
-    let isolationManager: DefaultTestIsolationManager
+  let testFactory: DefaultTestServiceFactory
+  let isolationManager: DefaultTestIsolationManager
 
-    beforeEach(async () => {
-        testFactory = new DefaultTestServiceFactory()
-        isolationManager = new DefaultTestIsolationManager()
-        await isolationManager.setupTestEnvironment()
+  beforeEach(async () => {
+    testFactory = new DefaultTestServiceFactory()
+    isolationManager = new DefaultTestIsolationManager()
+    await isolationManager.setupTestEnvironment()
+  })
+
+  afterEach(async () => {
+    await testFactory.cleanup()
+    await isolationManager.cleanupTestEnvironment()
+  })
+
+  it('should initialize with a specific cache directory using dependency injection', async () => {
+    const testDir = await isolationManager.createIsolatedDirectory()
+    const cacheDirectory = path.join(testDir, 'test-cache-config')
+
+    const cacheConfigService = testFactory.createCacheConfigService({
+      cacheDirectory,
+    })
+    await cacheConfigService.initialize()
+
+    expect(cacheConfigService.getCacheDirectory()).toBe(cacheDirectory)
+    expect(cacheConfigService.isReady()).toBe(true)
+
+    const stats = await fs.stat(cacheDirectory)
+    expect(stats.isDirectory()).toBe(true)
+
+    await cacheConfigService.dispose()
+    await isolationManager.removeIsolatedDirectory(testDir)
+  })
+
+  it('should create 3 independent service instances with unique cache directories', async () => {
+    const instanceCount = 3
+    const services = []
+    const testDirs = []
+
+    for (let i = 0; i < instanceCount; i++) {
+      const testDir = await isolationManager.createIsolatedDirectory()
+      const cacheDirectory = path.join(testDir, `cache-${i}`)
+
+      const service = testFactory.createCacheConfigService({ cacheDirectory })
+      await service.initialize()
+
+      services.push(service)
+      testDirs.push(testDir)
+    }
+
+    const cacheDirs = services.map(s => s.getCacheDirectory())
+    const uniqueCacheDirs = new Set(cacheDirs)
+    expect(uniqueCacheDirs.size).toBe(instanceCount)
+
+    services.forEach(service => {
+      expect(service.isReady()).toBe(true)
     })
 
-    afterEach(async () => {
-        await testFactory.cleanup()
-        await isolationManager.cleanupTestEnvironment()
-    })
+    for (const cacheDir of cacheDirs) {
+      const stats = await fs.stat(cacheDir)
+      expect(stats.isDirectory()).toBe(true)
+    }
 
-    it('should initialize with a specific cache directory using dependency injection', async () => {
+    for (let i = 0; i < services.length; i++) {
+      await services[i].dispose()
+      await isolationManager.removeIsolatedDirectory(testDirs[i])
+    }
+  })
+
+  it('should handle concurrent service creation without conflicts', async () => {
+    const concurrentCount = 4
+
+    const servicePromises = Array.from(
+      { length: concurrentCount },
+      async (_, index) => {
         const testDir = await isolationManager.createIsolatedDirectory()
-        const cacheDirectory = path.join(testDir, 'test-cache-config')
-
-        const cacheConfigService = testFactory.createCacheConfigService({
-            cacheDirectory,
-        })
-        await cacheConfigService.initialize()
-
-        expect(cacheConfigService.getCacheDirectory()).toBe(cacheDirectory)
-        expect(cacheConfigService.isReady()).toBe(true)
-
-        const stats = await fs.stat(cacheDirectory)
-        expect(stats.isDirectory()).toBe(true)
-
-        await cacheConfigService.dispose()
-        await isolationManager.removeIsolatedDirectory(testDir)
-    })
-
-    it('should create 3 independent service instances with unique cache directories', async () => {
-        const instanceCount = 3
-        const services = []
-        const testDirs = []
-
-        for (let i = 0; i < instanceCount; i++) {
-            const testDir = await isolationManager.createIsolatedDirectory()
-            const cacheDirectory = path.join(testDir, `cache-${i}`)
-
-            const service = testFactory.createCacheConfigService({ cacheDirectory })
-            await service.initialize()
-
-            services.push(service)
-            testDirs.push(testDir)
-        }
-
-        const cacheDirs = services.map(s => s.getCacheDirectory())
-        const uniqueCacheDirs = new Set(cacheDirs)
-        expect(uniqueCacheDirs.size).toBe(instanceCount)
-
-        services.forEach(service => {
-            expect(service.isReady()).toBe(true)
-        })
-
-        for (const cacheDir of cacheDirs) {
-            const stats = await fs.stat(cacheDir)
-            expect(stats.isDirectory()).toBe(true)
-        }
-
-        for (let i = 0; i < services.length; i++) {
-            await services[i].dispose()
-            await isolationManager.removeIsolatedDirectory(testDirs[i])
-        }
-    })
-
-    it('should handle concurrent service creation without conflicts', async () => {
-        const concurrentCount = 4
-
-        const servicePromises = Array.from(
-            { length: concurrentCount },
-            async (_, index) => {
-                const testDir = await isolationManager.createIsolatedDirectory()
-                const cacheDirectory = path.join(testDir, `concurrent-cache-${index}`)
-
-                const service = testFactory.createCacheConfigService({ cacheDirectory })
-                await service.initialize()
-
-                return { service, testDir, cacheDirectory }
-            }
-        )
-
-        const results = await Promise.all(servicePromises)
-
-        expect(results).toHaveLength(concurrentCount)
-
-        const cachePaths = results.map(r => r.cacheDirectory)
-        const uniquePaths = new Set(cachePaths)
-        expect(uniquePaths.size).toBe(concurrentCount)
-
-        results.forEach(({ service }) => {
-            expect(service.isReady()).toBe(true)
-        })
-
-        for (const { service, testDir } of results) {
-            await service.dispose()
-            await isolationManager.removeIsolatedDirectory(testDir)
-        }
-    })
-
-    it('should properly dispose of resources', async () => {
-        const testDir = await isolationManager.createIsolatedDirectory()
-        const cacheDirectory = path.join(testDir, 'dispose-test-cache')
+        const cacheDirectory = path.join(testDir, `concurrent-cache-${index}`)
 
         const service = testFactory.createCacheConfigService({ cacheDirectory })
         await service.initialize()
 
-        expect(service.isReady()).toBe(true)
-        expect(service.getCacheDirectory()).toBe(cacheDirectory)
+        return { service, testDir, cacheDirectory }
+      }
+    )
 
-        await service.dispose()
-        await isolationManager.removeIsolatedDirectory(testDir)
+    const results = await Promise.all(servicePromises)
+
+    expect(results).toHaveLength(concurrentCount)
+
+    const cachePaths = results.map(r => r.cacheDirectory)
+    const uniquePaths = new Set(cachePaths)
+    expect(uniquePaths.size).toBe(concurrentCount)
+
+    results.forEach(({ service }) => {
+      expect(service.isReady()).toBe(true)
     })
 
-    it('should work with test service factory container', async () => {
-        const testDir = await isolationManager.createIsolatedDirectory()
-        const cacheDirectory = path.join(testDir, 'container-cache')
+    for (const { service, testDir } of results) {
+      await service.dispose()
+      await isolationManager.removeIsolatedDirectory(testDir)
+    }
+  })
 
-        const container = testFactory.createConfiguredContainer({ cacheDirectory })
+  it('should properly dispose of resources', async () => {
+    const testDir = await isolationManager.createIsolatedDirectory()
+    const cacheDirectory = path.join(testDir, 'dispose-test-cache')
 
-        const cacheConfigService = container.resolve(
-            ServiceTokens.CacheConfigService
-        )
-        await cacheConfigService.initialize()
+    const service = testFactory.createCacheConfigService({ cacheDirectory })
+    await service.initialize()
 
-        expect(cacheConfigService.isReady()).toBe(true)
-        expect(cacheConfigService.getCacheDirectory()).toBe(cacheDirectory)
+    expect(service.isReady()).toBe(true)
+    expect(service.getCacheDirectory()).toBe(cacheDirectory)
 
-        const stats = await fs.stat(cacheDirectory)
-        expect(stats.isDirectory()).toBe(true)
+    await service.dispose()
+    await isolationManager.removeIsolatedDirectory(testDir)
+  })
 
-        await container.dispose()
-        await isolationManager.removeIsolatedDirectory(testDir)
-    })
+  it('should work with test service factory container', async () => {
+    const testDir = await isolationManager.createIsolatedDirectory()
+    const cacheDirectory = path.join(testDir, 'container-cache')
+
+    const container = testFactory.createConfiguredContainer({ cacheDirectory })
+
+    const cacheConfigService = container.resolve(
+      ServiceTokens.CacheConfigService
+    )
+    await cacheConfigService.initialize()
+
+    expect(cacheConfigService.isReady()).toBe(true)
+    expect(cacheConfigService.getCacheDirectory()).toBe(cacheDirectory)
+
+    const stats = await fs.stat(cacheDirectory)
+    expect(stats.isDirectory()).toBe(true)
+
+    await container.dispose()
+    await isolationManager.removeIsolatedDirectory(testDir)
+  })
 })
