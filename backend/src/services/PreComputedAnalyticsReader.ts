@@ -378,7 +378,16 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
       throw new Error('Invalid file path: path traversal detected')
     }
 
-    return resolvedPath
+    // Re-derive the path from the trusted base + validated relative portion
+    // to break the taint chain from user-controlled input (CodeQL js/path-injection)
+    const relativePath = path.relative(resolvedBase, resolvedPath)
+
+    // Double-check the relative path doesn't escape (no leading '..')
+    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+      throw new Error('Invalid file path: path traversal detected')
+    }
+
+    return path.join(resolvedBase, relativePath)
   }
 
   /**
