@@ -2,6 +2,10 @@
   "name": "toastmasters-district-visualizer",
   "version": "1.0.0",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rservant/toast-stats.git"
+  },
   "private": true,
   "workspaces": [
     "frontend",
