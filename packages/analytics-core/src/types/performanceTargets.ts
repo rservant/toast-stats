@@ -1,0 +1,185 @@
+/**
+ * District performance targets and rankings type definitions.
+ *
+ * Requirements: 7.1, 7.2, 7.3, 7.4
+ */
+
+/**
+ * Recognition levels for district performance targets.
+ * Ordered from lowest to highest achievement tier.
+ *
+ * Requirements: 7.2
+ */
+export type RecognitionLevel =
+  | 'distinguished'
+  | 'select'
+  | 'presidents'
+  | 'smedley'
+
+/**
+ * Target values for each recognition level.
+ * All values are integers (ceiling-rounded from formulas).
+ *
+ * Requirements: 7.2
+ */
+export interface RecognitionTargets {
+  distinguished: number
+  select: number
+  presidents: number
+  smedley: number
+}
+
+/**
+ * Target calculation result for a single metric.
+ * Contains base value, current value, calculated targets, and achieved level.
+ *
+ * Requirements: 7.2
+ */
+export interface MetricTargets {
+  /** Base value used for target calculation (null if unavailable) */
+  base: number | null
+  /** Current value of the metric */
+  current: number
+  /** Calculated targets for each recognition level (null if base unavailable) */
+  targets: RecognitionTargets | null
+  /** Highest recognition level achieved (null if none achieved or targets unavailable) */
+  achievedLevel: RecognitionLevel | null
+}
+
+/**
+ * Region ranking data for a single metric.
+ *
+ * Requirements: 7.2
+ */
+export interface RegionRankData {
+  /** District's rank within its region (1 = best, null if unavailable) */
+  regionRank: number | null
+  /** Total number of districts in the region */
+  totalInRegion: number
+  /** Region identifier (null if unknown) */
+  region: string | null
+}
+
+/**
+ * Complete ranking data for a metric.
+ * Includes world rank, percentile, and region rank.
+ *
+ * Requirements: 7.2
+ */
+export interface MetricRankings {
+  /** District's world rank (1 = best, null if unavailable) */
+  worldRank: number | null
+  /** World percentile (0-100, rounded to 1 decimal, null if unavailable) */
+  worldPercentile: number | null
+  /** District's rank within its region (1 = best, null if unavailable) */
+  regionRank: number | null
+  /** Total number of districts worldwide */
+  totalDistricts: number
+  /** Total number of districts in the region */
+  totalInRegion: number
+  /** Region identifier (null if unknown) */
+  region: string | null
+}
+
+/**
+ * Performance targets and rankings for district overview.
+ * Contains data for all three enhanced metric cards:
+ * - Paid Clubs
+ * - Membership Payments
+ * - Distinguished Clubs
+ *
+ * Each metric includes current value, base value, calculated targets,
+ * achieved recognition level, and complete ranking data.
+ *
+ * Requirements: 7.1, 7.2, 7.3, 7.4
+ */
+export interface DistrictPerformanceTargets {
+  paidClubs: {
+    current: number
+    base: number | null
+    targets: RecognitionTargets | null
+    achievedLevel: RecognitionLevel | null
+    rankings: MetricRankings
+  }
+  membershipPayments: {
+    current: number
+    base: number | null
+    targets: RecognitionTargets | null
+    achievedLevel: RecognitionLevel | null
+    rankings: MetricRankings
+  }
+  distinguishedClubs: {
+    current: number
+    base: number | null // Uses Club_Base for percentage calculation
+    targets: RecognitionTargets | null
+    achievedLevel: RecognitionLevel | null
+    rankings: MetricRankings
+  }
+}
+
+/**
+ * Performance targets data structure for pre-computed files.
+ * Pre-computed by scraper-cli, served by backend.
+ *
+ * Requirements: 7.1, 7.2
+ */
+export interface PerformanceTargetsData {
+  /** District identifier */
+  districtId: string
+  /** ISO timestamp when the data was computed */
+  computedAt: string
+  /** Target for membership (based on base membership + growth target) */
+  membershipTarget: number
+  /** Target for distinguished clubs count */
+  distinguishedTarget: number
+  /** Target for club growth (net new clubs) */
+  clubGrowthTarget: number
+  /** Total count of paid clubs (clubs with "Active" status) */
+  paidClubsCount: number
+  /** Current progress toward targets */
+  currentProgress: {
+    /** Current membership count */
+    membership: number
+    /** Current distinguished clubs count */
+    distinguished: number
+    /** Current club growth (net change from base) */
+    clubGrowth: number
+  }
+  /** Whether targets are projected to be achieved */
+  projectedAchievement: {
+    /** Whether membership target is projected to be achieved */
+    membership: boolean
+    /** Whether distinguished target is projected to be achieved */
+    distinguished: boolean
+    /** Whether club growth target is projected to be achieved */
+    clubGrowth: boolean
+  }
+  /** Rankings for paid clubs metric (Requirements 4.1, 4.4) */
+  paidClubsRankings: MetricRankings
+  /** Rankings for membership payments metric (Requirements 4.2, 4.4) */
+  membershipPaymentsRankings: MetricRankings
+  /** Rankings for distinguished clubs metric (Requirements 4.3, 4.4) */
+  distinguishedClubsRankings: MetricRankings
+
+  // NEW: Base values from All Districts Rankings (Requirements 6.1, 6.2)
+  /** Base value for paid clubs from All Districts Rankings (Requirement 6.1) */
+  paidClubBase: number | null
+  /** Base value for membership payments from All Districts Rankings (Requirement 6.2) */
+  paymentBase: number | null
+
+  // NEW: Recognition level targets (Requirements 6.3, 6.4, 6.5)
+  /** Recognition level targets for paid clubs metric (Requirement 6.3) */
+  paidClubsTargets: RecognitionTargets | null
+  /** Recognition level targets for membership payments metric (Requirement 6.4) */
+  membershipPaymentsTargets: RecognitionTargets | null
+  /** Recognition level targets for distinguished clubs metric (Requirement 6.5) */
+  distinguishedClubsTargets: RecognitionTargets | null
+
+  // NEW: Achieved recognition levels (Requirements 6.6, 6.7, 6.8)
+  /** Achieved recognition level for paid clubs metric (Requirement 6.6) */
+  paidClubsAchievedLevel: RecognitionLevel | null
+  /** Achieved recognition level for membership payments metric (Requirement 6.7) */
+  membershipPaymentsAchievedLevel: RecognitionLevel | null
+  /** Achieved recognition level for distinguished clubs metric (Requirement 6.8) */
+  distinguishedClubsAchievedLevel: RecognitionLevel | null
+}
