@@ -33,6 +33,7 @@ import type {
   NormalizedData,
   SnapshotStatus,
 } from '../types/snapshots.js'
+import type { ILogger } from '../types/serviceInterfaces.js'
 import type { ScrapedRecord } from '../types/districts.js'
 import { CSVType, type RawCSVCacheMetadata } from '../types/rawCSVCache.js'
 import {
@@ -125,16 +126,6 @@ export interface ChecksumValidationResult {
   actualChecksum?: string
   /** Error message if validation failed */
   error?: string
-}
-
-/**
- * Logger interface for dependency injection
- */
-export interface ILogger {
-  info(message: string, data?: unknown): void
-  warn(message: string, data?: unknown): void
-  error(message: string, error?: Error | unknown): void
-  debug(message: string, data?: unknown): void
 }
 
 /**
