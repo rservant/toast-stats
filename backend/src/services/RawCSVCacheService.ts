@@ -36,6 +36,8 @@ import { ScrapedRecord } from '../types/districts.js'
 import { CircuitBreaker } from '../utils/CircuitBreaker.js'
 import { CacheIntegrityValidator } from './CacheIntegrityValidator.js'
 import { CacheSecurityManager } from './CacheSecurityManager.js'
+import { parseCSVContent as parseCSV } from './RawCSVParser.js'
+import { CacheStatisticsCollector } from './CacheStatisticsCollector.js'
 
 /**
  * Raw CSV Cache Service Implementation
@@ -48,6 +50,7 @@ export class RawCSVCacheService implements IRawCSVCacheService {
   private readonly integrityValidator: ICacheIntegrityValidator
   private readonly securityManager: ICacheSecurityManager
   private readonly circuitBreaker: CircuitBreaker
+  private readonly statisticsCollector: CacheStatisticsCollector
   private slowOperations: Array<{
     operation: string
     duration: number
@@ -82,6 +85,20 @@ export class RawCSVCacheService implements IRawCSVCacheService {
     this.circuitBreaker =
       circuitBreaker ??
       CircuitBreaker.createCacheCircuitBreaker('raw-csv-cache')
+
+    // Initialize the statistics collector with a reference back to this service
+    this.statisticsCollector = new CacheStatisticsCollector(
+      {
+        getCachedDates: () => this.getCachedDates(),
+        getCacheMetadata: (date: string) => this.getCacheMetadata(date),
+        buildDatePath: (date: string) => this.buildDatePath(date),
+      },
+      this.logger,
+      this.config,
+      this.circuitBreaker,
+      this.cacheDir,
+      () => this.slowOperations
+    )
 
     this.logger.info(
       'Raw CSV Cache Service initialized - CSV files are permanent artifacts',
@@ -675,6 +692,7 @@ export class RawCSVCacheService implements IRawCSVCacheService {
 
   /**
    * Get cache storage information and recommendations
+   * Delegates to CacheStatisticsCollector
    */
   async getCacheStorageInfo(): Promise<{
     totalSizeMB: number
@@ -684,259 +702,23 @@ export class RawCSVCacheService implements IRawCSVCacheService {
     isLargeCache: boolean
     recommendations: string[]
   }> {
-    try {
-      const dates = await this.getCachedDates()
-      const recommendations: string[] = []
-      let totalFiles = 0
-      let totalSize = 0
-
-      for (const date of dates) {
-        try {
-          const metadata = await this.getCacheMetadata(date)
-          if (metadata) {
-            totalFiles += metadata.integrity.fileCount
-            totalSize += metadata.integrity.totalSize
-          }
-        } catch (error) {
-          this.logger.warn('Failed to get storage info for date', {
-            date,
-            error,
-          })
-        }
-      }
-
-      const totalSizeMB = totalSize / (1024 * 1024)
-      const isLargeCache =
-        totalSizeMB > this.config.monitoring.storageSizeWarningMB
-
-      // Generate recommendations
-      if (isLargeCache) {
-        recommendations.push(
-          `Cache size (${totalSizeMB.toFixed(2)}MB) exceeds warning threshold (${this.config.monitoring.storageSizeWarningMB}MB)`
-        )
-        recommendations.push('Consider monitoring disk space usage regularly')
-      }
-
-      if (dates.length > 365) {
-        recommendations.push(
-          `Cache contains ${dates.length} date directories spanning over a year`
-        )
-        recommendations.push(
-          'Consider archiving very old data if disk space becomes an issue'
-        )
-      }
-
-      if (totalFiles > 10000) {
-        recommendations.push(
-          `Cache contains ${totalFiles} files which may impact file system performance`
-        )
-      }
-
-      if (recommendations.length === 0) {
-        recommendations.push('Cache storage is within normal parameters')
-      }
-
-      const result = {
-        totalSizeMB,
-        totalFiles,
-        oldestDate: dates.length > 0 ? (dates[0] ?? null) : null,
-        newestDate: dates.length > 0 ? (dates[dates.length - 1] ?? null) : null,
-        isLargeCache,
-        recommendations,
-      }
-
-      this.logger.info('Cache storage information retrieved', result)
-      return {
-        totalSizeMB: result.totalSizeMB,
-        totalFiles: result.totalFiles,
-        oldestDate: result.oldestDate,
-        newestDate: result.newestDate,
-        isLargeCache: result.isLargeCache,
-        recommendations: result.recommendations,
-      }
-    } catch (error) {
-      this.logger.error('Failed to get cache storage information', { error })
-      throw error
-    }
+    return this.statisticsCollector.getCacheStorageInfo()
   }
 
   /**
    * Get comprehensive cache statistics
+   * Delegates to CacheStatisticsCollector
    */
   async getCacheStatistics(): Promise<RawCSVCacheStatistics> {
-    try {
-      const dates = await this.getCachedDates()
-      let totalFiles = 0
-      let totalSize = 0
-      let totalHits = 0
-      let totalMisses = 0
-      const fileSizes: number[] = []
-
-      for (const date of dates) {
-        try {
-          const metadata = await this.getCacheMetadata(date)
-          if (metadata) {
-            totalFiles += metadata.integrity.fileCount
-            totalSize += metadata.integrity.totalSize
-            totalHits += metadata.downloadStats.cacheHits
-            totalMisses += metadata.downloadStats.cacheMisses
-          }
-
-          const datePath = this.buildDatePath(date)
-          const stats = await this.getDirectoryStats(datePath)
-          fileSizes.push(...stats.fileSizes)
-        } catch (error) {
-          this.logger.warn('Failed to get statistics for date', { date, error })
-        }
-      }
-
-      const averageFileSize =
-        fileSizes.length > 0
-          ? fileSizes.reduce((sum, size) => sum + size, 0) / fileSizes.length
-          : 0
-
-      const totalRequests = totalHits + totalMisses
-      const hitRatio = totalRequests > 0 ? totalHits / totalRequests : 0
-      const missRatio = totalRequests > 0 ? totalMisses / totalRequests : 0
-
-      return {
-        totalCachedDates: dates.length,
-        totalCachedFiles: totalFiles,
-        totalCacheSize: totalSize,
-        hitRatio,
-        missRatio,
-        averageFileSize,
-        oldestCacheDate: dates.length > 0 ? (dates[0] ?? null) : null,
-        newestCacheDate:
-          dates.length > 0 ? (dates[dates.length - 1] ?? null) : null,
-        diskUsage: {
-          used: totalSize,
-          available: 0, // Would need system call to get actual disk space
-          percentUsed: 0,
-        },
-        performance: {
-          averageReadTime: 0, // Would need to track over time
-          averageWriteTime: 0, // Would need to track over time
-          slowestOperations: this.config.monitoring.trackSlowOperations
-            ? [...this.slowOperations]
-            : [],
-        },
-      }
-    } catch (error) {
-      this.logger.error('Failed to get cache statistics', { error })
-      throw error
-    }
+    return this.statisticsCollector.getCacheStatistics()
   }
 
   /**
    * Get cache health status
+   * Delegates to CacheStatisticsCollector
    */
   async getHealthStatus(): Promise<CacheHealthStatus> {
-    const errors: string[] = []
-    const warnings: string[] = []
-    let isAccessible = false
-    let hasWritePermissions = false
-    let diskSpaceAvailable = 0
-
-    try {
-      // Check if cache directory exists and is accessible
-      try {
-        await fs.access(this.cacheDir)
-        isAccessible = true
-      } catch {
-        errors.push('Cache directory is not accessible')
-      }
-
-      // Check write permissions
-      if (isAccessible) {
-        try {
-          const testFile = path.join(
-            this.cacheDir,
-            `.health-check-${Date.now()}`
-          )
-          await fs.writeFile(testFile, 'test', 'utf-8')
-          await fs.unlink(testFile)
-          hasWritePermissions = true
-        } catch {
-          errors.push('Cache directory is not writable')
-        }
-      }
-
-      // Get disk space (simplified - would need system calls for real implementation)
-      diskSpaceAvailable = 1000000000 // 1GB placeholder
-
-      // Check circuit breaker status
-      const cbStats = this.circuitBreaker.getStats()
-      if (cbStats.state === 'OPEN') {
-        errors.push(
-          `Circuit breaker is open due to ${cbStats.failureCount} consecutive failures`
-        )
-      } else if (cbStats.failureCount > 0) {
-        warnings.push(
-          `Circuit breaker has recorded ${cbStats.failureCount} recent failures`
-        )
-      }
-
-      // Check configuration health - no warnings about cleanup since files are permanent
-      try {
-        const storageInfo = await this.getCacheStorageInfo()
-
-        if (storageInfo.isLargeCache) {
-          warnings.push(
-            `Cache size is large (${storageInfo.totalSizeMB.toFixed(2)}MB) - monitor disk space regularly`
-          )
-        }
-
-        if (storageInfo.totalFiles > 10000) {
-          warnings.push(
-            `Large number of cached files (${storageInfo.totalFiles}) - may impact file system performance`
-          )
-        }
-      } catch (error) {
-        warnings.push(
-          `Unable to check cache storage info: ${error instanceof Error ? error.message : 'Unknown error'}`
-        )
-      }
-
-      // Check for slow operations
-      const recentSlowOps = this.slowOperations.filter(op => {
-        const opTime = new Date(op.timestamp).getTime()
-        const oneHourAgo = Date.now() - 60 * 60 * 1000
-        return opTime > oneHourAgo
-      })
-
-      if (recentSlowOps.length > 10) {
-        warnings.push(
-          `High number of slow operations in the last hour (${recentSlowOps.length})`
-        )
-      }
-
-      return {
-        isHealthy: errors.length === 0,
-        cacheDirectory: this.cacheDir,
-        isAccessible,
-        hasWritePermissions,
-        diskSpaceAvailable,
-        lastSuccessfulOperation: Date.now(),
-        errors,
-        warnings,
-      }
-    } catch (error) {
-      errors.push(
-        `Health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
-
-      return {
-        isHealthy: false,
-        cacheDirectory: this.cacheDir,
-        isAccessible: false,
-        hasWritePermissions: false,
-        diskSpaceAvailable: 0,
-        lastSuccessfulOperation: null,
-        errors,
-        warnings,
-      }
-    }
+    return this.statisticsCollector.getHealthStatus()
   }
 
   /**
@@ -1220,96 +1002,10 @@ export class RawCSVCacheService implements IRawCSVCacheService {
 
   /**
    * Parse CSV content into ScrapedRecord array
-   * Simple CSV parser for cached content
-   *
-   * Filters out footer rows that contain "Month of" (e.g., "Month of Jan, As of 01/11/2026")
-   * which are metadata lines from the Toastmasters dashboard, not actual data records.
+   * Delegates to standalone RawCSVParser module
    */
   private parseCSVContent(csvContent: string): ScrapedRecord[] {
-    const lines = csvContent.trim().split('\n')
-    if (lines.length < 2) {
-      return []
-    }
-
-    // Parse header
-    const headerLine = lines[0]
-    if (!headerLine) {
-      return []
-    }
-    const headers = this.parseCSVLine(headerLine)
-
-    // Parse data rows
-    const records: ScrapedRecord[] = []
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i]
-      if (!line || line.trim().length === 0) {
-        continue
-      }
-
-      // Skip footer rows containing "Month of" (e.g., "Month of Jan, As of 01/11/2026")
-      // These are metadata lines from the Toastmasters dashboard, not actual data records
-      if (line.includes('Month of')) {
-        this.logger.debug('Skipping CSV footer row', { line })
-        continue
-      }
-
-      const values = this.parseCSVLine(line)
-      const record: ScrapedRecord = {}
-
-      for (let j = 0; j < headers.length; j++) {
-        const header = headers[j]
-        const value = values[j]
-        if (header) {
-          // Keep REGION as string to preserve leading zeros (e.g., "01", "09")
-          if (header === 'REGION') {
-            record[header] = value ?? null
-          } else if (value !== undefined && value !== null && value !== '') {
-            // Try to parse as number if possible for other fields
-            const numValue = Number(value)
-            record[header] = isNaN(numValue) ? value : numValue
-          } else {
-            record[header] = null
-          }
-        }
-      }
-
-      records.push(record)
-    }
-
-    return records
-  }
-
-  /**
-   * Parse a single CSV line handling quoted values
-   */
-  private parseCSVLine(line: string): string[] {
-    const result: string[] = []
-    let current = ''
-    let inQuotes = false
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i]
-
-      if (char === '"') {
-        // Check for escaped quote
-        if (inQuotes && line[i + 1] === '"') {
-          current += '"'
-          i++ // Skip next quote
-        } else {
-          inQuotes = !inQuotes
-        }
-      } else if (char === ',' && !inQuotes) {
-        result.push(current.trim())
-        current = ''
-      } else {
-        current += char
-      }
-    }
-
-    // Add last field
-    result.push(current.trim())
-
-    return result
+    return parseCSV(csvContent, this.logger)
   }
 
   /**
@@ -1854,49 +1550,5 @@ export class RawCSVCacheService implements IRawCSVCacheService {
         error,
       })
     }
-  }
-
-  /**
-   * Get directory statistics
-   */
-  private async getDirectoryStats(dirPath: string): Promise<{
-    fileCount: number
-    totalSize: number
-    fileSizes: number[]
-  }> {
-    const stats = {
-      fileCount: 0,
-      totalSize: 0,
-      fileSizes: [] as number[],
-    }
-
-    try {
-      const entries = await fs.readdir(dirPath, { withFileTypes: true })
-
-      for (const entry of entries) {
-        const fullPath = path.join(dirPath, entry.name)
-
-        if (entry.isFile()) {
-          try {
-            const fileStat = await fs.stat(fullPath)
-            stats.fileCount += 1
-            stats.totalSize += fileStat.size
-            stats.fileSizes.push(fileStat.size)
-          } catch {
-            // Ignore individual file stat errors
-          }
-        } else if (entry.isDirectory()) {
-          // Recursively get stats for subdirectories
-          const subStats = await this.getDirectoryStats(fullPath)
-          stats.fileCount += subStats.fileCount
-          stats.totalSize += subStats.totalSize
-          stats.fileSizes.push(...subStats.fileSizes)
-        }
-      }
-    } catch {
-      // Return empty stats if directory can't be read
-    }
-
-    return stats
   }
 }
