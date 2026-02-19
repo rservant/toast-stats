@@ -25,21 +25,17 @@ import { ScraperOrchestrator } from './ScraperOrchestrator.js'
 import { TransformService } from './services/TransformService.js'
 import { AnalyticsComputeService } from './services/AnalyticsComputeService.js'
 import { UploadService } from './services/UploadService.js'
+import { createVerboseLogger } from './createVerboseLogger.js'
 import {
   CLIOptions,
   ExitCode,
-  ScrapeSummary,
   ScrapeResult,
   TransformOptions,
   TransformResult,
-  TransformSummary,
   ScrapeWithTransformSummary,
   ComputeAnalyticsOptions,
   ComputeAnalyticsResult,
-  ComputeAnalyticsSummary,
   UploadOptions,
-  UploadResult,
-  UploadSummary,
 } from './types/index.js'
 import { resolveConfiguration } from './utils/config.js'
 
@@ -51,437 +47,36 @@ export {
 } from './utils/config.js'
 export type { ResolvedConfiguration } from './utils/config.js'
 
-/**
- * Validate date string format (YYYY-MM-DD)
- * Requirement 1.3: Date format validation
- *
- * Property 1: CLI Date Parsing Validity
- * For any valid date string in YYYY-MM-DD format, this function returns true.
- * For any invalid date string, this function returns false.
- */
-export function validateDateFormat(dateStr: string): boolean {
-  // Check basic format with regex
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/
-  if (!dateRegex.test(dateStr)) {
-    return false
-  }
+// Re-export all CLI helpers for backward compatibility
+export {
+  validateDateFormat,
+  getCurrentDateString,
+  parseDistrictList,
+  determineExitCode,
+  determineTransformExitCode,
+  determineComputeAnalyticsExitCode,
+  determineUploadExitCode,
+  formatScrapeSummary,
+  formatTransformSummary,
+  formatComputeAnalyticsSummary,
+  formatUploadSummary,
+} from './cliHelpers.js'
 
-  // Parse components
-  const parts = dateStr.split('-')
-  const year = parseInt(parts[0] ?? '0', 10)
-  const month = parseInt(parts[1] ?? '0', 10)
-  const day = parseInt(parts[2] ?? '0', 10)
-
-  // Validate ranges
-  if (year < 1 || year > 9999) {
-    return false
-  }
-  if (month < 1 || month > 12) {
-    return false
-  }
-  if (day < 1 || day > 31) {
-    return false
-  }
-
-  // Validate it's a real date by constructing and comparing
-  const date = new Date(year, month - 1, day)
-  if (isNaN(date.getTime())) {
-    return false
-  }
-
-  // Ensure the parsed date matches the input (catches invalid dates like 2024-02-30)
-  return (
-    date.getFullYear() === year &&
-    date.getMonth() + 1 === month &&
-    date.getDate() === day
-  )
-}
-
-/**
- * Get current date in YYYY-MM-DD format
- * Requirement 1.4: Default to current date
- */
-export function getCurrentDateString(): string {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-/**
- * Parse comma-separated district list
- * Requirement 1.5: Comma-separated district parsing
- */
-export function parseDistrictList(value: string): string[] {
-  return value
-    .split(',')
-    .map(d => d.trim())
-    .filter(d => d.length > 0)
-}
-
-/**
- * Determine the exit code based on scrape result
- * Requirement 1.11: Exit code logic
- *
- * Property 4: Exit Code Consistency
- * - Exit 0 on full success (all districts succeeded)
- * - Exit 1 on partial failure (some succeeded, some failed)
- * - Exit 2 on complete failure (all failed or fatal error)
- */
-export function determineExitCode(result: ScrapeResult): ExitCode {
-  const totalProcessed = result.districtsProcessed.length
-  const succeeded = result.districtsSucceeded.length
-  const failed = result.districtsFailed.length
-
-  // No districts processed = complete failure
-  if (totalProcessed === 0) {
-    return ExitCode.COMPLETE_FAILURE
-  }
-
-  // All succeeded = success
-  if (failed === 0 && succeeded > 0) {
-    return ExitCode.SUCCESS
-  }
-
-  // All failed = complete failure
-  if (succeeded === 0 && failed > 0) {
-    return ExitCode.COMPLETE_FAILURE
-  }
-
-  // Some succeeded, some failed = partial failure
-  if (succeeded > 0 && failed > 0) {
-    return ExitCode.PARTIAL_FAILURE
-  }
-
-  // Edge case: no successes and no failures (shouldn't happen)
-  return ExitCode.COMPLETE_FAILURE
-}
-
-/**
- * Convert ScrapeResult to ScrapeSummary for JSON output
- * Requirement 1.9: JSON output format
- */
-export function formatScrapeSummary(
-  result: ScrapeResult,
-  cacheDir: string
-): ScrapeSummary {
-  const exitCode = determineExitCode(result)
-
-  let status: 'success' | 'partial' | 'failed'
-  if (exitCode === ExitCode.SUCCESS) {
-    status = 'success'
-  } else if (exitCode === ExitCode.PARTIAL_FAILURE) {
-    status = 'partial'
-  } else {
-    status = 'failed'
-  }
-
-  // Calculate skipped (processed but neither succeeded nor failed - e.g., cache hit)
-  const skipped =
-    result.districtsProcessed.length -
-    result.districtsSucceeded.length -
-    result.districtsFailed.length
-
-  return {
-    timestamp: new Date().toISOString(),
-    date: result.date,
-    status,
-    districts: {
-      total: result.districtsProcessed.length,
-      succeeded: result.districtsSucceeded.length,
-      failed: result.districtsFailed.length,
-      skipped: Math.max(0, skipped),
-    },
-    cache: {
-      directory: cacheDir,
-      filesCreated: result.cacheLocations.length,
-      totalSize: 0, // Size calculation would require file system access
-    },
-    errors: result.errors.map(e => ({
-      districtId: e.districtId,
-      error: e.error,
-    })),
-    duration_ms: result.duration_ms,
-  }
-}
-
-/**
- * Determine the exit code based on transform result
- * Requirement 2.1: Transform command exit codes
- *
- * Uses the same exit code logic as scrape:
- * - Exit 0 on full success (all districts transformed)
- * - Exit 1 on partial failure (some succeeded, some failed)
- * - Exit 2 on complete failure (all failed or fatal error)
- */
-export function determineTransformExitCode(result: TransformResult): ExitCode {
-  const totalProcessed = result.districtsProcessed.length
-  const succeeded = result.districtsSucceeded.length
-  const failed = result.districtsFailed.length
-
-  // No districts processed = complete failure
-  if (totalProcessed === 0) {
-    return ExitCode.COMPLETE_FAILURE
-  }
-
-  // All succeeded (including skipped) = success
-  if (failed === 0 && succeeded > 0) {
-    return ExitCode.SUCCESS
-  }
-
-  // All failed = complete failure
-  if (succeeded === 0 && failed > 0) {
-    return ExitCode.COMPLETE_FAILURE
-  }
-
-  // Some succeeded, some failed = partial failure
-  if (succeeded > 0 && failed > 0) {
-    return ExitCode.PARTIAL_FAILURE
-  }
-
-  // Edge case: all skipped (no successes, no failures) = success
-  if (result.districtsSkipped.length > 0 && succeeded === 0 && failed === 0) {
-    return ExitCode.SUCCESS
-  }
-
-  // Edge case: no successes and no failures (shouldn't happen)
-  return ExitCode.COMPLETE_FAILURE
-}
-
-/**
- * Convert TransformResult to TransformSummary for JSON output
- * Requirement 2.1: Transform command JSON output
- */
-export function formatTransformSummary(
-  result: TransformResult,
-  snapshotDir: string
-): TransformSummary {
-  const exitCode = determineTransformExitCode(result)
-
-  let status: 'success' | 'partial' | 'failed'
-  if (exitCode === ExitCode.SUCCESS) {
-    status = 'success'
-  } else if (exitCode === ExitCode.PARTIAL_FAILURE) {
-    status = 'partial'
-  } else {
-    status = 'failed'
-  }
-
-  return {
-    timestamp: new Date().toISOString(),
-    date: result.date,
-    status,
-    districts: {
-      total: result.districtsProcessed.length,
-      succeeded: result.districtsSucceeded.length,
-      failed: result.districtsFailed.length,
-      skipped: result.districtsSkipped.length,
-    },
-    snapshots: {
-      directory: snapshotDir,
-      filesCreated: result.snapshotLocations.length,
-    },
-    errors: result.errors.map(e => ({
-      districtId: e.districtId,
-      error: e.error,
-    })),
-    duration_ms: result.duration_ms,
-  }
-}
-
-/**
- * Determine the exit code based on compute-analytics result
- * Requirement 8.1: compute-analytics command exit codes
- *
- * Uses the same exit code logic as scrape and transform:
- * - Exit 0 on full success (all districts computed)
- * - Exit 1 on partial failure (some succeeded, some failed)
- * - Exit 2 on complete failure (all failed or fatal error)
- */
-export function determineComputeAnalyticsExitCode(
-  result: ComputeAnalyticsResult
-): ExitCode {
-  const totalProcessed = result.districtsProcessed.length
-  const succeeded = result.districtsSucceeded.length
-  const failed = result.districtsFailed.length
-
-  // No districts processed = complete failure
-  if (totalProcessed === 0) {
-    return ExitCode.COMPLETE_FAILURE
-  }
-
-  // All succeeded (including skipped) = success
-  if (failed === 0 && succeeded > 0) {
-    return ExitCode.SUCCESS
-  }
-
-  // All failed = complete failure
-  if (succeeded === 0 && failed > 0) {
-    return ExitCode.COMPLETE_FAILURE
-  }
-
-  // Some succeeded, some failed = partial failure
-  if (succeeded > 0 && failed > 0) {
-    return ExitCode.PARTIAL_FAILURE
-  }
-
-  // Edge case: all skipped (no successes, no failures) = success
-  if (result.districtsSkipped.length > 0 && succeeded === 0 && failed === 0) {
-    return ExitCode.SUCCESS
-  }
-
-  // Edge case: no successes and no failures (shouldn't happen)
-  return ExitCode.COMPLETE_FAILURE
-}
-
-/**
- * Convert ComputeAnalyticsResult to ComputeAnalyticsSummary for JSON output
- * Requirement 8.4: compute-analytics command JSON output
- * Requirement 8.2: Report the actual snapshot date used (not the requested date)
- */
-export function formatComputeAnalyticsSummary(
-  result: ComputeAnalyticsResult,
-  analyticsDir: string
-): ComputeAnalyticsSummary {
-  const exitCode = determineComputeAnalyticsExitCode(result)
-
-  let status: 'success' | 'partial' | 'failed'
-  if (exitCode === ExitCode.SUCCESS) {
-    status = 'success'
-  } else if (exitCode === ExitCode.PARTIAL_FAILURE) {
-    status = 'partial'
-  } else {
-    status = 'failed'
-  }
-
-  return {
-    timestamp: new Date().toISOString(),
-    date: result.date,
-    requestedDate: result.requestedDate,
-    isClosingPeriod: result.isClosingPeriod,
-    dataMonth: result.dataMonth,
-    status,
-    districts: {
-      total: result.districtsProcessed.length,
-      succeeded: result.districtsSucceeded.length,
-      failed: result.districtsFailed.length,
-      skipped: result.districtsSkipped.length,
-    },
-    analytics: {
-      directory: analyticsDir,
-      filesCreated: result.analyticsLocations.length,
-    },
-    errors: result.errors.map(e => ({
-      districtId: e.districtId,
-      error: e.error,
-    })),
-    duration_ms: result.duration_ms,
-  }
-}
-
-/**
- * Determine the exit code based on upload result
- * Requirement 6.1: upload command exit codes
- *
- * Uses the same exit code logic as other commands:
- * - Exit 0 on full success (all files uploaded)
- * - Exit 1 on partial failure (some succeeded, some failed)
- * - Exit 2 on complete failure (all failed or fatal error)
- *
- * From design.md Error Handling:
- * - Upload failure (single file): exit code 1 (partial)
- * - GCS authentication failure: exit code 2 (complete failure)
- */
-export function determineUploadExitCode(result: UploadResult): ExitCode {
-  // GCS authentication failure always results in complete failure (exit code 2)
-  if (result.authError) {
-    return ExitCode.COMPLETE_FAILURE
-  }
-
-  const totalProcessed = result.filesProcessed.length
-  const uploaded = result.filesUploaded.length
-  const failed = result.filesFailed.length
-
-  // No files processed = complete failure
-  if (totalProcessed === 0) {
-    return ExitCode.COMPLETE_FAILURE
-  }
-
-  // All uploaded (including skipped) = success
-  if (failed === 0 && uploaded > 0) {
-    return ExitCode.SUCCESS
-  }
-
-  // All failed = complete failure
-  if (uploaded === 0 && failed > 0) {
-    return ExitCode.COMPLETE_FAILURE
-  }
-
-  // Some uploaded, some failed = partial failure
-  if (uploaded > 0 && failed > 0) {
-    return ExitCode.PARTIAL_FAILURE
-  }
-
-  // Edge case: all skipped (no uploads, no failures) = success
-  if (result.filesSkipped.length > 0 && uploaded === 0 && failed === 0) {
-    return ExitCode.SUCCESS
-  }
-
-  // Edge case: no uploads and no failures (shouldn't happen)
-  return ExitCode.COMPLETE_FAILURE
-}
-
-/**
- * Convert UploadResult to UploadSummary for JSON output
- * Requirement 6.5: WHEN upload completes, THE Scraper_CLI SHALL output a summary
- */
-export function formatUploadSummary(
-  result: UploadResult,
-  bucket: string,
-  prefix: string,
-  dryRun: boolean
-): UploadSummary {
-  const exitCode = determineUploadExitCode(result)
-
-  let status: 'success' | 'partial' | 'failed'
-  if (exitCode === ExitCode.SUCCESS) {
-    status = 'success'
-  } else if (exitCode === ExitCode.PARTIAL_FAILURE) {
-    status = 'partial'
-  } else {
-    status = 'failed'
-  }
-
-  const summary: UploadSummary = {
-    timestamp: new Date().toISOString(),
-    dates: result.dates,
-    status,
-    dryRun,
-    files: {
-      total: result.filesProcessed.length,
-      uploaded: result.filesUploaded.length,
-      failed: result.filesFailed.length,
-      skipped: result.filesSkipped.length,
-    },
-    destination: {
-      bucket,
-      prefix,
-    },
-    errors: result.errors.map(e => ({
-      file: e.file,
-      error: e.error,
-    })),
-    duration_ms: result.duration_ms,
-  }
-
-  // Include authError flag if present
-  if (result.authError) {
-    summary.authError = true
-  }
-
-  return summary
-}
+// Import helpers for use within this module (namespace to avoid redeclaration)
+import * as helpers from './cliHelpers.js'
+const {
+  validateDateFormat,
+  getCurrentDateString,
+  parseDistrictList,
+  determineExitCode,
+  determineTransformExitCode,
+  determineComputeAnalyticsExitCode,
+  determineUploadExitCode,
+  formatScrapeSummary,
+  formatTransformSummary,
+  formatComputeAnalyticsSummary,
+  formatUploadSummary,
+} = helpers
 
 /**
  * Create the CLI program
@@ -636,30 +231,7 @@ export function createCLI(): Command {
           // Create TransformService with optional verbose logger
           const transformService = new TransformService({
             cacheDir,
-            logger: options.verbose
-              ? {
-                  info: (msg: string, data?: unknown) =>
-                    console.error(
-                      `[INFO] ${msg}`,
-                      data ? JSON.stringify(data) : ''
-                    ),
-                  warn: (msg: string, data?: unknown) =>
-                    console.error(
-                      `[WARN] ${msg}`,
-                      data ? JSON.stringify(data) : ''
-                    ),
-                  error: (msg: string, err?: unknown) =>
-                    console.error(
-                      `[ERROR] ${msg}`,
-                      err instanceof Error ? err.message : ''
-                    ),
-                  debug: (msg: string, data?: unknown) =>
-                    console.error(
-                      `[DEBUG] ${msg}`,
-                      data ? JSON.stringify(data) : ''
-                    ),
-                }
-              : undefined,
+            logger: createVerboseLogger(options.verbose),
           })
 
           // Transform only the successfully scraped districts
@@ -867,30 +439,7 @@ export function createCLI(): Command {
       // Requirement 2.2: Use the same DataTransformationService logic as the Backend
       const transformService = new TransformService({
         cacheDir,
-        logger: options.verbose
-          ? {
-              info: (msg: string, data?: unknown) =>
-                console.error(
-                  `[INFO] ${msg}`,
-                  data ? JSON.stringify(data) : ''
-                ),
-              warn: (msg: string, data?: unknown) =>
-                console.error(
-                  `[WARN] ${msg}`,
-                  data ? JSON.stringify(data) : ''
-                ),
-              error: (msg: string, err?: unknown) =>
-                console.error(
-                  `[ERROR] ${msg}`,
-                  err instanceof Error ? err.message : ''
-                ),
-              debug: (msg: string, data?: unknown) =>
-                console.error(
-                  `[DEBUG] ${msg}`,
-                  data ? JSON.stringify(data) : ''
-                ),
-            }
-          : undefined,
+        logger: createVerboseLogger(options.verbose),
       })
 
       // Execute transformation
@@ -997,30 +546,7 @@ export function createCLI(): Command {
       // Requirement 1.3: Generate membership trends, club health scores, etc.
       const analyticsComputeService = new AnalyticsComputeService({
         cacheDir,
-        logger: options.verbose
-          ? {
-              info: (msg: string, data?: unknown) =>
-                console.error(
-                  `[INFO] ${msg}`,
-                  data ? JSON.stringify(data) : ''
-                ),
-              warn: (msg: string, data?: unknown) =>
-                console.error(
-                  `[WARN] ${msg}`,
-                  data ? JSON.stringify(data) : ''
-                ),
-              error: (msg: string, err?: unknown) =>
-                console.error(
-                  `[ERROR] ${msg}`,
-                  err instanceof Error ? err.message : ''
-                ),
-              debug: (msg: string, data?: unknown) =>
-                console.error(
-                  `[DEBUG] ${msg}`,
-                  data ? JSON.stringify(data) : ''
-                ),
-            }
-          : undefined,
+        logger: createVerboseLogger(options.verbose),
       })
 
       // Execute analytics computation
@@ -1197,30 +723,7 @@ export function createCLI(): Command {
         bucket,
         prefix,
         projectId,
-        logger: options.verbose
-          ? {
-              info: (msg: string, data?: unknown) =>
-                console.error(
-                  `[INFO] ${msg}`,
-                  data ? JSON.stringify(data) : ''
-                ),
-              warn: (msg: string, data?: unknown) =>
-                console.error(
-                  `[WARN] ${msg}`,
-                  data ? JSON.stringify(data) : ''
-                ),
-              error: (msg: string, err?: unknown) =>
-                console.error(
-                  `[ERROR] ${msg}`,
-                  err instanceof Error ? err.message : ''
-                ),
-              debug: (msg: string, data?: unknown) =>
-                console.error(
-                  `[DEBUG] ${msg}`,
-                  data ? JSON.stringify(data) : ''
-                ),
-            }
-          : undefined,
+        logger: createVerboseLogger(options.verbose),
       })
 
       // Execute upload operation

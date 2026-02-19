@@ -13,6 +13,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fs from 'fs/promises'
 import path from 'path'
 import { FileSnapshotStore } from '../SnapshotStore.js'
+import { generateSnapshotDirectoryName } from '../snapshot/SnapshotWriter.js'
 
 describe('PerDistrictSnapshotStore ISO Date Directory Naming', () => {
   let testCacheDir: string
@@ -48,11 +49,6 @@ describe('PerDistrictSnapshotStore ISO Date Directory Naming', () => {
 
   describe('generateSnapshotDirectoryName()', () => {
     it('should generate ISO date format (YYYY-MM-DD) from ISO 8601 date string', () => {
-      // Access the private method through type assertion for testing
-      const storeWithPrivate = store as unknown as {
-        generateSnapshotDirectoryName: (dataAsOfDate: string) => string
-      }
-
       const testCases = [
         { input: '2025-01-07T00:00:00.000Z', expected: '2025-01-07' },
         { input: '2024-12-31T23:59:59.999Z', expected: '2024-12-31' },
@@ -62,18 +58,12 @@ describe('PerDistrictSnapshotStore ISO Date Directory Naming', () => {
       ]
 
       for (const testCase of testCases) {
-        const result = storeWithPrivate.generateSnapshotDirectoryName(
-          testCase.input
-        )
+        const result = generateSnapshotDirectoryName(testCase.input)
         expect(result).toBe(testCase.expected)
       }
     })
 
     it('should generate ISO date format from date-only strings', () => {
-      const storeWithPrivate = store as unknown as {
-        generateSnapshotDirectoryName: (dataAsOfDate: string) => string
-      }
-
       const testCases = [
         { input: '2025-01-07', expected: '2025-01-07' },
         { input: '2024-12-31', expected: '2024-12-31' },
@@ -81,18 +71,12 @@ describe('PerDistrictSnapshotStore ISO Date Directory Naming', () => {
       ]
 
       for (const testCase of testCases) {
-        const result = storeWithPrivate.generateSnapshotDirectoryName(
-          testCase.input
-        )
+        const result = generateSnapshotDirectoryName(testCase.input)
         expect(result).toBe(testCase.expected)
       }
     })
 
     it('should pad single-digit months and days with leading zeros', () => {
-      const storeWithPrivate = store as unknown as {
-        generateSnapshotDirectoryName: (dataAsOfDate: string) => string
-      }
-
       const testCases = [
         { input: '2025-01-01T00:00:00.000Z', expected: '2025-01-01' },
         { input: '2025-09-05T00:00:00.000Z', expected: '2025-09-05' },
@@ -100,18 +84,12 @@ describe('PerDistrictSnapshotStore ISO Date Directory Naming', () => {
       ]
 
       for (const testCase of testCases) {
-        const result = storeWithPrivate.generateSnapshotDirectoryName(
-          testCase.input
-        )
+        const result = generateSnapshotDirectoryName(testCase.input)
         expect(result).toBe(testCase.expected)
       }
     })
 
     it('should handle different timezones consistently', () => {
-      const storeWithPrivate = store as unknown as {
-        generateSnapshotDirectoryName: (dataAsOfDate: string) => string
-      }
-
       // Same date in different timezone representations should produce same result
       const testCases = [
         { input: '2025-01-07T00:00:00.000Z', expected: '2025-01-07' },
@@ -120,9 +98,7 @@ describe('PerDistrictSnapshotStore ISO Date Directory Naming', () => {
       ]
 
       for (const testCase of testCases) {
-        const result = storeWithPrivate.generateSnapshotDirectoryName(
-          testCase.input
-        )
+        const result = generateSnapshotDirectoryName(testCase.input)
         expect(result).toBe(testCase.expected)
       }
     })
