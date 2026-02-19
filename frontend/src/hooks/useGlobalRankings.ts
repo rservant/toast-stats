@@ -5,8 +5,23 @@ import type {
   RankHistoryResponse,
   ProgramYearWithData,
 } from '../types/districts'
+import {
+  convertToProgramYear,
+  extractEndOfYearRankings,
+  buildYearlyRankingSummaries,
+} from '../utils/globalRankingsUtils'
+import type {
+  UseGlobalRankingsParams,
+  UseGlobalRankingsResult,
+} from '../utils/globalRankingsUtils'
 
-// Re-export types and helpers for backward compatibility
+// Re-export types and functions for backward compatibility
+export {
+  convertToProgramYear,
+  extractEndOfYearRankings,
+  calculateYearOverYearChange,
+  buildYearlyRankingSummaries,
+} from '../utils/globalRankingsUtils'
 export type {
   RankPosition,
   EndOfYearRankings,
@@ -14,23 +29,7 @@ export type {
   YearlyRankingSummary,
   UseGlobalRankingsParams,
   UseGlobalRankingsResult,
-} from './globalRankings/types'
-export {
-  convertToProgramYear,
-  extractEndOfYearRankings,
-  calculateYearOverYearChange,
-  buildYearlyRankingSummaries,
-} from './globalRankings/helpers'
-
-import type {
-  UseGlobalRankingsParams,
-  UseGlobalRankingsResult,
-} from './globalRankings/types'
-import {
-  convertToProgramYear,
-  extractEndOfYearRankings,
-  buildYearlyRankingSummaries,
-} from './globalRankings/helpers'
+} from '../utils/globalRankingsUtils'
 
 // ========== Query Key Factory ==========
 

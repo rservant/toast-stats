@@ -1,10 +1,12 @@
 /**
- * Leadership insights type definitions.
+ * Leadership insights types.
  *
- * Requirements: 4.1, 4.2
+ * Types for leadership effectiveness scores, leadership changes,
+ * area director correlations, and pre-computed leadership insights data.
  */
 
-import type { DateRange, DivisionRanking, AreaPerformance } from './core.js'
+import type { DateRange } from './metadata.js'
+import type { DivisionRanking, AreaPerformance } from './divisionArea.js'
 
 /**
  * Leadership effectiveness score for a division.
@@ -51,6 +53,7 @@ export interface AreaDirectorCorrelation {
 /**
  * Comprehensive leadership insights data structure.
  * Pre-computed by scraper-cli, served by backend.
+ * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  */
 export interface LeadershipInsights {
   // Leadership effectiveness scores (Requirement 8.1)
@@ -82,10 +85,15 @@ export interface LeadershipInsights {
   }
 }
 
+// ========== Leadership Insights Data Types (for pre-computed files) ==========
+
 /**
  * Leadership insights data structure for pre-computed files.
  * Pre-computed by scraper-cli, served by backend.
  * This is the wrapper type for the pre-computed leadership insights file.
+ *
+ * Contains leadership effectiveness metrics and officer performance data
+ * derived from the comprehensive LeadershipInsights analysis.
  *
  * Requirements: 4.1, 4.2
  */

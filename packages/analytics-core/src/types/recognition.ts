@@ -1,13 +1,15 @@
 /**
- * Area/Division recognition type definitions.
- * Distinguished Area Program (DAP) and Distinguished Division Program (DDP).
+ * Area/Division recognition types.
  *
- * Requirements: 7.1
+ * Types for DAP (Distinguished Area Program) and DDP (Distinguished Division Program)
+ * recognition levels, eligibility, and metrics.
  */
 
 /**
  * Recognition level for Areas and Divisions
  * Ordinal: NotDistinguished < Distinguished < Select < Presidents
+ *
+ * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  *
  * Requirements: 7.1
  */
@@ -23,6 +25,8 @@ export type AreaDivisionRecognitionLevel =
  * - 'ineligible': One or more eligibility gates failed
  * - 'unknown': Cannot determine eligibility (missing data, e.g., club visits)
  *
+ * Moved from backend/src/types/analytics.ts to preserve hardened logic.
+ *
  * Requirements: 7.1
  */
 export type RecognitionEligibility = 'eligible' | 'ineligible' | 'unknown'
@@ -34,6 +38,8 @@ export type RecognitionEligibility = 'eligible' | 'ineligible' | 'unknown'
  * - Eligibility requires club visits (2 per club) - currently unavailable from dashboard
  * - Paid clubs threshold: ≥75%
  * - Distinguished clubs calculated against paid clubs only
+ *
+ * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  *
  * Requirements: 7.1
  */
@@ -68,6 +74,8 @@ export interface AreaRecognition {
  * - Eligibility requires area club visits completion - currently unavailable from dashboard
  * - Paid areas threshold: ≥85%
  * - Distinguished areas calculated against paid areas only
+ *
+ * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  *
  * Requirements: 7.1
  */

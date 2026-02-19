@@ -1,15 +1,50 @@
 /**
- * Membership analytics type definitions.
+ * Membership analytics types.
  *
- * Requirements: 1.1, 1.2
+ * Types for membership trends, payments, year-over-year comparisons,
+ * seasonal patterns, and pre-computed membership analytics data.
  */
 
-import type {
-  DateRange,
-  MembershipTrendPoint,
-  PaymentsTrendPoint,
-  YearOverYearComparison,
-} from './core.js'
+import type { DateRange } from './metadata.js'
+
+/**
+ * Membership trend data point.
+ */
+export interface MembershipTrendPoint {
+  date: string
+  count: number
+}
+
+/**
+ * Payments trend data point.
+ */
+export interface PaymentsTrendPoint {
+  date: string
+  payments: number
+}
+
+/**
+ * Year-over-year comparison data.
+ */
+export interface YearOverYearComparison {
+  currentYear: number
+  previousYear: number
+  membershipChange: number
+  membershipChangePercent: number
+  paymentsChange: number
+  paymentsChangePercent: number
+}
+
+/**
+ * Membership trends data structure.
+ */
+export interface MembershipTrendData {
+  membershipTrend: MembershipTrendPoint[]
+  paymentsTrend: PaymentsTrendPoint[]
+  yearOverYear?: YearOverYearComparison
+}
+
+// ========== Membership Analytics Types (moved from backend) ==========
 
 /**
  * Seasonal pattern for membership analytics.
@@ -36,6 +71,7 @@ export interface MembershipYearOverYearComparison {
 /**
  * Comprehensive membership analytics data structure.
  * Pre-computed by scraper-cli, served by backend.
+ * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  */
 export interface MembershipAnalytics {
   totalMembership: number
@@ -51,6 +87,8 @@ export interface MembershipAnalytics {
   seasonalPatterns: SeasonalPattern[]
   yearOverYearComparison?: MembershipYearOverYearComparison
 }
+
+// ========== Membership Analytics Data Types (for pre-computed files) ==========
 
 /**
  * Membership analytics data structure for pre-computed files.

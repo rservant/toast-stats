@@ -1,19 +1,60 @@
 /**
- * Distinguished club analytics type definitions.
+ * Distinguished club analytics types.
  *
- * Requirements: 5.1, 5.2
+ * Types for distinguished club projections, summaries, counts,
+ * achievements, DCP goal analysis, and pre-computed distinguished analytics data.
  */
 
-import type {
-  DateRange,
-  DistinguishedClubCounts,
-  DistinguishedClubSummary,
-  DistinguishedProjection,
-} from './core.js'
+import type { DateRange } from './metadata.js'
+
+/**
+ * Distinguished club projection data.
+ * Simplified to a single projected field (projectedDistinguished = thriving count).
+ *
+ * Requirements: 2.1, 2.2
+ */
+export interface DistinguishedProjection {
+  projectedDistinguished: number // Single projected field = thriving count
+  currentDistinguished: number
+  currentSelect: number
+  currentPresident: number
+  projectionDate: string
+}
+
+/**
+ * Distinguished club summary.
+ */
+export interface DistinguishedClubSummary {
+  clubId: string
+  clubName: string
+  status: 'smedley' | 'president' | 'select' | 'distinguished' | 'none'
+  dcpPoints: number
+  goalsCompleted: number
+}
+
+/**
+ * Summary counts of distinguished clubs by recognition level.
+ * Used in DistrictAnalytics.distinguishedClubs field.
+ */
+export interface DistinguishedClubCounts {
+  /** Clubs achieving Smedley Distinguished (10+ goals, 25+ members) */
+  smedley: number
+  /** Clubs achieving President's Distinguished (9+ goals, 20+ members) */
+  presidents: number
+  /** Clubs achieving Select Distinguished (7+ goals, 20+ members) */
+  select: number
+  /** Clubs achieving Distinguished (5+ goals, 20+ members) */
+  distinguished: number
+  /** Total count of all distinguished clubs */
+  total: number
+}
+
+// ========== Distinguished Club Analytics Types (moved from backend) ==========
 
 /**
  * Achievement record for a club reaching a distinguished level.
  * Tracks when clubs achieve distinguished status and at what level.
+ * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  *
  * Requirements: 5.1, 5.2
  */
@@ -28,6 +69,7 @@ export interface DistinguishedClubAchievement {
 /**
  * DCP goal analysis data for a single goal.
  * Tracks achievement count and percentage for each of the 10 DCP goals.
+ * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  *
  * Requirements: 5.1, 5.2
  */
@@ -40,6 +82,7 @@ export interface DCPGoalAnalysis {
 /**
  * Comprehensive distinguished club analytics data structure.
  * Pre-computed by scraper-cli, served by backend.
+ * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  *
  * Requirements: 5.1, 5.2
  */
@@ -92,9 +135,14 @@ export interface DistinguishedClubAnalytics {
   }
 }
 
+// ========== Distinguished Club Analytics Data Types (for pre-computed files) ==========
+
 /**
  * Distinguished club analytics data structure for pre-computed files.
  * Pre-computed by scraper-cli, served by backend.
+ *
+ * Contains comprehensive distinguished club progress and projections
+ * derived from the DistinguishedClubAnalytics analysis.
  *
  * Requirements: 5.1, 5.2
  */

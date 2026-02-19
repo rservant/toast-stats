@@ -327,53 +327,8 @@ export function useAutoTouchTargetValidation(
   }
 }
 
-/**
- * Utility function to check if an element is interactive
- */
-export function isInteractiveElement(element: HTMLElement): boolean {
-  const interactiveTags = ['button', 'a', 'input', 'select', 'textarea']
-  const interactiveRoles = ['button', 'link', 'menuitem', 'tab']
-
-  const tagName = element.tagName.toLowerCase()
-  const role = element.getAttribute('role')
-  const tabIndex = element.getAttribute('tabindex')
-  const hasClickHandler =
-    element.onclick !== null || element.getAttribute('onclick') !== null
-
-  return (
-    interactiveTags.includes(tagName) ||
-    (role && interactiveRoles.includes(role)) ||
-    (tabIndex && tabIndex !== '-1') ||
-    hasClickHandler
-  )
-}
-
-/**
- * Get all interactive elements in a container
- */
-export function getAllInteractiveElements(
-  container: HTMLElement = document.body
-): HTMLElement[] {
-  const interactiveSelectors = [
-    'button',
-    'a[href]',
-    'input:not([type="hidden"])',
-    'select',
-    'textarea',
-    '[tabindex]:not([tabindex="-1"])',
-    '[role="button"]',
-    '[role="link"]',
-    '[role="menuitem"]',
-    '[role="tab"]',
-    '[onclick]',
-  ]
-
-  const elements = container.querySelectorAll(interactiveSelectors.join(', '))
-  return Array.from(elements).filter(element => {
-    const htmlElement = element as HTMLElement
-    const computedStyle = window.getComputedStyle(htmlElement)
-    return (
-      computedStyle.display !== 'none' && computedStyle.visibility !== 'hidden'
-    )
-  }) as HTMLElement[]
-}
+// Re-export utility functions for backward compatibility
+export {
+  isInteractiveElement,
+  getAllInteractiveElements,
+} from '../utils/touchTargetUtils'

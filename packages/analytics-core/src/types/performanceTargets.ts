@@ -1,12 +1,15 @@
 /**
- * District performance targets and rankings type definitions.
+ * Performance targets and rankings types.
  *
- * Requirements: 7.1, 7.2, 7.3, 7.4
+ * Types for recognition levels, recognition targets, metric targets,
+ * region rank data, metric rankings, district performance targets,
+ * and pre-computed performance targets data.
  */
 
 /**
  * Recognition levels for district performance targets.
  * Ordered from lowest to highest achievement tier.
+ * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  *
  * Requirements: 7.2
  */
@@ -19,6 +22,7 @@ export type RecognitionLevel =
 /**
  * Target values for each recognition level.
  * All values are integers (ceiling-rounded from formulas).
+ * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  *
  * Requirements: 7.2
  */
@@ -32,6 +36,7 @@ export interface RecognitionTargets {
 /**
  * Target calculation result for a single metric.
  * Contains base value, current value, calculated targets, and achieved level.
+ * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  *
  * Requirements: 7.2
  */
@@ -48,6 +53,7 @@ export interface MetricTargets {
 
 /**
  * Region ranking data for a single metric.
+ * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  *
  * Requirements: 7.2
  */
@@ -63,6 +69,7 @@ export interface RegionRankData {
 /**
  * Complete ranking data for a metric.
  * Includes world rank, percentile, and region rank.
+ * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  *
  * Requirements: 7.2
  */
@@ -91,6 +98,8 @@ export interface MetricRankings {
  * Each metric includes current value, base value, calculated targets,
  * achieved recognition level, and complete ranking data.
  *
+ * Moved from backend/src/types/analytics.ts to preserve hardened logic.
+ *
  * Requirements: 7.1, 7.2, 7.3, 7.4
  */
 export interface DistrictPerformanceTargets {
@@ -117,9 +126,15 @@ export interface DistrictPerformanceTargets {
   }
 }
 
+// ========== Performance Targets Data Types (for pre-computed files) ==========
+
 /**
  * Performance targets data structure for pre-computed files.
  * Pre-computed by scraper-cli, served by backend.
+ *
+ * Contains recognition level targets (DAP, DDP) and progress tracking
+ * for district performance metrics. Uses AreaDivisionRecognitionModule
+ * to compute targets based on paid clubs and distinguished clubs percentages.
  *
  * Requirements: 7.1, 7.2
  */

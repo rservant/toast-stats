@@ -6,6 +6,20 @@ import {
   SortField,
   ProcessedClubTrend,
 } from '../components/filters/types'
+import {
+  processClubs,
+  applyFilter as applyFilterUtil,
+} from '../utils/columnFilterUtils'
+
+// Re-export utils for backward compatibility / direct testing
+export {
+  getLatestMembership,
+  getLatestDcpGoals,
+  getDistinguishedOrder,
+  processClubs,
+  applyFilter,
+  applyAllFilters,
+} from '../utils/columnFilterUtils'
 
 /**
  * Hook for managing individual column filter states
@@ -15,46 +29,11 @@ export const useColumnFilters = (clubs: ClubTrend[]) => {
   const [filterState, setFilterState] = useState<FilterState>({})
 
   /**
-   * Get latest membership count from club trend data
-   */
-  const getLatestMembership = useCallback((club: ClubTrend): number => {
-    if (club.membershipTrend.length === 0) return 0
-    return club.membershipTrend[club.membershipTrend.length - 1]?.count ?? 0
-  }, [])
-
-  /**
-   * Get latest DCP goals from club trend data
-   */
-  const getLatestDcpGoals = useCallback((club: ClubTrend): number => {
-    if (club.dcpGoalsTrend.length === 0) return 0
-    return club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]?.goalsAchieved ?? 0
-  }, [])
-
-  /**
-   * Get distinguished order for sorting
-   */
-  const getDistinguishedOrder = useCallback((club: ClubTrend): number => {
-    const order = {
-      NotDistinguished: 0,
-      Distinguished: 1,
-      Select: 2,
-      President: 3,
-      Smedley: 4,
-    }
-    return order[club.distinguishedLevel as keyof typeof order] ?? 999
-  }, [])
-
-  /**
    * Process clubs with computed properties for filtering
    */
   const processedClubs = useMemo((): ProcessedClubTrend[] => {
-    return clubs.map(club => ({
-      ...club,
-      latestMembership: getLatestMembership(club),
-      latestDcpGoals: getLatestDcpGoals(club),
-      distinguishedOrder: getDistinguishedOrder(club),
-    }))
-  }, [clubs, getLatestMembership, getLatestDcpGoals, getDistinguishedOrder])
+    return processClubs(clubs)
+  }, [clubs])
 
   /**
    * Apply a single filter to the club data
@@ -64,184 +43,7 @@ export const useColumnFilters = (clubs: ClubTrend[]) => {
       clubs: ProcessedClubTrend[],
       filter: ColumnFilter
     ): ProcessedClubTrend[] => {
-      switch (filter.field) {
-        case 'name':
-          if (filter.type === 'text' && typeof filter.value === 'string') {
-            const searchTerm = filter.value.toLowerCase().trim()
-            // Handle empty or whitespace-only search terms
-            if (searchTerm === '') {
-              return clubs
-            }
-            return clubs.filter(club => {
-              const clubName = club.clubName.toLowerCase()
-              if (filter.operator === 'startsWith') {
-                return clubName.startsWith(searchTerm)
-              }
-              // Default to 'contains'
-              return clubName.includes(searchTerm)
-            })
-          }
-          break
-
-        case 'division':
-          if (filter.type === 'text' && typeof filter.value === 'string') {
-            const searchTerm = filter.value.toLowerCase().trim()
-            // Handle empty or whitespace-only search terms
-            if (searchTerm === '') {
-              return clubs
-            }
-            return clubs.filter(club => {
-              const divisionName = club.divisionName.toLowerCase()
-              if (filter.operator === 'startsWith') {
-                return divisionName.startsWith(searchTerm)
-              }
-              // Default to 'contains'
-              return divisionName.includes(searchTerm)
-            })
-          }
-          break
-
-        case 'area':
-          if (filter.type === 'text' && typeof filter.value === 'string') {
-            const searchTerm = filter.value.toLowerCase().trim()
-            // Handle empty or whitespace-only search terms
-            if (searchTerm === '') {
-              return clubs
-            }
-            return clubs.filter(club => {
-              const areaName = club.areaName.toLowerCase()
-              if (filter.operator === 'startsWith') {
-                return areaName.startsWith(searchTerm)
-              }
-              // Default to 'contains'
-              return areaName.includes(searchTerm)
-            })
-          }
-          break
-
-        case 'membership':
-          if (filter.type === 'numeric' && Array.isArray(filter.value)) {
-            const [min, max] = filter.value as [number | null, number | null]
-            // Handle case where both min and max are null (no filtering)
-            if (min === null && max === null) {
-              return clubs
-            }
-            return clubs.filter(club => {
-              const membership = club.latestMembership
-              if (min !== null && membership < min) return false
-              if (max !== null && membership > max) return false
-              return true
-            })
-          }
-          break
-
-        case 'dcpGoals':
-          if (filter.type === 'numeric' && Array.isArray(filter.value)) {
-            const [min, max] = filter.value as [number | null, number | null]
-            // Handle case where both min and max are null (no filtering)
-            if (min === null && max === null) {
-              return clubs
-            }
-            return clubs.filter(club => {
-              const dcpGoals = club.latestDcpGoals
-              if (min !== null && dcpGoals < min) return false
-              if (max !== null && dcpGoals > max) return false
-              return true
-            })
-          }
-          break
-
-        case 'distinguished':
-          if (filter.type === 'categorical' && Array.isArray(filter.value)) {
-            const selectedValues = filter.value as string[]
-            if (selectedValues.length === 0) return clubs
-            return clubs.filter(club => {
-              return (
-                club.distinguishedLevel &&
-                selectedValues.includes(club.distinguishedLevel)
-              )
-            })
-          }
-          break
-
-        case 'status':
-          if (filter.type === 'categorical' && Array.isArray(filter.value)) {
-            const selectedValues = filter.value as string[]
-            if (selectedValues.length === 0) return clubs
-            return clubs.filter(club =>
-              selectedValues.includes(club.currentStatus)
-            )
-          }
-          break
-
-        case 'clubStatus':
-          if (filter.type === 'categorical' && Array.isArray(filter.value)) {
-            const selectedValues = filter.value as string[]
-            if (selectedValues.length === 0) return clubs
-            return clubs.filter(club => {
-              return club.clubStatus && selectedValues.includes(club.clubStatus)
-            })
-          }
-          break
-
-        case 'octoberRenewals':
-          if (filter.type === 'numeric' && Array.isArray(filter.value)) {
-            const [min, max] = filter.value as [number | null, number | null]
-            // Handle case where both min and max are null (no filtering)
-            if (min === null && max === null) {
-              return clubs
-            }
-            return clubs.filter(club => {
-              const value = club.octoberRenewals
-              // Undefined values do not match any range
-              if (value === undefined) return false
-              if (min !== null && value < min) return false
-              if (max !== null && value > max) return false
-              return true
-            })
-          }
-          break
-
-        case 'aprilRenewals':
-          if (filter.type === 'numeric' && Array.isArray(filter.value)) {
-            const [min, max] = filter.value as [number | null, number | null]
-            // Handle case where both min and max are null (no filtering)
-            if (min === null && max === null) {
-              return clubs
-            }
-            return clubs.filter(club => {
-              const value = club.aprilRenewals
-              // Undefined values do not match any range
-              if (value === undefined) return false
-              if (min !== null && value < min) return false
-              if (max !== null && value > max) return false
-              return true
-            })
-          }
-          break
-
-        case 'newMembers':
-          if (filter.type === 'numeric' && Array.isArray(filter.value)) {
-            const [min, max] = filter.value as [number | null, number | null]
-            // Handle case where both min and max are null (no filtering)
-            if (min === null && max === null) {
-              return clubs
-            }
-            return clubs.filter(club => {
-              const value = club.newMembers
-              // Undefined values do not match any range
-              if (value === undefined) return false
-              if (min !== null && value < min) return false
-              if (max !== null && value > max) return false
-              return true
-            })
-          }
-          break
-
-        default:
-          return clubs
-      }
-      return clubs
+      return applyFilterUtil(clubs, filter)
     },
     []
   )

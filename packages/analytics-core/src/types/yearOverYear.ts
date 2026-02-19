@@ -1,13 +1,15 @@
 /**
- * Year-over-year comparison type definitions.
+ * Year-over-year comparison types.
  *
- * Requirements: 6.1, 6.2, 6.3
+ * Types for extended year-over-year comparisons, metric comparisons,
+ * multi-year trends, and pre-computed year-over-year data.
  */
 
 /**
  * Extended year-over-year comparison data structure.
  * Contains full metrics structure with byLevel breakdowns for distinguished clubs.
  * Pre-computed by scraper-cli, served by backend.
+ * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  *
  * Requirements: 6.2, 6.3
  */
@@ -93,6 +95,8 @@ export interface ExtendedYearOverYearComparison {
     }
   }
 }
+
+// ========== Year-Over-Year Data Types (for pre-computed files) ==========
 
 /**
  * Metric comparison structure for year-over-year analysis.
