@@ -1,0 +1,169 @@
+# Production Deployment Workflow
+# Deploys backend to Cloud Run and frontend to Firebase Hosting
+# on every merge to main, after CI passes.
+#
+# Prerequisites:
+#   1. Run scripts/setup-wif.sh (one-time)
+#   2. Add GitHub secrets: GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Prevent concurrent deployments
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20'
+  REGION: 'us-east1'
+  CLOUD_RUN_SERVICE: 'toast-stats-api'
+  GCS_BUCKET: 'raw-csv-toast-stats'
+
+permissions:
+  contents: read
+  id-token: write # Required for Workload Identity Federation
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Gate: CI must pass before deployment
+  # ──────────────────────────────────────────────
+  ci:
+    name: CI Quality Gates
+    uses: ./.github/workflows/ci-cd.yml
+
+  # ──────────────────────────────────────────────
+  # Deploy Backend to Cloud Run
+  # ──────────────────────────────────────────────
+  deploy-backend:
+    name: Deploy Backend
+    runs-on: ubuntu-latest
+    needs: ci
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.CLOUD_RUN_SERVICE }} \
+            --source=./backend \
+            --region=${{ env.REGION }} \
+            --platform=managed \
+            --set-env-vars="NODE_ENV=production" \
+            --set-env-vars="STORAGE_PROVIDER=gcp" \
+            --set-env-vars="GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}" \
+            --set-env-vars="GCS_BUCKET_NAME=${{ env.GCS_BUCKET }}" \
+            --set-env-vars="CORS_ORIGIN=https://${{ secrets.GCP_PROJECT_ID }}.web.app" \
+            --set-secrets="JWT_SECRET=jwt-secret:latest" \
+            --no-allow-unauthenticated \
+            --memory=512Mi \
+            --cpu=1 \
+            --min-instances=0 \
+            --max-instances=10 \
+            --quiet
+
+      - name: Get deployment URL
+        id: deploy-url
+        run: |
+          URL=$(gcloud run services describe ${{ env.CLOUD_RUN_SERVICE }} \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)')
+          echo "url=${URL}" >> "$GITHUB_OUTPUT"
+          echo "## Backend Deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "✅ Deployed to: ${URL}" >> "$GITHUB_STEP_SUMMARY"
+
+  # ──────────────────────────────────────────────
+  # Deploy Frontend to Firebase Hosting
+  # ──────────────────────────────────────────────
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    needs: ci
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build dependency packages
+        run: |
+          npm run build:shared-contracts
+          npm run build:analytics-core
+
+      - name: Build frontend
+        run: npm run build:frontend
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          channelId: live
+          projectId: ${{ secrets.GCP_PROJECT_ID }}
+
+  # ──────────────────────────────────────────────
+  # Post-Deployment Verification
+  # ──────────────────────────────────────────────
+  post-deploy-verify:
+    name: Post-Deploy Verification
+    runs-on: ubuntu-latest
+    needs: [deploy-backend, deploy-frontend]
+
+    steps:
+      - name: Wait for services to stabilize
+        run: sleep 30
+
+      - name: Health check
+        run: |
+          echo "## Post-Deployment Verification" >> "$GITHUB_STEP_SUMMARY"
+
+          # Check backend health via Firebase Hosting rewrite
+          HOSTING_URL="https://${{ secrets.GCP_PROJECT_ID }}.web.app"
+
+          echo "Checking health at ${HOSTING_URL}/api/health..."
+          RESPONSE=$(curl -sf --max-time 30 "${HOSTING_URL}/api/health" || true)
+
+          if echo "${RESPONSE}" | grep -q '"status":"ok"'; then
+            echo "✅ Health check passed" >> "$GITHUB_STEP_SUMMARY"
+            echo "Response: ${RESPONSE}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "⚠️ Health check returned unexpected response" >> "$GITHUB_STEP_SUMMARY"
+            echo "Response: ${RESPONSE:-'(no response)'}" >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Health check did not return expected response. Manual verification recommended."
+          fi
+
+      - name: Deployment summary
+        run: |
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "---" >> "$GITHUB_STEP_SUMMARY"
+          echo "🚀 Deployment complete for commit \`${GITHUB_SHA::7}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Frontend**: https://${{ secrets.GCP_PROJECT_ID }}.web.app" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Triggered by**: @${GITHUB_ACTOR}" >> "$GITHUB_STEP_SUMMARY"
