@@ -48,7 +48,7 @@ docs
 frontend
 
 # Scraper CLI (not needed for backend build)
-packages
+packages/scraper-cli
 
 # Scripts (not needed in production)
 scripts

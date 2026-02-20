@@ -23,15 +23,16 @@ COPY packages/analytics-core/package.json packages/analytics-core/
 COPY backend/package.json backend/
 
 # Install all dependencies (including devDependencies for build)
-RUN npm ci --workspace=@toastmasters/shared-contracts \
+RUN npm ci --ignore-scripts \
+           --workspace=@toastmasters/shared-contracts \
            --workspace=@toastmasters/analytics-core \
            --workspace=backend
 
-# Copy workspace source files
-COPY packages/shared-contracts/tsconfig.json packages/shared-contracts/
+# Copy workspace source files (include all tsconfig variants for ESM/CJS builds)
+COPY packages/shared-contracts/tsconfig*.json packages/shared-contracts/
 COPY packages/shared-contracts/src packages/shared-contracts/src
 
-COPY packages/analytics-core/tsconfig.json packages/analytics-core/
+COPY packages/analytics-core/tsconfig*.json packages/analytics-core/
 COPY packages/analytics-core/src packages/analytics-core/src
 
 COPY backend/tsconfig.json backend/
@@ -64,8 +65,8 @@ COPY packages/shared-contracts/package.json packages/shared-contracts/
 COPY packages/analytics-core/package.json packages/analytics-core/
 COPY backend/package.json backend/
 
-# Install production dependencies only
-RUN npm ci --omit=dev \
+# Install production dependencies only (--ignore-scripts skips husky install)
+RUN npm ci --omit=dev --ignore-scripts \
            --workspace=@toastmasters/shared-contracts \
            --workspace=@toastmasters/analytics-core \
            --workspace=backend && \
