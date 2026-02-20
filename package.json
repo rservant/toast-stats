@@ -47,7 +47,8 @@
     "prepare": "husky install",
     "cleanup:test-dirs": "bash scripts/cleanup-all-test-dirs.sh",
     "cleanup:backend": "bash backend/scripts/cleanup-test-dirs.sh",
-    "cleanup:frontend": "bash frontend/scripts/cleanup-test-dirs.sh"
+    "cleanup:frontend": "bash frontend/scripts/cleanup-test-dirs.sh",
+    "docker:build": "docker build -f Dockerfile -t toast-stats-backend ."
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.18",
