@@ -82,6 +82,15 @@ jobs:
       - name: Grant Firebase Hosting access to Cloud Run
         run: |
           PROJECT_NUMBER=$(gcloud projects describe ${{ secrets.GCP_PROJECT_ID }} --format='value(projectNumber)')
+          echo "Project number: ${PROJECT_NUMBER}"
+
+          echo "## Available Service Accounts (firebase/hosting related):" >> "$GITHUB_STEP_SUMMARY"
+          gcloud iam service-accounts list --format='table(email)' \
+            --filter='email:firebase OR email:hosting OR email:compute' \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+          echo ""
+          echo "Attempting IAM binding with ${PROJECT_NUMBER}-compute@developer.gserviceaccount.com..."
           gcloud run services add-iam-policy-binding ${{ env.CLOUD_RUN_SERVICE }} \
             --region=${{ env.REGION }} \
             --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
