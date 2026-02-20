@@ -72,11 +72,20 @@ jobs:
             --set-env-vars="GCS_BUCKET_NAME=${{ env.GCS_BUCKET }}" \
             --set-env-vars="CORS_ORIGIN=https://ts.taverns.red" \
             --set-secrets="JWT_SECRET=jwt-secret:latest" \
-            --allow-unauthenticated \
+            --no-allow-unauthenticated \
             --memory=512Mi \
             --cpu=1 \
             --min-instances=0 \
             --max-instances=10 \
+            --quiet
+
+      - name: Grant Firebase Hosting access to Cloud Run
+        run: |
+          PROJECT_NUMBER=$(gcloud projects describe ${{ secrets.GCP_PROJECT_ID }} --format='value(projectNumber)')
+          gcloud run services add-iam-policy-binding ${{ env.CLOUD_RUN_SERVICE }} \
+            --region=${{ env.REGION }} \
+            --member="serviceAccount:service-${PROJECT_NUMBER}@firebase-hosting.iam.gserviceaccount.com" \
+            --role="roles/run.invoker" \
             --quiet
 
       - name: Get deployment URL
