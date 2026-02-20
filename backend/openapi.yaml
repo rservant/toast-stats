@@ -6,18 +6,18 @@ info:
     
     This gateway routes requests to the Cloud Run backend with explicit endpoint
     definitions for parameter validation and documentation.
-  version: '2.0.1'
+  version: '2.1.0'
 
 schemes:
   - https
 
 basePath: /api
 
-host: toast-stats-18majkbqxtagv.apigateway.toast-stats-prod-6d64a.cloud.goog
+host: toast-stats-api-2zns5ezexch8k.apigateway.toast-stats-prod-6d64a.cloud.goog
 
 # CORS configuration
 x-google-endpoints:
-  - name: toast-stats-18majkbqxtagv.apigateway.toast-stats-prod-6d64a.cloud.goog
+  - name: toast-stats-api-2zns5ezexch8k.apigateway.toast-stats-prod-6d64a.cloud.goog
     allowCors: true
 
 # Security definition (not required for operations)

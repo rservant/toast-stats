@@ -7,13 +7,6 @@
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
-        "source": "/api/**",
-        "run": {
-          "serviceId": "toast-stats-api",
-          "region": "us-east1"
-        }
-      },
-      {
         "source": "**",
         "destination": "/index.html"
       }
