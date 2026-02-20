@@ -98,6 +98,7 @@ ROLES=(
   "roles/artifactregistry.writer"
   "roles/apigateway.admin"
   "roles/servicemanagement.admin"
+  "roles/serviceusage.serviceUsageConsumer"
 )
 
 for ROLE in "${ROLES[@]}"; do
