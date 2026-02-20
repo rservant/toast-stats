@@ -31,8 +31,10 @@ interface MockGCSSnapshotConfig {
   prefix?: string
 }
 
-interface MockFirestoreDistrictConfig {
+interface MockGCSDistrictConfig {
   projectId: string
+  bucketName: string
+  prefix?: string
 }
 
 interface MockGCSConfig {
@@ -41,8 +43,7 @@ interface MockGCSConfig {
 }
 
 const gcsSnapshotConstructorCalls: MockGCSSnapshotConfig[] = []
-const firestoreDistrictConfigConstructorCalls: MockFirestoreDistrictConfig[] =
-  []
+const gcsDistrictConfigConstructorCalls: MockGCSDistrictConfig[] = []
 const gcsConstructorCalls: MockGCSConfig[] = []
 
 // Mock the GCP provider modules to avoid actual GCP connections
@@ -77,15 +78,15 @@ vi.mock('../GCSSnapshotStorage.js', () => {
   }
 })
 
-vi.mock('../FirestoreDistrictConfigStorage.js', () => {
+vi.mock('../GCSDistrictConfigStorage.js', () => {
   return {
-    FirestoreDistrictConfigStorage: class MockFirestoreDistrictConfigStorage {
-      _mockType = 'FirestoreDistrictConfigStorage'
-      _config: MockFirestoreDistrictConfig
+    GCSDistrictConfigStorage: class MockGCSDistrictConfigStorage {
+      _mockType = 'GCSDistrictConfigStorage'
+      _config: MockGCSDistrictConfig
 
-      constructor(config: MockFirestoreDistrictConfig) {
+      constructor(config: MockGCSDistrictConfig) {
         this._config = config
-        firestoreDistrictConfigConstructorCalls.push(config)
+        gcsDistrictConfigConstructorCalls.push(config)
       }
 
       getConfiguration = vi.fn().mockResolvedValue(null)
@@ -147,7 +148,7 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
 
     // Clear constructor call tracking arrays
     gcsSnapshotConstructorCalls.length = 0
-    firestoreDistrictConfigConstructorCalls.length = 0
+    gcsDistrictConfigConstructorCalls.length = 0
     gcsConstructorCalls.length = 0
   })
 
@@ -211,7 +212,7 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
       )
     })
 
-    it('should create FirestoreDistrictConfigStorage when STORAGE_PROVIDER is "gcp" (Requirement 4.2)', () => {
+    it('should create GCSDistrictConfigStorage when STORAGE_PROVIDER is "gcp" (Requirement 4.2)', () => {
       process.env['STORAGE_PROVIDER'] = 'gcp'
       process.env['GCP_PROJECT_ID'] = 'test-project-id'
       process.env['GCS_BUCKET_NAME'] = 'test-bucket-name'
@@ -222,10 +223,10 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
       expect(
         (result.districtConfigStorage as unknown as { _mockType: string })
           ._mockType
-      ).toBe('FirestoreDistrictConfigStorage')
+      ).toBe('GCSDistrictConfigStorage')
     })
 
-    it('should create FirestoreDistrictConfigStorage when STORAGE_PROVIDER is "GCP" (case insensitive)', () => {
+    it('should create GCSDistrictConfigStorage when STORAGE_PROVIDER is "GCP" (case insensitive)', () => {
       process.env['STORAGE_PROVIDER'] = 'GCP'
       process.env['GCP_PROJECT_ID'] = 'test-project-id'
       process.env['GCS_BUCKET_NAME'] = 'test-bucket-name'
@@ -235,7 +236,7 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
       expect(
         (result.districtConfigStorage as unknown as { _mockType: string })
           ._mockType
-      ).toBe('FirestoreDistrictConfigStorage')
+      ).toBe('GCSDistrictConfigStorage')
     })
 
     it('should default to LocalDistrictConfigStorage for invalid STORAGE_PROVIDER values', () => {
@@ -268,15 +269,15 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
   // ============================================================================
 
   describe('Provider Type Selection', () => {
-    it('should pass correct projectId to FirestoreDistrictConfigStorage (Requirement 4.2)', () => {
+    it('should pass correct projectId to GCSDistrictConfigStorage (Requirement 4.2)', () => {
       process.env['STORAGE_PROVIDER'] = 'gcp'
       process.env['GCP_PROJECT_ID'] = 'my-test-project'
       process.env['GCS_BUCKET_NAME'] = 'my-test-bucket'
 
       StorageProviderFactory.createFromEnvironment()
 
-      expect(firestoreDistrictConfigConstructorCalls).toHaveLength(1)
-      expect(firestoreDistrictConfigConstructorCalls[0]?.projectId).toBe(
+      expect(gcsDistrictConfigConstructorCalls).toHaveLength(1)
+      expect(gcsDistrictConfigConstructorCalls[0]?.projectId).toBe(
         'my-test-project'
       )
     })
@@ -294,8 +295,8 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
         'shared-project-id'
       )
 
-      expect(firestoreDistrictConfigConstructorCalls).toHaveLength(1)
-      expect(firestoreDistrictConfigConstructorCalls[0]?.projectId).toBe(
+      expect(gcsDistrictConfigConstructorCalls).toHaveLength(1)
+      expect(gcsDistrictConfigConstructorCalls[0]?.projectId).toBe(
         'shared-project-id'
       )
 
@@ -343,7 +344,7 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
       )
 
       // Verify no GCP providers were created
-      expect(firestoreDistrictConfigConstructorCalls).toHaveLength(0)
+      expect(gcsDistrictConfigConstructorCalls).toHaveLength(0)
     })
 
     it('should throw StorageConfigurationError when GCP provider selected without GCS_BUCKET_NAME', () => {
@@ -356,7 +357,7 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
       )
 
       // Verify no GCP providers were created
-      expect(firestoreDistrictConfigConstructorCalls).toHaveLength(0)
+      expect(gcsDistrictConfigConstructorCalls).toHaveLength(0)
     })
 
     it('should throw StorageConfigurationError when GCP_PROJECT_ID is empty string', () => {
@@ -438,7 +439,7 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
       )
     })
 
-    it('should create FirestoreDistrictConfigStorage with explicit GCP config', () => {
+    it('should create GCSDistrictConfigStorage with explicit GCP config', () => {
       const config: StorageConfig = {
         provider: 'gcp',
         gcp: {
@@ -452,10 +453,10 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
       expect(
         (result.districtConfigStorage as unknown as { _mockType: string })
           ._mockType
-      ).toBe('FirestoreDistrictConfigStorage')
+      ).toBe('GCSDistrictConfigStorage')
 
-      expect(firestoreDistrictConfigConstructorCalls).toHaveLength(1)
-      expect(firestoreDistrictConfigConstructorCalls[0]?.projectId).toBe(
+      expect(gcsDistrictConfigConstructorCalls).toHaveLength(1)
+      expect(gcsDistrictConfigConstructorCalls[0]?.projectId).toBe(
         'explicit-project-id'
       )
     })
@@ -579,7 +580,7 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
 
       for (const testCase of gcpCases) {
         // Reset tracking arrays
-        firestoreDistrictConfigConstructorCalls.length = 0
+        gcsDistrictConfigConstructorCalls.length = 0
 
         process.env['STORAGE_PROVIDER'] = testCase
         process.env['GCP_PROJECT_ID'] = 'test-project'
@@ -590,7 +591,7 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
         expect(
           (result.districtConfigStorage as unknown as { _mockType: string })
             ._mockType
-        ).toBe('FirestoreDistrictConfigStorage')
+        ).toBe('GCSDistrictConfigStorage')
       }
     })
 
@@ -605,7 +606,7 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
       expect(
         (result.districtConfigStorage as unknown as { _mockType: string })
           ._mockType
-      ).toBe('FirestoreDistrictConfigStorage')
+      ).toBe('GCSDistrictConfigStorage')
     })
 
     it('should create all three storage providers consistently', () => {
@@ -618,7 +619,7 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
 
       // GCP provider
       gcsSnapshotConstructorCalls.length = 0
-      firestoreDistrictConfigConstructorCalls.length = 0
+      gcsDistrictConfigConstructorCalls.length = 0
       gcsConstructorCalls.length = 0
 
       process.env['STORAGE_PROVIDER'] = 'gcp'
@@ -644,7 +645,7 @@ describe('StorageProviderFactory - District Configuration Storage', () => {
 
       // Verify no GCP providers were created
       expect(gcsSnapshotConstructorCalls).toHaveLength(0)
-      expect(firestoreDistrictConfigConstructorCalls).toHaveLength(0)
+      expect(gcsDistrictConfigConstructorCalls).toHaveLength(0)
       expect(gcsConstructorCalls).toHaveLength(0)
     })
   })

@@ -41,7 +41,6 @@
     "snapshot-debug": "tsx src/scripts/snapshot-debug.ts"
   },
   "dependencies": {
-    "@google-cloud/firestore": "^7.11.0",
     "@google-cloud/storage": "^7.19.0",
     "@toastmasters/analytics-core": "^1.0.0",
     "@toastmasters/shared-contracts": "^1.0.0",

@@ -28,8 +28,8 @@ import { LocalSnapshotStorage } from './LocalSnapshotStorage.js'
 import { LocalRawCSVStorage } from './LocalRawCSVStorage.js'
 import { LocalDistrictConfigStorage } from './LocalDistrictConfigStorage.js'
 import { LocalTimeSeriesIndexStorage } from './LocalTimeSeriesIndexStorage.js'
-import { FirestoreDistrictConfigStorage } from './FirestoreDistrictConfigStorage.js'
-import { FirestoreTimeSeriesIndexStorage } from './FirestoreTimeSeriesIndexStorage.js'
+import { GCSDistrictConfigStorage } from './GCSDistrictConfigStorage.js'
+import { GCSTimeSeriesIndexStorage } from './GCSTimeSeriesIndexStorage.js'
 import { GCSRawCSVStorage } from './GCSRawCSVStorage.js'
 import { GCSSnapshotStorage } from './GCSSnapshotStorage.js'
 import { CacheConfigService } from '../CacheConfigService.js'
@@ -44,9 +44,6 @@ const DEFAULT_STORAGE_PROVIDER: StorageProviderType = 'local'
 
 /** Default cache directory for local storage */
 const DEFAULT_CACHE_DIR = './data/cache'
-
-/** Default Firestore collection name for snapshots */
-const DEFAULT_FIRESTORE_COLLECTION = 'snapshots'
 
 // ============================================================================
 // Types
@@ -260,7 +257,6 @@ export class StorageProviderFactory {
   private static createGCPProvidersFromEnvironment(): StorageProviders {
     const projectId = process.env['GCP_PROJECT_ID']
     const bucketName = process.env['GCS_BUCKET_NAME']
-    const firestoreCollection = process.env['FIRESTORE_COLLECTION']
 
     // Validate required configuration
     const missingConfig: string[] = []
@@ -290,8 +286,6 @@ export class StorageProviderFactory {
       gcp: {
         projectId: projectId as string,
         bucketName: bucketName as string,
-        firestoreCollection:
-          firestoreCollection ?? DEFAULT_FIRESTORE_COLLECTION,
       },
     }
 
@@ -332,14 +326,11 @@ export class StorageProviderFactory {
 
     // TypeScript now knows gcp config is defined
     const gcpConfig = config.gcp!
-    const collectionName =
-      gcpConfig.firestoreCollection ?? DEFAULT_FIRESTORE_COLLECTION
 
     logger.debug('Initializing GCP storage providers', {
       operation: 'createGCPProviders',
       projectId: gcpConfig.projectId,
       bucketName: gcpConfig.bucketName,
-      firestoreCollection: collectionName,
     })
 
     // Create GCS snapshot storage (read-only, replaces FirestoreSnapshotStorage)
@@ -355,21 +346,24 @@ export class StorageProviderFactory {
       bucketName: gcpConfig.bucketName,
     })
 
-    // Create Firestore district configuration storage
-    const districtConfigStorage = new FirestoreDistrictConfigStorage({
+    // Create GCS district configuration storage
+    const districtConfigStorage = new GCSDistrictConfigStorage({
       projectId: gcpConfig.projectId,
+      bucketName: gcpConfig.bucketName,
+      prefix: 'config',
     })
 
-    // Create Firestore time-series index storage
-    const timeSeriesIndexStorage = new FirestoreTimeSeriesIndexStorage({
+    // Create GCS time-series index storage
+    const timeSeriesIndexStorage = new GCSTimeSeriesIndexStorage({
       projectId: gcpConfig.projectId,
+      bucketName: gcpConfig.bucketName,
+      prefix: 'time-series',
     })
 
     logger.info('GCP storage providers created successfully', {
       operation: 'createGCPProviders',
       projectId: gcpConfig.projectId,
       bucketName: gcpConfig.bucketName,
-      firestoreCollection: collectionName,
     })
 
     return {

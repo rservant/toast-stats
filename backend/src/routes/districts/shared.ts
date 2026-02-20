@@ -36,7 +36,7 @@ export const cacheDirectory = cacheConfig.getCacheDirectory()
 
 // Create storage providers from environment configuration
 // This respects the STORAGE_PROVIDER environment variable:
-// - STORAGE_PROVIDER=gcp: Uses FirestoreSnapshotStorage
+// - STORAGE_PROVIDER=gcp: Uses GCSSnapshotStorage
 // - STORAGE_PROVIDER=local or unset: Uses LocalSnapshotStorage
 const storageProviders = StorageProviderFactory.createFromEnvironment()
 

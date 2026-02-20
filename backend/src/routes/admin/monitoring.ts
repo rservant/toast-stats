@@ -53,7 +53,7 @@ interface IntegrityResult {
  * Extended ISnapshotStorage interface with optional monitoring methods
  *
  * These methods may be available on some storage implementations
- * (e.g., LocalSnapshotStorage) but not others (e.g., FirestoreSnapshotStorage).
+ * (e.g., LocalSnapshotStorage) but not others (e.g., GCSSnapshotStorage).
  */
 type ISnapshotStorageWithOptionalMethods = ISnapshotStorage & {
   validateIntegrity?: () => Promise<IntegrityResult>

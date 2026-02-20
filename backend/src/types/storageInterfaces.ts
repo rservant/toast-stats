@@ -695,7 +695,7 @@ export interface GCPStorageConfig {
   /**
    * GCP project identifier
    *
-   * The Google Cloud project ID where Firestore and Cloud Storage
+   * The Google Cloud project ID where Cloud Storage
    * resources are provisioned.
    */
   projectId: string
@@ -703,18 +703,10 @@ export interface GCPStorageConfig {
   /**
    * Cloud Storage bucket name
    *
-   * The GCS bucket name for storing raw CSV files.
+   * The GCS bucket name for storing all data.
    * Must be globally unique and accessible by the service account.
    */
   bucketName: string
-
-  /**
-   * Firestore collection name for snapshots
-   *
-   * The root collection name in Firestore for storing snapshot documents.
-   * Defaults to 'snapshots' if not specified.
-   */
-  firestoreCollection?: string
 }
 
 /**
@@ -763,7 +755,7 @@ export interface StorageConfig {
  * More granular than StorageProviderType to distinguish between
  * Firestore and GCS within the GCP provider.
  */
-export type StorageErrorProvider = 'local' | 'firestore' | 'gcs'
+export type StorageErrorProvider = 'local' | 'gcs'
 
 /**
  * Base error class for storage operations
