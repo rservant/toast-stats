@@ -57,5 +57,8 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md}": "prettier --write"
+  },
+  "overrides": {
+    "minimatch": "^10.2.1"
   }
 }
