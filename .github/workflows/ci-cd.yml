@@ -189,19 +189,19 @@ jobs:
           npm run build:analytics-core
 
       - name: Run shared-contracts tests
-        run: npm run test:shared-contracts
+        run: npm run test:shared-contracts -- --coverage
 
       - name: Run analytics-core tests
-        run: npm run test:analytics-core
+        run: npm run test:analytics-core -- --coverage
 
       - name: Run scraper-cli tests
-        run: npm run test:scraper-cli
+        run: npm run test:scraper-cli -- --coverage
 
       - name: Run backend tests
-        run: npm run test:backend
+        run: npm run test:backend -- --coverage
 
       - name: Run frontend tests
-        run: npm run test:frontend
+        run: npm run test:frontend -- --coverage
 
   # Build Applications
   build:
