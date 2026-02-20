@@ -63,7 +63,8 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ${{ env.CLOUD_RUN_SERVICE }} \
-            --source=./backend \
+            --source=. \
+            --dockerfile=backend/Dockerfile \
             --region=${{ env.REGION }} \
             --platform=managed \
             --set-env-vars="NODE_ENV=production" \

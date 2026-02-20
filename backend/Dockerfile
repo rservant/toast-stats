@@ -1,41 +1,54 @@
-# Backend Dockerfile
-# Multi-stage build for optimized production image
+# Backend Dockerfile — Monorepo-aware build
+# Build context must be the repo root (not backend/).
 #
-# For Cloud Build (build context is backend/):
-#   docker build -t toast-stats-backend .
+# Cloud Run deploy:
+#   gcloud run deploy --source=. --dockerfile=backend/Dockerfile
 #
-# For local build from repo root:
-#   docker build -f backend/Dockerfile -t toast-stats-backend backend/
+# Local build:
+#   docker build -f backend/Dockerfile -t toast-stats-backend .
 
 # ============================================
-# Stage 1: Build
+# Stage 1: Build workspace dependencies + backend
 # ============================================
 FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json ./
+# Copy root package files (workspace config)
+COPY package.json package-lock.json ./
+
+# Copy workspace package.json files (for npm ci)
+COPY packages/shared-contracts/package.json packages/shared-contracts/
+COPY packages/analytics-core/package.json packages/analytics-core/
+COPY backend/package.json backend/
 
 # Install all dependencies (including devDependencies for build)
-RUN npm install
+RUN npm ci --workspace=@toastmasters/shared-contracts \
+           --workspace=@toastmasters/analytics-core \
+           --workspace=backend
 
-# Copy source code and TypeScript config
-COPY tsconfig.json ./
-COPY src ./src
+# Copy workspace source files
+COPY packages/shared-contracts/tsconfig.json packages/shared-contracts/
+COPY packages/shared-contracts/src packages/shared-contracts/src
 
-# Build TypeScript to JavaScript
-RUN npm run build
+COPY packages/analytics-core/tsconfig.json packages/analytics-core/
+COPY packages/analytics-core/src packages/analytics-core/src
+
+COPY backend/tsconfig.json backend/
+COPY backend/src backend/src
+
+# Build workspace dependencies first, then backend
+RUN npm run build --workspace=@toastmasters/shared-contracts && \
+    npm run build --workspace=@toastmasters/analytics-core && \
+    npm run build --workspace=backend
 
 # ============================================
 # Stage 2: Production
 # ============================================
 FROM node:22-alpine AS production
 
-# Add labels for container metadata
 LABEL org.opencontainers.image.title="Toast-Stats Backend"
 LABEL org.opencontainers.image.description="Toastmasters District Statistics API Server"
-LABEL org.opencontainers.image.source="https://github.com/toast-stats/toast-stats"
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
@@ -43,21 +56,30 @@ RUN addgroup -g 1001 -S nodejs && \
 
 WORKDIR /app
 
-# Copy package.json for production install
-COPY package.json ./
+# Copy root package files
+COPY package.json package-lock.json ./
+
+# Copy workspace package.json files
+COPY packages/shared-contracts/package.json packages/shared-contracts/
+COPY packages/analytics-core/package.json packages/analytics-core/
+COPY backend/package.json backend/
 
 # Install production dependencies only
-RUN npm install --omit=dev && \
+RUN npm ci --omit=dev \
+           --workspace=@toastmasters/shared-contracts \
+           --workspace=@toastmasters/analytics-core \
+           --workspace=backend && \
     npm cache clean --force
 
-# Copy built application from builder stage
-COPY --from=builder /app/dist ./dist
+# Copy built artifacts from builder
+COPY --from=builder /app/packages/shared-contracts/dist packages/shared-contracts/dist
+COPY --from=builder /app/packages/analytics-core/dist packages/analytics-core/dist
+COPY --from=builder /app/backend/dist backend/dist
 
 # Create cache directory with proper permissions
 RUN mkdir -p /app/cache && \
     chown -R nodejs:nodejs /app
 
-# Switch to non-root user
 USER nodejs
 
 # Environment variables
@@ -66,12 +88,10 @@ ENV PORT=5001
 ENV CACHE_DIR=/app/cache
 ENV NODE_OPTIONS="--max-old-space-size=384"
 
-# Expose the application port
 EXPOSE 5001
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:5001/health || exit 1
 
-# Start the application
-CMD ["node", "dist/index.js"]
+# Start from the backend dist directory
+CMD ["node", "backend/dist/index.js"]

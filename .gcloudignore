@@ -1,0 +1,41 @@
+# .gcloudignore
+# Exclude files from Cloud Build upload context.
+# Only backend + workspace deps are needed for the Cloud Run build.
+
+# Git
+.git/
+.github/
+
+# Frontend (not needed for backend deploy)
+frontend/
+
+# Scraper CLI (not needed for backend)
+packages/scraper-cli/
+
+# Dev/config files
+.agents/
+.gemini/
+.vscode/
+scripts/
+docs/
+
+# Dependencies (installed fresh in Docker)
+node_modules/
+**/node_modules/
+
+# Test files
+**/__tests__/
+**/*.test.ts
+**/*.spec.ts
+jest.config.*
+vitest.config.*
+
+# Build artifacts (rebuilt in Docker)
+**/dist/
+
+# Misc
+*.md
+.eslintrc*
+.prettier*
+.yamllint*
+LICENSE
