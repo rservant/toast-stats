@@ -6,7 +6,7 @@ info:
     
     This gateway routes requests to the Cloud Run backend with explicit endpoint
     definitions for parameter validation and documentation.
-  version: '2.0.0'
+  version: '2.0.1'
 
 schemes:
   - https
