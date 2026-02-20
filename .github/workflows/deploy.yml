@@ -173,14 +173,14 @@ jobs:
 
           echo "Creating API config: ${CONFIG_NAME}..."
           gcloud api-gateway api-configs create "${CONFIG_NAME}" \
-            --api=toast-stats-api \
+            --api=toast-stats \
             --openapi-spec=backend/openapi.yaml \
             --project=${{ secrets.GCP_PROJECT_ID }} \
             --quiet
 
           echo "Updating gateway to use ${CONFIG_NAME}..."
-          gcloud api-gateway gateways update toast-stats-api \
-            --api=toast-stats-api \
+          gcloud api-gateway gateways update toast-stats-gw \
+            --api=toast-stats \
             --api-config="${CONFIG_NAME}" \
             --location=${{ env.REGION }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
@@ -212,7 +212,7 @@ jobs:
           echo "## Post-Deployment Verification" >> "$GITHUB_STEP_SUMMARY"
 
           # Check backend health via API Gateway
-          GW_URL="https://toast-stats-api-2zns5ezexch8k.apigateway.toast-stats-prod-6d64a.cloud.goog"
+          GW_URL="https://toast-stats-gw-9e9mo5c1.ue.gateway.dev"
 
           echo "Checking health at ${GW_URL}/api/health..."
           RESPONSE=$(curl -sf --max-time 30 "${GW_URL}/api/health" || true)
