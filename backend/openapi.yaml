@@ -6,7 +6,7 @@ info:
     
     This gateway routes requests to the Cloud Run backend with explicit endpoint
     definitions for parameter validation and documentation.
-  version: '2.2.0'
+  version: '2.3.0'
 
 schemes:
   - https
@@ -41,6 +41,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app/health
         path_translation: CONSTANT_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       responses:
@@ -62,6 +63,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       responses:
@@ -83,6 +85,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -119,6 +122,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       responses:
@@ -140,6 +144,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -175,6 +180,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -204,6 +210,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -241,6 +248,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -278,6 +286,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -319,6 +328,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -354,6 +364,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -395,6 +406,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -424,6 +436,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -467,6 +480,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -536,6 +550,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -592,6 +607,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -640,6 +656,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -692,6 +709,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -749,6 +767,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -808,6 +827,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -969,6 +989,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -1009,6 +1030,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
         - text/csv
@@ -1068,6 +1090,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       responses:
@@ -1092,6 +1115,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -1226,6 +1250,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       consumes:
         - application/json
       produces:
@@ -1267,6 +1292,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       consumes:
         - application/json
       produces:
@@ -1312,6 +1338,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       consumes:
         - application/json
       produces:
@@ -1345,6 +1372,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -1374,6 +1402,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -1407,6 +1436,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       responses:
@@ -1424,6 +1454,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       consumes:
         - application/json
       produces:
@@ -1465,6 +1496,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
@@ -1494,6 +1526,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       consumes:
         - application/json
       produces:
@@ -1527,6 +1560,7 @@ paths:
       x-google-backend:
         address: https://toast-stats-api-736334703361.us-east1.run.app
         path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
       produces:
         - application/json
       parameters:
