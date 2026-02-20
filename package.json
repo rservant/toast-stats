@@ -29,6 +29,7 @@
     "test:analytics-core": "npm run test --workspace=@toastmasters/analytics-core",
     "test:shared-contracts": "npm run test --workspace=@toastmasters/shared-contracts",
     "test": "npm run test --workspaces",
+    "test:coverage": "npm run test --workspaces -- --coverage",
     "test:watch": "npm run test:watch --workspaces --if-present",
     "lint": "npm run lint --workspaces",
     "lint:yaml": "yamllint -c .yamllint.yml .github/ docs/",
@@ -49,6 +50,7 @@
     "cleanup:frontend": "bash frontend/scripts/cleanup-test-dirs.sh"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.0.18",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "prettier": "^3.8.1"
