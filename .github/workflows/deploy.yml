@@ -27,6 +27,9 @@ env:
 permissions:
   contents: read
   id-token: write # Required for Workload Identity Federation
+  packages: write # Required by CI workflow
+  pull-requests: write # Required by CI workflow
+  security-events: write # Required by CI workflow
 
 jobs:
   # ──────────────────────────────────────────────
@@ -34,7 +37,7 @@ jobs:
   # ──────────────────────────────────────────────
   ci:
     name: CI Quality Gates
-    uses: ./.github/workflows/ci-cd.yml
+    uses: ./.github/workflows/ci.yml
 
   # ──────────────────────────────────────────────
   # Deploy Backend to Cloud Run
@@ -122,12 +125,9 @@ jobs:
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
       - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-          channelId: live
-          projectId: ${{ secrets.GCP_PROJECT_ID }}
+        run: |
+          npm install -g firebase-tools
+          firebase deploy --only hosting --project ${{ secrets.GCP_PROJECT_ID }}
 
   # ──────────────────────────────────────────────
   # Deploy API Gateway (only when openapi.yaml changes)

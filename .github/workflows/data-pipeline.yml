@@ -75,6 +75,9 @@ jobs:
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
 
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
       # ── Step 1: Sync config + raw-csv cache from GCS ────────
       # Pull district configuration and previously scraped CSVs
       # so the scraper knows which districts to process and can
@@ -137,6 +140,10 @@ jobs:
 
           # Use manual districts if provided, otherwise use config from GCS
           DISTRICT_LIST="${{ inputs.districts || steps.config.outputs.districts }}"
+          if [ -z "${DISTRICT_LIST}" ]; then
+            echo "::error::No districts configured. Upload config/districts.json to GCS or provide districts via workflow_dispatch."
+            exit 1
+          fi
           ARGS="$ARGS --districts ${DISTRICT_LIST}"
 
           # Force flag
