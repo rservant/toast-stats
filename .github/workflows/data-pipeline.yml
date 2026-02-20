@@ -1,0 +1,236 @@
+# Data Pipeline Workflow
+# Runs daily: scrape → transform → compute-analytics → upload to GCS
+#
+# Prerequisites:
+#   1. Run scripts/setup-wif.sh (one-time)
+#   2. Add GitHub secrets: GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
+#
+# The scraper uses Playwright (chromium) to scrape Toastmasters dashboards.
+# Data is processed locally and uploaded to GCS for the backend to consume.
+
+name: Data Pipeline
+
+on:
+  schedule:
+    # Run daily at 13:00 UTC (8 AM EST / 9 AM EDT)
+    - cron: '0 13 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Target date (YYYY-MM-DD), defaults to today'
+        required: false
+        type: string
+      districts:
+        description: 'Comma-separated district IDs (e.g. 57,58,59), defaults to all'
+        required: false
+        type: string
+      force:
+        description: 'Force re-scrape even if cache exists'
+        required: false
+        type: boolean
+        default: false
+
+# Prevent overlapping pipeline runs
+concurrency:
+  group: data-pipeline
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20'
+
+permissions:
+  contents: read
+  id-token: write # Required for Workload Identity Federation
+
+jobs:
+  data-pipeline:
+    name: Scrape, Transform, Analyze & Upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build packages
+        run: |
+          npm run build --workspace=@toastmasters/shared-contracts
+          npm run build --workspace=@toastmasters/scraper-cli
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      # ── Step 1: Sync config + raw-csv cache from GCS ────────
+      # Pull district configuration and previously scraped CSVs
+      # so the scraper knows which districts to process and can
+      # skip re-downloading cached dates.
+      - name: Sync config and raw-csv from GCS
+        id: config
+        env:
+          GCS_BUCKET: 'toast-stats-data'
+        run: |
+          # Toastmasters dashboard is always one day behind — use yesterday
+          TARGET_DATE="${{ inputs.date || '' }}"
+          if [ -z "${TARGET_DATE}" ]; then
+            TARGET_DATE=$(date -u -d '1 day ago' +%Y-%m-%d)
+          fi
+          echo "Target date: ${TARGET_DATE}"
+
+          # Sync district configuration
+          mkdir -p ./cache/config
+          gsutil cp \
+            "gs://${GCS_BUCKET}/config/districts.json" \
+            "./cache/config/districts.json" \
+            2>&1 || echo "No config in GCS — will rely on workflow_dispatch input"
+
+          # Read districts from config (comma-separated)
+          if [ -f ./cache/config/districts.json ]; then
+            DISTRICTS=$(jq -r '.configuredDistricts | join(",")' ./cache/config/districts.json)
+          else
+            DISTRICTS=""
+          fi
+          echo "districts=${DISTRICTS}" >> "$GITHUB_OUTPUT"
+
+          # Sync raw-csv cache for target date
+          mkdir -p "./cache/raw-csv/${TARGET_DATE}"
+          gsutil -m rsync -r \
+            "gs://${GCS_BUCKET}/raw-csv/${TARGET_DATE}/" \
+            "./cache/raw-csv/${TARGET_DATE}/" \
+            2>&1 || echo "No existing raw-csv for ${TARGET_DATE} in GCS (first run for this date)"
+
+          echo "## ⏬ Config & Raw CSV Sync" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Districts**: ${DISTRICTS}" >> "$GITHUB_STEP_SUMMARY"
+          FILE_COUNT=$(find "./cache/raw-csv/${TARGET_DATE}" -name '*.csv' 2>/dev/null | wc -l | tr -d ' ')
+          echo "- **Date**: ${TARGET_DATE}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **CSV files restored**: ${FILE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Step 2: Scrape + Transform ──────────────────────────
+      - name: Scrape & Transform
+        id: scrape
+        env:
+          TOASTMASTERS_DASHBOARD_URL: 'https://dashboards.toastmasters.org'
+        run: |
+          ARGS="--transform --verbose"
+
+          # Use manual date if provided, otherwise default to yesterday
+          # (Toastmasters dashboard is always one day behind)
+          if [ -n "${{ inputs.date }}" ]; then
+            ARGS="$ARGS --date ${{ inputs.date }}"
+          else
+            ARGS="$ARGS --date $(date -u -d '1 day ago' +%Y-%m-%d)"
+          fi
+
+          # Use manual districts if provided, otherwise use config from GCS
+          DISTRICT_LIST="${{ inputs.districts || steps.config.outputs.districts }}"
+          ARGS="$ARGS --districts ${DISTRICT_LIST}"
+
+          # Force flag
+          if [ "${{ inputs.force }}" = "true" ]; then
+            ARGS="$ARGS --force"
+          fi
+
+          echo "Running: npx scraper-cli scrape $ARGS"
+          npx scraper-cli scrape $ARGS | tee /tmp/scrape-output.json
+
+          # Extract date from output for subsequent steps
+          DATE=$(jq -r '.date' /tmp/scrape-output.json)
+          echo "date=${DATE}" >> "$GITHUB_OUTPUT"
+
+          echo "## 📥 Scrape Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Date**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
+          SUCCEEDED=$(jq '.scrape.districts.succeeded' /tmp/scrape-output.json)
+          FAILED=$(jq '.scrape.districts.failed' /tmp/scrape-output.json)
+          echo "- **Districts succeeded**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Districts failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Step 3: Sync time-series from GCS ─────────────────────
+      # The TimeSeriesIndexWriter appends today's data point to the
+      # existing program-year index. Without prior data, it would
+      # create a fresh index with only 1 data point each run.
+      # This syncs ~344 KB of index files — not the full 7+ GB cache.
+      - name: Sync time-series from GCS
+        env:
+          GCS_BUCKET: 'toast-stats-data'
+        run: |
+          echo "Syncing time-series index from GCS..."
+          mkdir -p ./cache/time-series
+          gsutil -m rsync -r \
+            "gs://${GCS_BUCKET}/time-series/" \
+            "./cache/time-series/" \
+            2>&1 || echo "No existing time-series data in GCS (first run)"
+
+          echo "## ⏬ Time-Series Sync" >> "$GITHUB_STEP_SUMMARY"
+          FILE_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
+          echo "- **Index files restored**: ${FILE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Step 4: Compute Analytics ───────────────────────────
+      - name: Compute Analytics
+        run: |
+          DATE="${{ steps.scrape.outputs.date }}"
+          DISTRICT_LIST="${{ inputs.districts || steps.config.outputs.districts }}"
+          ARGS="--date ${DATE} --districts ${DISTRICT_LIST} --verbose"
+
+          echo "Running: npx scraper-cli compute-analytics $ARGS"
+          npx scraper-cli compute-analytics $ARGS | tee /tmp/analytics-output.json
+
+          echo "## 📊 Analytics Results" >> "$GITHUB_STEP_SUMMARY"
+          SUCCEEDED=$(jq '.districts.succeeded' /tmp/analytics-output.json)
+          echo "- **Districts computed**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Step 5: Sync cache to GCS ───────────────────────────
+      # Single rsync replaces scraper-cli upload + separate syncs.
+      # gsutil rsync compares against remote state — truly incremental
+      # with no local manifest needed (which was useless on ephemeral runners).
+      - name: Sync cache to GCS
+        env:
+          GCS_BUCKET: 'toast-stats-data'
+        run: |
+          DATE="${{ steps.scrape.outputs.date }}"
+          echo "Syncing cache to GCS..."
+
+          # Sync raw-csv (only today's date)
+          gsutil -m rsync -r \
+            "./cache/raw-csv/${DATE}/" \
+            "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
+
+          # Sync snapshots + analytics (only today's date)
+          gsutil -m rsync -r \
+            "./cache/snapshots/${DATE}/" \
+            "gs://${GCS_BUCKET}/snapshots/${DATE}/"
+
+          # Sync time-series (all — small, ~344 KB)
+          gsutil -m rsync -r \
+            "./cache/time-series/" \
+            "gs://${GCS_BUCKET}/time-series/"
+
+          echo "## ☁️ GCS Sync Results" >> "$GITHUB_STEP_SUMMARY"
+          CSV_COUNT=$(find "./cache/raw-csv/${DATE}" -name '*.csv' 2>/dev/null | wc -l | tr -d ' ')
+          SNAPSHOT_COUNT=$(find "./cache/snapshots/${DATE}" -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
+          TS_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
+          echo "- **Date**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Raw CSVs synced**: ${CSV_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Snapshot/analytics files synced**: ${SNAPSHOT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Time-series index files synced**: ${TS_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Summary ─────────────────────────────────────────────
+      - name: Pipeline summary
+        if: always()
+        run: |
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "---" >> "$GITHUB_STEP_SUMMARY"
+          echo "🏁 Pipeline completed for \`${{ steps.scrape.outputs.date }}\` at $(date -u +%H:%M' UTC')" >> "$GITHUB_STEP_SUMMARY"

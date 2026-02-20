@@ -47,7 +47,10 @@ gcloud services enable \
   run.googleapis.com \
   cloudbuild.googleapis.com \
   firebasehosting.googleapis.com \
-  artifactregistry.googleapis.com
+  artifactregistry.googleapis.com \
+  apigateway.googleapis.com \
+  servicemanagement.googleapis.com \
+  servicecontrol.googleapis.com
 
 # Step 3: Create Workload Identity Pool
 echo "→ Creating Workload Identity Pool..."
@@ -93,6 +96,8 @@ ROLES=(
   "roles/firebasehosting.admin"
   "roles/cloudbuild.builds.builder"
   "roles/artifactregistry.writer"
+  "roles/apigateway.admin"
+  "roles/servicemanagement.admin"
 )
 
 for ROLE in "${ROLES[@]}"; do
