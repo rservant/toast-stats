@@ -1176,6 +1176,7 @@ export class TransformService {
       totalDistricts: districtEntries.length + failedDistrictIds.length,
       successfulDistricts: districtEntries.length,
       failedDistricts: failedDistrictIds.length,
+      writeComplete: true,
     }
 
     // Validate data before writing (Requirement 7.4, 7.5)

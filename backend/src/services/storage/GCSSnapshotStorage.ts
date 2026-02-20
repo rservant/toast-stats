@@ -668,8 +668,8 @@ export class GCSSnapshotStorage implements ISnapshotStorage {
       return null
     }
 
-    if (manifest.writeComplete !== true) {
-      logger.info('Snapshot manifest writeComplete is not true, skipping', {
+    if (manifest.writeComplete === false) {
+      logger.info('Snapshot manifest writeComplete is false, skipping', {
         operation: 'getSnapshot',
         snapshot_id: snapshotId,
       })
@@ -719,7 +719,7 @@ export class GCSSnapshotStorage implements ISnapshotStorage {
       'getSnapshot'
     )
 
-    if (reReadManifest === null || reReadManifest.writeComplete !== true) {
+    if (reReadManifest === null || reReadManifest.writeComplete === false) {
       logger.info(
         'Snapshot writeComplete changed during read, discarding snapshot',
         {
@@ -917,7 +917,7 @@ export class GCSSnapshotStorage implements ISnapshotStorage {
       return false
     }
 
-    return manifest.writeComplete === true
+    return manifest.writeComplete !== false
   }
 
   async isReady(): Promise<boolean> {
