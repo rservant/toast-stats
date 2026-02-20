@@ -64,6 +64,7 @@ jobs:
       - name: Build packages
         run: |
           npm run build --workspace=@toastmasters/shared-contracts
+          npm run build --workspace=@toastmasters/analytics-core
           npm run build --workspace=@toastmasters/scraper-cli
 
       - name: Install Playwright browsers
