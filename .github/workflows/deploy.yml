@@ -79,23 +79,21 @@ jobs:
             --max-instances=10 \
             --quiet
 
-      - name: Grant Firebase Hosting access to Cloud Run
+      - name: Grant public access to Cloud Run (for Firebase Hosting rewrites)
         run: |
-          PROJECT_NUMBER=$(gcloud projects describe ${{ secrets.GCP_PROJECT_ID }} --format='value(projectNumber)')
-          echo "Project number: ${PROJECT_NUMBER}"
+          echo "## Cloud Run IAM Configuration" >> "$GITHUB_STEP_SUMMARY"
 
-          echo "## Available Service Accounts (firebase/hosting related):" >> "$GITHUB_STEP_SUMMARY"
-          gcloud iam service-accounts list --format='table(email)' \
-            --filter='email:firebase OR email:hosting OR email:compute' \
-            | tee -a "$GITHUB_STEP_SUMMARY"
-
-          echo ""
-          echo "Attempting IAM binding with ${PROJECT_NUMBER}-compute@developer.gserviceaccount.com..."
-          gcloud run services add-iam-policy-binding ${{ env.CLOUD_RUN_SERVICE }} \
+          echo "Granting allUsers Cloud Run Invoker role..."
+          if gcloud run services add-iam-policy-binding ${{ env.CLOUD_RUN_SERVICE }} \
             --region=${{ env.REGION }} \
-            --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+            --member="allUsers" \
             --role="roles/run.invoker" \
-            --quiet
+            --quiet 2>&1; then
+            echo "✅ Public access granted" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "⚠️ Could not grant allUsers access (org policy may block this)" >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Failed to grant public Cloud Run access. Check org policy constraints."
+          fi
 
       - name: Get deployment URL
         id: deploy-url
