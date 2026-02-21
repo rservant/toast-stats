@@ -257,8 +257,12 @@ export function useGlobalRankings({
   }, [availableYearsData, allYearsHistoryData, effectiveSelectedYear])
 
   // Loading states for progressive rendering
-  // isLoading = only the initial years query (blocks all rendering)
-  const isLoading = isLoadingYears
+  // isLoading = true while any core data query is still in-flight
+  // This keeps the spinner visible until meaningful data is ready to display
+  const isLoading =
+    isLoadingYears ||
+    isLoadingHistory ||
+    (allYearsHistoryParams !== null && isLoadingAllYears)
   // isLoadingChart = the selected year's rank history
   const isLoadingChart = isLoadingHistory
   // isLoadingMultiYear = the all-years history for multi-year comparison
