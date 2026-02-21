@@ -1258,6 +1258,77 @@ paths:
               schema:
                 $ref: '#/components/schemas/ServiceUnavailableErrorResponse'
 
+  /districts/rank-history-batch:
+    post:
+      tags:
+        - Rankings
+      operationId: batchDistrictRankHistory
+      summary: Batch fetch rank history for multiple districts
+      description: |
+        Retrieves historical ranking data for multiple Toastmasters districts in a single request.
+
+        This endpoint is designed to efficiently fetch rank history for multiple districts at once,
+        avoiding the overhead of making many individual requests. The response is an array of
+        RankHistoryResponse objects, one per requested district.
+
+        ## Request Body
+
+        - **districtIds** (required): Array of district IDs to fetch rank history for
+        - **startDate** (optional): Start date for history range (YYYY-MM-DD)
+        - **endDate** (optional): End date for history range (YYYY-MM-DD)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - districtIds
+              properties:
+                districtIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of district IDs to fetch rank history for
+                  example: ["57", "61", "F"]
+                startDate:
+                  type: string
+                  format: date
+                  description: Start date for history range (YYYY-MM-DD)
+                  example: "2025-07-01"
+                endDate:
+                  type: string
+                  format: date
+                  description: End date for history range (YYYY-MM-DD)
+                  example: "2026-01-24"
+      responses:
+        '200':
+          description: Successfully retrieved batch rank history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RankHistoryResponse'
+        '400':
+          description: Bad request - invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequestErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalServerErrorResponse'
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceUnavailableErrorResponse'
+
   /districts/{districtId}/available-ranking-years:
     get:
       tags:
