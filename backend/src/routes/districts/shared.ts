@@ -402,20 +402,17 @@ export async function getSnapshotForDate(
 export async function findNearestSnapshot(
   requestedDate: string
 ): Promise<FindNearestSnapshotResult> {
-  const availableSnapshots = await perDistrictSnapshotStore.listSnapshots()
+  // Use fast prefix listing (~1s) instead of listSnapshots (~91s with 2,370 snapshots)
+  const availableSnapshotIds = await perDistrictSnapshotStore.listSnapshotIds()
 
-  if (availableSnapshots.length === 0) {
+  if (availableSnapshotIds.length === 0) {
     return { snapshot: null, fallbackReason: null }
   }
 
-  // Filter to only successful snapshots and sort by date (newest first)
-  const sortedSnapshots = availableSnapshots
-    .filter(s => s.status === 'success')
-    .sort((a, b) => b.snapshot_id.localeCompare(a.snapshot_id))
-
-  if (sortedSnapshots.length === 0) {
-    return { snapshot: null, fallbackReason: null }
-  }
+  // Sort by date (newest first) using lexical ordering on YYYY-MM-DD strings
+  const sortedSnapshotIds = [...availableSnapshotIds].sort((a, b) =>
+    b.localeCompare(a)
+  )
 
   const requestedDateObj = new Date(requestedDate)
   const today = new Date()
@@ -423,7 +420,7 @@ export async function findNearestSnapshot(
   // Check if requested date is in the future
   if (requestedDateObj > today) {
     // Return latest available snapshot
-    const latestId = sortedSnapshots[0]?.snapshot_id
+    const latestId = sortedSnapshotIds[0]
     if (latestId) {
       const snapshot = await perDistrictSnapshotStore.getSnapshot(latestId)
       return { snapshot, fallbackReason: 'future_date' }
@@ -435,13 +432,13 @@ export async function findNearestSnapshot(
   let nearestBefore: string | null = null
   let nearestAfter: string | null = null
 
-  for (const s of sortedSnapshots) {
-    const snapshotDate = new Date(s.snapshot_id)
+  for (const snapshotId of sortedSnapshotIds) {
+    const snapshotDate = new Date(snapshotId)
     if (snapshotDate <= requestedDateObj && !nearestBefore) {
-      nearestBefore = s.snapshot_id
+      nearestBefore = snapshotId
     }
     if (snapshotDate > requestedDateObj) {
-      nearestAfter = s.snapshot_id
+      nearestAfter = snapshotId
     }
   }
 

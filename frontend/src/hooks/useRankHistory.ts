@@ -9,7 +9,8 @@ interface UseRankHistoryParams {
 }
 
 /**
- * React Query hook to fetch historical rank data for multiple districts
+ * React Query hook to fetch historical rank data for multiple districts.
+ * Uses the batch endpoint to avoid N concurrent requests overwhelming Cloud Run.
  */
 export const useRankHistory = ({
   districtIds,
@@ -19,20 +20,16 @@ export const useRankHistory = ({
   return useQuery<RankHistoryResponse[], Error>({
     queryKey: ['rank-history', districtIds, startDate, endDate],
     queryFn: async () => {
-      // Fetch rank history for each district
-      const promises = districtIds.map(async districtId => {
-        const params: Record<string, string> = {}
-        if (startDate) params['startDate'] = startDate
-        if (endDate) params['endDate'] = endDate
-
-        const response = await apiClient.get<RankHistoryResponse>(
-          `/districts/${districtId}/rank-history`,
-          { params }
-        )
-        return response.data
-      })
-
-      return Promise.all(promises)
+      // Single batch request instead of N parallel requests
+      const response = await apiClient.post<RankHistoryResponse[]>(
+        '/districts/rank-history-batch',
+        {
+          districtIds,
+          startDate,
+          endDate,
+        }
+      )
+      return response.data
     },
     enabled: districtIds.length > 0,
     staleTime: 15 * 60 * 1000, // 15 minutes

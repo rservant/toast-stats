@@ -86,6 +86,7 @@ vi.mock('../shared.js', async importOriginal => {
     getProgramYearInfo: original.getProgramYearInfo,
     perDistrictSnapshotStore: {
       listSnapshots: vi.fn(async () => mockSnapshots),
+      listSnapshotIds: vi.fn(async () => mockSnapshots.map(s => s.snapshot_id)),
       readAllDistrictsRankings: vi.fn(
         async (snapshotId: string) =>
           mockRankingsDataBySnapshot.get(snapshotId) ?? null
