@@ -257,7 +257,8 @@ describe('AvailableProgramYearsService', () => {
 
       // Should still return data from successful reads
       expect(result.programYears).toHaveLength(1)
-      expect(result.programYears[0]?.snapshotCount).toBe(1)
+      // snapshotCount reflects all snapshots with rankings files, not just successful reads
+      expect(result.programYears[0]?.snapshotCount).toBe(2)
     })
   })
 
@@ -381,7 +382,7 @@ describe('AvailableProgramYearsService', () => {
   })
 
   describe('district filtering', () => {
-    it('should only include snapshots where the district has ranking data', async () => {
+    it('should verify district exists by sampling one snapshot per program year', async () => {
       mockSnapshotStore.listSnapshotIds.mockResolvedValue([
         '2023-09-15',
         '2023-10-15',
@@ -389,22 +390,20 @@ describe('AvailableProgramYearsService', () => {
       ])
       mockSnapshotStore.hasAllDistrictsRankings.mockResolvedValue(true)
 
-      // District 42 only in first and third snapshots
-      mockSnapshotStore.readAllDistrictsRankings
-        .mockResolvedValueOnce(
-          createMockRankingsData('2023-09-15', ['42', '15'])
-        )
-        .mockResolvedValueOnce(
-          createMockRankingsData('2023-10-15', ['15', 'F'])
-        ) // No 42
-        .mockResolvedValueOnce(
-          createMockRankingsData('2023-11-15', ['42', 'F'])
-        )
+      // District 42 is in the first snapshot — service samples and finds it
+      mockSnapshotStore.readAllDistrictsRankings.mockResolvedValueOnce(
+        createMockRankingsData('2023-09-15', ['42', '15'])
+      )
 
       const result = await service.getAvailableProgramYears('42')
 
       expect(result.programYears).toHaveLength(1)
-      expect(result.programYears[0]?.snapshotCount).toBe(2) // Only 2 snapshots have district 42
+      // snapshotCount reflects all snapshots with rankings files in the program year
+      expect(result.programYears[0]?.snapshotCount).toBe(3)
+      // Only one readAllDistrictsRankings call — district found on first sample
+      expect(mockSnapshotStore.readAllDistrictsRankings).toHaveBeenCalledTimes(
+        1
+      )
     })
 
     it('should handle alphanumeric district IDs', async () => {

@@ -110,61 +110,88 @@ export class AvailableProgramYearsService implements IAvailableProgramYearsServi
       }
     }
 
-    // Group snapshots by program year and check for district data
-    const programYearMap = new Map<string, ProgramYearAggregation>()
+    // Phase 1: Group snapshot IDs by program year using just the date string (no GCS reads)
+    // Then count which snapshots have rankings files per program year
+    const programYearSnapshots = new Map<
+      string,
+      { info: ReturnType<typeof getProgramYearInfo>; snapshotIds: string[] }
+    >()
 
     for (const snapshotId of allSnapshotIds) {
+      const programYearInfo = getProgramYearInfo(snapshotId)
+      const key = programYearInfo.year
+      const existing = programYearSnapshots.get(key)
+      if (existing) {
+        existing.snapshotIds.push(snapshotId)
+      } else {
+        programYearSnapshots.set(key, {
+          info: programYearInfo,
+          snapshotIds: [snapshotId],
+        })
+      }
+    }
+
+    // Phase 2: For each program year, count snapshots with rankings and verify district exists
+    // This reads only ~1 full rankings file per program year (~10 reads instead of ~2000)
+    const programYearMap = new Map<string, ProgramYearAggregation>()
+
+    for (const [
+      programYearKey,
+      { info, snapshotIds },
+    ] of programYearSnapshots) {
       try {
-        // Fast existence check — skip snapshots without rankings files
-        const hasRankings =
-          await this.snapshotStore.hasAllDistrictsRankings(snapshotId)
-        if (!hasRankings) {
-          continue
-        }
-
-        // Read rankings data from snapshot
-        const rankings =
-          await this.snapshotStore.readAllDistrictsRankings(snapshotId)
-
-        if (!rankings) {
-          continue
-        }
-
-        // Check if this district exists in the rankings
-        const districtRanking = rankings.rankings.find(
-          r => r.districtId === districtId
+        // Count how many snapshots have rankings files (fast existence checks)
+        const rankingsExistence = await Promise.all(
+          snapshotIds.map(id => this.snapshotStore.hasAllDistrictsRankings(id))
+        )
+        const snapshotIdsWithRankings = snapshotIds.filter(
+          (_, i) => rankingsExistence[i]
         )
 
-        if (!districtRanking) {
+        if (snapshotIdsWithRankings.length === 0) {
           continue
         }
 
-        // Determine program year for this snapshot
-        // Snapshot IDs are YYYY-MM-DD date strings matching sourceCsvDate
-        const snapshotDate = rankings.metadata.sourceCsvDate
-        const programYearInfo = getProgramYearInfo(snapshotDate)
-        const programYearKey = programYearInfo.year
+        // Read ONE snapshot to verify the district exists in this program year
+        // Try the latest snapshot first (most likely to have the district)
+        let districtFound = false
+        for (const sampleId of snapshotIdsWithRankings) {
+          try {
+            const rankings =
+              await this.snapshotStore.readAllDistrictsRankings(sampleId)
+            if (!rankings) continue
 
-        // Add to program year map
-        const existing = programYearMap.get(programYearKey)
-        if (existing) {
-          existing.snapshotDates.push(snapshotDate)
-          existing.hasDistrictData = true
-        } else {
-          programYearMap.set(programYearKey, {
-            year: programYearInfo.year,
-            startDate: programYearInfo.startDate,
-            endDate: programYearInfo.endDate,
-            snapshotDates: [snapshotDate],
-            hasDistrictData: true,
-          })
+            const districtRanking = rankings.rankings.find(
+              r => r.districtId === districtId
+            )
+            if (districtRanking) {
+              districtFound = true
+              break
+            }
+            // District not in this snapshot — try next (rare edge case)
+          } catch {
+            // Try next snapshot
+            continue
+          }
         }
+
+        if (!districtFound) {
+          continue
+        }
+
+        // District verified — record all snapshot dates with rankings
+        programYearMap.set(programYearKey, {
+          year: info.year,
+          startDate: info.startDate,
+          endDate: info.endDate,
+          snapshotDates: snapshotIdsWithRankings,
+          hasDistrictData: true,
+        })
       } catch (error) {
-        // Log but continue processing other snapshots
-        logger.warn('Failed to read rankings from snapshot', {
+        logger.warn('Failed to process program year', {
           operation: 'AvailableProgramYearsService.getAvailableProgramYears',
           request_id: requestId,
-          snapshot_id: snapshotId,
+          program_year: programYearKey,
           error: error instanceof Error ? error.message : 'Unknown error',
         })
       }
