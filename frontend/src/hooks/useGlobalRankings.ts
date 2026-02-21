@@ -257,12 +257,14 @@ export function useGlobalRankings({
   }, [availableYearsData, allYearsHistoryData, effectiveSelectedYear])
 
   // Loading states for progressive rendering
-  // isLoading = true while any core data query is still in-flight
-  // This keeps the spinner visible until meaningful data is ready to display
-  const isLoading =
-    isLoadingYears ||
-    isLoadingHistory ||
-    (allYearsHistoryParams !== null && isLoadingAllYears)
+  // Short-circuit: if years query resolved with no data, we're done — show empty state immediately
+  const hasNoData = !isLoadingYears && availableProgramYears.length === 0
+  // isLoading = true while core data queries are still in-flight (but not if we already know there's no data)
+  const isLoading = hasNoData
+    ? false
+    : isLoadingYears ||
+      isLoadingHistory ||
+      (allYearsHistoryParams !== null && isLoadingAllYears)
   // isLoadingChart = the selected year's rank history
   const isLoadingChart = isLoadingHistory
   // isLoadingMultiYear = the all-years history for multi-year comparison
