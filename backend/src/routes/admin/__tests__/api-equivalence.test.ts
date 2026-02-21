@@ -223,12 +223,24 @@ describe('Admin API Path Preservation', () => {
       await testSnapshotStore.writeSnapshot(createTestSnapshot(id, 'success'))
     }
 
+    // Verify all snapshots are readable before making HTTP requests
+    for (const id of snapshotIds) {
+      const snapshot = await testSnapshotStore.getSnapshot(id)
+      expect(
+        snapshot,
+        `Snapshot ${id} should be readable after write`
+      ).not.toBeNull()
+    }
+
     for (const snapshotId of snapshotIds) {
       const response = await request(app).get(
         `/api/admin/snapshots/${snapshotId}`
       )
 
-      expect(response.status).toBe(200)
+      expect(
+        response.status,
+        `Expected 200 for snapshot ${snapshotId}, got ${response.status}: ${JSON.stringify(response.body)}`
+      ).toBe(200)
       expect(response.body).toHaveProperty('inspection')
       expect(response.body).toHaveProperty('metadata')
       expect(response.body.inspection).toHaveProperty('snapshot_id')
