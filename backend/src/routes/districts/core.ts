@@ -826,6 +826,21 @@ coreRouter.get(
  */
 coreRouter.get(
   '/:districtId/rank-history',
+  cacheMiddleware({
+    ttl: 3600, // 1 hour - ranking data changes at most daily
+    keyGenerator: req => {
+      const districtId = extractStringParam(
+        req.params['districtId'],
+        'districtId'
+      )
+      const startDate = extractQueryParam(req.query['startDate'])
+      const endDate = extractQueryParam(req.query['endDate'])
+      return generateDistrictCacheKey(districtId, 'rank-history', {
+        startDate,
+        endDate,
+      })
+    },
+  }),
   async (req: Request, res: Response) => {
     const districtId = getValidDistrictId(req)
 
@@ -880,14 +895,24 @@ coreRouter.get(
         { status: 'success' }
       )
 
-      if (allSnapshots.length === 0) {
-        // No snapshots available - return empty response with default program year
-        logger.warn('No snapshots available for rank history request', {
-          operation: 'GET /api/districts/:districtId/rank-history',
-          operation_id: operationId,
-          district_id: districtId,
-        })
+      // Pre-filter snapshots by date range using snapshot_id (which corresponds
+      // to the CSV date) BEFORE downloading any files. This eliminates GCS reads
+      // for snapshots outside the requested range (typically ~70% of all snapshots).
+      const filteredSnapshots = allSnapshots.filter(s => {
+        const id = s.snapshot_id
+        return id >= effectiveStartDate && id <= effectiveEndDate
+      })
 
+      logger.info('Pre-filtered snapshots by date range', {
+        operation: 'GET /api/districts/:districtId/rank-history',
+        operation_id: operationId,
+        total_snapshots: allSnapshots.length,
+        filtered_snapshots: filteredSnapshots.length,
+        effectiveStartDate,
+        effectiveEndDate,
+      })
+
+      if (filteredSnapshots.length === 0) {
         res.json({
           districtId,
           districtName: `District ${districtId}`,
@@ -897,7 +922,7 @@ coreRouter.get(
         return
       }
 
-      // Build history by reading rankings from each snapshot
+      // Build history by reading rankings from snapshots in parallel
       interface HistoryEntry {
         date: string
         aggregateScore: number
@@ -907,55 +932,37 @@ coreRouter.get(
         totalDistricts: number
         overallRank: number // Position when sorted by aggregateScore (1 = best)
       }
-      const history: HistoryEntry[] = []
+      interface SnapshotResult extends HistoryEntry {
+        districtName: string
+      }
       let districtName = `District ${districtId}`
       const seenDates = new Set<string>()
 
-      // Process snapshots (already sorted newest first by listSnapshots)
-      for (const snapshotMeta of allSnapshots) {
+      // Process pre-filtered snapshots in parallel batches.
+      // GCS in the same region (us-east1) handles high concurrency well.
+      const CONCURRENCY_LIMIT = 25
+
+      const processSnapshot = async (
+        snapshotMeta: (typeof allSnapshots)[0]
+      ): Promise<SnapshotResult | null> => {
         try {
           const rankings =
             await perDistrictSnapshotStore.readAllDistrictsRankings(
               snapshotMeta.snapshot_id
             )
 
-          if (!rankings) {
-            continue
-          }
+          if (!rankings) return null
 
-          // Use the source CSV date as the history date
           const date = rankings.metadata.sourceCsvDate
-
-          // Filter to effective date range (from query params or program year)
-          if (date < effectiveStartDate || date > effectiveEndDate) {
-            continue
-          }
-
-          // Skip duplicate dates (keep the first/newest one)
-          if (seenDates.has(date)) {
-            continue
-          }
-          seenDates.add(date)
 
           const districtRanking = rankings.rankings.find(
             r => r.districtId === districtId
           )
+          if (!districtRanking) return null
 
-          if (!districtRanking) {
-            continue
-          }
-
-          // Capture district name from the first found entry
-          if (districtName === `District ${districtId}`) {
-            districtName = districtRanking.districtName
-          }
-
-          // Read pre-computed overallRank from rankings data
-          // Requirement 17.3: Route SHALL NOT compute overallRank by sorting rankings
-          // Requirement 17.4: overallRank SHALL be pre-computed and stored in rankings files
           const overallRank = districtRanking.overallRank ?? 0
 
-          history.push({
+          return {
             date,
             aggregateScore: districtRanking.aggregateScore,
             clubsRank: districtRanking.clubsRank,
@@ -963,14 +970,46 @@ coreRouter.get(
             distinguishedRank: districtRanking.distinguishedRank,
             totalDistricts: rankings.metadata.totalDistricts,
             overallRank,
-          })
+            districtName: districtRanking.districtName,
+          }
         } catch (error) {
-          // Log but continue processing other snapshots
           logger.warn('Failed to read rankings from snapshot', {
             operation: 'GET /api/districts/:districtId/rank-history',
             operation_id: operationId,
             snapshot_id: snapshotMeta.snapshot_id,
             error: error instanceof Error ? error.message : 'Unknown error',
+          })
+          return null
+        }
+      }
+
+      // Process in batches to limit concurrent GCS reads
+      const history: HistoryEntry[] = []
+      for (let i = 0; i < filteredSnapshots.length; i += CONCURRENCY_LIMIT) {
+        const batch = filteredSnapshots.slice(i, i + CONCURRENCY_LIMIT)
+        const results = await Promise.all(batch.map(processSnapshot))
+
+        for (const entry of results) {
+          if (entry === null) continue
+
+          // Skip duplicate dates (keep the first/newest one, since snapshots are newest-first)
+          if (seenDates.has(entry.date)) continue
+          seenDates.add(entry.date)
+
+          // Capture district name from the first found entry
+          if (districtName === `District ${districtId}`) {
+            districtName = entry.districtName
+          }
+
+          // Push history entry (without the extra districtName field)
+          history.push({
+            date: entry.date,
+            aggregateScore: entry.aggregateScore,
+            clubsRank: entry.clubsRank,
+            paymentsRank: entry.paymentsRank,
+            distinguishedRank: entry.distinguishedRank,
+            totalDistricts: entry.totalDistricts,
+            overallRank: entry.overallRank,
           })
         }
       }
@@ -986,7 +1025,7 @@ coreRouter.get(
             operation: 'GET /api/districts/:districtId/rank-history',
             operation_id: operationId,
             district_id: districtId,
-            snapshots_checked: allSnapshots.length,
+            snapshots_checked: filteredSnapshots.length,
             program_year: programYear.year,
           }
         )
@@ -1006,7 +1045,7 @@ coreRouter.get(
         district_id: districtId,
         district_name: districtName,
         history_points: history.length,
-        snapshots_checked: allSnapshots.length,
+        snapshots_checked: filteredSnapshots.length,
         program_year: programYear.year,
         date_range:
           history.length > 0
