@@ -109,8 +109,12 @@ export interface UseGlobalRankingsResult {
   yearlyRankings: YearlyRankingSummary[]
 
   // State
-  /** Whether any data is currently loading */
+  /** Whether the initial years data is loading (blocks all rendering) */
   isLoading: boolean
+  /** Whether the selected year's rank history chart data is loading */
+  isLoadingChart: boolean
+  /** Whether the multi-year comparison data is loading */
+  isLoadingMultiYear: boolean
   /** Whether an error occurred */
   isError: boolean
   /** The error if one occurred */

@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react'
-import { ProgramYearSelector } from './ProgramYearSelector'
 import EndOfYearRankingsPanel from './EndOfYearRankingsPanel'
 import FullYearRankingChart, { type RankMetric } from './FullYearRankingChart'
 import MultiYearComparisonTable from './MultiYearComparisonTable'
@@ -15,63 +14,35 @@ export interface GlobalRankingsTabProps {
   districtId: string
   /** District name for display purposes */
   districtName: string
+  /** Selected program year from the parent page selector */
+  selectedProgramYear?: ProgramYear
 }
 
 /**
- * Loading skeleton component that matches the content layout
+ * Loading spinner component for the initial data fetch.
+ * Shows an animated spinner with a status message to indicate
+ * that the page is actively loading ranking data in the background.
  */
-const GlobalRankingsLoadingSkeleton: React.FC = () => (
+const GlobalRankingsLoadingSpinner: React.FC = () => (
   <div
-    className="space-y-6"
+    className="flex flex-col items-center justify-center py-16"
     role="status"
     aria-busy="true"
     aria-label="Loading global rankings data"
   >
-    {/* Program Year Selector Skeleton */}
-    <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-      <div className="flex-shrink-0 w-48">
-        <div className="h-4 w-24 bg-gray-300 rounded-sm animate-pulse mb-2" />
-        <div className="h-10 w-full bg-gray-300 rounded-lg animate-pulse" />
-      </div>
-      <div className="h-4 w-48 bg-gray-300 rounded-sm animate-pulse" />
+    {/* Spinner */}
+    <div className="relative w-12 h-12 mb-4">
+      <div
+        className="absolute inset-0 rounded-full border-4 border-gray-200"
+        aria-hidden="true"
+      />
+      <div
+        className="absolute inset-0 rounded-full border-4 border-transparent border-t-[var(--tm-loyal-blue)] animate-spin"
+        aria-hidden="true"
+      />
     </div>
-
-    {/* End-of-Year Rankings Panel Skeleton */}
-    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-      <div className="h-6 w-48 bg-gray-300 rounded-sm animate-pulse mb-4" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[1, 2, 3, 4].map(i => (
-          <div
-            key={i}
-            className="bg-gray-100 rounded-lg p-4 h-32 animate-pulse"
-          />
-        ))}
-      </div>
-    </div>
-
-    {/* Full Year Ranking Chart Skeleton */}
-    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-      <div className="h-6 w-48 bg-gray-300 rounded-sm animate-pulse mb-4" />
-      <div className="flex flex-wrap gap-2 mb-4">
-        {[1, 2, 3, 4].map(i => (
-          <div
-            key={i}
-            className="h-10 w-24 bg-gray-300 rounded-lg animate-pulse"
-          />
-        ))}
-      </div>
-      <div className="h-80 bg-gray-200 rounded-lg animate-pulse" />
-    </div>
-
-    {/* Multi-Year Comparison Table Skeleton */}
-    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-      <div className="h-6 w-48 bg-gray-300 rounded-sm animate-pulse mb-4" />
-      <div className="space-y-3">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="h-12 bg-gray-200 rounded-sm animate-pulse" />
-        ))}
-      </div>
-    </div>
+    {/* Status text */}
+    <p className="text-sm font-tm-body text-gray-600">Loading ranking data…</p>
   </div>
 )
 
@@ -231,37 +202,22 @@ const DataFreshness: React.FC<DataFreshnessProps> = ({ lastUpdated }) => {
  * Displays historical global ranking data across all available program years.
  *
  * Features:
- * - Program year selection via ProgramYearSelector
+ * - Uses the parent page's program year selector (no redundant selector)
+ * - Animated loading spinner during initial data fetch
+ * - Progressive rendering — each section loads independently
  * - End-of-year rankings panel with four ranking cards
  * - Full-year ranking progression chart with metric toggle
  * - Multi-year comparison table with year-over-year changes
- * - Loading skeleton matching content layout
  * - Error state with retry button
  * - Empty state for districts without ranking data
  * - Data freshness timestamp display
- *
- * Follows Toastmasters brand guidelines:
- * - Uses brand color palette (--tm-loyal-blue, --tm-true-maroon, etc.)
- * - Meets WCAG AA contrast requirements
- * - Provides 44px minimum touch targets
- * - Uses Montserrat for headings, Source Sans 3 for body
- *
- * @example
- * ```tsx
- * <GlobalRankingsTab
- *   districtId="57"
- *   districtName="District 57"
- * />
- * ```
  */
 const GlobalRankingsTab: React.FC<GlobalRankingsTabProps> = ({
   districtId,
   districtName,
+  selectedProgramYear,
 }) => {
-  // Local state for selected program year and metric
-  const [selectedProgramYear, setSelectedProgramYear] = useState<
-    ProgramYear | undefined
-  >(undefined)
+  // Local state for selected metric (chart toggle)
   const [selectedMetric, setSelectedMetric] = useState<RankMetric>('aggregate')
 
   // Build hook params - only include selectedProgramYear when it has a value
@@ -283,6 +239,8 @@ const GlobalRankingsTab: React.FC<GlobalRankingsTabProps> = ({
     availableProgramYears,
     yearlyRankings,
     isLoading,
+    isLoadingChart,
+    isLoadingMultiYear,
     isError,
     error,
     refetch,
@@ -346,19 +304,14 @@ const GlobalRankingsTab: React.FC<GlobalRankingsTabProps> = ({
     return null
   }, [endOfYearRankings])
 
-  // Handle program year change
-  const handleProgramYearChange = (programYear: ProgramYear) => {
-    setSelectedProgramYear(programYear)
-  }
-
   // Handle metric change for the chart
   const handleMetricChange = (metric: RankMetric) => {
     setSelectedMetric(metric)
   }
 
-  // Show loading skeleton while data is being fetched
+  // Show loading spinner while initial years data is being fetched
   if (isLoading) {
-    return <GlobalRankingsLoadingSkeleton />
+    return <GlobalRankingsLoadingSpinner />
   }
 
   // Show error state if an error occurred
@@ -377,23 +330,12 @@ const GlobalRankingsTab: React.FC<GlobalRankingsTabProps> = ({
       role="region"
       aria-label={`Global rankings for ${districtName}`}
     >
-      {/* Header with Program Year Selector and Data Freshness */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        {/* Program Year Selector */}
-        <div className="flex-shrink-0">
-          <ProgramYearSelector
-            availableProgramYears={availableProgramYears}
-            selectedProgramYear={effectiveSelectedYear}
-            onProgramYearChange={handleProgramYearChange}
-            showProgress={true}
-          />
-        </div>
-
-        {/* Data Freshness Timestamp */}
+      {/* Data Freshness Timestamp */}
+      <div className="flex justify-end">
         <DataFreshness lastUpdated={lastUpdatedTimestamp} />
       </div>
 
-      {/* End-of-Year Rankings Panel */}
+      {/* End-of-Year Rankings Panel — available as soon as years data loads */}
       <EndOfYearRankingsPanel
         rankings={endOfYearRankings}
         isLoading={false}
@@ -401,19 +343,19 @@ const GlobalRankingsTab: React.FC<GlobalRankingsTabProps> = ({
         previousYearRankings={previousYearRankings}
       />
 
-      {/* Full Year Ranking Chart */}
+      {/* Full Year Ranking Chart — loads progressively */}
       <FullYearRankingChart
         data={currentYearHistory}
         selectedMetric={selectedMetric}
         onMetricChange={handleMetricChange}
-        isLoading={false}
+        isLoading={isLoadingChart}
         programYear={effectiveSelectedYear}
       />
 
-      {/* Multi-Year Comparison Table */}
+      {/* Multi-Year Comparison Table — loads progressively */}
       <MultiYearComparisonTable
         yearlyRankings={yearlyRankings}
-        isLoading={false}
+        isLoading={isLoadingMultiYear}
       />
     </div>
   )

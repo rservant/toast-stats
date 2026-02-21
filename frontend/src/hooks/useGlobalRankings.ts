@@ -256,12 +256,13 @@ export function useGlobalRankings({
     return buildYearlyRankingSummaries(yearsWithHistory, historyByYear)
   }, [availableYearsData, allYearsHistoryData, effectiveSelectedYear])
 
-  // Combine loading states
-  // Include loading for all years history only when we're actually fetching it
-  const isLoading =
-    isLoadingYears ||
-    isLoadingHistory ||
-    (allYearsHistoryParams !== null && isLoadingAllYears)
+  // Loading states for progressive rendering
+  // isLoading = only the initial years query (blocks all rendering)
+  const isLoading = isLoadingYears
+  // isLoadingChart = the selected year's rank history
+  const isLoadingChart = isLoadingHistory
+  // isLoadingMultiYear = the all-years history for multi-year comparison
+  const isLoadingMultiYear = allYearsHistoryParams !== null && isLoadingAllYears
 
   // Combine error states
   const isError = isErrorYears || isErrorHistory || isErrorAllYears
@@ -280,6 +281,8 @@ export function useGlobalRankings({
     availableProgramYears,
     yearlyRankings,
     isLoading,
+    isLoadingChart,
+    isLoadingMultiYear,
     isError,
     error,
     refetch,

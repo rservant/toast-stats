@@ -1,6 +1,6 @@
 import React from 'react'
 import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import GlobalRankingsTab, { GlobalRankingsTabProps } from '../GlobalRankingsTab'
 import {
@@ -119,6 +119,7 @@ describe('GlobalRankingsTab', () => {
   const baseProps: GlobalRankingsTabProps = {
     districtId: '57',
     districtName: 'District 57',
+    selectedProgramYear: mockProgramYear2024,
   }
 
   const createMockHookResult = (
@@ -129,6 +130,8 @@ describe('GlobalRankingsTab', () => {
     availableProgramYears: [mockProgramYear2024, mockProgramYear2023],
     yearlyRankings: mockYearlyRankings,
     isLoading: false,
+    isLoadingChart: false,
+    isLoadingMultiYear: false,
     isError: false,
     error: null,
     refetch: mockRefetch,
@@ -136,7 +139,7 @@ describe('GlobalRankingsTab', () => {
   })
 
   describe('Loading State', () => {
-    it('renders loading skeleton when isLoading is true', () => {
+    it('renders loading spinner when isLoading is true', () => {
       mockUseGlobalRankings.mockReturnValue(
         createMockHookResult({
           isLoading: true,
@@ -149,7 +152,7 @@ describe('GlobalRankingsTab', () => {
 
       renderWithProviders(<GlobalRankingsTab {...baseProps} />)
 
-      // Should show loading skeleton with aria-busy
+      // Should show loading spinner with aria-busy
       const loadingSection = screen.getByLabelText(
         'Loading global rankings data'
       )
@@ -157,7 +160,7 @@ describe('GlobalRankingsTab', () => {
       expect(loadingSection).toHaveAttribute('aria-busy', 'true')
     })
 
-    it('loading skeleton has animated pulse elements', () => {
+    it('loading spinner displays status text', () => {
       mockUseGlobalRankings.mockReturnValue(
         createMockHookResult({
           isLoading: true,
@@ -168,13 +171,9 @@ describe('GlobalRankingsTab', () => {
         })
       )
 
-      const { container } = renderWithProviders(
-        <GlobalRankingsTab {...baseProps} />
-      )
+      renderWithProviders(<GlobalRankingsTab {...baseProps} />)
 
-      // Should have multiple animated skeleton elements
-      const pulseElements = container.querySelectorAll('.animate-pulse')
-      expect(pulseElements.length).toBeGreaterThan(0)
+      expect(screen.getByText('Loading ranking data…')).toBeInTheDocument()
     })
 
     it('does not render child components when loading', () => {
@@ -196,6 +195,67 @@ describe('GlobalRankingsTab', () => {
       expect(
         screen.queryByText('Multi-Year Comparison')
       ).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Progressive Loading', () => {
+    it('renders end-of-year rankings while chart is still loading', () => {
+      mockUseGlobalRankings.mockReturnValue(
+        createMockHookResult({
+          isLoadingChart: true,
+          isLoadingMultiYear: true,
+          currentYearHistory: null,
+          yearlyRankings: [],
+        })
+      )
+
+      renderWithProviders(<GlobalRankingsTab {...baseProps} />)
+
+      // End-of-year rankings should be visible immediately
+      expect(screen.getByText('End-of-Year Rankings')).toBeInTheDocument()
+      // Chart and table should show their loading skeletons
+      expect(
+        screen.getByLabelText('Loading ranking progression chart')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByLabelText('Loading multi-year comparison table')
+      ).toBeInTheDocument()
+    })
+
+    it('passes isLoadingChart to FullYearRankingChart', () => {
+      mockUseGlobalRankings.mockReturnValue(
+        createMockHookResult({
+          isLoadingChart: true,
+          currentYearHistory: null,
+        })
+      )
+
+      renderWithProviders(<GlobalRankingsTab {...baseProps} />)
+
+      // The chart section should show its loading skeleton
+      const chartSkeleton = screen.getByLabelText(
+        'Loading ranking progression chart'
+      )
+      expect(chartSkeleton).toBeInTheDocument()
+      expect(chartSkeleton).toHaveAttribute('aria-busy', 'true')
+    })
+
+    it('passes isLoadingMultiYear to MultiYearComparisonTable', () => {
+      mockUseGlobalRankings.mockReturnValue(
+        createMockHookResult({
+          isLoadingMultiYear: true,
+          yearlyRankings: [],
+        })
+      )
+
+      renderWithProviders(<GlobalRankingsTab {...baseProps} />)
+
+      // The table section should show its loading skeleton
+      const tableSkeleton = screen.getByLabelText(
+        'Loading multi-year comparison table'
+      )
+      expect(tableSkeleton).toBeInTheDocument()
+      expect(tableSkeleton).toHaveAttribute('aria-busy', 'true')
     })
   })
 
@@ -379,14 +439,14 @@ describe('GlobalRankingsTab', () => {
       expect(screen.getByText('Multi-Year Comparison')).toBeInTheDocument()
     })
 
-    it('renders ProgramYearSelector with available years', () => {
+    it('does not render its own ProgramYearSelector', () => {
       mockUseGlobalRankings.mockReturnValue(createMockHookResult())
 
       renderWithProviders(<GlobalRankingsTab {...baseProps} />)
 
-      // Should have program year selector - use label query to be specific
-      const selector = screen.getByRole('combobox', { name: /program year/i })
-      expect(selector).toBeInTheDocument()
+      // The tab should NOT have a program year combobox — it uses the parent's
+      const selector = screen.queryByRole('combobox', { name: /program year/i })
+      expect(selector).not.toBeInTheDocument()
     })
 
     it('renders main region with proper aria-label', () => {
@@ -438,34 +498,39 @@ describe('GlobalRankingsTab', () => {
     })
   })
 
-  describe('Program Year Selection', () => {
-    it('calls hook with selected program year when changed', async () => {
+  describe('Program Year from Parent', () => {
+    it('passes selectedProgramYear prop to the hook', () => {
       mockUseGlobalRankings.mockReturnValue(createMockHookResult())
 
-      renderWithProviders(<GlobalRankingsTab {...baseProps} />)
+      renderWithProviders(
+        <GlobalRankingsTab
+          districtId="57"
+          districtName="District 57"
+          selectedProgramYear={mockProgramYear2023}
+        />
+      )
 
-      // Find and interact with the program year selector
-      const selector = screen.getByRole('combobox', { name: /program year/i })
-      expect(selector).toBeInTheDocument()
-
-      // Change the selection
-      fireEvent.change(selector, { target: { value: '2023-2024' } })
-
-      // The hook should be called with updated params
-      await waitFor(() => {
-        expect(mockUseGlobalRankings).toHaveBeenCalled()
-      })
+      expect(mockUseGlobalRankings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          districtId: '57',
+          selectedProgramYear: mockProgramYear2023,
+        })
+      )
     })
 
-    it('defaults to most recent program year', () => {
+    it('works without selectedProgramYear prop (defaults to most recent)', () => {
       mockUseGlobalRankings.mockReturnValue(createMockHookResult())
 
-      renderWithProviders(<GlobalRankingsTab {...baseProps} />)
+      renderWithProviders(
+        <GlobalRankingsTab districtId="57" districtName="District 57" />
+      )
 
-      // The selector should show the most recent year
-      // The value is the year number (2024), not the label (2024-2025)
-      const selector = screen.getByRole('combobox', { name: /program year/i })
-      expect(selector).toHaveValue('2024')
+      // Hook should be called without selectedProgramYear
+      expect(mockUseGlobalRankings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          districtId: '57',
+        })
+      )
     })
   })
 
@@ -607,20 +672,6 @@ describe('GlobalRankingsTab', () => {
   })
 
   describe('Responsive Layout', () => {
-    it('renders with responsive flex container for header', () => {
-      mockUseGlobalRankings.mockReturnValue(createMockHookResult())
-
-      const { container } = renderWithProviders(
-        <GlobalRankingsTab {...baseProps} />
-      )
-
-      // Check for responsive flex classes
-      const flexContainer = container.querySelector(
-        '.flex.flex-col.sm\\:flex-row'
-      )
-      expect(flexContainer).toBeInTheDocument()
-    })
-
     it('renders with proper spacing between sections', () => {
       mockUseGlobalRankings.mockReturnValue(createMockHookResult())
 

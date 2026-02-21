@@ -702,6 +702,7 @@ const DistrictDetailPage: React.FC = () => {
               <GlobalRankingsTab
                 districtId={districtId}
                 districtName={districtName}
+                selectedProgramYear={selectedProgramYear}
               />
             )}
           </div>
