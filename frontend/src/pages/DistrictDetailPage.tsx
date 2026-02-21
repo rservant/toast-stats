@@ -245,7 +245,7 @@ const DistrictDetailPage: React.FC = () => {
       effectiveProgramYear ?? undefined // Pass selected program year
     )
 
-  const districtName = selectedDistrict?.name || 'Unknown District'
+  const districtName = selectedDistrict?.name || `District ${districtId}`
 
   // Get all clubs from analytics
   const allClubs = analytics?.allClubs || []
@@ -328,6 +328,53 @@ const DistrictDetailPage: React.FC = () => {
 
   // Format date for display (using utility to avoid UTC timezone shift)
   const formatDate = (dateStr: string) => formatDisplayDate(dateStr)
+
+  // If districts data has loaded but this district isn't in the tracked list,
+  // show a user-friendly state instead of rendering the full page with empty data.
+  // Only 6 districts are intentionally tracked for detailed analytics.
+  if (districtsData && !selectedDistrict && districtId) {
+    return (
+      <ErrorBoundary>
+        <div className="min-h-screen bg-gray-100" id="main-content">
+          <div className="container mx-auto px-4 py-4 sm:py-8">
+            <div className="mb-4 sm:mb-6">
+              <button
+                onClick={() => navigate('/')}
+                className="flex items-center gap-2 text-tm-loyal-blue hover:text-tm-loyal-blue-80 font-tm-headline font-medium transition-colors mb-4"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
+                Back to Rankings
+              </button>
+              <h1 className="text-2xl sm:text-3xl font-tm-headline font-bold text-tm-black">
+                {districtName}
+              </h1>
+            </div>
+            <EmptyState
+              title="Detailed Analytics Not Available"
+              message="Detailed analytics are not yet available for this district. Rankings data can be viewed on the home page."
+              icon="data"
+              action={{
+                label: 'View Global Rankings',
+                onClick: () => navigate('/'),
+              }}
+            />
+          </div>
+        </div>
+      </ErrorBoundary>
+    )
+  }
 
   return (
     <ErrorBoundary>
