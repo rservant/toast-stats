@@ -11,33 +11,16 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { AvailableProgramYearsService } from '../AvailableProgramYearsService.js'
-import type { FileSnapshotStore } from '../SnapshotStore.js'
-import type {
-  SnapshotMetadata,
-  AllDistrictsRankingsData,
-} from '../../types/snapshots.js'
+import type { ISnapshotStorage } from '../../types/storageInterfaces.js'
+import type { AllDistrictsRankingsData } from '../../types/snapshots.js'
 
 describe('AvailableProgramYearsService', () => {
   let service: AvailableProgramYearsService
   let mockSnapshotStore: {
-    listSnapshots: ReturnType<typeof vi.fn>
+    listSnapshotIds: ReturnType<typeof vi.fn>
+    hasAllDistrictsRankings: ReturnType<typeof vi.fn>
     readAllDistrictsRankings: ReturnType<typeof vi.fn>
   }
-
-  // Sample test data
-  const createMockSnapshotMetadata = (
-    snapshotId: string,
-    status: 'success' | 'failed' = 'success'
-  ): SnapshotMetadata => ({
-    snapshot_id: snapshotId,
-    created_at: `${snapshotId}T10:00:00.000Z`,
-    status,
-    schema_version: '2.0.0',
-    calculation_version: '2.0.0',
-    size_bytes: 1024,
-    error_count: 0,
-    district_count: 10,
-  })
 
   const createMockRankingsData = (
     snapshotId: string,
@@ -77,15 +60,16 @@ describe('AvailableProgramYearsService', () => {
   })
 
   beforeEach(() => {
-    // Create mock snapshot store
+    // Create mock snapshot store matching ISnapshotStorage interface
     mockSnapshotStore = {
-      listSnapshots: vi.fn(),
+      listSnapshotIds: vi.fn(),
+      hasAllDistrictsRankings: vi.fn(),
       readAllDistrictsRankings: vi.fn(),
     }
 
     // Create service with mock store
     service = new AvailableProgramYearsService(
-      mockSnapshotStore as unknown as FileSnapshotStore
+      mockSnapshotStore as unknown as ISnapshotStorage
     )
   })
 
@@ -95,7 +79,7 @@ describe('AvailableProgramYearsService', () => {
 
   describe('getAvailableProgramYears', () => {
     it('should return empty array when no snapshots exist', async () => {
-      mockSnapshotStore.listSnapshots.mockResolvedValue([])
+      mockSnapshotStore.listSnapshotIds.mockResolvedValue([])
 
       const result = await service.getAvailableProgramYears('42')
 
@@ -103,17 +87,16 @@ describe('AvailableProgramYearsService', () => {
         districtId: '42',
         programYears: [],
       })
-      expect(mockSnapshotStore.listSnapshots).toHaveBeenCalledWith(undefined, {
-        status: 'success',
-      })
+      expect(mockSnapshotStore.listSnapshotIds).toHaveBeenCalled()
     })
 
     it('should return empty array when district has no ranking data', async () => {
       // Snapshots exist but district is not in any of them
-      mockSnapshotStore.listSnapshots.mockResolvedValue([
-        createMockSnapshotMetadata('2024-01-15'),
-        createMockSnapshotMetadata('2024-02-15'),
+      mockSnapshotStore.listSnapshotIds.mockResolvedValue([
+        '2024-01-15',
+        '2024-02-15',
       ])
+      mockSnapshotStore.hasAllDistrictsRankings.mockResolvedValue(true)
 
       // Rankings exist but don't include the requested district
       mockSnapshotStore.readAllDistrictsRankings
@@ -134,11 +117,12 @@ describe('AvailableProgramYearsService', () => {
 
     it('should return program years with ranking data for the district', async () => {
       // Snapshots from program year 2023-2024 (July 2023 - June 2024)
-      mockSnapshotStore.listSnapshots.mockResolvedValue([
-        createMockSnapshotMetadata('2023-09-15'),
-        createMockSnapshotMetadata('2023-12-15'),
-        createMockSnapshotMetadata('2024-03-15'),
+      mockSnapshotStore.listSnapshotIds.mockResolvedValue([
+        '2023-09-15',
+        '2023-12-15',
+        '2024-03-15',
       ])
+      mockSnapshotStore.hasAllDistrictsRankings.mockResolvedValue(true)
 
       // All snapshots include district 42
       mockSnapshotStore.readAllDistrictsRankings
@@ -166,12 +150,13 @@ describe('AvailableProgramYearsService', () => {
 
     it('should return multiple program years sorted by most recent first', async () => {
       // Snapshots from two program years
-      mockSnapshotStore.listSnapshots.mockResolvedValue([
-        createMockSnapshotMetadata('2022-10-15'), // 2022-2023
-        createMockSnapshotMetadata('2023-02-15'), // 2022-2023
-        createMockSnapshotMetadata('2023-09-15'), // 2023-2024
-        createMockSnapshotMetadata('2024-01-15'), // 2023-2024
+      mockSnapshotStore.listSnapshotIds.mockResolvedValue([
+        '2022-10-15', // 2022-2023
+        '2023-02-15', // 2022-2023
+        '2023-09-15', // 2023-2024
+        '2024-01-15', // 2023-2024
       ])
+      mockSnapshotStore.hasAllDistrictsRankings.mockResolvedValue(true)
 
       mockSnapshotStore.readAllDistrictsRankings
         .mockResolvedValueOnce(createMockRankingsData('2022-10-15', ['42']))
@@ -188,13 +173,14 @@ describe('AvailableProgramYearsService', () => {
     })
 
     it('should calculate correct snapshot count per program year', async () => {
-      mockSnapshotStore.listSnapshots.mockResolvedValue([
-        createMockSnapshotMetadata('2023-08-15'),
-        createMockSnapshotMetadata('2023-10-15'),
-        createMockSnapshotMetadata('2023-12-15'),
-        createMockSnapshotMetadata('2024-02-15'),
-        createMockSnapshotMetadata('2024-04-15'),
+      mockSnapshotStore.listSnapshotIds.mockResolvedValue([
+        '2023-08-15',
+        '2023-10-15',
+        '2023-12-15',
+        '2024-02-15',
+        '2024-04-15',
       ])
+      mockSnapshotStore.hasAllDistrictsRankings.mockResolvedValue(true)
 
       mockSnapshotStore.readAllDistrictsRankings
         .mockResolvedValueOnce(createMockRankingsData('2023-08-15', ['42']))
@@ -210,11 +196,12 @@ describe('AvailableProgramYearsService', () => {
     })
 
     it('should return latest snapshot date for each program year', async () => {
-      mockSnapshotStore.listSnapshots.mockResolvedValue([
-        createMockSnapshotMetadata('2023-08-15'),
-        createMockSnapshotMetadata('2024-03-20'),
-        createMockSnapshotMetadata('2023-11-10'),
+      mockSnapshotStore.listSnapshotIds.mockResolvedValue([
+        '2023-08-15',
+        '2024-03-20',
+        '2023-11-10',
       ])
+      mockSnapshotStore.hasAllDistrictsRankings.mockResolvedValue(true)
 
       mockSnapshotStore.readAllDistrictsRankings
         .mockResolvedValueOnce(createMockRankingsData('2023-08-15', ['42']))
@@ -226,28 +213,39 @@ describe('AvailableProgramYearsService', () => {
       expect(result.programYears[0]?.latestSnapshotDate).toBe('2024-03-20')
     })
 
-    it('should handle snapshots with null rankings data gracefully', async () => {
-      mockSnapshotStore.listSnapshots.mockResolvedValue([
-        createMockSnapshotMetadata('2023-09-15'),
-        createMockSnapshotMetadata('2023-10-15'),
+    it('should skip snapshots without rankings files', async () => {
+      mockSnapshotStore.listSnapshotIds.mockResolvedValue([
+        '2023-09-15',
+        '2023-10-15',
       ])
+      // First snapshot has no rankings file, second does
+      mockSnapshotStore.hasAllDistrictsRankings
+        .mockResolvedValueOnce(false)
+        .mockResolvedValueOnce(true)
 
-      // First snapshot has no rankings data
-      mockSnapshotStore.readAllDistrictsRankings
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(createMockRankingsData('2023-10-15', ['42']))
+      mockSnapshotStore.readAllDistrictsRankings.mockResolvedValueOnce(
+        createMockRankingsData('2023-10-15', ['42'])
+      )
 
       const result = await service.getAvailableProgramYears('42')
 
       expect(result.programYears).toHaveLength(1)
       expect(result.programYears[0]?.snapshotCount).toBe(1)
+      // readAllDistrictsRankings should only be called for snapshots with rankings
+      expect(mockSnapshotStore.readAllDistrictsRankings).toHaveBeenCalledTimes(
+        1
+      )
+      expect(mockSnapshotStore.readAllDistrictsRankings).toHaveBeenCalledWith(
+        '2023-10-15'
+      )
     })
 
     it('should handle errors reading rankings data gracefully', async () => {
-      mockSnapshotStore.listSnapshots.mockResolvedValue([
-        createMockSnapshotMetadata('2023-09-15'),
-        createMockSnapshotMetadata('2023-10-15'),
+      mockSnapshotStore.listSnapshotIds.mockResolvedValue([
+        '2023-09-15',
+        '2023-10-15',
       ])
+      mockSnapshotStore.hasAllDistrictsRankings.mockResolvedValue(true)
 
       // First snapshot throws error, second succeeds
       mockSnapshotStore.readAllDistrictsRankings
@@ -270,9 +268,8 @@ describe('AvailableProgramYearsService', () => {
       const snapshotDate =
         futureDate.toISOString().split('T')[0] ?? '2025-01-15'
 
-      mockSnapshotStore.listSnapshots.mockResolvedValue([
-        createMockSnapshotMetadata(snapshotDate),
-      ])
+      mockSnapshotStore.listSnapshotIds.mockResolvedValue([snapshotDate])
+      mockSnapshotStore.hasAllDistrictsRankings.mockResolvedValue(true)
 
       mockSnapshotStore.readAllDistrictsRankings.mockResolvedValueOnce(
         createMockRankingsData(snapshotDate, ['42'])
@@ -285,10 +282,11 @@ describe('AvailableProgramYearsService', () => {
 
     it('should mark program year as complete when end date passed and has June snapshot', async () => {
       // Program year 2022-2023 ended June 30, 2023
-      mockSnapshotStore.listSnapshots.mockResolvedValue([
-        createMockSnapshotMetadata('2022-09-15'),
-        createMockSnapshotMetadata('2023-06-15'), // June snapshot
+      mockSnapshotStore.listSnapshotIds.mockResolvedValue([
+        '2022-09-15',
+        '2023-06-15', // June snapshot
       ])
+      mockSnapshotStore.hasAllDistrictsRankings.mockResolvedValue(true)
 
       mockSnapshotStore.readAllDistrictsRankings
         .mockResolvedValueOnce(createMockRankingsData('2022-09-15', ['42']))
@@ -301,10 +299,11 @@ describe('AvailableProgramYearsService', () => {
 
     it('should mark program year as incomplete when end date passed but no June snapshot', async () => {
       // Program year 2022-2023 ended June 30, 2023 but no June snapshot
-      mockSnapshotStore.listSnapshots.mockResolvedValue([
-        createMockSnapshotMetadata('2022-09-15'),
-        createMockSnapshotMetadata('2023-05-15'), // May snapshot, no June
+      mockSnapshotStore.listSnapshotIds.mockResolvedValue([
+        '2022-09-15',
+        '2023-05-15', // May snapshot, no June
       ])
+      mockSnapshotStore.hasAllDistrictsRankings.mockResolvedValue(true)
 
       mockSnapshotStore.readAllDistrictsRankings
         .mockResolvedValueOnce(createMockRankingsData('2022-09-15', ['42']))
@@ -319,9 +318,8 @@ describe('AvailableProgramYearsService', () => {
   describe('program year date calculation', () => {
     it('should correctly assign July-December dates to current year program year', async () => {
       // October 2023 should be in 2023-2024 program year
-      mockSnapshotStore.listSnapshots.mockResolvedValue([
-        createMockSnapshotMetadata('2023-10-15'),
-      ])
+      mockSnapshotStore.listSnapshotIds.mockResolvedValue(['2023-10-15'])
+      mockSnapshotStore.hasAllDistrictsRankings.mockResolvedValue(true)
 
       mockSnapshotStore.readAllDistrictsRankings.mockResolvedValueOnce(
         createMockRankingsData('2023-10-15', ['42'])
@@ -336,9 +334,8 @@ describe('AvailableProgramYearsService', () => {
 
     it('should correctly assign January-June dates to previous year program year', async () => {
       // March 2024 should be in 2023-2024 program year
-      mockSnapshotStore.listSnapshots.mockResolvedValue([
-        createMockSnapshotMetadata('2024-03-15'),
-      ])
+      mockSnapshotStore.listSnapshotIds.mockResolvedValue(['2024-03-15'])
+      mockSnapshotStore.hasAllDistrictsRankings.mockResolvedValue(true)
 
       mockSnapshotStore.readAllDistrictsRankings.mockResolvedValueOnce(
         createMockRankingsData('2024-03-15', ['42'])
@@ -355,9 +352,8 @@ describe('AvailableProgramYearsService', () => {
       // July 15, 2024 should be in 2024-2025 program year
       // Note: Using July 15 instead of July 1 to avoid timezone edge cases
       // where Date parsing might interpret the date differently
-      mockSnapshotStore.listSnapshots.mockResolvedValue([
-        createMockSnapshotMetadata('2024-07-15'),
-      ])
+      mockSnapshotStore.listSnapshotIds.mockResolvedValue(['2024-07-15'])
+      mockSnapshotStore.hasAllDistrictsRankings.mockResolvedValue(true)
 
       mockSnapshotStore.readAllDistrictsRankings.mockResolvedValueOnce(
         createMockRankingsData('2024-07-15', ['42'])
@@ -370,9 +366,8 @@ describe('AvailableProgramYearsService', () => {
 
     it('should correctly handle June 30th as end of program year', async () => {
       // June 30, 2024 should be in 2023-2024 program year
-      mockSnapshotStore.listSnapshots.mockResolvedValue([
-        createMockSnapshotMetadata('2024-06-30'),
-      ])
+      mockSnapshotStore.listSnapshotIds.mockResolvedValue(['2024-06-30'])
+      mockSnapshotStore.hasAllDistrictsRankings.mockResolvedValue(true)
 
       mockSnapshotStore.readAllDistrictsRankings.mockResolvedValueOnce(
         createMockRankingsData('2024-06-30', ['42'])
@@ -386,11 +381,12 @@ describe('AvailableProgramYearsService', () => {
 
   describe('district filtering', () => {
     it('should only include snapshots where the district has ranking data', async () => {
-      mockSnapshotStore.listSnapshots.mockResolvedValue([
-        createMockSnapshotMetadata('2023-09-15'),
-        createMockSnapshotMetadata('2023-10-15'),
-        createMockSnapshotMetadata('2023-11-15'),
+      mockSnapshotStore.listSnapshotIds.mockResolvedValue([
+        '2023-09-15',
+        '2023-10-15',
+        '2023-11-15',
       ])
+      mockSnapshotStore.hasAllDistrictsRankings.mockResolvedValue(true)
 
       // District 42 only in first and third snapshots
       mockSnapshotStore.readAllDistrictsRankings
@@ -411,9 +407,8 @@ describe('AvailableProgramYearsService', () => {
     })
 
     it('should handle alphanumeric district IDs', async () => {
-      mockSnapshotStore.listSnapshots.mockResolvedValue([
-        createMockSnapshotMetadata('2023-09-15'),
-      ])
+      mockSnapshotStore.listSnapshotIds.mockResolvedValue(['2023-09-15'])
+      mockSnapshotStore.hasAllDistrictsRankings.mockResolvedValue(true)
 
       mockSnapshotStore.readAllDistrictsRankings.mockResolvedValueOnce(
         createMockRankingsData('2023-09-15', ['F', 'U', '42'])
