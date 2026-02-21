@@ -38,6 +38,8 @@ export default defineConfig({
         '**/test-dir/**',
       ],
       thresholds: {
+        // TODO: Raise thresholds to match actual coverage (~74% lines, ~59% branches as of Feb 2026)
+        // Recommended targets: lines: 70, branches: 55, functions: 70, statements: 70
         lines: 50,
         branches: 40,
       },
