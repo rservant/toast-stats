@@ -45,7 +45,7 @@
    * TOASTMASTERS BRAND COLORS
    * Per Toastmasters Brand Guidelines
    * ======================================== */
-  
+
   /* TM Loyal Blue (#004165) - Primary brand color */
   --color-tm-loyal-blue: #004165;
   --color-tm-loyal-blue-100: rgba(0, 65, 101, 1.0);
@@ -58,7 +58,7 @@
   --color-tm-loyal-blue-30: rgba(0, 65, 101, 0.3);
   --color-tm-loyal-blue-20: rgba(0, 65, 101, 0.2);
   --color-tm-loyal-blue-10: rgba(0, 65, 101, 0.1);
-  
+
   /* TM True Maroon (#772432) - Secondary brand color */
   --color-tm-true-maroon: #772432;
   --color-tm-true-maroon-100: rgba(119, 36, 50, 1.0);
@@ -71,7 +71,7 @@
   --color-tm-true-maroon-30: rgba(119, 36, 50, 0.3);
   --color-tm-true-maroon-20: rgba(119, 36, 50, 0.2);
   --color-tm-true-maroon-10: rgba(119, 36, 50, 0.1);
-  
+
   /* TM Cool Gray (#A9B2B1) - Background/panel color */
   --color-tm-cool-gray: #A9B2B1;
   --color-tm-cool-gray-100: rgba(169, 178, 177, 1.0);
@@ -84,7 +84,7 @@
   --color-tm-cool-gray-30: rgba(169, 178, 177, 0.3);
   --color-tm-cool-gray-20: rgba(169, 178, 177, 0.2);
   --color-tm-cool-gray-10: rgba(169, 178, 177, 0.1);
-  
+
   /* TM Happy Yellow (#F2DF74) - Accent color */
   --color-tm-happy-yellow: #F2DF74;
   --color-tm-happy-yellow-100: rgba(242, 223, 116, 1.0);
@@ -97,7 +97,7 @@
   --color-tm-happy-yellow-30: rgba(242, 223, 116, 0.3);
   --color-tm-happy-yellow-20: rgba(242, 223, 116, 0.2);
   --color-tm-happy-yellow-10: rgba(242, 223, 116, 0.1);
-  
+
   /* TM Black (#000000) - Primary text color */
   --color-tm-black: #000000;
   --color-tm-black-100: rgba(0, 0, 0, 1.0);
@@ -110,7 +110,7 @@
   --color-tm-black-30: rgba(0, 0, 0, 0.3);
   --color-tm-black-20: rgba(0, 0, 0, 0.2);
   --color-tm-black-10: rgba(0, 0, 0, 0.1);
-  
+
   /* TM White (#FFFFFF) - Background/text on dark color */
   --color-tm-white: #FFFFFF;
   --color-tm-white-100: rgba(255, 255, 255, 1.0);
@@ -123,15 +123,15 @@
   --color-tm-white-30: rgba(255, 255, 255, 0.3);
   --color-tm-white-20: rgba(255, 255, 255, 0.2);
   --color-tm-white-10: rgba(255, 255, 255, 0.1);
-  
+
   /* ========================================
    * DEFAULT TAILWIND COLOR PALETTES
    * Standard Tailwind CSS color values for v4 migration
    * ======================================== */
-  
+
   /* White */
   --color-white: #ffffff;
-  
+
   /* Gray Palette */
   --color-gray-50: #f9fafb;
   --color-gray-100: #f3f4f6;
@@ -144,7 +144,7 @@
   --color-gray-800: #1f2937;
   --color-gray-900: #111827;
   --color-gray-950: #030712;
-  
+
   /* Red Palette */
   --color-red-50: #fef2f2;
   --color-red-100: #fee2e2;
@@ -157,7 +157,7 @@
   --color-red-800: #991b1b;
   --color-red-900: #7f1d1d;
   --color-red-950: #450a0a;
-  
+
   /* Green Palette */
   --color-green-50: #f0fdf4;
   --color-green-100: #dcfce7;
@@ -170,7 +170,7 @@
   --color-green-800: #166534;
   --color-green-900: #14532d;
   --color-green-950: #052e16;
-  
+
   /* Yellow Palette */
   --color-yellow-50: #fefce8;
   --color-yellow-100: #fef9c3;
@@ -183,7 +183,7 @@
   --color-yellow-800: #854d0e;
   --color-yellow-900: #713f12;
   --color-yellow-950: #422006;
-  
+
   /* Blue Palette */
   --color-blue-50: #eff6ff;
   --color-blue-100: #dbeafe;
@@ -196,7 +196,7 @@
   --color-blue-800: #1e40af;
   --color-blue-900: #1e3a8a;
   --color-blue-950: #172554;
-  
+
   /* Amber Palette */
   --color-amber-50: #fffbeb;
   --color-amber-100: #fef3c7;
@@ -209,16 +209,16 @@
   --color-amber-800: #92400e;
   --color-amber-900: #78350f;
   --color-amber-950: #451a03;
-  
+
   /* ========================================
    * TYPOGRAPHY
    * Per Toastmasters Brand Guidelines
    * ======================================== */
-  
+
   /* Font Families */
   --font-family-tm-headline: 'Montserrat', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
   --font-family-tm-body: 'Source Sans 3', system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-  
+
   /* Font Sizes with Line Heights
    * Tailwind v4 format: --text-{name}: {size}; generates text-{name} utility
    * Minimum body text: 14px per brand guidelines
@@ -234,7 +234,7 @@
   --text-5xl: 48px;
   --text-6xl: 60px;
   --text-7xl: 72px;
-  
+
   /* Line Heights
    * Minimum line-height ratio: 1.4 per brand guidelines
    */
@@ -243,7 +243,7 @@
   --line-height-normal: 1.5;
   --line-height-relaxed: 1.625;
   --line-height-loose: 2;
-  
+
   /* Font Weights
    * Headline: Medium (500), Bold (700), Black (900)
    * Body: Regular (400), Semibold (600), Bold (700)
@@ -253,7 +253,7 @@
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
   --font-weight-black: 900;
-  
+
   /* Letter Spacing */
   --letter-spacing-tighter: -0.05em;
   --letter-spacing-tight: -0.025em;
@@ -261,12 +261,12 @@
   --letter-spacing-wide: 0.025em;
   --letter-spacing-wider: 0.05em;
   --letter-spacing-widest: 0.1em;
-  
+
   /* ========================================
    * SPACING
    * Per Toastmasters Brand Guidelines
    * ======================================== */
-  
+
   /* Base spacing multiplier for Tailwind v4
    * px-1 = 1 * 0.25rem = 4px
    * px-2 = 2 * 0.25rem = 8px
@@ -275,37 +275,33 @@
    * etc.
    */
   --spacing: 0.25rem;
-  
-  /* Brand Spacing Scale (semantic names for p-xs, p-sm, etc.) */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  --spacing-2xl: 48px;
-  --spacing-3xl: 64px;
-  
-  /* Touch Target - 44px minimum per brand guidelines */
-  --spacing-touch: 44px;
-  
+
+  /* Brand Spacing Scale — available as --spacing-brand-*
+   * Note: Do NOT define --spacing-xs/sm/md/lg/xl/2xl/3xl here.
+   * Tailwind v4 reserves those names for built-in named sizes
+   * (e.g. max-w-lg = 32rem). Overriding them breaks max-w-*,
+   * w-*, min-w-*, etc. Brand components use --tm-space-*
+   * from spacing.css instead.
+   */
+
   /* ========================================
    * BORDER RADIUS
    * Per Toastmasters Brand Guidelines
    * ======================================== */
-  
+
   /* Border Radius Scale */
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
   --radius-2xl: 24px;
-  
+
   /* ========================================
    * GRADIENTS
    * Per Toastmasters Brand Guidelines
    * Note: Maximum 1 gradient per screen
    * ======================================== */
-  
+
   /* Gradient Stop Colors - for custom gradient construction */
   --color-tm-loyal-blue-start: #004165;
   --color-tm-loyal-blue-end: #006094;
@@ -326,28 +322,28 @@
   --gradient-tm-loyal-blue: linear-gradient(135deg, #004165 0%, #006094 100%);
   --gradient-tm-true-maroon: linear-gradient(135deg, #3B0104 0%, #781327 100%);
   --gradient-tm-cool-gray: linear-gradient(135deg, #A9B2B1 0%, #F5F5F5 100%);
-  
+
   /* Radial Gradient Variants */
   --gradient-tm-loyal-blue-radial: radial-gradient(circle, #004165 0%, #006094 100%);
   --gradient-tm-true-maroon-radial: radial-gradient(circle, #3B0104 0%, #781327 100%);
   --gradient-tm-cool-gray-radial: radial-gradient(circle, #A9B2B1 0%, #F5F5F5 100%);
-  
+
   /* Vertical Gradient Variants (180deg) */
   --gradient-tm-loyal-blue-vertical: linear-gradient(180deg, #004165 0%, #006094 100%);
   --gradient-tm-true-maroon-vertical: linear-gradient(180deg, #3B0104 0%, #781327 100%);
   --gradient-tm-cool-gray-vertical: linear-gradient(180deg, #A9B2B1 0%, #F5F5F5 100%);
-  
+
   /* Horizontal Gradient Variants (90deg) */
   --gradient-tm-loyal-blue-horizontal: linear-gradient(90deg, #004165 0%, #006094 100%);
   --gradient-tm-true-maroon-horizontal: linear-gradient(90deg, #3B0104 0%, #781327 100%);
   --gradient-tm-cool-gray-horizontal: linear-gradient(90deg, #A9B2B1 0%, #F5F5F5 100%);
-  
+
   /* Cool Gray Opacity Variations (20% increments per brand guidelines) */
   --gradient-tm-cool-gray-80: linear-gradient(135deg, rgba(169, 178, 177, 0.8) 0%, rgba(245, 245, 245, 0.8) 100%);
   --gradient-tm-cool-gray-60: linear-gradient(135deg, rgba(169, 178, 177, 0.6) 0%, rgba(245, 245, 245, 0.6) 100%);
   --gradient-tm-cool-gray-40: linear-gradient(135deg, rgba(169, 178, 177, 0.4) 0%, rgba(245, 245, 245, 0.4) 100%);
   --gradient-tm-cool-gray-20: linear-gradient(135deg, rgba(169, 178, 177, 0.2) 0%, rgba(245, 245, 245, 0.2) 100%);
-  
+
   /* Overlay Gradients for Text Contrast */
   --gradient-overlay-dark: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.3) 100%);
   --gradient-overlay-light: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.3) 100%);
@@ -377,7 +373,7 @@
     padding-left: 1rem;
     padding-right: 1rem;
   }
-  
+
   @media (min-width: 640px) {
     .container {
       max-width: 640px;
@@ -385,13 +381,13 @@
       padding-right: 2rem;
     }
   }
-  
+
   @media (min-width: 768px) {
     .container {
       max-width: 768px;
     }
   }
-  
+
   @media (min-width: 1024px) {
     .container {
       max-width: 1024px;
@@ -399,7 +395,7 @@
       padding-right: 4rem;
     }
   }
-  
+
   @media (min-width: 1280px) {
     .container {
       max-width: 1280px;
@@ -407,7 +403,7 @@
       padding-right: 5rem;
     }
   }
-  
+
   @media (min-width: 1536px) {
     .container {
       max-width: 1536px;
@@ -496,7 +492,7 @@ body {
   * {
     border-color: currentColor !important;
   }
-  
+
   *:focus-visible {
     outline-width: 3px;
   }
@@ -504,6 +500,7 @@ body {
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -538,7 +535,8 @@ body {
 /* Improve text readability on mobile */
 @media (max-width: 640px) {
   body {
-    font-size: 16px; /* Prevents zoom on iOS */
+    font-size: 16px;
+    /* Prevents zoom on iOS */
   }
 }
 
@@ -555,12 +553,15 @@ html {
 
 /* Hide scrollbar for horizontal scrolling tabs */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 
 /* Tooltip animations */
@@ -569,6 +570,7 @@ html {
     opacity: 0;
     transform: translateY(-4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -581,9 +583,12 @@ html {
 
 /* Loading skeleton pulse animation */
 @keyframes skeleton-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
