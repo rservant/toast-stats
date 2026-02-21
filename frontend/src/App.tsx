@@ -4,9 +4,6 @@ import { queryClient } from './config/queryClient'
 import { ProgramYearProvider } from './contexts/ProgramYearContext'
 import LandingPage from './pages/LandingPage'
 import DistrictDetailPage from './pages/DistrictDetailPage'
-import DistrictConfigurationPage from './pages/DistrictConfigurationPage'
-import AdminDashboardPage from './pages/AdminDashboardPage'
-import AdminPage from './pages/AdminPage'
 
 function Layout(): React.JSX.Element {
   return (
@@ -33,18 +30,6 @@ const router = createBrowserRouter(
         {
           path: 'district/:districtId',
           element: <DistrictDetailPage />,
-        },
-        {
-          path: 'admin/districts',
-          element: <DistrictConfigurationPage />,
-        },
-        {
-          path: 'admin/dashboard',
-          element: <AdminDashboardPage />,
-        },
-        {
-          path: 'admin',
-          element: <AdminPage />,
         },
       ],
     },

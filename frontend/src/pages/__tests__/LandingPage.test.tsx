@@ -250,16 +250,13 @@ describe('LandingPage - Error Handling', () => {
       )
     ).toBeInTheDocument()
 
-    // Check for Admin Panel link (BackfillButton was removed, now directs to Admin Panel)
-    expect(screen.getByText('Go to Admin Panel')).toBeInTheDocument()
-
-    // Check for "Check Again" button
+    // Check for "Check Again" button (now the primary action)
     expect(screen.getByText('Check Again')).toBeInTheDocument()
 
     // Check for setup instructions
     expect(screen.getByText('What happens next:')).toBeInTheDocument()
     expect(
-      screen.getByText('Go to the Admin page to manage data collection')
+      screen.getByText(/The data pipeline will automatically collect data/)
     ).toBeInTheDocument()
   })
 

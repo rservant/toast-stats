@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../services/api'
 import HistoricalRankChart from '../components/HistoricalRankChart'
@@ -288,31 +288,21 @@ const LandingPage: React.FC = () => {
                   <ul className="space-y-2 text-tm-black">
                     <li className="flex items-start">
                       <span className="text-tm-loyal-blue mr-2">1.</span>
-                      Go to the Admin page to manage data collection
+                      The data pipeline will automatically collect data from the
+                      Toastmasters dashboard
                     </li>
                     <li className="flex items-start">
                       <span className="text-tm-loyal-blue mr-2">2.</span>
-                      The system will download data from the Toastmasters
-                      dashboard
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-tm-loyal-blue mr-2">3.</span>
                       Once complete, district rankings and analytics will be
                       available
                     </li>
                   </ul>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Link
-                    to="/admin"
-                    className="px-6 py-3 text-lg bg-tm-loyal-blue text-white rounded-lg hover:bg-opacity-90 transition-colors font-medium text-center"
-                  >
-                    Go to Admin Panel
-                  </Link>
+                <div className="flex justify-center">
                   <button
                     onClick={() => refetch()}
-                    className="px-6 py-3 bg-tm-cool-gray text-tm-black rounded-lg hover:bg-opacity-80 transition-colors"
+                    className="px-6 py-3 text-lg bg-tm-loyal-blue text-white rounded-lg hover:bg-opacity-90 transition-colors font-medium"
                   >
                     Check Again
                   </button>
@@ -366,14 +356,6 @@ const LandingPage: React.FC = () => {
                 Compare district performance across paid clubs, payments, and
                 distinguished clubs
               </p>
-            </div>
-            <div className="flex gap-3">
-              <Link
-                to="/admin"
-                className="px-4 py-2 bg-tm-cool-gray text-tm-black rounded-sm hover:bg-opacity-80 transition-colors min-h-[44px] flex items-center text-sm font-medium font-tm-body"
-              >
-                Admin
-              </Link>
             </div>
           </div>
 

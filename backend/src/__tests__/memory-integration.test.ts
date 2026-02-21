@@ -29,7 +29,6 @@ function mockAllDependencies() {
     },
   }))
   vi.doMock('../routes/districts/index.js', () => ({ default: vi.fn() }))
-  vi.doMock('../routes/admin/index.js', () => ({ default: vi.fn() }))
   vi.doMock('../services/ProductionServiceFactory.js', () => ({
     getProductionServiceFactory: vi.fn(() => ({
       createCacheConfigService: vi.fn(() => ({

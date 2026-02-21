@@ -6,7 +6,6 @@ dotenv.config()
 import express from 'express'
 import cors from 'cors'
 import districtRoutes from './routes/districts/index.js'
-import adminRoutes from './routes/admin/index.js'
 import { logger } from './utils/logger.js'
 import { getProductionServiceFactory } from './services/ProductionServiceFactory.js'
 import { validateHeapConfiguration } from './utils/heapValidator.js'
@@ -87,9 +86,6 @@ app.get('/api', (_req, res) => {
 
 // District routes
 app.use('/api/districts', districtRoutes)
-
-// Admin routes
-app.use('/api/admin', adminRoutes)
 
 // Error handling middleware
 app.use(

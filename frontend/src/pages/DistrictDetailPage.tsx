@@ -483,19 +483,19 @@ const DistrictDetailPage: React.FC = () => {
             />
           )}
 
-          {/* No Data Prompt - Direct to Admin Panel */}
+          {/* No Data Prompt */}
           {!isLoadingOverview &&
             !overviewError &&
             !hasOverviewData &&
             districtId && (
               <EmptyState
                 title="No District Data Available"
-                message="This district doesn't have any cached historical data yet. Use the Admin Panel to manage data collection."
+                message="This district doesn't have any cached historical data yet. Data will be available after the next pipeline run."
                 icon="data"
                 action={{
-                  label: 'Go to Admin Panel',
+                  label: 'Back to Rankings',
                   onClick: () => {
-                    navigate('/admin')
+                    navigate('/')
                   },
                 }}
               />
