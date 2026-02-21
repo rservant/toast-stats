@@ -77,6 +77,7 @@ vi.mock('../shared.js', () => ({
   }),
   cacheDirectory: '/tmp/test-cache',
   snapshotStore: mockSnapshotStore,
+  analyticsFileReader: undefined,
   // Implement getSnapshotForDate using the mock snapshotStore
   getSnapshotForDate: vi.fn(async (endDate?: string) => {
     // When no endDate is provided, use the latest successful snapshot

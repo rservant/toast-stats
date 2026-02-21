@@ -20,6 +20,7 @@ import {
   cacheDirectory,
   getSnapshotForDate,
   getTimeSeriesIndexService,
+  analyticsFileReader,
 } from './shared.js'
 import {
   PreComputedAnalyticsReader,
@@ -39,6 +40,7 @@ export const analyticsRouter = Router()
 // Requirement 4.1: THE Backend SHALL read pre-computed analytics from the file system
 const preComputedAnalyticsReader = new PreComputedAnalyticsReader({
   cacheDir: cacheDirectory,
+  readFile: analyticsFileReader,
 })
 
 /**

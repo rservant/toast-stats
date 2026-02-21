@@ -63,6 +63,7 @@ vi.mock('../shared.js', () => ({
   getTimeSeriesIndexService: vi.fn(),
   cacheDirectory: '/tmp/test-cache',
   snapshotStore: mockSnapshotStore,
+  analyticsFileReader: undefined,
 }))
 
 // Mock the cache middleware

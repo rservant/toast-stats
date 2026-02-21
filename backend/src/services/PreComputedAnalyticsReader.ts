@@ -41,11 +41,25 @@ import {
 import { logger } from '../utils/logger.js'
 
 /**
+ * Function type for reading file contents.
+ * Returns the file content as a string, or null if the file does not exist.
+ * Throws on errors other than file-not-found.
+ */
+export type AnalyticsFileReader = (filePath: string) => Promise<string | null>
+
+/**
  * Configuration for PreComputedAnalyticsReader
  */
 export interface PreComputedAnalyticsReaderConfig {
   /** Base cache directory (CACHE_DIR) */
   cacheDir: string
+  /**
+   * Optional custom file reader function.
+   * When provided, this is used instead of fs.readFile for reading analytics files.
+   * This enables GCS-backed reads in production where files are not on the local filesystem.
+   * The function should return null for missing files (instead of throwing ENOENT).
+   */
+  readFile?: AnalyticsFileReader
 }
 
 /**
@@ -285,9 +299,30 @@ export interface IPreComputedAnalyticsReader {
  */
 export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
   private readonly cacheDir: string
+  private readonly fileReader: AnalyticsFileReader
 
   constructor(config: PreComputedAnalyticsReaderConfig) {
     this.cacheDir = config.cacheDir
+    this.fileReader =
+      config.readFile ?? PreComputedAnalyticsReader.defaultFileReader
+  }
+
+  /**
+   * Default file reader using Node.js fs module.
+   * Returns null for missing files (ENOENT), throws on other errors.
+   */
+  private static async defaultFileReader(
+    filePath: string
+  ): Promise<string | null> {
+    try {
+      return await fs.readFile(filePath, 'utf-8')
+    } catch (error) {
+      const errnoError = error as { code?: string }
+      if (errnoError.code === 'ENOENT') {
+        return null
+      }
+      throw error
+    }
   }
 
   /**
@@ -392,6 +427,7 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
 
   /**
    * Read and parse a pre-computed analytics file.
+   * Uses the injected file reader (local fs or GCS) for file access.
    *
    * @param filePath - Path to the analytics file
    * @returns The parsed file content or null if file not found
@@ -403,7 +439,16 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
   ): Promise<PreComputedAnalyticsFile<T> | null> {
     const safePath = this.validatePathContainment(filePath)
     try {
-      const content = await fs.readFile(safePath, 'utf-8')
+      const content = await this.fileReader(safePath)
+
+      // File not found — reader returns null instead of throwing ENOENT
+      if (content === null) {
+        logger.debug('Analytics file not found', {
+          operation: 'readAnalyticsFile',
+          filePath,
+        })
+        return null
+      }
 
       let parsed: PreComputedAnalyticsFile<T>
       try {
@@ -453,17 +498,7 @@ export class PreComputedAnalyticsReader implements IPreComputedAnalyticsReader {
         throw error
       }
 
-      // Handle file not found
-      const errnoError = error as { code?: string }
-      if (errnoError.code === 'ENOENT') {
-        logger.debug('Analytics file not found', {
-          operation: 'readAnalyticsFile',
-          filePath,
-        })
-        return null
-      }
-
-      // Handle other file system errors
+      // Handle other errors
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error'
       logger.error('Failed to read analytics file', {

@@ -26,6 +26,7 @@ import {
   extractStringParam,
   snapshotStore,
   cacheDirectory,
+  analyticsFileReader,
 } from './shared.js'
 import { PreComputedAnalyticsReader } from '../../services/PreComputedAnalyticsReader.js'
 
@@ -34,6 +35,7 @@ export const analyticsSummaryRouter = Router()
 // Create PreComputedAnalyticsReader instance for reading year-over-year data
 const preComputedAnalyticsReader = new PreComputedAnalyticsReader({
   cacheDir: cacheDirectory,
+  readFile: analyticsFileReader,
 })
 
 /**

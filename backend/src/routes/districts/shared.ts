@@ -46,6 +46,96 @@ export const snapshotStore: ISnapshotStorage = storageProviders.snapshotStorage
 // Backward compatibility alias
 export const perDistrictSnapshotStore = snapshotStore
 
+/**
+ * Creates an analytics file reader appropriate for the current storage provider.
+ *
+ * When STORAGE_PROVIDER=gcp, returns a reader that downloads files from GCS.
+ * When STORAGE_PROVIDER=local, returns undefined (uses default fs.readFile).
+ *
+ * The reader translates local filesystem paths like:
+ *   {cacheDir}/snapshots/2026-02-19/analytics/district_61_analytics.json
+ * into GCS object paths like:
+ *   snapshots/2026-02-19/analytics/district_61_analytics.json
+ */
+function createAnalyticsFileReader():
+  | ((filePath: string) => Promise<string | null>)
+  | undefined {
+  const provider = process.env['STORAGE_PROVIDER']
+  if (provider !== 'gcp') {
+    return undefined // Use default fs.readFile
+  }
+
+  const bucketName = process.env['GCS_BUCKET_NAME']
+  if (!bucketName) {
+    logger.warn(
+      'GCS_BUCKET_NAME not set, analytics reader falling back to local filesystem',
+      {
+        operation: 'createAnalyticsFileReader',
+      }
+    )
+    return undefined
+  }
+
+  // Capture as const to satisfy TypeScript narrowing in closures
+  const gcsAnalyticsBucket = bucketName
+
+  // Lazy-initialize bucket reference on first read
+  let bucketPromise: Promise<import('@google-cloud/storage').Bucket> | null =
+    null
+
+  function getBucket(): Promise<import('@google-cloud/storage').Bucket> {
+    if (!bucketPromise) {
+      bucketPromise = import('@google-cloud/storage').then(({ Storage }) => {
+        const storage = new Storage()
+        return storage.bucket(gcsAnalyticsBucket)
+      })
+    }
+    return bucketPromise
+  }
+
+  logger.info('Created GCS-backed analytics file reader', {
+    operation: 'createAnalyticsFileReader',
+    bucket: bucketName,
+  })
+
+  return async (filePath: string): Promise<string | null> => {
+    // Extract the GCS object path from the local filesystem path.
+    // Local paths look like: /path/to/cache/snapshots/2026-02-19/analytics/file.json
+    // GCS paths look like:   snapshots/2026-02-19/analytics/file.json
+    const snapshotsIdx = filePath.indexOf('/snapshots/')
+    if (snapshotsIdx === -1) {
+      logger.warn('Cannot map file path to GCS object path', {
+        operation: 'analyticsFileReader',
+        filePath,
+      })
+      return null
+    }
+
+    // Strip the leading slash from the extracted path
+    const objectPath = filePath.substring(snapshotsIdx + 1)
+
+    try {
+      const bucket = await getBucket()
+      const file = bucket.file(objectPath)
+      const [exists] = await file.exists()
+      if (!exists) {
+        return null
+      }
+      const [buffer] = await file.download()
+      return buffer.toString('utf-8')
+    } catch (error) {
+      // GCS 404 → return null
+      const gcsError = error as { code?: number }
+      if (gcsError.code === 404) {
+        return null
+      }
+      throw error
+    }
+  }
+}
+
+export const analyticsFileReader = createAnalyticsFileReader()
+
 // Note: createDistrictDataAggregator expects PerDistrictSnapshotStoreInterface which includes
 // checkVersionCompatibility and shouldUpdateClosingPeriodSnapshot methods. ISnapshotStorage
 // includes all methods that DistrictDataAggregator actually uses. This type assertion is safe
