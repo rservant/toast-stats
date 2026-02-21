@@ -36,6 +36,7 @@ import type {
 vi.mock('../../services/api', () => ({
   apiClient: {
     get: vi.fn(),
+    post: vi.fn(),
   },
 }))
 
@@ -184,15 +185,18 @@ describe('useGlobalRankings', () => {
       const mockAvailableYears = createMockAvailableYearsResponse(districtId)
       const mockRankHistory = createMockRankHistoryResponse(districtId)
 
-      // Mock both API endpoints - available years and rank history
+      // Mock GET for available years, POST for batch rank history
       mockedApiClient.get.mockImplementation((url: string) => {
         if (url.includes('available-ranking-years')) {
           return Promise.resolve({ data: mockAvailableYears })
         }
-        if (url.includes('rank-history')) {
-          return Promise.resolve({ data: mockRankHistory })
+        return Promise.reject(new Error(`Unexpected GET URL: ${url}`))
+      })
+      mockedApiClient.post.mockImplementation((url: string) => {
+        if (url.includes('rank-history-batch')) {
+          return Promise.resolve({ data: [mockRankHistory] })
         }
-        return Promise.reject(new Error(`Unexpected URL: ${url}`))
+        return Promise.reject(new Error(`Unexpected POST URL: ${url}`))
       })
 
       const { result } = renderHook(() => useGlobalRankings({ districtId }), {
@@ -227,10 +231,13 @@ describe('useGlobalRankings', () => {
         if (url.includes('available-ranking-years')) {
           return Promise.resolve({ data: mockAvailableYears })
         }
-        if (url.includes('rank-history')) {
-          return Promise.resolve({ data: mockRankHistory })
+        return Promise.reject(new Error(`Unexpected GET URL: ${url}`))
+      })
+      mockedApiClient.post.mockImplementation((url: string) => {
+        if (url.includes('rank-history-batch')) {
+          return Promise.resolve({ data: [mockRankHistory] })
         }
-        return Promise.reject(new Error(`Unexpected URL: ${url}`))
+        return Promise.reject(new Error(`Unexpected POST URL: ${url}`))
       })
 
       const { result } = renderHook(() => useGlobalRankings({ districtId }), {
@@ -264,10 +271,13 @@ describe('useGlobalRankings', () => {
         if (url.includes('available-ranking-years')) {
           return Promise.resolve({ data: mockAvailableYears })
         }
-        if (url.includes('rank-history')) {
-          return Promise.resolve({ data: mockRankHistory })
+        return Promise.reject(new Error(`Unexpected GET URL: ${url}`))
+      })
+      mockedApiClient.post.mockImplementation((url: string) => {
+        if (url.includes('rank-history-batch')) {
+          return Promise.resolve({ data: [mockRankHistory] })
         }
-        return Promise.reject(new Error(`Unexpected URL: ${url}`))
+        return Promise.reject(new Error(`Unexpected POST URL: ${url}`))
       })
 
       const { result } = renderHook(() => useGlobalRankings({ districtId }), {
@@ -304,12 +314,15 @@ describe('useGlobalRankings', () => {
             setTimeout(() => resolve({ data: mockAvailableYears }), 50)
           )
         }
-        if (url.includes('rank-history')) {
+        return Promise.reject(new Error(`Unexpected GET URL: ${url}`))
+      })
+      mockedApiClient.post.mockImplementation((url: string) => {
+        if (url.includes('rank-history-batch')) {
           return new Promise(resolve =>
-            setTimeout(() => resolve({ data: mockRankHistory }), 50)
+            setTimeout(() => resolve({ data: [mockRankHistory] }), 50)
           )
         }
-        return Promise.reject(new Error(`Unexpected URL: ${url}`))
+        return Promise.reject(new Error(`Unexpected POST URL: ${url}`))
       })
 
       const { result } = renderHook(() => useGlobalRankings({ districtId }), {
@@ -363,10 +376,13 @@ describe('useGlobalRankings', () => {
         if (url.includes('available-ranking-years')) {
           return Promise.resolve({ data: mockAvailableYears })
         }
-        if (url.includes('rank-history')) {
-          return Promise.resolve({ data: mockRankHistory })
+        return Promise.reject(new Error(`Unexpected GET URL: ${url}`))
+      })
+      mockedApiClient.post.mockImplementation((url: string) => {
+        if (url.includes('rank-history-batch')) {
+          return Promise.resolve({ data: [mockRankHistory] })
         }
-        return Promise.reject(new Error(`Unexpected URL: ${url}`))
+        return Promise.reject(new Error(`Unexpected POST URL: ${url}`))
       })
 
       const { result } = renderHook(() => useGlobalRankings({ districtId }), {
@@ -399,10 +415,13 @@ describe('useGlobalRankings', () => {
         if (url.includes('available-ranking-years')) {
           return Promise.resolve({ data: mockAvailableYears })
         }
-        if (url.includes('rank-history')) {
+        return Promise.reject(new Error(`Unexpected GET URL: ${url}`))
+      })
+      mockedApiClient.post.mockImplementation((url: string) => {
+        if (url.includes('rank-history-batch')) {
           // Return empty history when no program years
           return Promise.resolve({
-            data: {
+            data: [{
               districtId,
               districtName: `District ${districtId}`,
               history: [],
@@ -411,10 +430,10 @@ describe('useGlobalRankings', () => {
                 endDate: '',
                 year: '',
               },
-            },
+            }],
           })
         }
-        return Promise.reject(new Error(`Unexpected URL: ${url}`))
+        return Promise.reject(new Error(`Unexpected POST URL: ${url}`))
       })
 
       const { result } = renderHook(() => useGlobalRankings({ districtId }), {
