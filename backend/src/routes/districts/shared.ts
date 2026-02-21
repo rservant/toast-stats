@@ -18,6 +18,7 @@ import {
   TimeSeriesIndexService,
   type ITimeSeriesIndexService,
 } from '../../services/TimeSeriesIndexService.js'
+import { GCSTimeSeriesIndexStorage } from '../../services/storage/GCSTimeSeriesIndexStorage.js'
 import type { ISnapshotStorage } from '../../types/storageInterfaces.js'
 import type { PerDistrictSnapshotStoreInterface } from '../../services/SnapshotStore.js'
 import { transformErrorResponse } from '../../utils/transformers.js'
@@ -172,9 +173,25 @@ async function initializeServices(): Promise<void> {
   })
 
   // Initialize TimeSeriesIndexService (read-only, for serving pre-computed data)
-  _timeSeriesIndexService = new TimeSeriesIndexService({
-    cacheDir: cacheDirectory,
-  })
+  // Use GCS-backed implementation when STORAGE_PROVIDER=gcp
+  const storageProvider = process.env['STORAGE_PROVIDER']
+  const gcsBucketName = process.env['GCS_BUCKET_NAME']
+  const gcpProjectId = process.env['GCP_PROJECT_ID']
+
+  if (storageProvider === 'gcp' && gcsBucketName && gcpProjectId) {
+    _timeSeriesIndexService = new GCSTimeSeriesIndexStorage({
+      projectId: gcpProjectId,
+      bucketName: gcsBucketName,
+    })
+    logger.info('Using GCS-backed TimeSeriesIndexService', {
+      operation: 'initializeServices',
+      bucket: gcsBucketName,
+    })
+  } else {
+    _timeSeriesIndexService = new TimeSeriesIndexService({
+      cacheDir: cacheDirectory,
+    })
+  }
 
   // RefreshService no longer takes timeSeriesIndexService or rankingCalculator
   // Time-series data and rankings are now pre-computed by scraper-cli
