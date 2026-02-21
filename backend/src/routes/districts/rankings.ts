@@ -14,19 +14,14 @@ import {
   AvailableProgramYearsService,
   type IAvailableProgramYearsService,
 } from '../../services/AvailableProgramYearsService.js'
-import type { FileSnapshotStore } from '../../services/SnapshotStore.js'
 import type { AvailableRankingYearsResponse } from '../../types/districts.js'
 
 export const rankingsRouter = Router()
 
 // Initialize the service with the snapshot store
-// This can be overridden for testing via dependency injection
-// Note: AvailableProgramYearsService expects FileSnapshotStore. This type assertion is
-// temporary until the service is updated to accept ISnapshotStorage.
+// AvailableProgramYearsService now accepts ISnapshotStorage directly
 let availableProgramYearsService: IAvailableProgramYearsService =
-  new AvailableProgramYearsService(
-    perDistrictSnapshotStore as unknown as FileSnapshotStore
-  )
+  new AvailableProgramYearsService(perDistrictSnapshotStore)
 
 /**
  * Set the AvailableProgramYearsService instance (for testing/dependency injection)

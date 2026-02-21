@@ -37,7 +37,7 @@ describe('AvailableProgramYearsService', () => {
       totalDistricts: districtIds.length,
       fromCache: false,
     },
-    rankings: districtIds.map(districtId => ({
+    rankings: districtIds.map((districtId, index) => ({
       districtId,
       districtName: `District ${districtId}`,
       region: 'Test Region',
@@ -56,6 +56,7 @@ describe('AvailableProgramYearsService', () => {
       paymentsRank: 1,
       distinguishedRank: 1,
       aggregateScore: 300,
+      overallRank: index + 1,
     })),
   })
 

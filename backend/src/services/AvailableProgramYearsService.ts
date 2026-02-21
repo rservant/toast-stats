@@ -11,7 +11,7 @@
  */
 
 import { logger } from '../utils/logger.js'
-import type { FileSnapshotStore } from './SnapshotStore.js'
+import type { ISnapshotStorage } from '../types/storageInterfaces.js'
 import type {
   ProgramYearWithData,
   AvailableRankingYearsResponse,
@@ -65,9 +65,9 @@ interface ProgramYearAggregation {
  * snapshots containing data for a specific district.
  */
 export class AvailableProgramYearsService implements IAvailableProgramYearsService {
-  private readonly snapshotStore: FileSnapshotStore
+  private readonly snapshotStore: ISnapshotStorage
 
-  constructor(snapshotStore: FileSnapshotStore) {
+  constructor(snapshotStore: ISnapshotStorage) {
     this.snapshotStore = snapshotStore
   }
 
@@ -75,9 +75,9 @@ export class AvailableProgramYearsService implements IAvailableProgramYearsServi
    * Get all program years with ranking data available for a district
    *
    * This method:
-   * 1. Lists all successful snapshots from the store
-   * 2. Reads rankings data from each snapshot
-   * 3. Filters to snapshots containing the specified district
+   * 1. Lists all snapshot IDs (fast prefix listing, ~1s)
+   * 2. Checks each for rankings data existence (fast file check)
+   * 3. Reads rankings and filters to those containing the specified district
    * 4. Groups by program year and calculates metadata
    *
    * @param districtId - The district ID to query
@@ -94,12 +94,10 @@ export class AvailableProgramYearsService implements IAvailableProgramYearsServi
       district_id: districtId,
     })
 
-    // Get all successful snapshots
-    const allSnapshots = await this.snapshotStore.listSnapshots(undefined, {
-      status: 'success',
-    })
+    // Use fast prefix listing (~1s) instead of listSnapshots (~91s with 2,370 snapshots)
+    const allSnapshotIds = await this.snapshotStore.listSnapshotIds()
 
-    if (allSnapshots.length === 0) {
+    if (allSnapshotIds.length === 0) {
       logger.info('No snapshots available for program years query', {
         operation: 'AvailableProgramYearsService.getAvailableProgramYears',
         request_id: requestId,
@@ -115,12 +113,18 @@ export class AvailableProgramYearsService implements IAvailableProgramYearsServi
     // Group snapshots by program year and check for district data
     const programYearMap = new Map<string, ProgramYearAggregation>()
 
-    for (const snapshotMeta of allSnapshots) {
+    for (const snapshotId of allSnapshotIds) {
       try {
+        // Fast existence check — skip snapshots without rankings files
+        const hasRankings =
+          await this.snapshotStore.hasAllDistrictsRankings(snapshotId)
+        if (!hasRankings) {
+          continue
+        }
+
         // Read rankings data from snapshot
-        const rankings = await this.snapshotStore.readAllDistrictsRankings(
-          snapshotMeta.snapshot_id
-        )
+        const rankings =
+          await this.snapshotStore.readAllDistrictsRankings(snapshotId)
 
         if (!rankings) {
           continue
@@ -136,6 +140,7 @@ export class AvailableProgramYearsService implements IAvailableProgramYearsServi
         }
 
         // Determine program year for this snapshot
+        // Snapshot IDs are YYYY-MM-DD date strings matching sourceCsvDate
         const snapshotDate = rankings.metadata.sourceCsvDate
         const programYearInfo = getProgramYearInfo(snapshotDate)
         const programYearKey = programYearInfo.year
@@ -159,7 +164,7 @@ export class AvailableProgramYearsService implements IAvailableProgramYearsServi
         logger.warn('Failed to read rankings from snapshot', {
           operation: 'AvailableProgramYearsService.getAvailableProgramYears',
           request_id: requestId,
-          snapshot_id: snapshotMeta.snapshot_id,
+          snapshot_id: snapshotId,
           error: error instanceof Error ? error.message : 'Unknown error',
         })
       }
