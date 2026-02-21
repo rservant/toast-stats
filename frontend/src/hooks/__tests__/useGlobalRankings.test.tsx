@@ -421,16 +421,18 @@ describe('useGlobalRankings', () => {
         if (url.includes('rank-history-batch')) {
           // Return empty history when no program years
           return Promise.resolve({
-            data: [{
-              districtId,
-              districtName: `District ${districtId}`,
-              history: [],
-              programYear: {
-                startDate: '',
-                endDate: '',
-                year: '',
+            data: [
+              {
+                districtId,
+                districtName: `District ${districtId}`,
+                history: [],
+                programYear: {
+                  startDate: '',
+                  endDate: '',
+                  year: '',
+                },
               },
-            }],
+            ],
           })
         }
         return Promise.reject(new Error(`Unexpected POST URL: ${url}`))
