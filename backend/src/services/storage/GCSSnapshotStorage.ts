@@ -812,6 +812,32 @@ export class GCSSnapshotStorage implements ISnapshotStorage {
     return results
   }
 
+  async listSnapshotIds(): Promise<string[]> {
+    // Fast path: only list GCS prefixes, no metadata reads
+    // This is a single paginated GCS list API call (~1s vs ~91s for listSnapshots)
+    const snapshotIds: string[] = []
+    for await (const id of this.iterateSnapshotPrefixes()) {
+      snapshotIds.push(id)
+    }
+
+    // Sort in reverse lexical order (newest first)
+    snapshotIds.sort((a, b) => b.localeCompare(a))
+    return snapshotIds
+  }
+
+  async hasDistrictInSnapshot(
+    snapshotId: string,
+    districtId: string
+  ): Promise<boolean> {
+    this.validateSnapshotId(snapshotId)
+    this.validateDistrictId(districtId)
+    const objectPath = this.buildObjectPath(
+      snapshotId,
+      `district_${districtId}.json`
+    )
+    return this.checkObjectExists(objectPath, 'hasDistrictInSnapshot')
+  }
+
   async readDistrictData(
     snapshotId: string,
     districtId: string

@@ -745,6 +745,43 @@ export class FileSnapshotStore
     }
   }
 
+  async listSnapshotIds(): Promise<string[]> {
+    try {
+      await fs.mkdir(this.snapshotsDir, { recursive: true })
+      const entries = await fs.readdir(this.snapshotsDir)
+      const snapshotIds: string[] = []
+      for (const entry of entries) {
+        const fullPath = path.join(this.snapshotsDir, entry)
+        const stats = await fs.stat(fullPath)
+        if (stats.isDirectory()) {
+          snapshotIds.push(entry)
+        }
+      }
+      // Sort newest first
+      snapshotIds.sort((a, b) => b.localeCompare(a))
+      return snapshotIds
+    } catch {
+      return []
+    }
+  }
+
+  async hasDistrictInSnapshot(
+    snapshotId: string,
+    districtId: string
+  ): Promise<boolean> {
+    try {
+      const districtPath = path.join(
+        this.snapshotsDir,
+        snapshotId,
+        `district_${districtId}.json`
+      )
+      await fs.access(districtPath)
+      return true
+    } catch {
+      return false
+    }
+  }
+
   async checkVersionCompatibility(snapshotId: string): Promise<{
     isCompatible: boolean
     schemaCompatible: boolean

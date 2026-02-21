@@ -135,6 +135,32 @@ export interface ISnapshotStorage {
   ): Promise<SnapshotMetadata[]>
 
   /**
+   * List all snapshot IDs without reading metadata
+   *
+   * Returns just the snapshot identifiers (YYYY-MM-DD dates) by listing
+   * storage prefixes/directories. Much faster than listSnapshots() because
+   * it avoids reading metadata files for each snapshot.
+   *
+   * @returns Array of snapshot IDs sorted newest-first
+   */
+  listSnapshotIds(): Promise<string[]>
+
+  /**
+   * Check if a specific district exists in a snapshot
+   *
+   * Performs a single file existence check rather than listing all districts.
+   * Much faster than listDistrictsInSnapshot() when checking one district.
+   *
+   * @param snapshotId - The snapshot ID (ISO date format: YYYY-MM-DD)
+   * @param districtId - The district identifier to check for
+   * @returns True if the district exists in the snapshot
+   */
+  hasDistrictInSnapshot(
+    snapshotId: string,
+    districtId: string
+  ): Promise<boolean>
+
+  /**
    * Get a specific snapshot by ID
    *
    * Retrieves a complete snapshot including all district data by its

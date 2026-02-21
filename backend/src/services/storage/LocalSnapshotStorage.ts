@@ -110,6 +110,17 @@ export class LocalSnapshotStorage implements ISnapshotStorage {
     return this.store.listSnapshots(limit, filters)
   }
 
+  async listSnapshotIds(): Promise<string[]> {
+    return this.store.listSnapshotIds()
+  }
+
+  async hasDistrictInSnapshot(
+    snapshotId: string,
+    districtId: string
+  ): Promise<boolean> {
+    return this.store.hasDistrictInSnapshot(snapshotId, districtId)
+  }
+
   /**
    * Get a specific snapshot by ID
    *
