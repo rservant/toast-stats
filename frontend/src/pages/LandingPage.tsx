@@ -33,6 +33,9 @@ const LandingPage: React.FC = () => {
   const [selectedRegionsForHistory, setSelectedRegionsForHistory] = useState<
     string[]
   >([])
+  // Mobile-friendly collapsible region filters
+  const [isHistoryRegionExpanded, setIsHistoryRegionExpanded] = useState(false)
+  const [isTableRegionExpanded, setIsTableRegionExpanded] = useState(false)
 
   // Fetch cached dates
   const { data: cachedDatesData } = useQuery({
@@ -427,10 +430,29 @@ const LandingPage: React.FC = () => {
           {/* Region Multi-Select for Historical Tracking */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
-              <label className="text-sm font-medium text-gray-700">
+              <button
+                onClick={() =>
+                  setIsHistoryRegionExpanded(!isHistoryRegionExpanded)
+                }
+                className="text-sm font-medium text-gray-700 flex items-center gap-2 md:cursor-default"
+                aria-expanded={isHistoryRegionExpanded}
+              >
                 Select Regions to Compare ({selectedRegionsForHistory.length}{' '}
-                regions, {selectedDistricts.length} districts):
-              </label>
+                regions, {selectedDistricts.length} districts)
+                <svg
+                  className={`w-4 h-4 transition-transform md:hidden ${isHistoryRegionExpanded ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </button>
               {selectedRegionsForHistory.length > 0 && (
                 <button
                   onClick={() => setSelectedRegionsForHistory([])}
@@ -440,26 +462,30 @@ const LandingPage: React.FC = () => {
                 </button>
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
-              {regions.map(region => {
-                const isSelected = selectedRegionsForHistory.includes(region)
-                const districtCount = rankings.filter(
-                  r => r.region === region
-                ).length
-                return (
-                  <button
-                    key={region}
-                    onClick={() => handleRegionSelection(region)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors font-tm-body ${
-                      isSelected
-                        ? 'bg-tm-loyal-blue text-white hover:bg-tm-loyal-blue-80'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    {region} ({districtCount})
-                  </button>
-                )
-              })}
+            <div
+              className={`${isHistoryRegionExpanded ? 'block' : 'hidden'} md:block`}
+            >
+              <div className="flex flex-wrap gap-2">
+                {regions.map(region => {
+                  const isSelected = selectedRegionsForHistory.includes(region)
+                  const districtCount = rankings.filter(
+                    r => r.region === region
+                  ).length
+                  return (
+                    <button
+                      key={region}
+                      onClick={() => handleRegionSelection(region)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors font-tm-body ${
+                        isSelected
+                          ? 'bg-tm-loyal-blue text-white hover:bg-tm-loyal-blue-80'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      {region} ({districtCount})
+                    </button>
+                  )
+                })}
+              </div>
             </div>
             {selectedRegionsForHistory.length > 0 && (
               <p className="text-sm text-gray-600 mt-2">
@@ -534,11 +560,38 @@ const LandingPage: React.FC = () => {
           <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
             <div className="flex items-start gap-4">
               <div className="flex-shrink-0">
-                <span className="text-sm font-semibold text-gray-900">
-                  Filter Regions:
-                </span>
+                <button
+                  onClick={() =>
+                    setIsTableRegionExpanded(!isTableRegionExpanded)
+                  }
+                  className="text-sm font-semibold text-gray-900 flex items-center gap-2 md:cursor-default"
+                  aria-expanded={isTableRegionExpanded}
+                >
+                  Filter Regions
+                  {selectedRegions.length > 0 &&
+                    selectedRegions.length < regions.length && (
+                      <span className="text-xs font-normal text-tm-loyal-blue md:hidden">
+                        ({selectedRegions.length}/{regions.length})
+                      </span>
+                    )}
+                  <svg
+                    className={`w-4 h-4 transition-transform md:hidden ${isTableRegionExpanded ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
               </div>
-              <div className="flex-1">
+              <div
+                className={`flex-1 ${isTableRegionExpanded ? 'block' : 'hidden'} md:block`}
+              >
                 {/* Quick Select Buttons */}
                 <div className="flex flex-wrap gap-2 mb-3 pb-3 border-b border-gray-200">
                   <button
