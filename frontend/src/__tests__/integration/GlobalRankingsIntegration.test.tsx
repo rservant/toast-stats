@@ -12,7 +12,7 @@
 
 import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { screen, fireEvent, waitFor } from '@testing-library/react'
+import { screen, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import GlobalRankingsTab, {
   type GlobalRankingsTabProps,
@@ -229,6 +229,8 @@ const createMockHookResult = (
   ],
   yearlyRankings: mockYearlyRankings,
   isLoading: false,
+  isLoadingChart: false,
+  isLoadingMultiYear: false,
   isError: false,
   error: null,
   refetch: mockRefetch,
@@ -247,17 +249,18 @@ describe('GlobalRankingsIntegration', () => {
   })
 
   describe('10.1 Complete Data Flow (API → hooks → components)', () => {
-    it('should fetch available program years and display them in selector', async () => {
+    it('should pass available program years from hook data', async () => {
       mockUseGlobalRankings.mockReturnValue(createMockHookResult())
 
       renderWithProviders(<GlobalRankingsTab {...baseProps} />)
 
-      // Verify program year selector is populated
-      const selector = screen.getByRole('combobox', { name: /program year/i })
-      expect(selector).toBeInTheDocument()
-
-      // Verify the selector has the expected value (most recent year)
-      expect(selector).toHaveValue('2024')
+      // Tab no longer has its own ProgramYearSelector — it uses the page-level one
+      // Verify the hook was called with district data
+      expect(mockUseGlobalRankings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          districtId: '57',
+        })
+      )
     })
 
     it('should display rank history data in the progression chart', async () => {
@@ -356,25 +359,23 @@ describe('GlobalRankingsIntegration', () => {
   })
 
   describe('10.2 Program Year Transitions and Data Updates', () => {
-    it('should update displayed data when program year selection changes', async () => {
+    it('should accept selectedProgramYear prop and pass it to the hook', async () => {
       mockUseGlobalRankings.mockReturnValue(createMockHookResult())
 
-      renderWithProviders(<GlobalRankingsTab {...baseProps} />)
+      renderWithProviders(
+        <GlobalRankingsTab
+          {...baseProps}
+          selectedProgramYear={mockProgramYear2023}
+        />
+      )
 
-      // Find the program year selector
-      const selector = screen.getByRole('combobox', { name: /program year/i })
-      expect(selector).toBeInTheDocument()
-
-      // The selector should default to the most recent year (2024)
-      expect(selector).toHaveValue('2024')
-
-      // Change the selection to 2023
-      fireEvent.change(selector, { target: { value: '2023' } })
-
-      // The hook should be called again with updated params
-      await waitFor(() => {
-        expect(mockUseGlobalRankings).toHaveBeenCalled()
-      })
+      // Verify the hook receives the parent-provided program year
+      expect(mockUseGlobalRankings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          districtId: '57',
+          selectedProgramYear: mockProgramYear2023,
+        })
+      )
     })
 
     it('should show partial year indicator for current incomplete year', async () => {
@@ -412,52 +413,42 @@ describe('GlobalRankingsIntegration', () => {
       expect(overallButton).toHaveAttribute('aria-pressed', 'false')
     })
 
-    it('should display all available program years in selector', async () => {
+    it('should not render its own ProgramYearSelector (uses page-level)', async () => {
       mockUseGlobalRankings.mockReturnValue(createMockHookResult())
 
       renderWithProviders(<GlobalRankingsTab {...baseProps} />)
 
-      const selector = screen.getByRole('combobox', { name: /program year/i })
-
-      // Get all options
-      const options = selector.querySelectorAll('option')
-      expect(options.length).toBe(3) // 2024, 2023, 2022
+      // The tab should NOT have a program year combobox
+      const selector = screen.queryByRole('combobox', { name: /program year/i })
+      expect(selector).not.toBeInTheDocument()
     })
 
     it('should handle switching between complete and partial year data', async () => {
       // Start with 2024 (partial year)
       mockUseGlobalRankings.mockReturnValue(createMockHookResult())
 
-      renderWithProviders(<GlobalRankingsTab {...baseProps} />)
+      renderWithProviders(
+        <GlobalRankingsTab
+          {...baseProps}
+          selectedProgramYear={mockProgramYear2024}
+        />
+      )
 
       // Component should render successfully
       expect(
         screen.getByRole('region', { name: /Global rankings for District 57/i })
       ).toBeInTheDocument()
 
-      // Change to 2023 (complete year)
-      const selector = screen.getByRole('combobox', { name: /program year/i })
-      fireEvent.change(selector, { target: { value: '2023' } })
-
-      // Component should still render
+      // Component should still render with end-of-year rankings
       expect(screen.getByText('End-of-Year Rankings')).toBeInTheDocument()
     })
 
-    it('should maintain state consistency when switching years', async () => {
+    it('should maintain state consistency across sections', async () => {
       mockUseGlobalRankings.mockReturnValue(createMockHookResult())
 
       renderWithProviders(<GlobalRankingsTab {...baseProps} />)
 
-      // Verify initial state
-      expect(screen.getByText('End-of-Year Rankings')).toBeInTheDocument()
-      expect(screen.getByText('Ranking Progression')).toBeInTheDocument()
-      expect(screen.getByText('Multi-Year Comparison')).toBeInTheDocument()
-
-      // Change year
-      const selector = screen.getByRole('combobox', { name: /program year/i })
-      fireEvent.change(selector, { target: { value: '2023' } })
-
-      // All sections should still be present
+      // Verify all sections are rendered correctly
       expect(screen.getByText('End-of-Year Rankings')).toBeInTheDocument()
       expect(screen.getByText('Ranking Progression')).toBeInTheDocument()
       expect(screen.getByText('Multi-Year Comparison')).toBeInTheDocument()
@@ -770,9 +761,10 @@ describe('GlobalRankingsIntegration', () => {
       })
       expect(mainRegion).toBeInTheDocument()
 
-      // Verify program year selector shows correct year
-      const selector = screen.getByRole('combobox', { name: /program year/i })
-      expect(selector).toHaveValue('2024')
+      // Verify all sections are rendered
+      expect(screen.getByText('End-of-Year Rankings')).toBeInTheDocument()
+      expect(screen.getByText('Ranking Progression')).toBeInTheDocument()
+      expect(screen.getByText('Multi-Year Comparison')).toBeInTheDocument()
     })
 
     it('should display year-over-year changes in comparison table', async () => {

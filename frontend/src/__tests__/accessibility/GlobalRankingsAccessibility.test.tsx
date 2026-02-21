@@ -381,6 +381,8 @@ describe('Global Rankings Accessibility Tests', () => {
         availableProgramYears: [mockProgramYear2024, mockProgramYear2023],
         yearlyRankings: mockYearlyRankings,
         isLoading: false,
+        isLoadingChart: false,
+        isLoadingMultiYear: false,
         isError: false,
         error: null,
         refetch: mockRefetch,
@@ -400,6 +402,8 @@ describe('Global Rankings Accessibility Tests', () => {
         mockUseGlobalRankings.mockReturnValue(
           createMockHookResult({
             isLoading: true,
+            isLoadingChart: false,
+            isLoadingMultiYear: false,
             currentYearHistory: null,
             endOfYearRankings: null,
             availableProgramYears: [],
@@ -527,9 +531,8 @@ describe('Global Rankings Accessibility Tests', () => {
       })
     })
 
-    describe('GlobalRankingsTab program year selector', () => {
-      it('should allow keyboard navigation for program year selector', async () => {
-        const user = userEvent.setup()
+    describe('GlobalRankingsTab program year (parent-provided)', () => {
+      it('should not render its own combobox for program year selection', () => {
         const mockRefetch = vi.fn()
 
         mockUseGlobalRankings.mockReturnValue({
@@ -538,6 +541,8 @@ describe('Global Rankings Accessibility Tests', () => {
           availableProgramYears: [mockProgramYear2024, mockProgramYear2023],
           yearlyRankings: mockYearlyRankings,
           isLoading: false,
+          isLoadingChart: false,
+          isLoadingMultiYear: false,
           isError: false,
           error: null,
           refetch: mockRefetch,
@@ -547,19 +552,11 @@ describe('Global Rankings Accessibility Tests', () => {
           <GlobalRankingsTab districtId="57" districtName="District 57" />
         )
 
-        // Find the program year selector
-        const selector = screen.getByRole('combobox', { name: /program year/i })
-        expect(selector).toBeInTheDocument()
-
-        // Verify it's focusable
-        expect(selector).not.toHaveAttribute('tabindex', '-1')
-
-        // Focus and interact with keyboard
-        selector.focus()
-        expect(document.activeElement).toBe(selector)
-
-        // Change selection using keyboard
-        await user.keyboard('{ArrowDown}')
+        // Tab uses the page-level selector — no combobox inside the tab
+        const selector = screen.queryByRole('combobox', {
+          name: /program year/i,
+        })
+        expect(selector).not.toBeInTheDocument()
       })
     })
 
@@ -574,6 +571,8 @@ describe('Global Rankings Accessibility Tests', () => {
           availableProgramYears: [],
           yearlyRankings: [],
           isLoading: false,
+          isLoadingChart: false,
+          isLoadingMultiYear: false,
           isError: true,
           error: new Error('Network error'),
           refetch: mockRefetch,
@@ -609,6 +608,8 @@ describe('Global Rankings Accessibility Tests', () => {
           availableProgramYears: [],
           yearlyRankings: [],
           isLoading: false,
+          isLoadingChart: false,
+          isLoadingMultiYear: false,
           isError: true,
           error: new Error('Network error'),
           refetch: mockRefetch,
@@ -737,6 +738,8 @@ describe('Global Rankings Accessibility Tests', () => {
           availableProgramYears: [],
           yearlyRankings: [],
           isLoading: false,
+          isLoadingChart: false,
+          isLoadingMultiYear: false,
           isError: true,
           error: new Error('Network error'),
           refetch: mockRefetch,
@@ -760,6 +763,8 @@ describe('Global Rankings Accessibility Tests', () => {
           availableProgramYears: [],
           yearlyRankings: [],
           isLoading: true,
+          isLoadingChart: false,
+          isLoadingMultiYear: false,
           isError: false,
           error: null,
           refetch: mockRefetch,
@@ -890,6 +895,8 @@ describe('Global Rankings Accessibility Tests', () => {
           availableProgramYears: [mockProgramYear2024, mockProgramYear2023],
           yearlyRankings: mockYearlyRankings,
           isLoading: false,
+          isLoadingChart: false,
+          isLoadingMultiYear: false,
           isError: false,
           error: null,
           refetch: mockRefetch,
@@ -1288,6 +1295,8 @@ describe('Global Rankings Accessibility Tests', () => {
           availableProgramYears: [mockProgramYear2024, mockProgramYear2023],
           yearlyRankings: mockYearlyRankings,
           isLoading: false,
+          isLoadingChart: false,
+          isLoadingMultiYear: false,
           isError: false,
           error: null,
           refetch: mockRefetch,
