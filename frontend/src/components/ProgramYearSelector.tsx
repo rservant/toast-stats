@@ -177,9 +177,9 @@ export const ProgramYearSelector: React.FC<ProgramYearSelectorProps> = ({
       {/* Progress Bar */}
       {showProgress && progress !== null && progress < 100 && (
         <div className="mt-1">
-          <div className="flex justify-between text-xs font-tm-body text-gray-600 mb-1">
+          <div className="flex justify-between items-center gap-2 text-xs font-tm-body text-gray-600 mb-1">
             <span>Program Year Progress</span>
-            <span>{progress}%</span>
+            <span className="font-medium">{progress}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
