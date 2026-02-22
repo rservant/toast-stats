@@ -290,6 +290,23 @@ paths:
       parameters:
         - $ref: '#/components/parameters/districtIdParam'
         - $ref: '#/components/parameters/dateQueryParam'
+        - name: fields
+          in: query
+          required: false
+          description: |
+            Fields to include in the response. Controls response size by filtering
+            heavy arrays (clubPerformance, divisionPerformance, districtPerformance).
+
+            - **divisions**: Include divisionPerformance and clubPerformance
+            - **clubs**: Include clubPerformance only
+            - **all**: Include all data (backward compatible full response)
+            - **Default (omitted)**: Summary only, no heavy arrays (~10KB vs ~266KB)
+          schema:
+            type: string
+            enum:
+              - divisions
+              - clubs
+              - all
       responses:
         '200':
           description: Successfully retrieved district statistics

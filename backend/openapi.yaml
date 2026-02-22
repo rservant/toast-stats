@@ -159,6 +159,17 @@ paths:
           format: date
           description: Date for statistics snapshot (YYYY-MM-DD format)
           required: false
+        - name: fields
+          in: query
+          type: string
+          description: >
+            Fields to include in the response. Options: divisions, clubs, all.
+            Default returns summary only (no heavy arrays).
+          required: false
+          enum:
+            - divisions
+            - clubs
+            - all
       responses:
         '200':
           description: Successfully retrieved district statistics
