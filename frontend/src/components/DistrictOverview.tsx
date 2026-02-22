@@ -4,19 +4,16 @@ import { ExportButton } from './ExportButton'
 import { exportDistrictAnalytics } from '../utils/csvExport'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { ErrorDisplay, EmptyState } from './ErrorDisplay'
-import { formatDisplayDate } from '../utils/dateFormatting'
 import { TargetProgressCard } from './TargetProgressCard'
 
 interface DistrictOverviewProps {
   districtId: string
-  districtName: string
   selectedDate?: string
   programYearStartDate?: string
 }
 
 export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
   districtId,
-  districtName,
   selectedDate,
   programYearStartDate,
 }) => {
@@ -38,22 +35,11 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
 
   const isLoading = isLoadingAnalytics
 
-  // Format date for display (using utility to avoid UTC timezone shift)
-  const formatDate = (dateStr: string) => formatDisplayDate(dateStr)
-
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            {districtName} Overview
-          </h2>
-          {analytics?.dateRange && (
-            <p className="text-sm text-gray-600 mt-1">
-              Data range: {formatDate(analytics.dateRange.start)} -{' '}
-              {formatDate(analytics.dateRange.end)}
-            </p>
-          )}
+          <h2 className="text-2xl font-bold text-gray-900">Overview</h2>
         </div>
 
         {/* Export Button */}

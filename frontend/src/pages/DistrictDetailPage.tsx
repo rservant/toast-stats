@@ -585,7 +585,6 @@ const DistrictDetailPage: React.FC = () => {
                 {hasValidDates && effectiveProgramYear && (
                   <DistrictOverview
                     districtId={districtId}
-                    districtName={districtName}
                     {...(effectiveEndDate && {
                       selectedDate: effectiveEndDate,
                     })}
