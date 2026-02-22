@@ -85,13 +85,13 @@ snapshotsRouter.get(
         await districtSnapshotIndexService.getDatesForDistrict(districtId)
 
       if (indexDates !== null) {
-        // Index available — use it directly
-        const sortedDates = indexDates // already sorted by the service
+        // Index available — sort descending (newest first)
+        const sortedDates = [...indexDates].sort((a, b) => b.localeCompare(a))
         const dateRange =
           sortedDates.length > 0
             ? {
-                startDate: sortedDates[0],
-                endDate: sortedDates[sortedDates.length - 1],
+                startDate: sortedDates[sortedDates.length - 1],
+                endDate: sortedDates[0],
               }
             : null
 
@@ -146,15 +146,15 @@ snapshotsRouter.get(
         }
       }
 
-      // Sort dates ascending
-      const sortedDates = districtDates.sort()
+      // Sort dates descending (newest first)
+      const sortedDates = districtDates.sort((a, b) => b.localeCompare(a))
 
       // Calculate date range
       const dateRange =
         sortedDates.length > 0
           ? {
-              startDate: sortedDates[0],
-              endDate: sortedDates[sortedDates.length - 1],
+              startDate: sortedDates[sortedDates.length - 1],
+              endDate: sortedDates[0],
             }
           : null
 
