@@ -331,8 +331,8 @@ const DistrictDetailPage: React.FC = () => {
   const formatDate = (dateStr: string) => formatDisplayDate(dateStr)
 
   // If districts data has loaded but this district isn't in the tracked list,
-  // show a user-friendly state instead of rendering the full page with empty data.
-  // Only 6 districts are intentionally tracked for detailed analytics.
+  // show a limited page with Global Rankings (available for all districts)
+  // instead of blank data. Only 6 districts have detailed per-district analytics.
   if (districtsData && !selectedDistrict && districtId) {
     return (
       <ErrorBoundary>
@@ -361,15 +361,43 @@ const DistrictDetailPage: React.FC = () => {
               <h1 className="text-2xl sm:text-3xl font-tm-headline font-bold text-tm-black">
                 {districtName}
               </h1>
+              <p className="text-sm text-gray-600 mt-1">
+                District Statistics & Performance Analytics
+              </p>
             </div>
-            <EmptyState
-              title="Detailed Analytics Not Available"
-              message="Detailed analytics are not yet available for this district. Rankings data can be viewed on the home page."
-              icon="data"
-              action={{
-                label: 'View Global Rankings',
-                onClick: () => navigate('/'),
-              }}
+
+            {/* Limited data banner */}
+            <div className="bg-tm-happy-yellow bg-opacity-20 border border-tm-happy-yellow rounded-lg p-4 mb-6 flex items-start gap-3">
+              <svg
+                className="w-5 h-5 text-tm-loyal-blue mt-0.5 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <div>
+                <p className="text-sm font-medium text-tm-black">
+                  This district has limited data available.
+                </p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Detailed analytics (clubs, divisions, trends) are not yet
+                  tracked for this district. Global rankings are available
+                  below.
+                </p>
+              </div>
+            </div>
+
+            {/* Global Rankings tab for untracked districts */}
+            <GlobalRankingsTab
+              districtId={districtId}
+              districtName={districtName}
+              selectedProgramYear={selectedProgramYear}
             />
           </div>
         </div>
