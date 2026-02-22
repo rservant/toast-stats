@@ -19,7 +19,7 @@
 
 ---
 
-## 🗓️ 2026-02-22 — Lesson 03: Validation Gaps in Façade Layers
+## 🗓️ 2026-02-22 — Lesson 01: Validation Gaps in Façade Layers
 
 **The Discovery**: `SnapshotStore.hasDistrictInSnapshot` used `path.join` with raw `districtId` input, creating a path traversal vulnerability (CodeQL #57). The downstream modules (`SnapshotReader`, `SnapshotWriter`) already validated `districtId`, but the façade method bypassed them with inline `path.join`.
 
@@ -30,31 +30,3 @@
 **The Resulting Rule**: When a façade delegates to sub-modules, any method that constructs paths directly (rather than delegating) must also call the shared validation utilities (`validateDistrictId`, `resolvePathUnderBase`).
 
 **Future Warning**: If a new method is added to `SnapshotStore` that accepts `districtId` or `snapshotId` and constructs paths inline, it must validate inputs. Audit all `path.join` calls using user-supplied values.
-
----
-
-## 🗓️ YYYY-MM-DD — Lesson 02: Handling Asynchronous Side-Effects
-
-**The Discovery**: The EmailNotifier was firing inside the main OrderProcessing loop. If the email provider was slow, the entire checkout process hung.
-
-**The Hypothesis**: Moving the notification to an Event-Driven model (Pub/Sub) would reduce checkout latency by 80%.
-
-**The Measurement**: Verified via `time` command in the Antigravity terminal; latency dropped from 2.4s to 0.3s.
-
-**The Farley Principle Applied**: Favor Asynchronous Feedback Loops.
-
-**The Resulting Rule**: Business logic should emit events; side-effects (Email, Analytics) should listen to them. Do not couple the "Success" of a transaction to the "Success" of a notification.
-
----
-
-## 🗓️ YYYY-MM-DD — Lesson 01: Architectural Decoupling in [Project Name]
-
-**The Discovery**: The UserAuth service was directly importing the PostgresClient. This created a "Circular Dependency" risk and made unit testing impossible without a live database.
-
-**The Scientific Proof**: An experiment in `tasks/experiment_01.md` showed that mocking the database required mocking the entire `pg` library, which is a "Fragile Test" anti-pattern.
-
-**The Farley Principle Applied**: Separation of Concerns. We introduced an `IUserRepository` interface.
-
-**The Resulting Rule**: From now on, services must depend on Interfaces, not Implementations. This allows for high-speed, deterministic unit tests.
-
-**Future Warning**: If you see a service importing a raw database driver, STOP and refactor to an Interface/Repository pattern first.
