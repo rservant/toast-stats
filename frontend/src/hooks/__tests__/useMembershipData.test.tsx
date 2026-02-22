@@ -145,7 +145,7 @@ describe('useDistrictStatistics', () => {
       expect(mockedApiClient.get).toHaveBeenCalledWith(
         `/districts/${districtId}/statistics`,
         {
-          params: undefined,
+          params: {},
         }
       )
     })
@@ -254,10 +254,10 @@ describe('useDistrictStatistics', () => {
         expect(result.current.isSuccess).toBe(true)
       })
 
-      // Verify the API was called with params: undefined (no date parameter)
+      // Verify the API was called with params: {} (no date parameter)
       expect(mockedApiClient.get).toHaveBeenCalledWith(
         `/districts/${districtId}/statistics`,
-        { params: undefined }
+        { params: {} }
       )
     })
 
@@ -281,10 +281,10 @@ describe('useDistrictStatistics', () => {
         expect(result.current.isSuccess).toBe(true)
       })
 
-      // Empty string is falsy, so params should be undefined
+      // Empty string is falsy, so date should not be in params
       expect(mockedApiClient.get).toHaveBeenCalledWith(
         `/districts/${districtId}/statistics`,
-        { params: undefined }
+        { params: {} }
       )
     })
   })
@@ -491,6 +491,103 @@ describe('useDistrictStatistics', () => {
       expect(result.current.data).toEqual(mockData)
       expect(result.current.data?.districtId).toBe(districtId)
       expect(result.current.data?.asOfDate).toBe(selectedDate)
+    })
+  })
+
+  describe('Fields Parameter', () => {
+    /**
+     * Test that fields parameter is passed to API when provided
+     *
+     * **Validates: Response optimization - fields param propagation**
+     */
+    it('should pass fields parameter to API when provided', async () => {
+      const districtId = 'D101'
+      const selectedDate = '2026-01-14'
+      const mockData = createMockDistrictStatistics(districtId, selectedDate)
+
+      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+
+      const { result } = renderHook(
+        () => useDistrictStatistics(districtId, selectedDate, 'divisions'),
+        { wrapper: createWrapper() }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      expect(mockedApiClient.get).toHaveBeenCalledWith(
+        `/districts/${districtId}/statistics`,
+        {
+          params: { date: selectedDate, fields: 'divisions' },
+        }
+      )
+    })
+
+    /**
+     * Test that fields parameter is not passed when undefined
+     */
+    it('should not pass fields parameter when undefined', async () => {
+      const districtId = 'D101'
+      const selectedDate = '2026-01-14'
+      const mockData = createMockDistrictStatistics(districtId, selectedDate)
+
+      mockedApiClient.get.mockResolvedValueOnce({ data: mockData })
+
+      const { result } = renderHook(
+        () => useDistrictStatistics(districtId, selectedDate),
+        { wrapper: createWrapper() }
+      )
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      // Should not include fields in params
+      expect(mockedApiClient.get).toHaveBeenCalledWith(
+        `/districts/${districtId}/statistics`,
+        {
+          params: { date: selectedDate },
+        }
+      )
+    })
+
+    /**
+     * Test that fields is included in query key for proper cache differentiation
+     */
+    it('should include fields in query key for cache differentiation', async () => {
+      const districtId = 'D101'
+      const selectedDate = '2026-01-14'
+      const mockData = createMockDistrictStatistics(districtId, selectedDate)
+
+      mockedApiClient.get
+        .mockResolvedValueOnce({ data: mockData })
+        .mockResolvedValueOnce({ data: mockData })
+
+      const wrapper = createWrapper()
+
+      // First hook without fields
+      const { result: result1 } = renderHook(
+        () => useDistrictStatistics(districtId, selectedDate),
+        { wrapper }
+      )
+
+      await waitFor(() => {
+        expect(result1.current.isSuccess).toBe(true)
+      })
+
+      // Second hook with fields — should make a separate API call
+      const { result: result2 } = renderHook(
+        () => useDistrictStatistics(districtId, selectedDate, 'divisions'),
+        { wrapper }
+      )
+
+      await waitFor(() => {
+        expect(result2.current.isSuccess).toBe(true)
+      })
+
+      // Both calls should have been made (different query keys)
+      expect(mockedApiClient.get).toHaveBeenCalledTimes(2)
     })
   })
 })

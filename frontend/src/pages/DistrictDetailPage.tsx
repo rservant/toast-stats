@@ -217,7 +217,8 @@ const DistrictDetailPage: React.FC = () => {
   const { data: districtStatistics, isLoading: isLoadingStatistics } =
     useDistrictStatistics(
       hasValidDates ? districtId || null : null,
-      effectiveEndDate ?? undefined
+      effectiveEndDate ?? undefined,
+      'divisions'
     )
 
   // Fetch leadership insights for analytics tab - use program year boundaries

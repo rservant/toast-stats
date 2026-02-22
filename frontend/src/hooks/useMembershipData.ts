@@ -13,13 +13,19 @@ import type {
  *                       When provided, the API will return data from the snapshot matching that date
  *                       (or the nearest available snapshot if exact date not found).
  *                       When undefined, returns the latest snapshot (backward compatible behavior).
+ * @param fields - Optional field selector to control response size.
+ *                 'divisions': include divisionPerformance + clubPerformance
+ *                 'clubs': include clubPerformance only
+ *                 'all': include everything (backward compatible full response)
+ *                 undefined: summary only (no heavy arrays)
  */
 export const useDistrictStatistics = (
   districtId: string | null,
-  selectedDate?: string
+  selectedDate?: string,
+  fields?: 'divisions' | 'clubs' | 'all'
 ) => {
   return useQuery<DistrictStatistics, Error>({
-    queryKey: ['districtStatistics', districtId, selectedDate],
+    queryKey: ['districtStatistics', districtId, selectedDate, fields],
     queryFn: async () => {
       if (!districtId) {
         throw new Error('District ID is required')
@@ -27,7 +33,10 @@ export const useDistrictStatistics = (
       const response = await apiClient.get<DistrictStatistics>(
         `/districts/${districtId}/statistics`,
         {
-          params: selectedDate ? { date: selectedDate } : undefined,
+          params: {
+            ...(selectedDate && { date: selectedDate }),
+            ...(fields && { fields }),
+          },
         }
       )
       return response.data
