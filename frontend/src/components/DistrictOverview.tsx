@@ -35,6 +35,18 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
 
   const isLoading = isLoadingAnalytics
 
+  // Calculate actual member count change from the membership trend data
+  // This derives the net change from first to last trend point (matches Trends tab "Net Change")
+  // Fixes #76: memberCountChange from backend returns 0 for single-snapshot queries
+  const actualMemberCountChange = React.useMemo(() => {
+    const trend = analytics?.membershipTrend
+    if (!trend || trend.length < 2) return 0
+    const first = trend[0]
+    const last = trend[trend.length - 1]
+    if (!first || !last) return 0
+    return last.count - first.count
+  }, [analytics?.membershipTrend])
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
@@ -190,18 +202,13 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
             badges={
               <span
                 className={`text-xs px-2 py-1 rounded ${
-                  (analytics.memberCountChange ?? analytics.membershipChange) >=
-                  0
+                  actualMemberCountChange >= 0
                     ? 'text-green-700 bg-green-100'
                     : 'text-red-700 bg-red-100'
                 }`}
               >
-                {(analytics.memberCountChange ?? analytics.membershipChange) >=
-                0
-                  ? '+'
-                  : ''}
-                {analytics.memberCountChange ?? analytics.membershipChange}{' '}
-                members
+                {actualMemberCountChange >= 0 ? '+' : ''}
+                {actualMemberCountChange} members
               </span>
             }
           />
