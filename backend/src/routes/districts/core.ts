@@ -309,12 +309,54 @@ coreRouter.get(
 )
 
 /**
+ * Filters a DistrictStatistics response based on the `fields` query parameter.
+ *
+ * - No fields (default): strips heavy arrays for a lightweight summary (~10KB)
+ * - 'divisions': includes divisionPerformance + clubPerformance (needed by extractDivisionPerformance)
+ * - 'clubs': includes clubPerformance only
+ * - 'all': returns the full unmodified response (backward compatible)
+ */
+function filterStatisticsFields(
+  district: DistrictStatistics,
+  fields: string | undefined
+): DistrictStatistics {
+  // 'all' returns everything unchanged
+  if (fields === 'all') {
+    return district
+  }
+
+  // Create a shallow copy so we can safely remove fields
+  const result = { ...district }
+
+  if (fields === 'divisions') {
+    // Keep divisionPerformance + clubPerformance, remove districtPerformance
+    delete result.districtPerformance
+    return result
+  }
+
+  if (fields === 'clubs') {
+    // Keep clubPerformance, remove the other heavy arrays
+    delete result.divisionPerformance
+    delete result.districtPerformance
+    return result
+  }
+
+  // Default: summary only — strip all heavy arrays
+  delete result.clubPerformance
+  delete result.divisionPerformance
+  delete result.districtPerformance
+  return result
+}
+
+/**
  * GET /api/districts/:districtId/statistics
  * Fetch district statistics from snapshot
  *
  * Query parameters:
  * - date: Optional ISO date (YYYY-MM-DD) to fetch statistics for a specific historical snapshot
  *         If not provided, returns statistics from the latest successful snapshot
+ * - fields: Optional field selector to control response size.
+ *           Values: 'divisions' | 'clubs' | 'all'. Default: summary only.
  *
  * Requirements:
  * - 4.3: Accept optional date query parameter
@@ -330,17 +372,18 @@ coreRouter.get(
         'districtId'
       )
       const date = extractQueryParam(req.query['date'])
-      // Include date in cache key for proper cache invalidation (Requirement 6.1)
-      return generateDistrictCacheKey(
-        districtId,
-        'statistics',
-        date ? { date } : undefined
-      )
+      const fields = extractQueryParam(req.query['fields'])
+      // Include date and fields in cache key for proper invalidation
+      return generateDistrictCacheKey(districtId, 'statistics', {
+        ...(date && { date }),
+        ...(fields && { fields }),
+      })
     },
   }),
   async (req: Request, res: Response) => {
     const rawDistrictId = req.params['districtId']
     const requestedDate = extractQueryParam(req.query['date'])
+    const fields = extractQueryParam(req.query['fields'])
 
     // Handle string | string[] type from Express
     const districtIdStr = Array.isArray(rawDistrictId)
@@ -389,6 +432,7 @@ coreRouter.get(
       request_id: requestId,
       district_id: districtId,
       requested_date: requestedDate || 'latest',
+      fields: fields || 'summary',
       user_agent: req.get('user-agent'),
       ip: req.ip,
     })
@@ -411,7 +455,7 @@ coreRouter.get(
           }
         )
 
-        return district as DistrictStatistics
+        return filterStatisticsFields(district as DistrictStatistics, fields)
       },
       'fetch district statistics from per-district snapshot'
     )
