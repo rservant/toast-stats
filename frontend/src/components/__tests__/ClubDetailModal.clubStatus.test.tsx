@@ -17,11 +17,25 @@
  * - Undefined status → no badge rendered
  */
 
+import React from 'react'
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ClubDetailModal } from '../ClubDetailModal'
 import { getClubStatusBadge } from '../../utils/clubStatusBadge'
 import { ClubTrend } from '../../hooks/useDistrictAnalytics'
+
+/**
+ * Renders component wrapped in QueryClientProvider (required by useClubTrends hook).
+ */
+function renderWithQueryClient(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+  )
+}
 
 /**
  * Factory function to create a mock ClubTrend object with sensible defaults
@@ -169,7 +183,7 @@ describe('ClubDetailModal Club Status Badge Rendering', () => {
     it('should render Active status badge with green styling', () => {
       const club = createMockClub({ clubStatus: 'Active' })
 
-      render(<ClubDetailModal club={club} onClose={() => {}} />)
+      renderWithQueryClient(<ClubDetailModal club={club} onClose={() => {}} />)
 
       const badge = screen.getByText('Active')
       expect(badge).toBeInTheDocument()
@@ -185,7 +199,7 @@ describe('ClubDetailModal Club Status Badge Rendering', () => {
     it('should render Suspended status badge with red styling', () => {
       const club = createMockClub({ clubStatus: 'Suspended' })
 
-      render(<ClubDetailModal club={club} onClose={() => {}} />)
+      renderWithQueryClient(<ClubDetailModal club={club} onClose={() => {}} />)
 
       const badge = screen.getByText('Suspended')
       expect(badge).toBeInTheDocument()
@@ -201,7 +215,7 @@ describe('ClubDetailModal Club Status Badge Rendering', () => {
     it('should render Ineligible status badge with yellow styling', () => {
       const club = createMockClub({ clubStatus: 'Ineligible' })
 
-      render(<ClubDetailModal club={club} onClose={() => {}} />)
+      renderWithQueryClient(<ClubDetailModal club={club} onClose={() => {}} />)
 
       const badge = screen.getByText('Ineligible')
       expect(badge).toBeInTheDocument()
@@ -217,7 +231,7 @@ describe('ClubDetailModal Club Status Badge Rendering', () => {
     it('should render Low status badge with yellow styling', () => {
       const club = createMockClub({ clubStatus: 'Low' })
 
-      render(<ClubDetailModal club={club} onClose={() => {}} />)
+      renderWithQueryClient(<ClubDetailModal club={club} onClose={() => {}} />)
 
       const badge = screen.getByText('Low')
       expect(badge).toBeInTheDocument()
@@ -233,7 +247,7 @@ describe('ClubDetailModal Club Status Badge Rendering', () => {
     it('should render unknown status badge with gray styling', () => {
       const club = createMockClub({ clubStatus: 'Unknown' })
 
-      render(<ClubDetailModal club={club} onClose={() => {}} />)
+      renderWithQueryClient(<ClubDetailModal club={club} onClose={() => {}} />)
 
       const badge = screen.getByText('Unknown')
       expect(badge).toBeInTheDocument()
@@ -251,7 +265,7 @@ describe('ClubDetailModal Club Status Badge Rendering', () => {
     it('should not render club status badge when clubStatus is undefined', () => {
       const club = createMockClub({ clubStatus: undefined })
 
-      render(<ClubDetailModal club={club} onClose={() => {}} />)
+      renderWithQueryClient(<ClubDetailModal club={club} onClose={() => {}} />)
 
       // The health status badge should still be present
       expect(screen.getByText('THRIVING')).toBeInTheDocument()
@@ -270,7 +284,7 @@ describe('ClubDetailModal Club Status Badge Rendering', () => {
       // Explicitly delete clubStatus to ensure it's not present
       delete (club as Partial<ClubTrend>).clubStatus
 
-      render(<ClubDetailModal club={club} onClose={() => {}} />)
+      renderWithQueryClient(<ClubDetailModal club={club} onClose={() => {}} />)
 
       // The health status badge should still be present
       expect(screen.getByText('THRIVING')).toBeInTheDocument()
@@ -295,7 +309,7 @@ describe('ClubDetailModal Club Status Badge Rendering', () => {
     it('should render club status badge next to health status badge', () => {
       const club = createMockClub({ clubStatus: 'Active' })
 
-      render(<ClubDetailModal club={club} onClose={() => {}} />)
+      renderWithQueryClient(<ClubDetailModal club={club} onClose={() => {}} />)
 
       // Both badges should be in the same container
       const healthBadge = screen.getByText('THRIVING')
@@ -319,7 +333,7 @@ describe('ClubDetailModal Club Status Badge Rendering', () => {
 
   describe('Modal Does Not Render When Club is Null', () => {
     it('should not render anything when club is null', () => {
-      const { container } = render(
+      const { container } = renderWithQueryClient(
         <ClubDetailModal club={null} onClose={() => {}} />
       )
 
