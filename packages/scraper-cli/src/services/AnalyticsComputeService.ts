@@ -24,6 +24,7 @@ import {
   type AnalyticsManifestEntry,
   type PreComputedAnalyticsFile,
   type DistrictAnalytics,
+  type ClubTrendsIndex,
 } from '@toastmasters/analytics-core'
 import type {
   DistrictStatisticsInput,
@@ -891,11 +892,18 @@ export class AnalyticsComputeService {
           writeOptions
         )
 
+      // Enrich club-trends-index with data from all program-year snapshots (#79b)
+      const enrichedClubTrendsIndex = await this.enrichClubTrendsIndex(
+        date,
+        districtId,
+        computationResult.clubTrendsIndex
+      )
+
       const clubTrendsIndexPath =
         await this.analyticsWriter.writeClubTrendsIndex(
           date,
           districtId,
-          computationResult.clubTrendsIndex,
+          enrichedClubTrendsIndex,
           writeOptions
         )
 
@@ -1333,6 +1341,181 @@ export class AnalyticsComputeService {
       analyticsLocations,
       errors,
       duration_ms: Date.now() - startTime,
+    }
+  }
+
+  // ========== Dense Club Trends Enrichment (#79b) ==========
+
+  /**
+   * List all snapshot dates within the program year that contain
+   * a snapshot for the given district.
+   *
+   * The Toastmasters program year runs July 1 to June 30.
+   *
+   * @param currentDate - The current date (YYYY-MM-DD)
+   * @param districtId - The district to check snapshots for
+   * @returns Array of YYYY-MM-DD date strings sorted ascending
+   */
+  async listProgramYearSnapshotDates(
+    currentDate: string,
+    districtId: string
+  ): Promise<string[]> {
+    // Calculate program year boundaries
+    const d = new Date(currentDate + 'T00:00:00Z')
+    const year = d.getUTCFullYear()
+    const month = d.getUTCMonth() // 0-indexed
+
+    // Program year starts July 1. If month >= 6 (July), start = July 1 of this year.
+    // Otherwise start = July 1 of previous year.
+    const programYearStart = month >= 6 ? `${year}-07-01` : `${year - 1}-07-01`
+
+    const snapshotsDir = path.join(this.cacheDir, 'snapshots')
+
+    let dateEntries: string[]
+    try {
+      const entries = await fs.readdir(snapshotsDir)
+      dateEntries = entries.filter(e => /^\d{4}-\d{2}-\d{2}$/.test(e))
+    } catch {
+      this.logger.debug('No snapshots directory found for dense trends', {
+        snapshotsDir,
+      })
+      return []
+    }
+
+    // Filter to program year dates that have a snapshot for this district
+    const results: string[] = []
+    for (const dateEntry of dateEntries) {
+      if (dateEntry < programYearStart || dateEntry > currentDate) continue
+
+      const districtFile = path.join(
+        snapshotsDir,
+        dateEntry,
+        `district_${districtId}.json`
+      )
+      try {
+        await fs.access(districtFile)
+        results.push(dateEntry)
+      } catch {
+        // Snapshot doesn't exist for this district on this date
+      }
+    }
+
+    return results.sort()
+  }
+
+  /**
+   * Enrich the club-trends-index with data from all available
+   * program-year snapshots. Replaces the sparse 2-point trends
+   * with dense multi-point trends covering the full program year.
+   *
+   * @param currentDate - The date of the current computation
+   * @param districtId - The district ID
+   * @param sparseIndex - The club-trends-index from the standard computation (2 points)
+   * @returns Enriched ClubTrendsIndex with dense trends
+   */
+  private async enrichClubTrendsIndex(
+    currentDate: string,
+    districtId: string,
+    sparseIndex: ClubTrendsIndex
+  ): Promise<ClubTrendsIndex> {
+    const programYearDates = await this.listProgramYearSnapshotDates(
+      currentDate,
+      districtId
+    )
+
+    // If we only have 0-2 dates, the sparse data is already sufficient
+    if (programYearDates.length <= 2) {
+      this.logger.info(
+        'Not enough snapshots for dense club trends enrichment',
+        {
+          currentDate,
+          districtId,
+          availableDates: programYearDates.length,
+        }
+      )
+      return sparseIndex
+    }
+
+    this.logger.info('Enriching club trends with dense historical data', {
+      currentDate,
+      districtId,
+      snapshotCount: programYearDates.length,
+    })
+
+    // Build per-club trend maps: clubId → { date → { membership, dcpGoals } }
+    const clubMembershipMap = new Map<string, Map<string, number>>()
+    const clubDcpGoalsMap = new Map<string, Map<string, number>>()
+
+    for (const snapshotDate of programYearDates) {
+      try {
+        const snapshot = await this.loadDistrictSnapshot(
+          snapshotDate,
+          districtId
+        )
+        if (!snapshot) continue
+
+        for (const club of snapshot.clubs) {
+          // Membership trend
+          if (!clubMembershipMap.has(club.clubId)) {
+            clubMembershipMap.set(club.clubId, new Map())
+          }
+          clubMembershipMap
+            .get(club.clubId)!
+            .set(snapshotDate, club.membershipCount)
+
+          // DCP goals trend
+          if (!clubDcpGoalsMap.has(club.clubId)) {
+            clubDcpGoalsMap.set(club.clubId, new Map())
+          }
+          clubDcpGoalsMap.get(club.clubId)!.set(snapshotDate, club.dcpGoals)
+        }
+      } catch (error) {
+        // Skip dates that fail to load — don't break the enrichment
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error'
+        this.logger.debug('Skipping snapshot date for dense trends', {
+          snapshotDate,
+          districtId,
+          error: errorMessage,
+        })
+      }
+    }
+
+    // Replace the sparse trends with dense data
+    const enrichedClubs: Record<string, (typeof sparseIndex.clubs)[string]> = {}
+    for (const [clubId, clubData] of Object.entries(sparseIndex.clubs)) {
+      const membershipMap = clubMembershipMap.get(clubId)
+      const dcpGoalsMap = clubDcpGoalsMap.get(clubId)
+
+      const enrichedMembershipTrend = membershipMap
+        ? Array.from(membershipMap.entries())
+            .map(([date, count]) => ({ date, count }))
+            .sort((a, b) => a.date.localeCompare(b.date))
+        : clubData.membershipTrend
+
+      const enrichedDcpGoalsTrend = dcpGoalsMap
+        ? Array.from(dcpGoalsMap.entries())
+            .map(([date, goalsAchieved]) => ({ date, goalsAchieved }))
+            .sort((a, b) => a.date.localeCompare(b.date))
+        : clubData.dcpGoalsTrend
+
+      enrichedClubs[clubId] = {
+        ...clubData,
+        membershipTrend: enrichedMembershipTrend,
+        dcpGoalsTrend: enrichedDcpGoalsTrend,
+      }
+    }
+
+    this.logger.info('Club trends enrichment complete', {
+      districtId,
+      clubCount: Object.keys(enrichedClubs).length,
+      sampleClubTrendPoints:
+        Object.values(enrichedClubs)[0]?.membershipTrend.length ?? 0,
+    })
+
+    return {
+      ...sparseIndex,
+      clubs: enrichedClubs,
     }
   }
 }
