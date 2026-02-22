@@ -186,6 +186,38 @@ jobs:
           FILE_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
           echo "- **Index files restored**: ${FILE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
+      # ── Step 3b: Sync previous year snapshots for YoY ──────────
+      # The AnalyticsComputer needs the previous program year's
+      # snapshot to compute year-over-year comparisons. Without it,
+      # the YoY file is written with dataAvailable: false.
+      # This syncs only the specific district files needed (~1 MB).
+      - name: Sync previous year snapshots from GCS
+        env:
+          GCS_BUCKET: 'toast-stats-data'
+        run: |
+          DATE="${{ steps.scrape.outputs.date }}"
+          DISTRICT_LIST="${{ inputs.districts || steps.config.outputs.districts }}"
+
+          # Calculate previous year date (GNU date on Ubuntu runners)
+          PREV_YEAR=$(date -d "${DATE} - 1 year" +%Y-%m-%d)
+
+          echo "Syncing previous year snapshots for YoY comparison (${PREV_YEAR})..."
+          SYNCED=0
+
+          for DISTRICT in ${DISTRICT_LIST//,/ }; do
+            DISTRICT_TRIMMED=$(echo "$DISTRICT" | tr -d ' ')
+            SRC="gs://${GCS_BUCKET}/snapshots/${PREV_YEAR}/district_${DISTRICT_TRIMMED}.json"
+            DEST="./cache/snapshots/${PREV_YEAR}/"
+            mkdir -p "$DEST"
+            if gsutil cp "$SRC" "$DEST" 2>/dev/null; then
+              SYNCED=$((SYNCED + 1))
+            fi
+          done
+
+          echo "## ⏬ Previous Year Snapshot Sync" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Previous year date**: ${PREV_YEAR}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Snapshots synced**: ${SYNCED}" >> "$GITHUB_STEP_SUMMARY"
+
       # ── Step 4: Compute Analytics ───────────────────────────
       - name: Compute Analytics
         run: |

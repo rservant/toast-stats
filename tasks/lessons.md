@@ -19,6 +19,16 @@
 
 ---
 
+## 🗓️ 2026-02-22 — Lesson 02: Ephemeral Runners Need Explicit Cross-Date Data Syncs
+
+**The Discovery**: The YoY comparison showed "No Historical Data" even though 9 years of snapshots existed in GCS. The `AnalyticsComputeService.computeDistrictAnalytics()` calls `loadDistrictSnapshot(previousYearDate)` from the local filesystem, but the ephemeral GitHub Actions runner only has today's scraped data. Previous year snapshots were never synced down.
+
+**The Resulting Rule**: Any analytics computation that references data from a **different date** than the current run must have an explicit sync step in the pipeline. The time-series sync (Step 3) was already doing this correctly; the previous-year snapshot sync was simply missing.
+
+**Future Warning**: When adding new cross-date analytics (e.g., multi-year trends, seasonal patterns), always verify the pipeline downloads the required historical data before compute. Check `AnalyticsComputeService` for any `loadDistrictSnapshot()` calls with non-current dates.
+
+---
+
 ## 🗓️ 2026-02-22 — Lesson 01: Validation Gaps in Façade Layers
 
 **The Discovery**: `SnapshotStore.hasDistrictInSnapshot` used `path.join` with raw `districtId` input, creating a path traversal vulnerability (CodeQL #57). The downstream modules (`SnapshotReader`, `SnapshotWriter`) already validated `districtId`, but the façade method bypassed them with inline `path.join`.
