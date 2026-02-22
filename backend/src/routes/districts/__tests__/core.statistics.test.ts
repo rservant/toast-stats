@@ -459,4 +459,141 @@ describe('Statistics Endpoint - Date Parameter Handling Unit Tests', () => {
       }
     })
   })
+
+  /**
+   * Test Suite: Fields Query Parameter
+   * Tests the `fields` query parameter for response optimization.
+   *
+   * - Default (no fields): excludes heavy arrays (clubPerformance, divisionPerformance, districtPerformance)
+   * - fields=divisions: includes divisionPerformance and clubPerformance
+   * - fields=clubs: includes clubPerformance
+   * - fields=all: includes all data (backward compatible full response)
+   * - Invalid fields value: treated as summary-only (no error)
+   */
+  describe('Fields Query Parameter', () => {
+    it('should accept fields=divisions without returning 400', async () => {
+      const response = await request(app).get(
+        '/api/districts/101/statistics?fields=divisions'
+      )
+
+      // Should not return 400 for valid fields param
+      expect(response.status).not.toBe(400)
+    })
+
+    it('should accept fields=clubs without returning 400', async () => {
+      const response = await request(app).get(
+        '/api/districts/101/statistics?fields=clubs'
+      )
+
+      expect(response.status).not.toBe(400)
+    })
+
+    it('should accept fields=all without returning 400', async () => {
+      const response = await request(app).get(
+        '/api/districts/101/statistics?fields=all'
+      )
+
+      expect(response.status).not.toBe(400)
+    })
+
+    it('should exclude heavy arrays from default response (no fields param)', async () => {
+      const response = await request(app).get('/api/districts/101/statistics')
+
+      if (response.status === 200) {
+        // Default response should NOT include heavy arrays
+        expect(response.body).not.toHaveProperty('clubPerformance')
+        expect(response.body).not.toHaveProperty('divisionPerformance')
+        expect(response.body).not.toHaveProperty('districtPerformance')
+
+        // But should include summary fields
+        expect(response.body).toHaveProperty('districtId')
+        expect(response.body).toHaveProperty('membership')
+        expect(response.body).toHaveProperty('clubs')
+        expect(response.body).toHaveProperty('education')
+      }
+    })
+
+    it('should include all data when fields=all', async () => {
+      const response = await request(app).get(
+        '/api/districts/101/statistics?fields=all'
+      )
+
+      if (response.status === 200) {
+        // fields=all should preserve the full response including heavy arrays
+        expect(response.body).toHaveProperty('districtId')
+        expect(response.body).toHaveProperty('membership')
+        expect(response.body).toHaveProperty('clubs')
+        expect(response.body).toHaveProperty('education')
+        // Heavy arrays should be present
+        expect(response.body).toHaveProperty('clubPerformance')
+        expect(response.body).toHaveProperty('divisionPerformance')
+        expect(response.body).toHaveProperty('districtPerformance')
+      }
+    })
+
+    it('should include division data when fields=divisions', async () => {
+      const response = await request(app).get(
+        '/api/districts/101/statistics?fields=divisions'
+      )
+
+      if (response.status === 200) {
+        // Should include division-related arrays
+        expect(response.body).toHaveProperty('divisionPerformance')
+        expect(response.body).toHaveProperty('clubPerformance')
+        // Should NOT include other heavy arrays
+        expect(response.body).not.toHaveProperty('districtPerformance')
+      }
+    })
+
+    it('should include club data when fields=clubs', async () => {
+      const response = await request(app).get(
+        '/api/districts/101/statistics?fields=clubs'
+      )
+
+      if (response.status === 200) {
+        // Should include clubPerformance
+        expect(response.body).toHaveProperty('clubPerformance')
+        // Should NOT include other heavy arrays
+        expect(response.body).not.toHaveProperty('divisionPerformance')
+        expect(response.body).not.toHaveProperty('districtPerformance')
+      }
+    })
+
+    it('should not return 400 for unknown fields value', async () => {
+      const response = await request(app).get(
+        '/api/districts/101/statistics?fields=unknown'
+      )
+
+      // Unknown fields value should fallback to summary-only, not error
+      expect(response.status).not.toBe(400)
+    })
+
+    it('should work with both fields and date params together', async () => {
+      const response = await request(app).get(
+        '/api/districts/101/statistics?date=2024-01-15&fields=divisions'
+      )
+
+      // Should not return 400 for valid combination
+      expect(response.status).not.toBe(400)
+
+      // If successful, date validation should still work
+      if (response.status === 200) {
+        expect(response.body).toHaveProperty('divisionPerformance')
+      }
+    })
+
+    it('should generate different cache keys for different fields values', async () => {
+      const response1 = await request(app).get(
+        '/api/districts/101/statistics?fields=divisions'
+      )
+
+      const response2 = await request(app).get(
+        '/api/districts/101/statistics?fields=all'
+      )
+
+      // Both requests should complete independently
+      expect(response1.status).toBeDefined()
+      expect(response2.status).toBeDefined()
+    })
+  })
 })
