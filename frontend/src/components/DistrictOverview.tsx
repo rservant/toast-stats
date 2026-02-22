@@ -10,12 +10,21 @@ interface DistrictOverviewProps {
   districtId: string
   selectedDate?: string
   programYearStartDate?: string
+  /**
+   * Net member count change for the program year, computed from the rich
+   * aggregated analytics trend (134+ data points). When provided, this
+   * overrides the locally-derived value from the sparse /analytics endpoint
+   * which only has 2 points and computes a cross-year diff instead of
+   * a program-year diff. See #76.
+   */
+  netMemberChange?: number | undefined
 }
 
 export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
   districtId,
   selectedDate,
   programYearStartDate,
+  netMemberChange,
 }) => {
   // Fetch analytics with program year boundaries
   const {
@@ -35,17 +44,19 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
 
   const isLoading = isLoadingAnalytics
 
-  // Calculate actual member count change from the membership trend data
-  // This derives the net change from first to last trend point (matches Trends tab "Net Change")
-  // Fixes #76: memberCountChange from backend returns 0 for single-snapshot queries
+  // Use the prop value from aggregated analytics when available (correct program-year diff).
+  // Fall back to deriving from sparse /analytics trend (cross-year diff, less accurate).
+  // Fix #76: the sparse membershipTrend only has 2 points spanning a full calendar year,
+  // giving a cross-year diff (+61) instead of the program-year diff (-66).
   const actualMemberCountChange = React.useMemo(() => {
+    if (netMemberChange !== undefined) return netMemberChange
     const trend = analytics?.membershipTrend
     if (!trend || trend.length < 2) return 0
     const first = trend[0]
     const last = trend[trend.length - 1]
     if (!first || !last) return 0
     return last.count - first.count
-  }, [analytics?.membershipTrend])
+  }, [netMemberChange, analytics?.membershipTrend])
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">

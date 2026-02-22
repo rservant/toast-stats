@@ -474,20 +474,37 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                   Goal Achievement Timeline
                 </h5>
                 <div className="space-y-2">
-                  {club.dcpGoalsTrend
-                    .filter((point, index, arr) => {
-                      // Always include first entry
-                      if (index === 0) return true
-                      // Include if goals changed from previous
-                      return (
-                        point.goalsAchieved !== arr[index - 1]?.goalsAchieved
-                      )
-                    })
-                    .map((point, index, filtered) => {
+                  {(() => {
+                    // Fix #79b: filter to current program year only
+                    const latestDate =
+                      club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]?.date
+                    const programYearBounds = latestDate
+                      ? getProgramYearForDate(latestDate)
+                      : null
+                    const inProgramYear = programYearBounds
+                      ? club.dcpGoalsTrend.filter(
+                          p =>
+                            p.date >= programYearBounds.startDate &&
+                            p.date <= programYearBounds.endDate
+                        )
+                      : club.dcpGoalsTrend
+
+                    // Show only dates where goals changed
+                    const changed = inProgramYear.filter(
+                      (point, index, arr) => {
+                        if (index === 0) return true
+                        return (
+                          point.goalsAchieved !== arr[index - 1]?.goalsAchieved
+                        )
+                      }
+                    )
+
+                    return changed.map((point, index) => {
                       const prevGoals =
                         index > 0
-                          ? (filtered[index - 1]?.goalsAchieved ?? 0)
-                          : 0
+                          ? (changed[index - 1]?.goalsAchieved ?? 0)
+                          : // Use the last pre-program-year value as baseline
+                            (inProgramYear[0]?.goalsAchieved ?? 0)
                       const gained = point.goalsAchieved - prevGoals
                       const isIncrease = gained > 0
                       return (
@@ -521,7 +538,8 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                           )}
                         </div>
                       )
-                    })}
+                    })
+                  })()}
                 </div>
               </div>
             </div>

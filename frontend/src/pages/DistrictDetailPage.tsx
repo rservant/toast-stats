@@ -589,6 +589,15 @@ const DistrictDetailPage: React.FC = () => {
                       selectedDate: effectiveEndDate,
                     })}
                     programYearStartDate={effectiveProgramYear.startDate}
+                    netMemberChange={(() => {
+                      // Fix #76: compute from rich aggregated trend (program-year scoped, 134+ points)
+                      const trend = aggregatedAnalytics?.trends?.membership
+                      if (!trend || trend.length < 2) return undefined
+                      const first = trend[0]
+                      const last = trend[trend.length - 1]
+                      if (!first || !last) return undefined
+                      return last.count - first.count
+                    })()}
                   />
                 )}
 
