@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../services/api'
+import { useDistricts } from '../hooks/useDistricts'
 import HistoricalRankChart from '../components/HistoricalRankChart'
 import { useProgramYear } from '../contexts/ProgramYearContext'
 import { ProgramYearSelector } from '../components/ProgramYearSelector'
@@ -19,6 +20,14 @@ const LandingPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<
     'aggregate' | 'clubs' | 'payments' | 'distinguished'
   >('aggregate')
+
+  // Fetch tracked districts to show indicator badges
+  const { data: districtsData } = useDistricts()
+  const trackedDistrictIds = React.useMemo(() => {
+    const ids = new Set<string>()
+    districtsData?.districts?.forEach(d => ids.add(d.id))
+    return ids
+  }, [districtsData])
   const [selectedRegions, setSelectedRegions] = useState<string[]>([])
 
   // Use program year context
@@ -708,8 +717,31 @@ const LandingPage: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {district.districtName}
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-900">
+                            {district.districtName}
+                          </span>
+                          {trackedDistrictIds.has(district.districtId) && (
+                            <span
+                              title="Detailed analytics available"
+                              className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-tm-loyal-blue-10 text-tm-loyal-blue"
+                            >
+                              <svg
+                                className="w-3 h-3 mr-0.5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                                />
+                              </svg>
+                              Analytics
+                            </span>
+                          )}
                         </div>
                         <div className="text-sm text-gray-500">
                           {district.activeClubs} active clubs
