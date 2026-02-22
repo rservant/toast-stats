@@ -48,6 +48,7 @@ import type {
 import {
   resolvePathUnderBase,
   validateSnapshotId,
+  validateDistrictId,
 } from './snapshot/SnapshotPathUtils.js'
 import {
   findLatestSuccessful,
@@ -769,8 +770,9 @@ export class FileSnapshotStore
     snapshotId: string,
     districtId: string
   ): Promise<boolean> {
+    validateDistrictId(districtId)
     try {
-      const districtPath = path.join(
+      const districtPath = resolvePathUnderBase(
         this.snapshotsDir,
         snapshotId,
         `district_${districtId}.json`
