@@ -12,6 +12,15 @@ vi.mock('../../services/api', () => ({
   },
 }))
 
+// Mock useDistricts to prevent it from consuming apiClient.get mocks
+vi.mock('../../hooks/useDistricts', () => ({
+  useDistricts: () => ({
+    data: { districts: [] },
+    isLoading: false,
+    isError: false,
+  }),
+}))
+
 interface MockApiClient {
   get: ReturnType<typeof vi.fn>
   delete: ReturnType<typeof vi.fn>
