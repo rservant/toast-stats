@@ -39,4 +39,14 @@
 
 **The Resulting Rule**: When a façade delegates to sub-modules, any method that constructs paths directly (rather than delegating) must also call the shared validation utilities (`validateDistrictId`, `resolvePathUnderBase`).
 
+---
+
+## 🗓️ 2026-02-22 — Lesson 03: Date-Aware Charts Beat Index-Based Positioning
+
+**The Discovery**: The Membership Trend chart positioned data points using array index (`index / (length - 1) * width`), making the x-axis span only the data range. With sparse data (e.g., 2 points), the chart showed "Feb 21 – Feb 21" with no program year context.
+
+**The Fix**: Use `calculateProgramYearDay()` to map dates to their position within the July 1 – June 30 program year. This ensures the x-axis always represents the full 365-day program year, and data points cluster where they actually occurred in time.
+
+**The Resulting Rule**: Time-series visualizations should always use date-based positioning, not array-index-based. Pair with reference lines for domain-significant dates to give users context about what happened when.
+
 **Future Warning**: If a new method is added to `SnapshotStore` that accepts `districtId` or `snapshotId` and constructs paths inline, it must validate inputs. Audit all `path.join` calls using user-supplied values.
