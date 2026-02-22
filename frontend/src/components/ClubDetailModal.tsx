@@ -1,5 +1,6 @@
 import React from 'react'
 import { ClubTrend } from '../hooks/useDistrictAnalytics'
+import { useClubTrends } from '../hooks/useClubTrends'
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { getClubStatusBadge } from '../utils/clubStatusBadge'
 import {
@@ -9,14 +10,36 @@ import {
 
 interface ClubDetailModalProps {
   club: ClubTrend | null
+  districtId?: string
   onClose: () => void
 }
 
 export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
   club,
+  districtId,
   onClose,
 }) => {
+  // Fetch dense per-club trend data from the club-trends-index (#79b)
+  const { data: denseClubData } = useClubTrends(
+    districtId ?? null,
+    club?.clubId ?? null,
+    !!districtId && !!club
+  )
+
   if (!club) return null
+
+  // Use dense trend data if available, otherwise fall back to sparse data
+  const membershipTrend =
+    denseClubData?.membershipTrend &&
+    denseClubData.membershipTrend.length > club.membershipTrend.length
+      ? denseClubData.membershipTrend
+      : club.membershipTrend
+
+  const dcpGoalsTrend =
+    denseClubData?.dcpGoalsTrend &&
+    denseClubData.dcpGoalsTrend.length > club.dcpGoalsTrend.length
+      ? denseClubData.dcpGoalsTrend
+      : club.dcpGoalsTrend
 
   // Get status badge styling
   const getStatusBadge = (
@@ -34,21 +57,21 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
 
   // Get latest membership
   const latestMembership =
-    club.membershipTrend.length > 0
-      ? (club.membershipTrend[club.membershipTrend.length - 1]?.count ?? 0)
+    membershipTrend.length > 0
+      ? (membershipTrend[membershipTrend.length - 1]?.count ?? 0)
       : 0
 
   // Get membership change
   const membershipChange =
-    club.membershipTrend.length > 1
-      ? (club.membershipTrend[club.membershipTrend.length - 1]?.count ?? 0) -
-        (club.membershipTrend[0]?.count ?? 0)
+    membershipTrend.length > 1
+      ? (membershipTrend[membershipTrend.length - 1]?.count ?? 0) -
+        (membershipTrend[0]?.count ?? 0)
       : 0
 
   // Get latest DCP goals
   const latestDcpGoals =
-    club.dcpGoalsTrend.length > 0
-      ? (club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]?.goalsAchieved ?? 0)
+    dcpGoalsTrend.length > 0
+      ? (dcpGoalsTrend[dcpGoalsTrend.length - 1]?.goalsAchieved ?? 0)
       : 0
 
   // Format date (using utility to avoid UTC timezone shift)
@@ -62,13 +85,10 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
     csvRows.push('Date,Membership,DCP Goals')
 
     // Combine membership and DCP data
-    const maxLength = Math.max(
-      club.membershipTrend.length,
-      club.dcpGoalsTrend.length
-    )
+    const maxLength = Math.max(membershipTrend.length, dcpGoalsTrend.length)
     for (let i = 0; i < maxLength; i++) {
-      const membershipData = club.membershipTrend[i]
-      const dcpData = club.dcpGoalsTrend[i]
+      const membershipData = membershipTrend[i]
+      const dcpData = dcpGoalsTrend[i]
 
       const date = membershipData?.date || dcpData?.date || ''
       const membership = membershipData?.count ?? ''
@@ -91,14 +111,14 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
   }
 
   // Calculate chart dimensions based on program year
-  const membershipValues = club.membershipTrend.map(d => d.count)
+  const membershipValues = membershipTrend.map(d => d.count)
   const minMembership = Math.min(...membershipValues)
   const maxMembership = Math.max(...membershipValues)
   const membershipRange = maxMembership - minMembership || 1
 
   // Determine the program year from the data
   const firstDataDate =
-    club.membershipTrend[0]?.date ?? new Date().toISOString().slice(0, 10)
+    membershipTrend[0]?.date ?? new Date().toISOString().slice(0, 10)
   const programYear = getProgramYearForDate(firstDataDate)
   const totalProgramDays = 365
 
@@ -259,7 +279,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
             )}
 
           {/* Membership Trend Chart — full program year with key date markers */}
-          {club.membershipTrend.length > 0 && (
+          {membershipTrend.length > 0 && (
             <div className="mb-6">
               <h4 className="font-semibold text-gray-900 mb-1 flex items-center gap-2 font-tm-headline">
                 <svg
@@ -360,14 +380,14 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                     })}
 
                     {/* Data line path — positioned by date within program year */}
-                    {club.membershipTrend.length > 1 && (
+                    {membershipTrend.length > 1 && (
                       <polyline
                         fill="none"
                         stroke="var(--tm-loyal-blue)"
                         strokeWidth="2.5"
                         strokeLinejoin="round"
                         strokeLinecap="round"
-                        points={club.membershipTrend
+                        points={membershipTrend
                           .map(point => {
                             const day = calculateProgramYearDay(point.date)
                             const x = dayToX(day)
@@ -383,7 +403,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                     )}
 
                     {/* Data points */}
-                    {club.membershipTrend.map((point, index) => {
+                    {membershipTrend.map((point, index) => {
                       const day = calculateProgramYearDay(point.date)
                       const x = dayToX(day)
                       const y =
@@ -432,7 +452,7 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
           )}
 
           {/* DCP Goals Progress — with achievement dates */}
-          {club.dcpGoalsTrend.length > 0 && (
+          {dcpGoalsTrend.length > 0 && (
             <div className="mb-6">
               <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 font-tm-headline">
                 <svg
@@ -477,17 +497,17 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                   {(() => {
                     // Fix #79b: filter to current program year only
                     const latestDate =
-                      club.dcpGoalsTrend[club.dcpGoalsTrend.length - 1]?.date
+                      dcpGoalsTrend[dcpGoalsTrend.length - 1]?.date
                     const programYearBounds = latestDate
                       ? getProgramYearForDate(latestDate)
                       : null
                     const inProgramYear = programYearBounds
-                      ? club.dcpGoalsTrend.filter(
+                      ? dcpGoalsTrend.filter(
                           p =>
                             p.date >= programYearBounds.startDate &&
                             p.date <= programYearBounds.endDate
                         )
-                      : club.dcpGoalsTrend
+                      : dcpGoalsTrend
 
                     // Show only dates where goals changed
                     const changed = inProgramYear.filter(

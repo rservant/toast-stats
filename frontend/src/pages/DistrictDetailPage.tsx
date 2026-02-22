@@ -656,6 +656,7 @@ const DistrictDetailPage: React.FC = () => {
                 />
                 <ClubDetailModal
                   club={selectedClub}
+                  districtId={districtId}
                   onClose={handleCloseModal}
                 />
               </>
