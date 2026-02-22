@@ -161,8 +161,8 @@ jobs:
 
           echo "## 📥 Scrape Results" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Date**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
-          SUCCEEDED=$(jq '.scrape.districts.succeeded' /tmp/scrape-output.json)
-          FAILED=$(jq '.scrape.districts.failed' /tmp/scrape-output.json)
+          SUCCEEDED=$(jq '.districts.succeeded' /tmp/scrape-output.json)
+          FAILED=$(jq '.districts.failed' /tmp/scrape-output.json)
           echo "- **Districts succeeded**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Districts failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
 
