@@ -50,3 +50,13 @@
 **The Resulting Rule**: Time-series visualizations should always use date-based positioning, not array-index-based. Pair with reference lines for domain-significant dates to give users context about what happened when.
 
 **Future Warning**: If a new method is added to `SnapshotStore` that accepts `districtId` or `snapshotId` and constructs paths inline, it must validate inputs. Audit all `path.join` calls using user-supplied values.
+
+---
+
+## 🗓️ 2026-02-22 — Lesson 04: Summary vs Full Analytics Have Different Data Granularity
+
+**The Discovery**: The membership badge on the Overview tab showed +61 instead of -66. Root cause: `DistrictOverview` called `/analytics` (which returns a **sparse 2-point** `membershipTrend` spanning Feb 2025 → Feb 2026), while the correct value came from `/analytics-summary` (134-point `trends.membership` scoped to Jul 2025 → Feb 2026). The two endpoints return the same field name but with vastly different data ranges and granularity.
+
+**The Resulting Rule**: When a component needs derived values, always verify which API endpoint provides the data and whether the data range matches the intended scope (program year vs. calendar year). Never assume two endpoints with similar field names return equivalent data.
+
+**Future Warning**: Any new component that derives statistics from trend data must confirm it's using the aggregated summary (program-year scoped) rather than the full analytics endpoint (which may span multiple years with sparse points).
