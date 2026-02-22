@@ -2,6 +2,10 @@ import React from 'react'
 import { ClubTrend } from '../hooks/useDistrictAnalytics'
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { getClubStatusBadge } from '../utils/clubStatusBadge'
+import {
+  getProgramYearForDate,
+  calculateProgramYearDay,
+} from '../utils/programYear'
 
 interface ClubDetailModalProps {
   club: ClubTrend | null
@@ -86,11 +90,28 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
     window.URL.revokeObjectURL(url)
   }
 
-  // Calculate min and max for chart scaling
+  // Calculate chart dimensions based on program year
   const membershipValues = club.membershipTrend.map(d => d.count)
   const minMembership = Math.min(...membershipValues)
   const maxMembership = Math.max(...membershipValues)
   const membershipRange = maxMembership - minMembership || 1
+
+  // Determine the program year from the data
+  const firstDataDate =
+    club.membershipTrend[0]?.date ?? new Date().toISOString().slice(0, 10)
+  const programYear = getProgramYearForDate(firstDataDate)
+  const totalProgramDays = 365
+
+  // Key Toastmasters dates as program year day positions
+  const keyDates = [
+    { day: 0, label: 'Jul 1', description: 'Program Year Start' },
+    { day: 92, label: 'Oct 1', description: 'October Renewals' },
+    { day: 275, label: 'Apr 1', description: 'April Renewals' },
+    { day: 365, label: 'Jun 30', description: 'Program Year End' },
+  ]
+
+  // Map a program year day to SVG x-coordinate (chart is 800 wide)
+  const dayToX = (day: number) => (day / totalProgramDays) * 800
 
   return (
     <div
@@ -237,10 +258,10 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
               </div>
             )}
 
-          {/* Membership Trend Chart */}
+          {/* Membership Trend Chart — full program year with key date markers */}
           {club.membershipTrend.length > 0 && (
             <div className="mb-6">
-              <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 font-tm-headline">
+              <h4 className="font-semibold text-gray-900 mb-1 flex items-center gap-2 font-tm-headline">
                 <svg
                   className="w-5 h-5 text-tm-loyal-blue"
                   fill="none"
@@ -256,6 +277,9 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                 </svg>
                 Membership Trend
               </h4>
+              <p className="text-xs text-gray-500 mb-4 font-tm-body">
+                Program Year {programYear.label}
+              </p>
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                 {/* Stats */}
                 <div className="flex items-center justify-between mb-4 text-sm">
@@ -278,129 +302,136 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                   </div>
                 </div>
 
-                {/* Simple Line Chart */}
+                {/* Program Year Chart */}
                 <div className="relative h-48 bg-white rounded border border-gray-200 p-4">
                   {/* Y-axis labels */}
                   <div className="absolute left-0 top-4 bottom-4 w-10 flex flex-col justify-between text-xs text-gray-500 font-tm-body">
                     <span>{maxMembership}</span>
                     <span>
-                      {Math.round(minMembership + membershipRange * 0.75)}
-                    </span>
-                    <span>
                       {Math.round(minMembership + membershipRange * 0.5)}
-                    </span>
-                    <span>
-                      {Math.round(minMembership + membershipRange * 0.25)}
                     </span>
                     <span>{minMembership}</span>
                   </div>
                   <svg
                     className="w-full h-full ml-8"
-                    viewBox="0 0 800 160"
+                    viewBox="0 0 800 180"
                     preserveAspectRatio="none"
-                    aria-label={`Membership trend from ${minMembership} to ${maxMembership} members`}
+                    aria-label={`Membership trend for ${programYear.label} program year, from ${minMembership} to ${maxMembership} members`}
                   >
-                    {/* Grid lines */}
-                    <line
-                      x1="0"
-                      y1="0"
-                      x2="800"
-                      y2="0"
-                      stroke="var(--tm-cool-gray)"
-                      strokeWidth="1"
-                    />
-                    <line
-                      x1="0"
-                      y1="40"
-                      x2="800"
-                      y2="40"
-                      stroke="var(--tm-cool-gray)"
-                      strokeWidth="1"
-                    />
-                    <line
-                      x1="0"
-                      y1="80"
-                      x2="800"
-                      y2="80"
-                      stroke="var(--tm-cool-gray)"
-                      strokeWidth="1"
-                    />
-                    <line
-                      x1="0"
-                      y1="120"
-                      x2="800"
-                      y2="120"
-                      stroke="var(--tm-cool-gray)"
-                      strokeWidth="1"
-                    />
-                    <line
-                      x1="0"
-                      y1="160"
-                      x2="800"
-                      y2="160"
-                      stroke="var(--tm-cool-gray)"
-                      strokeWidth="1"
-                    />
+                    {/* Horizontal grid lines */}
+                    {[0, 45, 90, 135, 160].map(y => (
+                      <line
+                        key={`grid-${y}`}
+                        x1="0"
+                        y1={y}
+                        x2="800"
+                        y2={y}
+                        stroke="var(--tm-cool-gray)"
+                        strokeWidth="0.5"
+                      />
+                    ))}
 
-                    {/* Line path */}
-                    <polyline
-                      fill="none"
-                      stroke="var(--tm-loyal-blue)" // TM Loyal Blue
-                      strokeWidth="2"
-                      points={club.membershipTrend
-                        .map((point, index) => {
-                          const x =
-                            (index / (club.membershipTrend.length - 1)) * 800
-                          const y =
-                            160 -
-                            ((point.count - minMembership) / membershipRange) *
-                              160
-                          return `${x},${y}`
-                        })
-                        .join(' ')}
-                    />
+                    {/* Key date reference lines */}
+                    {keyDates.map(kd => {
+                      const x = dayToX(kd.day)
+                      return (
+                        <g key={kd.label}>
+                          <line
+                            x1={x}
+                            y1="0"
+                            x2={x}
+                            y2="160"
+                            stroke="var(--tm-cool-gray)"
+                            strokeWidth="1"
+                            strokeDasharray="4 3"
+                          />
+                          <text
+                            x={x}
+                            y="175"
+                            textAnchor="middle"
+                            fontSize="10"
+                            fill="#6b7280"
+                            fontFamily="inherit"
+                          >
+                            {kd.label}
+                          </text>
+                        </g>
+                      )
+                    })}
+
+                    {/* Data line path — positioned by date within program year */}
+                    {club.membershipTrend.length > 1 && (
+                      <polyline
+                        fill="none"
+                        stroke="var(--tm-loyal-blue)"
+                        strokeWidth="2.5"
+                        strokeLinejoin="round"
+                        strokeLinecap="round"
+                        points={club.membershipTrend
+                          .map(point => {
+                            const day = calculateProgramYearDay(point.date)
+                            const x = dayToX(day)
+                            const y =
+                              160 -
+                              ((point.count - minMembership) /
+                                membershipRange) *
+                                160
+                            return `${x},${y}`
+                          })
+                          .join(' ')}
+                      />
+                    )}
 
                     {/* Data points */}
                     {club.membershipTrend.map((point, index) => {
-                      const x =
-                        (index / (club.membershipTrend.length - 1)) * 800
+                      const day = calculateProgramYearDay(point.date)
+                      const x = dayToX(day)
                       const y =
                         160 -
                         ((point.count - minMembership) / membershipRange) * 160
                       return (
-                        <circle
-                          key={index}
-                          cx={x}
-                          cy={y}
-                          r="4"
-                          fill="var(--tm-loyal-blue)" // TM Loyal Blue
-                        />
+                        <g key={index}>
+                          <circle
+                            cx={x}
+                            cy={y}
+                            r="5"
+                            fill="var(--tm-loyal-blue)"
+                          />
+                          {/* Tooltip on hover — count label */}
+                          <title>
+                            {formatDate(point.date)}: {point.count} members
+                          </title>
+                        </g>
                       )
                     })}
                   </svg>
                 </div>
 
-                {/* Date range */}
-                <div className="flex items-center justify-between mt-2 text-xs text-gray-600 font-tm-body">
-                  <span>
-                    {club.membershipTrend[0]
-                      ? formatDate(club.membershipTrend[0].date)
-                      : 'N/A'}
-                  </span>
-                  <span>
-                    {club.membershipTrend[club.membershipTrend.length - 1]
-                      ? formatDate(
-                          club.membershipTrend[club.membershipTrend.length - 1]
-                            ?.date ?? ''
-                        )
-                      : 'N/A'}
-                  </span>
+                {/* Legend */}
+                <div className="flex items-center justify-between mt-2 text-xs text-gray-500 font-tm-body">
+                  <span>{programYear.label} Program Year</span>
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1">
+                      <span
+                        className="inline-block w-3 h-0.5 bg-gray-400"
+                        style={{ borderTop: '1px dashed #9ca3af' }}
+                      ></span>
+                      Key dates
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span
+                        className="inline-block w-2 h-2 rounded-full"
+                        style={{ backgroundColor: 'var(--tm-loyal-blue)' }}
+                      ></span>
+                      Data points
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* DCP Goals Progress */}
+          {/* DCP Goals Progress — with achievement dates */}
           {club.dcpGoalsTrend.length > 0 && (
             <div className="mb-6">
               <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 font-tm-headline">
@@ -438,7 +469,10 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                   </div>
                 </div>
 
-                {/* Historical Progress - only show dates where goals changed */}
+                {/* Goal achievement timeline — show when each new goal was achieved */}
+                <h5 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 font-tm-body">
+                  Goal Achievement Timeline
+                </h5>
                 <div className="space-y-2">
                   {club.dcpGoalsTrend
                     .filter((point, index, arr) => {
@@ -449,29 +483,45 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
                         point.goalsAchieved !== arr[index - 1]?.goalsAchieved
                       )
                     })
-                    .slice(-5)
-                    .reverse()
-                    .map((point, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-3 text-sm"
-                      >
-                        <span className="text-gray-600 w-24 font-tm-body">
-                          {formatDate(point.date)}
-                        </span>
-                        <div className="flex-1 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-tm-loyal-blue h-2 rounded-full"
-                            style={{
-                              width: `${(point.goalsAchieved / 10) * 100}%`,
-                            }}
-                          ></div>
+                    .map((point, index, filtered) => {
+                      const prevGoals =
+                        index > 0
+                          ? (filtered[index - 1]?.goalsAchieved ?? 0)
+                          : 0
+                      const gained = point.goalsAchieved - prevGoals
+                      const isIncrease = gained > 0
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 text-sm"
+                        >
+                          <span className="text-gray-600 w-24 flex-shrink-0 font-tm-body">
+                            {formatDate(point.date)}
+                          </span>
+                          <div className="flex-1 bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-tm-loyal-blue h-2 rounded-full"
+                              style={{
+                                width: `${(point.goalsAchieved / 10) * 100}%`,
+                              }}
+                            ></div>
+                          </div>
+                          <span className="text-gray-900 w-12 text-right font-tm-body">
+                            {point.goalsAchieved}/10
+                          </span>
+                          {index > 0 && (
+                            <span
+                              className={`text-xs w-8 text-right font-medium font-tm-body ${
+                                isIncrease ? 'text-green-600' : 'text-red-600'
+                              }`}
+                            >
+                              {isIncrease ? '+' : ''}
+                              {gained}
+                            </span>
+                          )}
                         </div>
-                        <span className="text-gray-900 w-16 text-right font-tm-body">
-                          {point.goalsAchieved} / 10
-                        </span>
-                      </div>
-                    ))}
+                      )
+                    })}
                 </div>
               </div>
             </div>
