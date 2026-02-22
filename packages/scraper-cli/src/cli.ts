@@ -25,6 +25,11 @@ import { ScraperOrchestrator } from './ScraperOrchestrator.js'
 import { TransformService } from './services/TransformService.js'
 import { AnalyticsComputeService } from './services/AnalyticsComputeService.js'
 import { UploadService } from './services/UploadService.js'
+import {
+  DistrictSnapshotIndexWriter,
+  type IndexStorage,
+  type DistrictSnapshotIndex,
+} from './services/DistrictSnapshotIndexWriter.js'
 import { createVerboseLogger } from './createVerboseLogger.js'
 import {
   CLIOptions,
@@ -737,6 +742,88 @@ export function createCLI(): Command {
         verbose: options.verbose,
         concurrency: options.concurrency,
       })
+
+      // ── Update district-snapshot index ─────────────────────────────────
+      // After upload completes, update the index with district-date mappings.
+      // This is non-fatal: if it fails the upload result is still reported.
+      if (
+        result.success &&
+        !options.dryRun &&
+        result.filesUploaded.length > 0
+      ) {
+        try {
+          // Extract unique (date, districtId) pairs from uploaded files
+          // Pattern: prefix/{date}/district_{id}.json
+          const districtPattern = /district_(\w+)\.json$/
+          const dateDistrictMap = new Map<string, Set<string>>()
+
+          for (const filePath of result.filesUploaded) {
+            const match = districtPattern.exec(filePath)
+            if (match?.[1]) {
+              // Extract date from path: prefix/{date}/...
+              const parts = filePath.split('/')
+              const dateIndex = parts.findIndex(p =>
+                /^\d{4}-\d{2}-\d{2}$/.test(p)
+              )
+              if (dateIndex >= 0) {
+                const date = parts[dateIndex]!
+                const existing = dateDistrictMap.get(date) ?? new Set<string>()
+                existing.add(match[1])
+                dateDistrictMap.set(date, existing)
+              }
+            }
+          }
+
+          if (dateDistrictMap.size > 0) {
+            // Create GCS-backed index storage using the same bucket
+            const { Storage } = await import('@google-cloud/storage')
+            const gcsStorage = new Storage({ projectId })
+            const gcsBucket = gcsStorage.bucket(bucket)
+
+            const indexStorage: IndexStorage = {
+              async readIndex(): Promise<DistrictSnapshotIndex | null> {
+                const file = gcsBucket.file(
+                  'config/district-snapshot-index.json'
+                )
+                const [exists] = await file.exists()
+                if (!exists) return null
+                const [buffer] = await file.download()
+                return JSON.parse(
+                  buffer.toString('utf-8')
+                ) as DistrictSnapshotIndex
+              },
+              async writeIndex(index: DistrictSnapshotIndex): Promise<void> {
+                const file = gcsBucket.file(
+                  'config/district-snapshot-index.json'
+                )
+                await file.save(JSON.stringify(index, null, 2), {
+                  contentType: 'application/json',
+                })
+              },
+            }
+
+            const indexWriter = new DistrictSnapshotIndexWriter(indexStorage)
+
+            for (const [date, districtIds] of dateDistrictMap) {
+              await indexWriter.updateIndex(date, [...districtIds])
+            }
+
+            if (options.verbose) {
+              console.error(
+                `[INFO] Updated district-snapshot index for ${dateDistrictMap.size} date(s)`
+              )
+            }
+          }
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : 'Unknown error'
+          if (options.verbose) {
+            console.error(
+              `[WARN] Failed to update district-snapshot index: ${msg}`
+            )
+          }
+          // Non-fatal: continue with summary output
+        }
+      }
 
       // Format and output JSON summary
       // Requirement 6.5: WHEN upload completes, THE Scraper_CLI SHALL output a summary
