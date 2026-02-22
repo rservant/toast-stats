@@ -7,7 +7,12 @@
 import { Router, type Request, type Response } from 'express'
 import { transformErrorResponse } from '../../utils/transformers.js'
 import { cacheMiddleware } from '../../middleware/cache.js'
-import { getValidDistrictId, perDistrictSnapshotStore } from './shared.js'
+import { logger } from '../../utils/logger.js'
+import {
+  getValidDistrictId,
+  perDistrictSnapshotStore,
+  districtSnapshotIndexService,
+} from './shared.js'
 
 export const snapshotsRouter = Router()
 
@@ -49,8 +54,9 @@ snapshotsRouter.get(
  * GET /api/districts/:districtId/cached-dates
  * List all available cached dates for a district
  *
- * Optimized: Uses listSnapshotIds() + parallel hasDistrictInSnapshot() checks
- * instead of listSnapshots() + sequential listDistrictsInSnapshot() calls.
+ * Fast path: Uses pre-computed district-snapshot index (single GCS read, cached 1h).
+ * Fallback: If index is unavailable, falls back to listSnapshotIds() +
+ *           parallel hasDistrictInSnapshot() HEAD requests.
  *
  * Requirements: 1.1, 1.2, 1.3, 1.4
  */
@@ -74,7 +80,44 @@ snapshotsRouter.get(
         return
       }
 
-      // Fast path: list snapshot IDs without reading metadata
+      // ── Fast path: pre-computed index ──────────────────────────────────
+      const indexDates =
+        await districtSnapshotIndexService.getDatesForDistrict(districtId)
+
+      if (indexDates !== null) {
+        // Index available — use it directly
+        const sortedDates = indexDates // already sorted by the service
+        const dateRange =
+          sortedDates.length > 0
+            ? {
+                startDate: sortedDates[0],
+                endDate: sortedDates[sortedDates.length - 1],
+              }
+            : null
+
+        logger.info('Served cached-dates from pre-computed index', {
+          operation: 'cachedDates',
+          districtId,
+          count: sortedDates.length,
+          source: 'index',
+        })
+
+        res.json({
+          districtId,
+          dates: sortedDates,
+          count: sortedDates.length,
+          dateRange,
+        })
+        return
+      }
+
+      // ── Fallback: HEAD request scan ───────────────────────────────────
+      logger.info('Index unavailable, falling back to HEAD request scan', {
+        operation: 'cachedDates',
+        districtId,
+        source: 'fallback',
+      })
+
       const snapshotIds = await perDistrictSnapshotStore.listSnapshotIds()
       const validSnapshotIds = snapshotIds.filter(id =>
         /^\d{4}-\d{2}-\d{2}$/.test(id)

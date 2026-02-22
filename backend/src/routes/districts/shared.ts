@@ -19,6 +19,11 @@ import {
   type ITimeSeriesIndexService,
 } from '../../services/TimeSeriesIndexService.js'
 import { GCSTimeSeriesIndexStorage } from '../../services/storage/GCSTimeSeriesIndexStorage.js'
+import {
+  DistrictSnapshotIndexService,
+  type IndexStorageReader,
+  type DistrictSnapshotIndex,
+} from '../../services/DistrictSnapshotIndexService.js'
 import type { ISnapshotStorage } from '../../types/storageInterfaces.js'
 import type { PerDistrictSnapshotStoreInterface } from '../../services/SnapshotStore.js'
 import { transformErrorResponse } from '../../utils/transformers.js'
@@ -155,6 +160,68 @@ export const rawCSVCacheService = storageProviders.rawCSVStorage
 // This respects the STORAGE_PROVIDER environment variable for storage backend selection
 export const districtConfigService = new DistrictConfigurationService(
   storageProviders.districtConfigStorage
+)
+
+// ─── District Snapshot Index Service ─────────────────────────────────────────
+// Reads pre-computed index mapping districts → available snapshot dates.
+// Uses GCS in production, local filesystem in development.
+
+function createIndexStorageReader(): IndexStorageReader {
+  const storageProvider = process.env['STORAGE_PROVIDER']
+  const gcsBucketName = process.env['GCS_BUCKET_NAME']
+
+  if (storageProvider === 'gcp' && gcsBucketName) {
+    // GCS-backed: read config/district-snapshot-index.json from bucket
+    let bucketPromise: Promise<import('@google-cloud/storage').Bucket> | null =
+      null
+    const bucket = gcsBucketName
+
+    function getBucket(): Promise<import('@google-cloud/storage').Bucket> {
+      if (!bucketPromise) {
+        bucketPromise = import('@google-cloud/storage').then(({ Storage }) => {
+          const storage = new Storage()
+          return storage.bucket(bucket)
+        })
+      }
+      return bucketPromise
+    }
+
+    logger.info('Using GCS-backed DistrictSnapshotIndexReader', {
+      operation: 'createIndexStorageReader',
+      bucket: gcsBucketName,
+    })
+
+    return {
+      async readIndex(): Promise<DistrictSnapshotIndex | null> {
+        const b = await getBucket()
+        const file = b.file('config/district-snapshot-index.json')
+        const [exists] = await file.exists()
+        if (!exists) return null
+        const [buffer] = await file.download()
+        return JSON.parse(buffer.toString('utf-8')) as DistrictSnapshotIndex
+      },
+    }
+  } else {
+    // Local filesystem: read from {cacheDir}/config/district-snapshot-index.json
+    const indexPath = `${cacheDirectory}/config/district-snapshot-index.json`
+    return {
+      async readIndex(): Promise<DistrictSnapshotIndex | null> {
+        try {
+          const { readFile } = await import('fs/promises')
+          const data = await readFile(indexPath, 'utf-8')
+          return JSON.parse(data) as DistrictSnapshotIndex
+        } catch (error) {
+          const fsError = error as { code?: string }
+          if (fsError.code === 'ENOENT') return null
+          throw error
+        }
+      },
+    }
+  }
+}
+
+export const districtSnapshotIndexService = new DistrictSnapshotIndexService(
+  createIndexStorageReader()
 )
 
 // Initialize services (async initialization)
