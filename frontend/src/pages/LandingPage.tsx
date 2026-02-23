@@ -44,7 +44,6 @@ const LandingPage: React.FC = () => {
   >([])
   // Mobile-friendly collapsible region filters
   const [isHistoryRegionExpanded, setIsHistoryRegionExpanded] = useState(false)
-  const [isTableRegionExpanded, setIsTableRegionExpanded] = useState(false)
 
   // Fetch cached dates
   const { data: cachedDatesData } = useQuery({
@@ -357,14 +356,14 @@ const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100" id="main-content">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
+        {/* Header — compact (#83) */}
+        <div className="bg-white rounded-lg shadow-md p-4 mb-3">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-3">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-2xl font-bold text-gray-900">
                 Toastmasters District Rankings
               </h1>
-              <p className="text-gray-600">
+              <p className="text-gray-600 text-sm">
                 Compare district performance across paid clubs, payments, and
                 distinguished clubs
               </p>
@@ -372,7 +371,7 @@ const LandingPage: React.FC = () => {
           </div>
 
           {/* Program Year and Date Selectors */}
-          <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row gap-4 pt-3 border-t border-gray-200">
             {/* Program Year Selector */}
             {availableProgramYears.length > 0 && (
               <div className="flex-shrink-0">
@@ -387,10 +386,10 @@ const LandingPage: React.FC = () => {
 
             {/* Date Selector - Shows only dates in selected program year */}
             {cachedDates.length > 0 && (
-              <div className="flex flex-col gap-2 flex-1">
+              <div className="flex flex-col gap-1 flex-1">
                 <label
                   htmlFor="date-select"
-                  className="text-xs sm:text-sm font-medium text-gray-700"
+                  className="text-xs font-medium text-gray-700"
                 >
                   View Specific Date
                 </label>
@@ -398,7 +397,7 @@ const LandingPage: React.FC = () => {
                   id="date-select"
                   value={selectedDate || ''}
                   onChange={e => setSelectedDate(e.target.value || undefined)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-900 hover:border-tm-loyal-blue-50 focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue transition-colors bg-white font-tm-body"
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg font-medium text-sm text-gray-900 hover:border-tm-loyal-blue-50 focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue transition-colors bg-white font-tm-body"
                   style={{ color: 'var(--tm-black)' }}
                 >
                   <option value="" className="text-gray-900 bg-white">
@@ -425,104 +424,15 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Historical Rank Tracking Section */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="mb-4">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Historical Rank Progression
-            </h2>
-            <p className="text-gray-600">
-              Select regions to compare district rank progression over time
-            </p>
-          </div>
-
-          {/* Region Multi-Select for Historical Tracking */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <button
-                onClick={() =>
-                  setIsHistoryRegionExpanded(!isHistoryRegionExpanded)
-                }
-                className="text-sm font-medium text-gray-700 flex items-center gap-2 md:cursor-default"
-                aria-expanded={isHistoryRegionExpanded}
-              >
-                Select Regions to Compare ({selectedRegionsForHistory.length}{' '}
-                regions, {selectedDistricts.length} districts)
-                <svg
-                  className={`w-4 h-4 transition-transform md:hidden ${isHistoryRegionExpanded ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
-              {selectedRegionsForHistory.length > 0 && (
-                <button
-                  onClick={() => setSelectedRegionsForHistory([])}
-                  className="text-sm text-tm-loyal-blue hover:text-tm-loyal-blue-80 font-medium font-tm-body"
-                >
-                  Clear Selection
-                </button>
-              )}
-            </div>
-            <div
-              className={`${isHistoryRegionExpanded ? 'block' : 'hidden'} md:block`}
-            >
-              <div className="flex flex-wrap gap-2">
-                {regions.map(region => {
-                  const isSelected = selectedRegionsForHistory.includes(region)
-                  const districtCount = rankings.filter(
-                    r => r.region === region
-                  ).length
-                  return (
-                    <button
-                      key={region}
-                      onClick={() => handleRegionSelection(region)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors font-tm-body ${
-                        isSelected
-                          ? 'bg-tm-loyal-blue text-white hover:bg-tm-loyal-blue-80'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
-                    >
-                      {region} ({districtCount})
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-            {selectedRegionsForHistory.length > 0 && (
-              <p className="text-sm text-gray-600 mt-2">
-                Showing {selectedDistricts.length} districts from{' '}
-                {selectedRegionsForHistory.length} selected region
-                {selectedRegionsForHistory.length !== 1 ? 's' : ''}
-              </p>
-            )}
-          </div>
-
-          {/* Historical Rank Chart */}
-          <HistoricalRankChart
-            data={rankHistoryData || []}
-            isLoading={isLoadingRankHistory}
-            isError={isErrorRankHistory}
-            error={rankHistoryError}
-          />
-        </div>
-
-        {/* Sort Controls */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-          <div className="flex flex-wrap gap-2">
-            <span className="text-sm font-medium text-gray-700 self-center mr-2">
+        {/* Sort Controls + Region Filter Toolbar — compact (#83) */}
+        <div className="bg-white rounded-lg shadow-md p-3 mb-3">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <span className="text-sm font-medium text-gray-700 mr-1">
               Sort by:
             </span>
             <button
               onClick={() => setSortBy('aggregate')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors font-tm-body ${
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
                 sortBy === 'aggregate'
                   ? 'bg-tm-loyal-blue text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -532,7 +442,7 @@ const LandingPage: React.FC = () => {
             </button>
             <button
               onClick={() => setSortBy('clubs')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors font-tm-body ${
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
                 sortBy === 'clubs'
                   ? 'bg-tm-loyal-blue text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -542,7 +452,7 @@ const LandingPage: React.FC = () => {
             </button>
             <button
               onClick={() => setSortBy('payments')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors font-tm-body ${
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
                 sortBy === 'payments'
                   ? 'bg-tm-loyal-blue text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -552,7 +462,7 @@ const LandingPage: React.FC = () => {
             </button>
             <button
               onClick={() => setSortBy('distinguished')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors font-tm-body ${
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
                 sortBy === 'distinguished'
                   ? 'bg-tm-loyal-blue text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -561,118 +471,91 @@ const LandingPage: React.FC = () => {
               Distinguished Clubs
             </button>
           </div>
+
+          {/* Region Filter — collapsed by default (#83) */}
+          <details>
+            <summary className="cursor-pointer select-none text-sm font-semibold text-gray-900 py-1 hover:text-tm-loyal-blue transition-colors">
+              Filter Regions
+              {selectedRegions.length > 0 &&
+                selectedRegions.length < regions.length && (
+                  <span className="ml-2 text-xs font-normal text-tm-loyal-blue">
+                    ({selectedRegions.length}/{regions.length} selected)
+                  </span>
+                )}
+            </summary>
+            <div className="pt-2">
+              {/* Quick Select Buttons */}
+              <div className="flex flex-wrap gap-2 mb-2 pb-2 border-b border-gray-200">
+                <button
+                  onClick={() => setSelectedRegions(regions)}
+                  className="px-3 py-1 text-xs font-medium bg-tm-loyal-blue-20 text-tm-loyal-blue rounded-sm hover:bg-tm-loyal-blue-30 transition-colors font-tm-body"
+                >
+                  All Regions
+                </button>
+                <button
+                  onClick={() => {
+                    const regions1to7 = regions.filter(r => {
+                      const num = parseInt(r, 10)
+                      return !isNaN(num) && num >= 1 && num <= 7
+                    })
+                    setSelectedRegions(regions1to7)
+                  }}
+                  className="px-3 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-sm hover:bg-green-200 transition-colors"
+                >
+                  Regions 1-7
+                </button>
+                <button
+                  onClick={() => setSelectedRegions([])}
+                  className="px-3 py-1 text-xs font-medium bg-gray-200 text-gray-700 rounded-sm hover:bg-gray-300 transition-colors"
+                >
+                  Clear All
+                </button>
+              </div>
+
+              {/* Individual Region Checkboxes */}
+              <div className="flex flex-wrap gap-3">
+                {regions.map(region => {
+                  const count = rankings.filter(r => r.region === region).length
+                  return (
+                    <label
+                      key={region}
+                      className="inline-flex items-center cursor-pointer hover:bg-gray-100 px-3 py-1 rounded-sm transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedRegions.includes(region)}
+                        onChange={e => {
+                          if (e.target.checked) {
+                            setSelectedRegions([...selectedRegions, region])
+                          } else {
+                            setSelectedRegions(
+                              selectedRegions.filter(r => r !== region)
+                            )
+                          }
+                        }}
+                        className="w-4 h-4 text-tm-loyal-blue border-gray-300 rounded-sm focus:ring-tm-loyal-blue"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">
+                        Region {region} ({count})
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+              {selectedRegions.length > 0 &&
+                selectedRegions.length < regions.length && (
+                  <div className="mt-2 text-sm text-tm-loyal-blue font-medium font-tm-body">
+                    Showing {filteredRankings.length} districts from{' '}
+                    {selectedRegions.length} region
+                    {selectedRegions.length !== 1 ? 's' : ''}
+                  </div>
+                )}
+            </div>
+          </details>
         </div>
 
         {/* Rankings Table */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          {/* Region Filter in Table Header */}
-          <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0">
-                <button
-                  onClick={() =>
-                    setIsTableRegionExpanded(!isTableRegionExpanded)
-                  }
-                  className="text-sm font-semibold text-gray-900 flex items-center gap-2 md:cursor-default"
-                  aria-expanded={isTableRegionExpanded}
-                >
-                  Filter Regions
-                  {selectedRegions.length > 0 &&
-                    selectedRegions.length < regions.length && (
-                      <span className="text-xs font-normal text-tm-loyal-blue md:hidden">
-                        ({selectedRegions.length}/{regions.length})
-                      </span>
-                    )}
-                  <svg
-                    className={`w-4 h-4 transition-transform md:hidden ${isTableRegionExpanded ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </button>
-              </div>
-              <div
-                className={`flex-1 ${isTableRegionExpanded ? 'block' : 'hidden'} md:block`}
-              >
-                {/* Quick Select Buttons */}
-                <div className="flex flex-wrap gap-2 mb-3 pb-3 border-b border-gray-200">
-                  <button
-                    onClick={() => setSelectedRegions(regions)}
-                    className="px-3 py-1 text-xs font-medium bg-tm-loyal-blue-20 text-tm-loyal-blue rounded-sm hover:bg-tm-loyal-blue-30 transition-colors font-tm-body"
-                  >
-                    All Regions
-                  </button>
-                  <button
-                    onClick={() => {
-                      const regions1to7 = regions.filter(r => {
-                        const num = parseInt(r, 10)
-                        return !isNaN(num) && num >= 1 && num <= 7
-                      })
-                      setSelectedRegions(regions1to7)
-                    }}
-                    className="px-3 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-sm hover:bg-green-200 transition-colors"
-                  >
-                    Regions 1-7
-                  </button>
-                  <button
-                    onClick={() => setSelectedRegions([])}
-                    className="px-3 py-1 text-xs font-medium bg-gray-200 text-gray-700 rounded-sm hover:bg-gray-300 transition-colors"
-                  >
-                    Clear All
-                  </button>
-                </div>
-
-                {/* Individual Region Checkboxes */}
-                <div className="flex flex-wrap gap-3">
-                  {regions.map(region => {
-                    const count = rankings.filter(
-                      r => r.region === region
-                    ).length
-                    return (
-                      <label
-                        key={region}
-                        className="inline-flex items-center cursor-pointer hover:bg-gray-100 px-3 py-1 rounded-sm transition-colors"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedRegions.includes(region)}
-                          onChange={e => {
-                            if (e.target.checked) {
-                              setSelectedRegions([...selectedRegions, region])
-                            } else {
-                              setSelectedRegions(
-                                selectedRegions.filter(r => r !== region)
-                              )
-                            }
-                          }}
-                          className="w-4 h-4 text-tm-loyal-blue border-gray-300 rounded-sm focus:ring-tm-loyal-blue"
-                        />
-                        <span className="ml-2 text-sm text-gray-700">
-                          Region {region} ({count})
-                        </span>
-                      </label>
-                    )
-                  })}
-                </div>
-                {selectedRegions.length > 0 &&
-                  selectedRegions.length < regions.length && (
-                    <div className="mt-2 text-sm text-tm-loyal-blue font-medium font-tm-body">
-                      Showing {filteredRankings.length} districts from{' '}
-                      {selectedRegions.length} region
-                      {selectedRegions.length !== 1 ? 's' : ''}
-                    </div>
-                  )}
-              </div>
-            </div>
-          </div>
-
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -825,8 +708,98 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Historical Rank Progression — collapsed by default (#83) */}
+        <details className="bg-white rounded-lg shadow-md mt-4">
+          <summary className="cursor-pointer select-none text-lg font-bold text-gray-900 p-4 hover:text-tm-loyal-blue transition-colors">
+            Historical Rank Progression
+          </summary>
+          <div className="px-4 pb-4">
+            <p className="text-gray-600 text-sm mb-3">
+              Select regions to compare district rank progression over time
+            </p>
+
+            {/* Region Multi-Select for Historical Tracking */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <button
+                  onClick={() =>
+                    setIsHistoryRegionExpanded(!isHistoryRegionExpanded)
+                  }
+                  className="text-sm font-medium text-gray-700 flex items-center gap-2 md:cursor-default"
+                  aria-expanded={isHistoryRegionExpanded}
+                >
+                  Select Regions to Compare ({selectedRegionsForHistory.length}{' '}
+                  regions, {selectedDistricts.length} districts)
+                  <svg
+                    className={`w-4 h-4 transition-transform md:hidden ${isHistoryRegionExpanded ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+                {selectedRegionsForHistory.length > 0 && (
+                  <button
+                    onClick={() => setSelectedRegionsForHistory([])}
+                    className="text-sm text-tm-loyal-blue hover:text-tm-loyal-blue-80 font-medium font-tm-body"
+                  >
+                    Clear Selection
+                  </button>
+                )}
+              </div>
+              <div
+                className={`${isHistoryRegionExpanded ? 'block' : 'hidden'} md:block`}
+              >
+                <div className="flex flex-wrap gap-2">
+                  {regions.map(region => {
+                    const isSelected =
+                      selectedRegionsForHistory.includes(region)
+                    const districtCount = rankings.filter(
+                      r => r.region === region
+                    ).length
+                    return (
+                      <button
+                        key={region}
+                        onClick={() => handleRegionSelection(region)}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors font-tm-body ${
+                          isSelected
+                            ? 'bg-tm-loyal-blue text-white hover:bg-tm-loyal-blue-80'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        {region} ({districtCount})
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              {selectedRegionsForHistory.length > 0 && (
+                <p className="text-sm text-gray-600 mt-2">
+                  Showing {selectedDistricts.length} districts from{' '}
+                  {selectedRegionsForHistory.length} selected region
+                  {selectedRegionsForHistory.length !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+
+            {/* Historical Rank Chart */}
+            <HistoricalRankChart
+              data={rankHistoryData || []}
+              isLoading={isLoadingRankHistory}
+              isError={isErrorRankHistory}
+              error={rankHistoryError}
+            />
+          </div>
+        </details>
+
         {/* Legend */}
-        <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+        <div className="bg-white rounded-lg shadow-md p-6 mt-4">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             Scoring Methodology
           </h3>

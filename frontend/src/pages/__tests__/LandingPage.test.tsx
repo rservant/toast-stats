@@ -513,3 +513,131 @@ describe('LandingPage - Table Cell Rendering', () => {
     })
   })
 })
+
+describe('LandingPage - Layout Order (#83)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  // Helper to set up a standard data render
+  const setupWithData = () => {
+    const apiClient = apiModule.apiClient as unknown as MockApiClient
+
+    apiClient.get.mockResolvedValueOnce({
+      data: { dates: [] },
+    })
+
+    apiClient.get.mockResolvedValueOnce({
+      data: {
+        rankings: [
+          {
+            districtId: 'D1',
+            districtName: 'District 1',
+            region: '1',
+            paidClubs: 100,
+            paidClubBase: 90,
+            clubGrowthPercent: 12.5,
+            totalPayments: 5000,
+            paymentBase: 4500,
+            paymentGrowthPercent: 11.1,
+            activeClubs: 100,
+            distinguishedClubs: 50,
+            selectDistinguished: 20,
+            presidentsDistinguished: 10,
+            distinguishedPercent: 50,
+            clubsRank: 1,
+            paymentsRank: 1,
+            distinguishedRank: 1,
+            aggregateScore: 300,
+          },
+        ],
+        date: '2025-11-22',
+      },
+    })
+  }
+
+  it('should render the rankings table before Historical Rank Progression in DOM order', async () => {
+    setupWithData()
+
+    const { container } = renderWithProviders(<LandingPage />)
+
+    // Wait for data
+    await screen.findByText('District 1')
+
+    // Rankings table should exist
+    const table = container.querySelector('table')
+    expect(table).toBeInTheDocument()
+
+    // Find the Historical Rank Progression <details> by its summary text
+    const allDetails = container.querySelectorAll('details')
+    const historyDetails = Array.from(allDetails).find(d =>
+      d
+        .querySelector('summary')
+        ?.textContent?.match(/Historical Rank Progression/i)
+    )
+    expect(historyDetails).toBeDefined()
+
+    // Table should appear before the history details in DOM order
+    const mainContent = container.querySelector('#main-content')!
+    const allElements = mainContent.querySelectorAll('table, details')
+    const elements = Array.from(allElements)
+    const tableIndex = elements.findIndex(el => el.tagName === 'TABLE')
+    const historyIndex = elements.indexOf(historyDetails!)
+    expect(tableIndex).toBeLessThan(historyIndex)
+  })
+
+  it('should render Historical Rank Progression inside a collapsed <details> element', async () => {
+    setupWithData()
+
+    const { container } = renderWithProviders(<LandingPage />)
+
+    await screen.findByText('District 1')
+
+    // Find the Historical Rank Progression <details> specifically
+    const allDetails = container.querySelectorAll('details')
+    const historyDetails = Array.from(allDetails).find(d =>
+      d
+        .querySelector('summary')
+        ?.textContent?.match(/Historical Rank Progression/i)
+    )
+    expect(historyDetails).toBeDefined()
+    expect(historyDetails).not.toHaveAttribute('open')
+
+    // Summary should mention Historical Rank Progression
+    const summary = historyDetails!.querySelector('summary')
+    expect(summary).toBeInTheDocument()
+    expect(summary!.textContent).toMatch(/Historical Rank Progression/i)
+  })
+
+  it('should use compact header with smaller title', async () => {
+    setupWithData()
+
+    renderWithProviders(<LandingPage />)
+
+    await screen.findByText('District 1')
+
+    // Title should use text-2xl (compact) instead of text-3xl
+    const heading = screen.getByRole('heading', {
+      name: /Toastmasters District Rankings/i,
+    })
+    expect(heading).toHaveClass('text-2xl')
+  })
+
+  it('should render region filter checkboxes inside a collapsed disclosure', async () => {
+    setupWithData()
+
+    const { container } = renderWithProviders(<LandingPage />)
+
+    await screen.findByText('District 1')
+
+    // Region filter checkboxes should be inside a <details> element
+    const allDetails = container.querySelectorAll('details')
+
+    // Find the one that contains "Filter Regions"
+    const regionDetails = Array.from(allDetails).find(d =>
+      d.querySelector('summary')?.textContent?.match(/Filter Regions/i)
+    )
+    expect(regionDetails).toBeDefined()
+    expect(regionDetails).not.toHaveAttribute('open')
+  })
+})
