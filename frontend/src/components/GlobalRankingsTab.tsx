@@ -4,6 +4,7 @@ import FullYearRankingChart, { type RankMetric } from './FullYearRankingChart'
 import MultiYearComparisonTable from './MultiYearComparisonTable'
 import { useGlobalRankings } from '../hooks/useGlobalRankings'
 import type { ProgramYear } from '../utils/programYear'
+import { formatLongDate } from '../utils/dateFormatting'
 
 /**
  * Props for the GlobalRankingsTab component
@@ -160,6 +161,41 @@ const EmptyState: React.FC<EmptyStateProps> = ({ districtName }) => (
 )
 
 /**
+ * Data freshness timestamp display component
+ */
+interface DataFreshnessProps {
+  /** ISO date string of when rankings were last calculated */
+  lastUpdated: string | null
+}
+
+const DataFreshness: React.FC<DataFreshnessProps> = ({ lastUpdated }) => {
+  if (!lastUpdated) return null
+
+  return (
+    <div
+      className="flex items-center gap-2 text-sm text-gray-600 font-tm-body"
+      aria-label={`Rankings last updated ${formatLongDate(lastUpdated)}`}
+    >
+      <svg
+        className="w-4 h-4"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+      <span>Last updated: {formatLongDate(lastUpdated)}</span>
+    </div>
+  )
+}
+
+/**
  * GlobalRankingsTab Component
  *
  * Main container component for the Global Rankings tab on the District Performance page.
@@ -260,6 +296,14 @@ const GlobalRankingsTab: React.FC<GlobalRankingsTabProps> = ({
     return null
   }, [effectiveSelectedYear, yearlyRankings])
 
+  // Get the data freshness timestamp from the most recent ranking data
+  const lastUpdatedTimestamp = useMemo(() => {
+    if (endOfYearRankings?.asOfDate) {
+      return endOfYearRankings.asOfDate
+    }
+    return null
+  }, [endOfYearRankings])
+
   // Handle metric change for the chart
   const handleMetricChange = (metric: RankMetric) => {
     setSelectedMetric(metric)
@@ -282,10 +326,15 @@ const GlobalRankingsTab: React.FC<GlobalRankingsTabProps> = ({
 
   return (
     <div
-      className="space-y-4"
+      className="space-y-6"
       role="region"
       aria-label={`Global rankings for ${districtName}`}
     >
+      {/* Data Freshness Timestamp */}
+      <div className="flex justify-end">
+        <DataFreshness lastUpdated={lastUpdatedTimestamp} />
+      </div>
+
       {/* End-of-Year Rankings Panel — available as soon as years data loads */}
       <EndOfYearRankingsPanel
         rankings={endOfYearRankings}
@@ -294,27 +343,20 @@ const GlobalRankingsTab: React.FC<GlobalRankingsTabProps> = ({
         previousYearRankings={previousYearRankings}
       />
 
-      {/* Multi-Year Comparison Table — primary content, above the fold */}
+      {/* Full Year Ranking Chart — loads progressively */}
+      <FullYearRankingChart
+        data={currentYearHistory}
+        selectedMetric={selectedMetric}
+        onMetricChange={handleMetricChange}
+        isLoading={isLoadingChart}
+        programYear={effectiveSelectedYear}
+      />
+
+      {/* Multi-Year Comparison Table — loads progressively */}
       <MultiYearComparisonTable
         yearlyRankings={yearlyRankings}
         isLoading={isLoadingMultiYear}
       />
-
-      {/* Historical Rank Progression — collapsed by default (#82, #83) */}
-      <details role="group" aria-label="Historical Rank Progression">
-        <summary className="cursor-pointer select-none text-lg font-semibold font-tm-headline text-gray-900 py-2 hover:text-tm-loyal-blue transition-colors">
-          Historical Rank Progression
-        </summary>
-        <div className="mt-2">
-          <FullYearRankingChart
-            data={currentYearHistory}
-            selectedMetric={selectedMetric}
-            onMetricChange={handleMetricChange}
-            isLoading={isLoadingChart}
-            programYear={effectiveSelectedYear}
-          />
-        </div>
-      </details>
     </div>
   )
 }

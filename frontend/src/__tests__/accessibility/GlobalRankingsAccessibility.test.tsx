@@ -1285,8 +1285,8 @@ describe('Global Rankings Accessibility Tests', () => {
       })
     })
 
-    describe('Collapsed chart section accessibility', () => {
-      it('should have accessible label on the collapsed chart details element', () => {
+    describe('Data freshness timestamp accessibility', () => {
+      it('should have accessible label for data freshness timestamp', () => {
         const mockRefetch = vi.fn()
 
         mockUseGlobalRankings.mockReturnValue({
@@ -1306,11 +1306,9 @@ describe('Global Rankings Accessibility Tests', () => {
           <GlobalRankingsTab districtId="57" districtName="District 57" />
         )
 
-        // Chart details element should have aria-label
-        const chartSection = screen.getByRole('group', {
-          name: /Historical Rank Progression/i,
-        })
-        expect(chartSection).toBeInTheDocument()
+        // Timestamp should have aria-label
+        const timestamp = screen.getByLabelText(/Rankings last updated/i)
+        expect(timestamp).toBeInTheDocument()
       })
     })
   })
