@@ -939,4 +939,67 @@ describe('AnalyticsComputer Integration Tests', () => {
       expect(analytics.totalMembership).toBe(75)
     })
   })
+
+  /**
+   * Issue #84: Missing analytics data — topGrowthClubs and dcpGoalAnalysis
+   */
+  describe('Missing Analytics Data (Issue #84)', () => {
+    /**
+     * topGrowthClubs must be included in districtAnalytics
+     * so the frontend /analytics endpoint serves it.
+     */
+    it('should include topGrowthClubs in districtAnalytics (Issue #84)', async () => {
+      const computer = new AnalyticsComputer()
+      const snapshots = createMultipleSnapshots('D101')
+
+      const result = await computer.computeDistrictAnalytics('D101', snapshots)
+      const analytics = result.districtAnalytics
+
+      // topGrowthClubs must exist and be an array
+      expect(analytics).toHaveProperty('topGrowthClubs')
+      expect(Array.isArray(analytics.topGrowthClubs)).toBe(true)
+
+      // With multiple snapshots showing growth, there should be growth clubs
+      expect(analytics.topGrowthClubs.length).toBeGreaterThan(0)
+
+      // Each entry should have clubId, clubName, growth
+      for (const club of analytics.topGrowthClubs) {
+        expect(club).toHaveProperty('clubId')
+        expect(club).toHaveProperty('clubName')
+        expect(club).toHaveProperty('growth')
+        expect(club.growth).toBeGreaterThan(0)
+      }
+    })
+
+    /**
+     * dcpGoalAnalysis must be included in distinguishedClubAnalytics
+     * so the frontend /distinguished-club-analytics endpoint serves it.
+     */
+    it('should include dcpGoalAnalysis in distinguishedClubAnalytics (Issue #84)', async () => {
+      const computer = new AnalyticsComputer()
+      const clubs = createRealisticClubSet()
+      const snapshot = createTestSnapshot('D101', '2024-03-15', clubs)
+
+      const result = await computer.computeDistrictAnalytics('D101', [snapshot])
+
+      // dcpGoalAnalysis must exist in the extended result
+      expect(result.distinguishedClubAnalytics).toHaveProperty(
+        'dcpGoalAnalysis'
+      )
+
+      const dcpGoalAnalysis = result.distinguishedClubAnalytics.dcpGoalAnalysis!
+
+      expect(dcpGoalAnalysis).toHaveProperty('mostCommonlyAchieved')
+      expect(dcpGoalAnalysis).toHaveProperty('leastCommonlyAchieved')
+      expect(Array.isArray(dcpGoalAnalysis.mostCommonlyAchieved)).toBe(true)
+      expect(Array.isArray(dcpGoalAnalysis.leastCommonlyAchieved)).toBe(true)
+
+      // Each goal entry should have goalNumber, achievementCount, achievementPercentage
+      for (const goal of dcpGoalAnalysis.mostCommonlyAchieved) {
+        expect(goal).toHaveProperty('goalNumber')
+        expect(goal).toHaveProperty('achievementCount')
+        expect(goal).toHaveProperty('achievementPercentage')
+      }
+    })
+  })
 })
