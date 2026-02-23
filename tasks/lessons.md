@@ -3,6 +3,15 @@
 <!-- Each lesson follows this structure. Newest entries go at the top. -->
 <!-- The agent reads the last 5 entries before starting any task. -->
 
+### Lesson 10 — Shared Package Loggers Must Use stderr (#100)
+
+**Date**: 2026-02-23  
+**Context**: The Data Pipeline failed at the "Compute Analytics" step with `jq: parse error`. The CLI correctly used `console.error()` for logs and `console.log()` for JSON output, but two analytics-core modules (`DistinguishedClubAnalyticsModule`, `ClubHealthAnalyticsModule`) had fallback loggers using `console.log()`. These `[INFO]` lines contaminated stdout, breaking `| tee ... | jq`.  
+**Lesson**: When shared packages define fallback loggers, always use `console.error()` (stderr) for all log levels. Stdout must be reserved for structured output. A `NODE_ENV !== 'test'` guard masks the bug during local testing but not in CI.  
+**Future Warning**: Any new module adding an inline logger must use `console.error()`. Consider adding a lint rule (`no-console` with `allow: ['error', 'warn']`) to analytics-core.
+
+---
+
 ### Lesson 09 — Batch Similar Mobile Issues for Efficient CSS-Only Fixes (#85, #86, #87)
 
 **Date**: 2026-02-23  

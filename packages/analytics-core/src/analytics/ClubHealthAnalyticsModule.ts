@@ -36,7 +36,7 @@ import {
 const logger = {
   info: (message: string, context?: Record<string, unknown>) => {
     if (process.env['NODE_ENV'] !== 'test') {
-      console.log(`[INFO] ${message}`, context)
+      console.error(`[INFO] ${message}`, context)
     }
   },
   warn: (message: string, context?: Record<string, unknown>) => {

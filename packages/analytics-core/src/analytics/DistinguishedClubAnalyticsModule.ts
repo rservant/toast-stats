@@ -42,7 +42,7 @@ import {
 const logger = {
   info: (message: string, context?: Record<string, unknown>) => {
     if (process.env['NODE_ENV'] !== 'test') {
-      console.log(`[INFO] ${message}`, context)
+      console.error(`[INFO] ${message}`, context)
     }
   },
   warn: (message: string, context?: Record<string, unknown>) => {
@@ -58,7 +58,7 @@ const logger = {
   debug: (message: string, _context?: Record<string, unknown>) => {
     // Debug logging disabled in production
     if (process.env['NODE_ENV'] === 'development') {
-      console.log(`[DEBUG] ${message}`, _context)
+      console.error(`[DEBUG] ${message}`, _context)
     }
   },
 }
@@ -332,23 +332,23 @@ export class DistinguishedClubAnalyticsModule {
     currentDate: string
   ):
     | {
-        currentTotal: number
-        previousTotal: number
-        change: number
-        percentageChange: number
-        currentByLevel: {
-          smedley: number
-          presidents: number
-          select: number
-          distinguished: number
-        }
-        previousByLevel: {
-          smedley: number
-          presidents: number
-          select: number
-          distinguished: number
-        }
+      currentTotal: number
+      previousTotal: number
+      change: number
+      percentageChange: number
+      currentByLevel: {
+        smedley: number
+        presidents: number
+        select: number
+        distinguished: number
       }
+      previousByLevel: {
+        smedley: number
+        presidents: number
+        select: number
+        distinguished: number
+      }
+    }
     | undefined {
     if (snapshots.length === 0) {
       return undefined

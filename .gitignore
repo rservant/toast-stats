@@ -66,3 +66,4 @@ logs
 logs.json
 logs.txt
 .firebase/
+.npm-cache/
