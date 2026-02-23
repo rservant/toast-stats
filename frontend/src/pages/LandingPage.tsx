@@ -8,6 +8,7 @@ import { useProgramYear } from '../contexts/ProgramYearContext'
 import { ProgramYearSelector } from '../components/ProgramYearSelector'
 import { useRankHistory } from '../hooks/useRankHistory'
 import InfoTooltip from '../components/InfoTooltip'
+import ComparisonPanel from '../components/ComparisonPanel'
 import {
   getAvailableProgramYears,
   filterDatesByProgramYear,
@@ -22,6 +23,9 @@ const LandingPage: React.FC = () => {
     'aggregate' | 'clubs' | 'payments' | 'distinguished'
   >('aggregate')
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [pinnedDistrictIds, setPinnedDistrictIds] = useState<Set<string>>(
+    new Set()
+  )
 
   // Fetch tracked districts to show indicator badges
   const { data: districtsData } = useDistricts()
@@ -199,6 +203,25 @@ const LandingPage: React.FC = () => {
   const handleDistrictClick = (districtId: string) => {
     navigate(`/district/${districtId}`)
   }
+
+  // Comparison mode — pin/unpin districts (#93)
+  const MAX_PINNED = 3
+  const togglePin = (districtId: string) => {
+    setPinnedDistrictIds(prev => {
+      const next = new Set(prev)
+      if (next.has(districtId)) {
+        next.delete(districtId)
+      } else if (next.size < MAX_PINNED) {
+        next.add(districtId)
+      }
+      return next
+    })
+  }
+
+  const pinnedDistricts = React.useMemo(
+    () => rankings.filter(r => pinnedDistrictIds.has(r.districtId)),
+    [rankings, pinnedDistrictIds]
+  )
 
   const getRankBadgeColor = (rank: number) => {
     if (rank === 1) return 'bg-yellow-500 text-white'
@@ -625,6 +648,14 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Comparison Panel (#93) */}
+        <ComparisonPanel
+          pinnedDistricts={pinnedDistricts}
+          totalDistricts={rankings.length}
+          onRemove={districtId => togglePin(districtId)}
+          onClearAll={() => setPinnedDistrictIds(new Set())}
+        />
+
         {/* Rankings Table */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="overflow-x-auto">
@@ -661,18 +692,58 @@ const LandingPage: React.FC = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {displayRankings.map(district => {
                   const rank = district.displayRank
+                  const isPinned = pinnedDistrictIds.has(district.districtId)
+                  const pinDisabled =
+                    !isPinned && pinnedDistrictIds.size >= MAX_PINNED
                   return (
                     <tr
                       key={district.districtId}
                       onClick={() => handleDistrictClick(district.districtId)}
-                      className="hover:bg-tm-loyal-blue-10 cursor-pointer transition-colors"
+                      className={`hover:bg-tm-loyal-blue-10 cursor-pointer transition-colors ${
+                        isPinned ? 'bg-blue-50' : ''
+                      }`}
                     >
                       <td className="px-6 py-4 whitespace-nowrap sticky left-0 z-10 bg-white">
-                        <span
-                          className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold ${getRankBadgeColor(rank)}`}
-                        >
-                          {rank}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={e => {
+                              e.stopPropagation()
+                              togglePin(district.districtId)
+                            }}
+                            disabled={pinDisabled}
+                            aria-label={
+                              isPinned
+                                ? `Unpin District ${district.districtId}`
+                                : `Pin District ${district.districtId}`
+                            }
+                            className={`flex-shrink-0 w-6 h-6 flex items-center justify-center rounded transition-colors ${
+                              isPinned
+                                ? 'text-tm-loyal-blue hover:text-red-500'
+                                : pinDisabled
+                                  ? 'text-gray-300 cursor-not-allowed'
+                                  : 'text-gray-400 hover:text-tm-loyal-blue'
+                            }`}
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill={isPinned ? 'currentColor' : 'none'}
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                              />
+                            </svg>
+                          </button>
+                          <span
+                            className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold ${getRankBadgeColor(rank)}`}
+                          >
+                            {rank}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap sticky left-[72px] z-10 bg-white sticky-column-shadow">
                         <div className="flex items-center gap-2">
