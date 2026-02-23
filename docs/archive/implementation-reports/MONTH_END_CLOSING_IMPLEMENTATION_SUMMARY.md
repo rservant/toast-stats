@@ -35,9 +35,9 @@ Successfully implemented a comprehensive solution to handle Toastmasters dashboa
 - **New Method**: `setCachedCSVWithMetadata` - stores CSV with closing period metadata
 - **New Method**: `updateCacheMetadataForFileWithClosingInfo` - enhanced metadata handling
 
-### 4. **ToastmastersScraper Updates**
+### 4. **ToastmastersCollector Updates**
 
-- **File**: `backend/src/services/ToastmastersScraper.ts`
+- **File**: `backend/src/services/ToastmastersCollector.ts`
 - **Enhanced**: `getCachedOrDownload` - now uses actual dashboard dates for caching
 - **New Method**: `detectClosingPeriod` - identifies month-end closing periods
 - **Updated Methods**: All download methods now return `{ content, actualDate }`
@@ -225,7 +225,7 @@ Following the testing steering guidelines:
 - [x] Enhanced type system
 - [x] Service interface updates
 - [x] RawCSVCacheService enhancements
-- [x] ToastmastersScraper updates
+- [x] ToastmastersCollector updates
 - [x] MonthEndDataMapper service
 - [x] Comprehensive test suite
 

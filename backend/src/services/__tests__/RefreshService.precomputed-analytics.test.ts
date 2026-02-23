@@ -5,7 +5,7 @@
  *
  * NOTE: Per the data-computation-separation steering document, RefreshService
  * no longer triggers analytics computation. Analytics are now pre-computed by
- * scraper-cli during the compute-analytics pipeline.
+ * collector-cli during the compute-analytics pipeline.
  *
  * These tests verify:
  * - RefreshService accepts preComputedAnalyticsService parameter for backward compatibility

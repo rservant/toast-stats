@@ -130,7 +130,7 @@ export interface DistrictPerformanceTargets {
 
 /**
  * Performance targets data structure for pre-computed files.
- * Pre-computed by scraper-cli, served by backend.
+ * Pre-computed by collector-cli, served by backend.
  *
  * Contains recognition level targets (DAP, DDP) and progress tracking
  * for district performance metrics. Uses AreaDivisionRecognitionModule

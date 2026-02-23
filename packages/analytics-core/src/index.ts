@@ -3,7 +3,7 @@
  *
  * Shared analytics computation logic for Toastmasters statistics.
  * This package provides the core algorithms and types used by both
- * scraper-cli (for pre-computing analytics) and backend (for validation).
+ * collector-cli (for pre-computing analytics) and backend (for validation).
  */
 
 // Version and compatibility

@@ -189,7 +189,7 @@ This plan implements a comprehensive cleanup of the Toast-Stats codebase in five
     - Delete `backend/src/services/__inspect-statuses.ts`
     - Delete `backend/src/services/__scrape-districts.ts`
     - Delete `backend/src/services/__test-cache.ts`
-    - Delete `backend/src/services/__test-scraper.ts`
+    - Delete `backend/src/services/__test-collector.ts`
     - _Requirements: 5.1_
   - [x] 10.2 Remove unused ProcessSeparationMonitor
     - Delete `backend/src/services/ProcessSeparationMonitor.ts`

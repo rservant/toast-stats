@@ -2,14 +2,14 @@
 
 ## Introduction
 
-This feature addresses a data format mismatch between the scraper-cli pipeline and the frontend's Divisions & Areas tab on the District Detail page. Currently, the "Divisions & Areas" tab shows empty data ("No Divisions Found") because the `DataTransformer` class discards raw CSV arrays during transformation, but the frontend's `extractDivisionPerformance` function requires these raw arrays to calculate division/area status and recognition levels.
+This feature addresses a data format mismatch between the collector-cli pipeline and the frontend's Divisions & Areas tab on the District Detail page. Currently, the "Divisions & Areas" tab shows empty data ("No Divisions Found") because the `DataTransformer` class discards raw CSV arrays during transformation, but the frontend's `extractDivisionPerformance` function requires these raw arrays to calculate division/area status and recognition levels.
 
 The frontend implementation (from archived specs `division-area-performance-cards`, `division-area-performance-fixes`, `area-distinguished-criteria`, and `division-distinguished-criteria`) expects the district statistics API response to include:
 
 - `divisionPerformance`: Raw CSV records from Division.aspx scrape containing club-level data with Division, Area, Club Base fields, and visit award fields
 - `clubPerformance`: Raw CSV records from Club.aspx scrape containing Club Status and Club Distinguished Status fields
 
-The solution follows the data-computation-separation steering document: all computation happens in scraper-cli, and the backend serves pre-computed data. The `DataTransformer` must preserve raw CSV arrays alongside transformed data.
+The solution follows the data-computation-separation steering document: all computation happens in collector-cli, and the backend serves pre-computed data. The `DataTransformer` must preserve raw CSV arrays alongside transformed data.
 
 ## Glossary
 
@@ -18,7 +18,7 @@ The solution follows the data-computation-separation steering document: all comp
 - **DistrictStatistics**: The output format containing transformed clubs, divisions, areas, and totals
 - **DistrictStatisticsFile**: The shared-contracts type defining the file format for district JSON files
 - **ScrapedRecord**: A record type representing a single row from CSV data as key-value pairs (`Record<string, string | number | null>`)
-- **TransformService**: The scraper-cli service that orchestrates CSV transformation and file writing
+- **TransformService**: The collector-cli service that orchestrates CSV transformation and file writing
 - **PerDistrictData**: The wrapper structure for district JSON files containing metadata and district statistics
 - **extractDivisionPerformance**: The frontend utility function that extracts division and area performance data from district statistics, expecting raw CSV arrays
 - **Division_Club_Base**: The number of clubs in a division at the start of the program year, stored in the "Division Club Base" CSV field
@@ -43,7 +43,7 @@ The solution follows the data-computation-separation steering document: all comp
 
 ### Requirement 2: Update Shared Contracts for Raw Data Fields
 
-**User Story:** As a developer, I want the shared contracts to define raw data fields, so that both scraper-cli and backend have a consistent type definition.
+**User Story:** As a developer, I want the shared contracts to define raw data fields, so that both collector-cli and backend have a consistent type definition.
 
 #### Acceptance Criteria
 

@@ -307,7 +307,7 @@ export class LocalTimeSeriesIndexStorage implements ITimeSeriesIndexStorage {
         indexFile.lastUpdated = new Date().toISOString()
 
         // Note: Summary is NOT recalculated here per data-computation-separation steering.
-        // The summary will be stale until scraper-cli regenerates the index file.
+        // The summary will be stale until collector-cli regenerates the index file.
         // This is acceptable because deletion is an admin operation and the summary
         // is informational only.
 

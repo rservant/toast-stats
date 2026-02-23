@@ -2,7 +2,7 @@
  * Zod validation schemas for snapshot manifest file format.
  *
  * These schemas provide runtime validation for snapshot manifest data,
- * ensuring that data written by scraper-cli and read by backend conforms
+ * ensuring that data written by collector-cli and read by backend conforms
  * to the expected structure.
  *
  * The schemas match the TypeScript interfaces in snapshot-manifest.ts exactly.
@@ -67,7 +67,7 @@ export const SnapshotManifestSchema = z.object({
   /** Number of failed districts */
   failedDistricts: z.number(),
 
-  /** Whether the snapshot upload is complete. Set to true by scraper-cli as the final step. */
+  /** Whether the snapshot upload is complete. Set to true by collector-cli as the final step. */
   writeComplete: z.boolean().optional(),
 
   /** All districts rankings file info (optional) */

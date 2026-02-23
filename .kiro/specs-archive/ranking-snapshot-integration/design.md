@@ -10,7 +10,7 @@ The key architectural change is embedding the RankingCalculator into the snapsho
 
 ```mermaid
 graph TD
-    A[ToastmastersScraper] --> B[RefreshService]
+    A[ToastmastersCollector] --> B[RefreshService]
     B --> C[RankingCalculator]
     C --> D[PerDistrictSnapshotStore]
     D --> E[DistrictDataAggregator]
@@ -101,7 +101,7 @@ interface DistrictStatistics {
   // New ranking fields
   ranking?: DistrictRankingData
 
-  // Raw data arrays from scraper (for caching purposes)
+  // Raw data arrays from collector (for caching purposes)
   districtPerformance?: ScrapedRecord[]
   divisionPerformance?: ScrapedRecord[]
   clubPerformance?: ScrapedRecord[]
@@ -149,7 +149,7 @@ The RefreshService will be modified to include ranking calculation in its snapsh
 class RefreshService {
   constructor(
     private snapshotStore: SnapshotStore,
-    private scraper: ToastmastersScraper,
+    private collector: ToastmastersCollector,
     private validator?: SnapshotValidator,
     private districtConfigService?: DistrictConfigurationService,
     private rankingCalculator?: RankingCalculator // New dependency
@@ -157,7 +157,7 @@ class RefreshService {
 
   async createSnapshot(): Promise<Snapshot> {
     // 1. Scrape raw data
-    const rawData = await this.scraper.getAllDistricts()
+    const rawData = await this.collector.getAllDistricts()
 
     // 2. Normalize to DistrictStatistics
     const districts = this.normalizeDistrictData(rawData)

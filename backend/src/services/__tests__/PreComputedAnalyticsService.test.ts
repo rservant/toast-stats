@@ -3,11 +3,11 @@
  *
  * Tests the read-only behavior of the PreComputedAnalyticsService.
  * This service only reads pre-computed analytics files - all computation
- * is performed by scraper-cli's compute-analytics command.
+ * is performed by collector-cli's compute-analytics command.
  *
  * Per the data-computation-separation steering document:
  * - The backend MUST NOT perform any on-demand data computation
- * - All computation happens in scraper-cli
+ * - All computation happens in collector-cli
  * - This service only reads pre-computed files
  *
  * Requirements tested:

@@ -1,7 +1,7 @@
 /**
  * Property-Based Tests for SnapshotBuilder
  *
- * Feature: scraper-cli-separation
+ * Feature: collector-cli-separation
  *
  * Property 10: SnapshotBuilder Isolation
  * **Validates: Requirements 3.2, 4.2**
@@ -38,7 +38,7 @@ function createValidCacheMetadata(date: string): RawCSVCacheMetadata {
     date,
     timestamp: Date.now(),
     programYear: '2024-2025',
-    source: 'scraper',
+    source: 'collector',
     dataMonth: date.substring(0, 7),
     isClosingPeriod: false,
     csvFiles: {
@@ -471,7 +471,7 @@ describe('Property 10: SnapshotBuilder Isolation', () => {
   })
 
   it('should only use cache read operations and never perform scraping', async () => {
-    // Feature: scraper-cli-separation, Property 10: SnapshotBuilder Isolation
+    // Feature: collector-cli-separation, Property 10: SnapshotBuilder Isolation
     // **Validates: Requirements 3.2, 4.2**
     await fc.assert(
       fc.asyncProperty(
@@ -561,7 +561,7 @@ describe('Property 10: SnapshotBuilder Isolation', () => {
   })
 
   it('should read from cache without invoking any external services', async () => {
-    // Feature: scraper-cli-separation, Property 10: SnapshotBuilder Isolation
+    // Feature: collector-cli-separation, Property 10: SnapshotBuilder Isolation
     // **Validates: Requirements 3.2, 4.2**
     await fc.assert(
       fc.asyncProperty(
@@ -632,7 +632,7 @@ describe('Property 10: SnapshotBuilder Isolation', () => {
   })
 
   it('should not have any dependencies on browser automation or network libraries', async () => {
-    // Feature: scraper-cli-separation, Property 10: SnapshotBuilder Isolation
+    // Feature: collector-cli-separation, Property 10: SnapshotBuilder Isolation
     // **Validates: Requirements 3.2, 4.2**
 
     // This is a static analysis property - verify the SnapshotBuilder class
@@ -688,7 +688,7 @@ describe('Property 10: SnapshotBuilder Isolation', () => {
 /**
  * Property 12: Partial Snapshot Creation
  *
- * Feature: scraper-cli-separation, Property 12: Partial Snapshot Creation
+ * Feature: collector-cli-separation, Property 12: Partial Snapshot Creation
  * **Validates: Requirements 3.5**
  *
  * This test validates that:
@@ -708,7 +708,7 @@ describe('Property 12: Partial Snapshot Creation', () => {
   })
 
   it('should create partial snapshot when some districts are missing from cache', async () => {
-    // Feature: scraper-cli-separation, Property 12: Partial Snapshot Creation
+    // Feature: collector-cli-separation, Property 12: Partial Snapshot Creation
     // **Validates: Requirements 3.5**
     await fc.assert(
       fc.asyncProperty(
@@ -816,7 +816,7 @@ describe('Property 12: Partial Snapshot Creation', () => {
   })
 
   it('should correctly identify cached vs missing districts', async () => {
-    // Feature: scraper-cli-separation, Property 12: Partial Snapshot Creation
+    // Feature: collector-cli-separation, Property 12: Partial Snapshot Creation
     // **Validates: Requirements 3.5**
     await fc.assert(
       fc.asyncProperty(
@@ -892,7 +892,7 @@ describe('Property 12: Partial Snapshot Creation', () => {
   })
 
   it('should record missing districts in snapshot metadata', async () => {
-    // Feature: scraper-cli-separation, Property 12: Partial Snapshot Creation
+    // Feature: collector-cli-separation, Property 12: Partial Snapshot Creation
     // **Validates: Requirements 3.5**
     await fc.assert(
       fc.asyncProperty(
@@ -966,7 +966,7 @@ describe('Property 12: Partial Snapshot Creation', () => {
 /**
  * Property 16: Cache Integrity Validation
  *
- * Feature: scraper-cli-separation, Property 16: Cache Integrity Validation
+ * Feature: collector-cli-separation, Property 16: Cache Integrity Validation
  * **Validates: Requirements 6.3, 6.4**
  *
  * This test validates that:
@@ -987,7 +987,7 @@ describe('Property 16: Cache Integrity Validation', () => {
   })
 
   it('should validate file checksums and skip corrupted files', async () => {
-    // Feature: scraper-cli-separation, Property 16: Cache Integrity Validation
+    // Feature: collector-cli-separation, Property 16: Cache Integrity Validation
     // **Validates: Requirements 6.3, 6.4**
     await fc.assert(
       fc.asyncProperty(
@@ -1031,7 +1031,7 @@ describe('Property 16: Cache Integrity Validation', () => {
             date,
             timestamp: Date.now(),
             programYear: '2024-2025',
-            source: 'scraper',
+            source: 'collector',
             csvFiles: { allDistricts: true, districts: {} },
             integrity: {
               fileCount: 1,
@@ -1087,7 +1087,7 @@ describe('Property 16: Cache Integrity Validation', () => {
   })
 
   it('should handle missing checksums in metadata gracefully', async () => {
-    // Feature: scraper-cli-separation, Property 16: Cache Integrity Validation
+    // Feature: collector-cli-separation, Property 16: Cache Integrity Validation
     // **Validates: Requirements 6.3, 6.4**
     await fc.assert(
       fc.asyncProperty(
@@ -1136,7 +1136,7 @@ describe('Property 16: Cache Integrity Validation', () => {
             date,
             timestamp: Date.now(),
             programYear: '2024-2025',
-            source: 'scraper',
+            source: 'collector',
             csvFiles: { allDistricts: true, districts: {} },
             integrity: {
               fileCount: 1,
@@ -1171,7 +1171,7 @@ describe('Property 16: Cache Integrity Validation', () => {
   })
 
   it('should correctly calculate checksums for any content', async () => {
-    // Feature: scraper-cli-separation, Property 16: Cache Integrity Validation
+    // Feature: collector-cli-separation, Property 16: Cache Integrity Validation
     // **Validates: Requirements 6.3, 6.4**
     await fc.assert(
       fc.asyncProperty(
@@ -1206,7 +1206,7 @@ describe('Property 16: Cache Integrity Validation', () => {
             date: '2024-01-01',
             timestamp: Date.now(),
             programYear: '2024-2025',
-            source: 'scraper',
+            source: 'collector',
             csvFiles: { allDistricts: true, districts: {} },
             integrity: {
               fileCount: 1,

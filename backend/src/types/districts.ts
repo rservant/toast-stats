@@ -143,7 +143,7 @@ export interface DistrictStatistics {
   // New ranking fields
   ranking?: DistrictRankingData
 
-  // Raw data arrays from scraper (for caching purposes)
+  // Raw data arrays from collector (for caching purposes)
   districtPerformance?: ScrapedRecord[]
   divisionPerformance?: ScrapedRecord[]
   clubPerformance?: ScrapedRecord[]
@@ -278,7 +278,7 @@ export interface CacheMetadata {
   timestamp: number // Unix timestamp when cached
   dataCompleteness: 'complete' | 'partial' | 'empty'
   districtCount: number
-  source: 'scraper' | 'manual' | 'api'
+  source: 'collector' | 'manual' | 'api'
   programYear: string
   cacheVersion?: number // Cache format version for migration tracking (added v2)
 }

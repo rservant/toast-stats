@@ -2,7 +2,7 @@
 
 ## Overview
 
-Incrementally enhance the scraper-cli upload command across seven areas: dependency injection seams, conditional checksum computation, streaming file collection, date range filtering, local upload manifest with fast-path, concurrent uploads, and progress reporting. Each task builds on the previous, with tests wired in alongside implementation.
+Incrementally enhance the collector-cli upload command across seven areas: dependency injection seams, conditional checksum computation, streaming file collection, date range filtering, local upload manifest with fast-path, concurrent uploads, and progress reporting. Each task builds on the previous, with tests wired in alongside implementation.
 
 ## Tasks
 
@@ -32,7 +32,7 @@ Incrementally enhance the scraper-cli upload command across seven areas: depende
     - FakeBucketClient: records uploadStream calls, can simulate failures (no `exists()` method)
     - FakeClock: returns fixed timestamp
     - FakeProgressReporter: captures calls for assertion
-    - Place in `packages/scraper-cli/src/__tests__/fakes/`
+    - Place in `packages/collector-cli/src/__tests__/fakes/`
     - _Requirements: 8.4_
 
 - [x] 2. Add date range filtering and new CLI options
@@ -210,6 +210,6 @@ Incrementally enhance the scraper-cli upload command across seven areas: depende
 - Integration tests (task 8) are required — they provide the highest ROI for regression detection
 - Each task references specific requirements for traceability
 - Checkpoints ensure incremental validation
-- No backend or API changes are needed — this is entirely within `packages/scraper-cli/`
+- No backend or API changes are needed — this is entirely within `packages/collector-cli/`
 - DI seams (task 1) are implemented first because all subsequent tasks depend on them for testability
 - The existing `getRemoteMetadata` GCS call path is removed in task 5.4, replaced by manifest lookups

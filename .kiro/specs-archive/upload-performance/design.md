@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design enhances the scraper-cli `upload` command to handle large-scale data (2,362+ snapshot dates, tens of thousands of files) by addressing six performance and usability bottlenecks:
+This design enhances the collector-cli `upload` command to handle large-scale data (2,362+ snapshot dates, tens of thousands of files) by addressing six performance and usability bottlenecks:
 
 1. Unnecessary checksum computation (now conditional: only for incremental comparisons)
 2. No progress feedback during long operations
@@ -13,7 +13,7 @@ This design enhances the scraper-cli `upload` command to handle large-scale data
 
 Additionally, the design introduces dependency injection seams for testability (FileSystem, Hasher, BucketClient, Clock, ProgressReporter).
 
-The changes are confined to `packages/scraper-cli/` — specifically `UploadService.ts`, `cli.ts`, and `types/index.ts`. No backend changes are needed (this is a CLI-only enhancement, consistent with the data-computation-separation steering).
+The changes are confined to `packages/collector-cli/` — specifically `UploadService.ts`, `cli.ts`, and `types/index.ts`. No backend changes are needed (this is a CLI-only enhancement, consistent with the data-computation-separation steering).
 
 ## Architecture
 
@@ -399,9 +399,9 @@ Property 1 (dry-run metadata) is better served by the integration test suite (3-
 
 ### Test File Organization
 
-- `packages/scraper-cli/src/__tests__/UploadService.test.ts` — existing unit tests, extended with new cases
-- `packages/scraper-cli/src/__tests__/UploadService.integration.test.ts` — new integration test suite using fakes
-- `packages/scraper-cli/src/__tests__/UploadService.property.test.ts` — property-based tests for Properties 2-5
+- `packages/collector-cli/src/__tests__/UploadService.test.ts` — existing unit tests, extended with new cases
+- `packages/collector-cli/src/__tests__/UploadService.integration.test.ts` — new integration test suite using fakes
+- `packages/collector-cli/src/__tests__/UploadService.property.test.ts` — property-based tests for Properties 2-5
 
 ### Fake Implementations for Testing
 

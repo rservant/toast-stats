@@ -229,7 +229,7 @@ export function cleanupTestDir(dir: string): Promise<void> { ... }
 - `backend/src/services/__inspect-statuses.ts`
 - `backend/src/services/__scrape-districts.ts`
 - `backend/src/services/__test-cache.ts`
-- `backend/src/services/__test-scraper.ts`
+- `backend/src/services/__test-collector.ts`
 
 **Unused Monitor:**
 

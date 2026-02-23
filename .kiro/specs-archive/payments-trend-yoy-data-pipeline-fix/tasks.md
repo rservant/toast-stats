@@ -64,5 +64,5 @@ Fix two persistent bugs by changing the data source for payments trend in the `/
 - Tasks marked with `*` are optional and can be skipped for faster MVP
 - No API response shape changes — `paymentsTrend` is already an optional field in the `/analytics` response
 - No OpenAPI update needed — the endpoint signature (path, params, status codes) is unchanged; only the internal data source changes
-- After deploying the analytics-core fix, run `scraper-cli compute-analytics` to regenerate pre-computed files with correct YoY data (Requirement 4.1, 4.2)
-- The backend remains a read-only API server — the time-series index is pre-computed by scraper-cli
+- After deploying the analytics-core fix, run `collector-cli compute-analytics` to regenerate pre-computed files with correct YoY data (Requirement 4.1, 4.2)
+- The backend remains a read-only API server — the time-series index is pre-computed by collector-cli

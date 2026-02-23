@@ -129,7 +129,7 @@ function makeMetadataBuffer(): Buffer {
       failedDistricts: [],
       errors: [],
       processingDuration: 5000,
-      source: 'scraper-cli',
+      source: 'collector-cli',
       dataAsOfDate: '2024-01-15',
     })
   )
@@ -277,7 +277,7 @@ describe('GCSSnapshotStorage — Snapshot Read Operations', () => {
       expect(result?.failedDistricts).toEqual([])
       expect(result?.errors).toEqual([])
       expect(result?.processingDuration).toBe(5000)
-      expect(result?.source).toBe('scraper-cli')
+      expect(result?.source).toBe('collector-cli')
       expect(mockBucket.file).toHaveBeenCalledWith(
         'snapshots/2024-01-15/metadata.json'
       )

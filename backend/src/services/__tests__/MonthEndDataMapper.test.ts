@@ -218,7 +218,7 @@ describe('MonthEndDataMapper', () => {
             totalSize: 1000,
             fileCount: 1,
           },
-          source: 'scraper' as const,
+          source: 'collector' as const,
           cacheVersion: 1,
         })
         .mockResolvedValueOnce({
@@ -242,7 +242,7 @@ describe('MonthEndDataMapper', () => {
             totalSize: 1000,
             fileCount: 1,
           },
-          source: 'scraper' as const,
+          source: 'collector' as const,
           cacheVersion: 1,
         })
 

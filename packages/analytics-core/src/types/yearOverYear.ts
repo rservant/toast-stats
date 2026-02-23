@@ -8,7 +8,7 @@
 /**
  * Extended year-over-year comparison data structure.
  * Contains full metrics structure with byLevel breakdowns for distinguished clubs.
- * Pre-computed by scraper-cli, served by backend.
+ * Pre-computed by collector-cli, served by backend.
  * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  *
  * Requirements: 6.2, 6.3
@@ -139,7 +139,7 @@ export interface MultiYearTrend {
 /**
  * Year-over-year comparison data structure.
  * Pre-computed historical comparison metrics for a district.
- * Pre-computed by scraper-cli, served by backend.
+ * Pre-computed by collector-cli, served by backend.
  *
  * This type supports both cases:
  * - dataAvailable=true: Full metrics comparison available

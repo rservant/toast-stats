@@ -14,7 +14,7 @@ No new functionality is introduced. No API endpoints are added or modified.
 
 ## Architecture
 
-No architectural changes. The two-process architecture (scraper-cli for computation, backend for serving) is unaffected. No API routes change — this cleanup only touches internal module exports, test files, and one CLI script.
+No architectural changes. The two-process architecture (collector-cli for computation, backend for serving) is unaffected. No API routes change — this cleanup only touches internal module exports, test files, and one CLI script.
 
 ### Affected Files Summary
 

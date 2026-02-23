@@ -20,7 +20,7 @@ graph TB
         AT[types.ts re-export]
     end
 
-    subgraph "scraper-cli"
+    subgraph "collector-cli"
         CLI[Computes analytics<br/>Writes pre-computed files]
     end
 

@@ -2,7 +2,7 @@
  * Zod validation schema for ClubHealthStatus type.
  *
  * This schema provides runtime validation for club health status values,
- * ensuring that data written by scraper-cli and read by backend conforms
+ * ensuring that data written by collector-cli and read by backend conforms
  * to the expected values.
  *
  * The schema matches the TypeScript type in club-health-status.ts exactly.

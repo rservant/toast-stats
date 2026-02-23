@@ -123,7 +123,7 @@ The fix extends the analytics-core computation to include base values, recogniti
 
 - [x] 8. Integration Verification
   - [x] 8.1 Verify end-to-end data flow
-    - Run scraper-cli to regenerate analytics with updated computation
+    - Run collector-cli to regenerate analytics with updated computation
     - Verify performance-targets.json contains new fields
     - Verify backend serves correct data
     - _Requirements: 1.1-1.4, 6.1-6.8, 7.1-7.9_

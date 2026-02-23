@@ -54,7 +54,7 @@ This implementation plan transforms the current tightly-coupled system into a cl
 - [x] 4. Implement RefreshService orchestration logic
   - [x] 4.1 Create RefreshService class with complete refresh workflow
     - Implement executeRefresh() method coordinating scraping, normalization, validation
-    - Add scrapeData() method integrating with existing ToastmastersScraper
+    - Add scrapeData() method integrating with existing ToastmastersCollector
     - Add normalizeData() method converting raw scraping results to NormalizedData
     - Add createSnapshot() method with proper versioning and error handling
     - _Requirements: 2.2, 2.4, 2.5, 4.1, 4.2, 4.3_
@@ -287,4 +287,4 @@ This implementation plan transforms the current tightly-coupled system into a cl
 - Unit tests validate specific examples and edge cases
 - Integration tests validate end-to-end workflows
 - The implementation follows the existing TypeScript/Node.js backend architecture
-- All new code should integrate with existing services like ToastmastersScraper, RetryManager, and logger utilities
+- All new code should integrate with existing services like ToastmastersCollector, RetryManager, and logger utilities

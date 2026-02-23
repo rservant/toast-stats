@@ -4,13 +4,13 @@
 
 This feature adds per-metric ranking data (world rank, world percentile, region rank) to the district overview cards. Currently, the three metric cards (Paid Clubs, Membership Payments, Distinguished Clubs) display "—" for rankings because the data is not being computed and stored in the pre-computed analytics files.
 
-The ranking data must be computed in the scraper-cli pipeline (per the data-computation-separation steering document) and included in the pre-computed `performance-targets` analytics files. The backend will serve this data as-is, and the frontend already expects the `MetricRankings` structure.
+The ranking data must be computed in the collector-cli pipeline (per the data-computation-separation steering document) and included in the pre-computed `performance-targets` analytics files. The backend will serve this data as-is, and the frontend already expects the `MetricRankings` structure.
 
 **Critical Consistency Requirement**: The per-metric rankings MUST be consistent with the existing all-districts-rankings.json data used on the landing page. The `clubsRank`, `paymentsRank`, and `distinguishedRank` fields already exist in all-districts-rankings.json and MUST be reused for the district detail page.
 
 ## Glossary
 
-- **Scraper_CLI**: The command-line tool that scrapes data from Toastmasters dashboard, transforms it, and computes analytics
+- **Collector_CLI**: The command-line tool that scrapes data from Toastmasters dashboard, transforms it, and computes analytics
 - **Analytics_Computer**: The shared analytics computation module in analytics-core that computes district analytics
 - **Performance_Targets_Data**: The pre-computed file containing recognition level targets and rankings for each metric
 - **All_Districts_Rankings**: The existing pre-computed file containing aggregate rankings for all districts, including per-metric ranks (clubsRank, paymentsRank, distinguishedRank)

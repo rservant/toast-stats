@@ -31,12 +31,12 @@ These documents record the completion of major features and improvements. They w
 - **Status**: ✅ Complete - Zero lint errors achieved
 - **Why Archived**: Compliance achieved; ongoing compliance enforced by CI/CD
 
-**SCRAPER_IMPLEMENTATION.md**
+**COLLECTOR_IMPLEMENTATION.md**
 
 - **Date**: Implementation period
-- **Purpose**: Documents the Playwright-based web scraper implementation for real Toastmasters data
-- **Status**: ✅ Complete - Scraper fully implemented and operational
-- **Why Archived**: Implementation complete; scraper is now part of core application
+- **Purpose**: Documents the Playwright-based web collector implementation for real Toastmasters data
+- **Status**: ✅ Complete - Collector fully implemented and operational
+- **Why Archived**: Implementation complete; collector is now part of core application
 
 **SECURITY_IMPROVEMENTS_SUMMARY.md**
 
@@ -129,7 +129,7 @@ docs/archive/
     ├── BACKEND_INTEGRATION_SUMMARY.md
     ├── FINAL_COMPLIANCE_SUMMARY.md
     ├── LINT_COMPLIANCE_SUMMARY.md
-    ├── SCRAPER_IMPLEMENTATION.md
+    ├── COLLECTOR_IMPLEMENTATION.md
     ├── SECURITY_IMPROVEMENTS_SUMMARY.md
     ├── RECONCILIATION_PERFORMANCE_OPTIMIZATION.md
     ├── ASSESSMENT_DATA_INTEGRATION_PLAN.md

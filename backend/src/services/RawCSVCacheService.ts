@@ -1354,13 +1354,13 @@ export class RawCSVCacheService implements IRawCSVCacheService {
         totalSize: 0,
         fileCount: 0,
       },
-      source: 'scraper',
+      source: 'collector',
       cacheVersion: 1,
     }
   }
 
   /**
-   * Get program year for a date (same logic as scraper-cli)
+   * Get program year for a date (same logic as collector-cli)
    */
   private getProgramYear(dateString: string): string {
     const date = new Date(dateString + 'T00:00:00')

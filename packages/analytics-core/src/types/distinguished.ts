@@ -81,7 +81,7 @@ export interface DCPGoalAnalysis {
 
 /**
  * Comprehensive distinguished club analytics data structure.
- * Pre-computed by scraper-cli, served by backend.
+ * Pre-computed by collector-cli, served by backend.
  * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  *
  * Requirements: 5.1, 5.2
@@ -139,7 +139,7 @@ export interface DistinguishedClubAnalytics {
 
 /**
  * Distinguished club analytics data structure for pre-computed files.
- * Pre-computed by scraper-cli, served by backend.
+ * Pre-computed by collector-cli, served by backend.
  *
  * Contains comprehensive distinguished club progress and projections
  * derived from the DistinguishedClubAnalytics analysis.

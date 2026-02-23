@@ -1,10 +1,10 @@
-# Design Document: Scraper CLI Separation
+# Design Document: Collector CLI Separation
 
 ## Overview
 
 This design separates the Toastmasters dashboard scraping functionality from the backend application into a standalone CLI tool. The architecture creates two independent components that communicate through a shared Raw CSV Cache:
 
-1. **Scraper CLI (`scraper-cli`)**: A standalone Node.js CLI tool that scrapes data from the Toastmasters dashboard and stores it in the Raw CSV Cache
+1. **Collector CLI (`collector-cli`)**: A standalone Node.js CLI tool that scrapes data from the Toastmasters dashboard and stores it in the Raw CSV Cache
 2. **SnapshotBuilder Service**: A new backend service that creates snapshots exclusively from cached CSV data
 
 This separation follows the Unix philosophy of "do one thing well" and enables independent scheduling, scaling, and deployment of scraping and snapshot creation operations.
@@ -13,10 +13,10 @@ This separation follows the Unix philosophy of "do one thing well" and enables i
 
 ```mermaid
 graph TB
-    subgraph "Scraper CLI (New Package)"
-        CLI[scraper-cli]
-        Scraper[ToastmastersScraper]
-        CLI --> Scraper
+    subgraph "Collector CLI (New Package)"
+        CLI[collector-cli]
+        Collector[ToastmastersCollector]
+        CLI --> Collector
     end
 
     subgraph "Shared Storage"
@@ -35,7 +35,7 @@ graph TB
         Builder --> Store
     end
 
-    Scraper --> Cache
+    Collector --> Cache
     CLI --> Config
     Builder --> Cache
     Builder --> Config
@@ -43,31 +43,31 @@ graph TB
 
 ## Components and Interfaces
 
-### Scraper CLI Package Structure
+### Collector CLI Package Structure
 
 ```
-packages/scraper-cli/
+packages/collector-cli/
 ├── package.json
 ├── tsconfig.json
 ├── src/
 │   ├── index.ts              # CLI entry point
 │   ├── cli.ts                # Commander.js CLI definition
-│   ├── ScraperOrchestrator.ts # Orchestrates scraping operations
+│   ├── CollectorOrchestrator.ts # Orchestrates scraping operations
 │   ├── services/
-│   │   ├── ToastmastersScraper.ts  # Moved from backend
+│   │   ├── ToastmastersCollector.ts  # Moved from backend
 │   │   └── index.ts
 │   ├── types/
 │   │   └── index.ts
 │   └── utils/
 │       └── logger.ts
 └── bin/
-    └── scraper-cli           # Executable entry point
+    └── collector-cli           # Executable entry point
 ```
 
-### ScraperOrchestrator Interface
+### CollectorOrchestrator Interface
 
 ```typescript
-interface ScraperOrchestratorConfig {
+interface CollectorOrchestratorConfig {
   cacheDir: string
   districtConfigPath: string
   timeout: number
@@ -95,7 +95,7 @@ interface ScrapeResult {
   duration_ms: number
 }
 
-interface ScraperOrchestrator {
+interface CollectorOrchestrator {
   scrape(options: ScrapeOptions): Promise<ScrapeResult>
   validateConfiguration(): Promise<{ isValid: boolean; errors: string[] }>
   getCacheStatus(date: string): Promise<{
@@ -145,8 +145,8 @@ interface SnapshotBuilder {
 ### CLI Interface
 
 ```bash
-# Scraper CLI
-scraper-cli scrape [options]
+# Collector CLI
+collector-cli scrape [options]
   --date <YYYY-MM-DD>     Target date for scraping (default: today)
   --districts <list>      Comma-separated district IDs to scrape
   --force                 Force re-scrape even if cache exists
@@ -167,7 +167,7 @@ refresh-cli [options]
 
 ### Cache Metadata Extension
 
-The existing `RawCSVCacheMetadata` will be used without modification. The Scraper CLI will populate all metadata fields including:
+The existing `RawCSVCacheMetadata` will be used without modification. The Collector CLI will populate all metadata fields including:
 
 ```typescript
 interface RawCSVCacheMetadata {
@@ -221,7 +221,7 @@ _A property is a characteristic or behavior that should hold true across all val
 
 ### Property 1: CLI Date Parsing Validity
 
-_For any_ valid date string in YYYY-MM-DD format passed to the `--date` option, the Scraper CLI SHALL accept it and use it as the target date for scraping.
+_For any_ valid date string in YYYY-MM-DD format passed to the `--date` option, the Collector CLI SHALL accept it and use it as the target date for scraping.
 
 **Validates: Requirements 1.3**
 
@@ -233,7 +233,7 @@ _For any_ successful or partial scrape operation, the JSON output SHALL contain:
 
 ### Property 3: Partial Failure Resilience
 
-_For any_ scrape operation where at least one district fails, the Scraper CLI SHALL continue processing remaining districts and include all failures in the summary output.
+_For any_ scrape operation where at least one district fails, the Collector CLI SHALL continue processing remaining districts and include all failures in the summary output.
 
 **Validates: Requirements 1.10**
 
@@ -269,7 +269,7 @@ _For any_ cache write operation, either the complete file and metadata are writt
 
 ### Property 9: Cache Skip Behavior
 
-_For any_ scrape operation where cache already exists for the date and district, the Scraper CLI SHALL skip scraping unless the `--force` flag is provided.
+_For any_ scrape operation where cache already exists for the date and district, the Collector CLI SHALL skip scraping unless the `--force` flag is provided.
 
 **Validates: Requirements 2.6**
 
@@ -299,13 +299,13 @@ _For any_ cached data with closing period metadata, the resulting snapshot SHALL
 
 ### Property 14: Cache Detection
 
-_For any_ new cache entry created by the Scraper CLI, the Backend SHALL detect and be able to use that data on subsequent refresh operations.
+_For any_ new cache entry created by the Collector CLI, the Backend SHALL detect and be able to use that data on subsequent refresh operations.
 
 **Validates: Requirements 5.4**
 
 ### Property 15: Retry Behavior
 
-_For any_ network error during scraping, the Scraper CLI SHALL retry with exponential backoff (at least 3 attempts) before marking the district as failed.
+_For any_ network error during scraping, the Collector CLI SHALL retry with exponential backoff (at least 3 attempts) before marking the district as failed.
 
 **Validates: Requirements 6.1**
 
@@ -317,19 +317,19 @@ _For any_ cached CSV file, the SnapshotBuilder SHALL validate the file's checksu
 
 ### Property 17: Configuration Consistency
 
-_For any_ configuration value (cache directory, district list), both the Scraper CLI and Backend SHALL read from the same source and produce identical values.
+_For any_ configuration value (cache directory, district list), both the Collector CLI and Backend SHALL read from the same source and produce identical values.
 
 **Validates: Requirements 7.1, 7.2**
 
 ### Property 18: Configuration Refresh
 
-_For any_ change to the district configuration file, the Scraper CLI SHALL use the updated configuration on its next invocation.
+_For any_ change to the district configuration file, the Collector CLI SHALL use the updated configuration on its next invocation.
 
 **Validates: Requirements 7.3**
 
 ## Error Handling
 
-### Scraper CLI Error Handling
+### Collector CLI Error Handling
 
 | Error Type              | Handling Strategy                                  | Exit Code   |
 | ----------------------- | -------------------------------------------------- | ----------- |
@@ -378,7 +378,7 @@ Property-based tests will verify universal properties using fast-check:
 
 Integration tests will verify component interactions:
 
-- Scraper CLI writes to cache, SnapshotBuilder reads from cache
+- Collector CLI writes to cache, SnapshotBuilder reads from cache
 - End-to-end flow from scrape to snapshot creation
 - Error propagation through the system
 

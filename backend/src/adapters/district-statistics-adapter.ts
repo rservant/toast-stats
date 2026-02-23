@@ -91,7 +91,7 @@ export function adaptDistrictStatisticsFileToBackend(
  * @remarks
  * This reverse transformation is primarily useful for testing or when
  * the backend needs to write data back to the file format. In normal
- * operation, the scraper-cli is responsible for writing files.
+ * operation, the collector-cli is responsible for writing files.
  */
 export function adaptDistrictStatisticsToFile(
   stats: DistrictStatistics,

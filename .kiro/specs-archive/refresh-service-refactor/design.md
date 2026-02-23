@@ -224,7 +224,7 @@ The refactored `RefreshService` delegates to extracted modules while preserving 
  */
 export interface RefreshServiceDependencies {
   snapshotStore: SnapshotStore
-  scraper: ToastmastersScraper
+  collector: ToastmastersCollector
   rawCSVCache: RawCSVCacheService
   validator?: DataValidator
   districtConfigService?: DistrictConfigurationService
@@ -240,7 +240,7 @@ export class RefreshService {
 
   constructor(
     snapshotStore: SnapshotStore,
-    scraper: ToastmastersScraper,
+    collector: ToastmastersCollector,
     rawCSVCache: RawCSVCacheService,
     validator?: DataValidator,
     districtConfigService?: DistrictConfigurationService,

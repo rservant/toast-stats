@@ -6,7 +6,7 @@ This specification defines the separation of the Toastmasters dashboard scraping
 
 ## Glossary
 
-- **Scraper_CLI**: The standalone command-line tool responsible for scraping data from the Toastmasters dashboard and storing it in the Raw CSV Cache
+- **Collector_CLI**: The standalone command-line tool responsible for scraping data from the Toastmasters dashboard and storing it in the Raw CSV Cache
 - **Raw_CSV_Cache**: The file-based cache storing downloaded CSV files organized by date and district
 - **Backend**: The existing backend application that will be modified to read from the Raw CSV Cache and create snapshots
 - **Snapshot**: An immutable, time-specific representation of normalized district data
@@ -16,23 +16,23 @@ This specification defines the separation of the Toastmasters dashboard scraping
 
 ## Requirements
 
-### Requirement 1: Standalone Scraper CLI Tool
+### Requirement 1: Standalone Collector CLI Tool
 
 **User Story:** As a system operator, I want a standalone CLI tool for scraping dashboard data, so that I can run data collection independently from the backend application.
 
 #### Acceptance Criteria
 
-1. THE Scraper_CLI SHALL be a standalone executable that can be invoked from the command line
-2. WHEN the Scraper_CLI is invoked, THE Scraper_CLI SHALL scrape data from the Toastmasters dashboard and store it in the Raw_CSV_Cache
-3. THE Scraper_CLI SHALL support a `--date` option to specify the target date for scraping (format: YYYY-MM-DD)
-4. WHEN no date is specified, THE Scraper_CLI SHALL default to the current date
-5. THE Scraper_CLI SHALL support a `--districts` option to specify which districts to scrape (comma-separated list)
-6. WHEN no districts are specified, THE Scraper_CLI SHALL scrape all configured districts from the district configuration
-7. THE Scraper_CLI SHALL support a `--verbose` flag for detailed logging output
-8. THE Scraper_CLI SHALL support a `--timeout` option to specify the maximum duration for the scraping operation
-9. WHEN scraping completes successfully, THE Scraper_CLI SHALL output a JSON summary including dates scraped, districts processed, and cache locations
-10. IF scraping fails for any district, THEN THE Scraper_CLI SHALL continue processing remaining districts and report failures in the summary
-11. THE Scraper_CLI SHALL exit with code 0 on success, code 1 on partial failure, and code 2 on complete failure
+1. THE Collector_CLI SHALL be a standalone executable that can be invoked from the command line
+2. WHEN the Collector_CLI is invoked, THE Collector_CLI SHALL scrape data from the Toastmasters dashboard and store it in the Raw_CSV_Cache
+3. THE Collector_CLI SHALL support a `--date` option to specify the target date for scraping (format: YYYY-MM-DD)
+4. WHEN no date is specified, THE Collector_CLI SHALL default to the current date
+5. THE Collector_CLI SHALL support a `--districts` option to specify which districts to scrape (comma-separated list)
+6. WHEN no districts are specified, THE Collector_CLI SHALL scrape all configured districts from the district configuration
+7. THE Collector_CLI SHALL support a `--verbose` flag for detailed logging output
+8. THE Collector_CLI SHALL support a `--timeout` option to specify the maximum duration for the scraping operation
+9. WHEN scraping completes successfully, THE Collector_CLI SHALL output a JSON summary including dates scraped, districts processed, and cache locations
+10. IF scraping fails for any district, THEN THE Collector_CLI SHALL continue processing remaining districts and report failures in the summary
+11. THE Collector_CLI SHALL exit with code 0 on success, code 1 on partial failure, and code 2 on complete failure
 
 ### Requirement 2: Raw CSV Cache Storage
 
@@ -40,12 +40,12 @@ This specification defines the separation of the Toastmasters dashboard scraping
 
 #### Acceptance Criteria
 
-1. THE Scraper_CLI SHALL store all downloaded CSV files in the existing Raw_CSV_Cache directory structure
-2. THE Scraper_CLI SHALL store metadata alongside CSV files including scrape timestamp, source URL, and data month
-3. WHEN storing CSV data, THE Scraper_CLI SHALL detect and record closing period information in the cache metadata
-4. THE Scraper_CLI SHALL use atomic file writes to prevent partial or corrupted cache entries
-5. THE Scraper_CLI SHALL validate CSV content before storing to ensure data integrity
-6. IF a cache entry already exists for the same date and district, THEN THE Scraper_CLI SHALL skip scraping unless `--force` flag is provided
+1. THE Collector_CLI SHALL store all downloaded CSV files in the existing Raw_CSV_Cache directory structure
+2. THE Collector_CLI SHALL store metadata alongside CSV files including scrape timestamp, source URL, and data month
+3. WHEN storing CSV data, THE Collector_CLI SHALL detect and record closing period information in the cache metadata
+4. THE Collector_CLI SHALL use atomic file writes to prevent partial or corrupted cache entries
+5. THE Collector_CLI SHALL validate CSV content before storing to ensure data integrity
+6. IF a cache entry already exists for the same date and district, THEN THE Collector_CLI SHALL skip scraping unless `--force` flag is provided
 
 ### Requirement 3: Backend Snapshot Builder
 
@@ -80,11 +80,11 @@ This specification defines the separation of the Toastmasters dashboard scraping
 
 #### Acceptance Criteria
 
-1. THE Scraper_CLI SHALL operate without requiring the backend to be running
-2. THE Backend SHALL operate without requiring the Scraper_CLI to be installed or available
-3. THE Scraper_CLI and Backend SHALL share only the Raw_CSV_Cache directory as their integration point
-4. WHEN the Scraper_CLI is run, THE Backend SHALL be able to detect new cached data on subsequent refresh operations
-5. THE Scraper_CLI SHALL support running on a different machine than the backend (given shared cache access)
+1. THE Collector_CLI SHALL operate without requiring the backend to be running
+2. THE Backend SHALL operate without requiring the Collector_CLI to be installed or available
+3. THE Collector_CLI and Backend SHALL share only the Raw_CSV_Cache directory as their integration point
+4. WHEN the Collector_CLI is run, THE Backend SHALL be able to detect new cached data on subsequent refresh operations
+5. THE Collector_CLI SHALL support running on a different machine than the backend (given shared cache access)
 
 ### Requirement 6: Error Handling and Resilience
 
@@ -92,11 +92,11 @@ This specification defines the separation of the Toastmasters dashboard scraping
 
 #### Acceptance Criteria
 
-1. IF the Scraper_CLI encounters a network error, THEN THE Scraper_CLI SHALL retry with exponential backoff before failing
-2. IF the Scraper_CLI circuit breaker opens, THEN THE Scraper_CLI SHALL report the circuit breaker status and exit gracefully
+1. IF the Collector_CLI encounters a network error, THEN THE Collector_CLI SHALL retry with exponential backoff before failing
+2. IF the Collector_CLI circuit breaker opens, THEN THE Collector_CLI SHALL report the circuit breaker status and exit gracefully
 3. THE SnapshotBuilder SHALL validate cache data integrity before processing
 4. IF cache data is corrupted, THEN THE SnapshotBuilder SHALL report the corruption and skip the affected files
-5. THE Scraper_CLI SHALL log all operations with timestamps for debugging and audit purposes
+5. THE Collector_CLI SHALL log all operations with timestamps for debugging and audit purposes
 6. THE Backend SHALL log cache access operations for debugging and monitoring
 
 ### Requirement 7: Configuration Consistency
@@ -105,11 +105,11 @@ This specification defines the separation of the Toastmasters dashboard scraping
 
 #### Acceptance Criteria
 
-1. THE Scraper_CLI SHALL read district configuration from the same source as the Backend
-2. THE Scraper_CLI SHALL use the same cache directory configuration as the Backend
-3. WHEN district configuration changes, THE Scraper_CLI SHALL respect the updated configuration on next run
-4. THE Scraper_CLI SHALL support environment variable configuration consistent with the Backend
-5. THE Scraper_CLI SHALL support a `--config` option to specify an alternative configuration file
+1. THE Collector_CLI SHALL read district configuration from the same source as the Backend
+2. THE Collector_CLI SHALL use the same cache directory configuration as the Backend
+3. WHEN district configuration changes, THE Collector_CLI SHALL respect the updated configuration on next run
+4. THE Collector_CLI SHALL support environment variable configuration consistent with the Backend
+5. THE Collector_CLI SHALL support a `--config` option to specify an alternative configuration file
 
 ### Requirement 8: Clean Separation
 
@@ -119,6 +119,6 @@ This specification defines the separation of the Toastmasters dashboard scraping
 
 1. THE Backend SHALL remove all scraping-related code from the RefreshService
 2. THE Backend refresh operation SHALL exclusively use the SnapshotBuilder to create snapshots from cached data
-3. THE ToastmastersScraper class SHALL be moved to the Scraper_CLI package
+3. THE ToastmastersCollector class SHALL be moved to the Collector_CLI package
 4. THE Backend SHALL NOT have any dependency on Playwright or browser automation libraries
-5. THE Scraper_CLI SHALL be the only component with dashboard scraping capabilities
+5. THE Collector_CLI SHALL be the only component with dashboard scraping capabilities

@@ -4,7 +4,7 @@
  * Tests verify that RefreshService operates as a read-only service
  * without performing any time-series computation.
  *
- * IMPORTANT: Time-series index updates are now handled by scraper-cli
+ * IMPORTANT: Time-series index updates are now handled by collector-cli
  * during the compute-analytics pipeline. The backend does NOT perform
  * any computation per the data-computation-separation steering document.
  *
@@ -237,7 +237,7 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
 
       // Note: Per data-computation-separation steering document, the backend
       // is read-only and does NOT create analytics-summary.json files.
-      // Analytics are computed by scraper-cli's compute-analytics command.
+      // Analytics are computed by collector-cli's compute-analytics command.
       // The PreComputedAnalyticsService only READS pre-computed files.
     })
 

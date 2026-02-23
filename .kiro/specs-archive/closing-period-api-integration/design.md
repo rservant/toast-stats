@@ -231,7 +231,7 @@ _For any_ December closing period data collected in January, the snapshot should
 
 ### What Does NOT Change
 
-- **Raw CSV Storage**: CSV files continue to be stored using the "As of" date (the actual collection date). The `RawCSVCacheService` and `ToastmastersScraper` are unaffected.
+- **Raw CSV Storage**: CSV files continue to be stored using the "As of" date (the actual collection date). The `RawCSVCacheService` and `ToastmastersCollector` are unaffected.
 - **CSV Metadata**: The existing closing period metadata in raw CSV cache (`isClosingPeriod`, `dataMonth`, `requestedDate`) remains as-is.
 - Only the **snapshot directory naming** changes for closing period data.
 

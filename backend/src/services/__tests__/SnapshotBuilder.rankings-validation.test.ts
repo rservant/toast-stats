@@ -29,7 +29,7 @@ function createValidCacheMetadata(date: string): RawCSVCacheMetadata {
     date,
     timestamp: Date.now(),
     programYear: '2024-2025',
-    source: 'scraper',
+    source: 'collector',
     dataMonth: date.substring(0, 7),
     isClosingPeriod: false,
     csvFiles: {

@@ -52,7 +52,7 @@ Update the data acquisition workflow to check cache before downloading:
 **Current Flow:**
 
 ```
-RefreshService → ToastmastersScraper → Download CSV → Parse → Normalize
+RefreshService → ToastmastersCollector → Download CSV → Parse → Normalize
 ```
 
 **New Flow:**
@@ -85,9 +85,9 @@ enum CSVType {
 }
 ```
 
-### 4. Integration with ToastmastersScraper
+### 4. Integration with ToastmastersCollector
 
-Update `ToastmastersScraper` to use the cache:
+Update `ToastmastersCollector` to use the cache:
 
 #### Modified Methods:
 
@@ -128,7 +128,7 @@ interface RawCSVCacheMetadata {
     cacheHits: number
     cacheMisses: number
   }
-  source: 'scraper'
+  source: 'collector'
   cacheVersion: number
 }
 ```
@@ -176,7 +176,7 @@ interface RawCSVCacheConfig {
 #### Test Coverage:
 
 - Unit tests for `RawCSVCacheService` methods
-- Integration tests for scraper cache integration
+- Integration tests for collector cache integration
 - Property-based tests for cache consistency
 - Performance tests for large CSV files
 - Error scenario tests (corrupted cache, disk full, etc.)
@@ -232,7 +232,7 @@ interface RawCSVCacheConfig {
 
 #### Integration Constraints:
 
-- **Zero API Changes**: Existing scraper methods maintain same signatures
+- **Zero API Changes**: Existing collector methods maintain same signatures
 - **No Breaking Changes**: Current refresh workflow continues unchanged
 - **Performance**: Cache operations must not slow down refresh process
 - **Memory Efficiency**: Handle large CSV files without excessive memory usage
@@ -266,7 +266,7 @@ interface RawCSVCacheConfig {
 
 - Cache directory structure and organization
 - Service architecture and class design
-- Integration points with existing scraper
+- Integration points with existing collector
 - Error handling and resilience patterns
 - Performance optimization strategies
 
@@ -288,7 +288,7 @@ interface RawCSVCacheConfig {
 ### 5. Testing Strategy
 
 - Unit test plan for cache service
-- Integration test plan for scraper integration
+- Integration test plan for collector integration
 - Performance test scenarios
 - Error scenario test coverage
 - Test isolation and cleanup strategies
@@ -298,7 +298,7 @@ interface RawCSVCacheConfig {
 ### Functional Success:
 
 - [ ] Raw CSV files cached in organized date/district structure
-- [ ] Cache-first lookup implemented in scraper methods
+- [ ] Cache-first lookup implemented in collector methods
 - [ ] No changes to existing API contracts or data flow
 - [ ] Proper cache metadata tracking and management
 - [ ] Robust error handling and fallback mechanisms
@@ -329,7 +329,7 @@ interface RawCSVCacheConfig {
 ### Architecture and Design:
 
 - `docs/BACKEND_ARCHITECTURE.md` - Current system architecture
-- `backend/src/services/ToastmastersScraper.ts` - Current scraper implementation
+- `backend/src/services/ToastmastersCollector.ts` - Current collector implementation
 - `backend/src/services/CacheManager.ts` - Existing cache patterns
 - `backend/src/services/RefreshService.ts` - Data acquisition workflow
 

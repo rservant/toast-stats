@@ -2,9 +2,9 @@
 
 ## Overview
 
-This design addresses the data format mismatch between the scraper-cli pipeline and the frontend's Divisions & Areas tab. The `DataTransformer` class in analytics-core currently discards raw CSV arrays during transformation, but the frontend's `extractDivisionPerformance` function requires these raw arrays to calculate division/area status and recognition levels.
+This design addresses the data format mismatch between the collector-cli pipeline and the frontend's Divisions & Areas tab. The `DataTransformer` class in analytics-core currently discards raw CSV arrays during transformation, but the frontend's `extractDivisionPerformance` function requires these raw arrays to calculate division/area status and recognition levels.
 
-The solution modifies the `DataTransformer` to preserve raw CSV arrays alongside transformed data. This follows the data-computation-separation steering document: scraper-cli generates the data, backend serves it as-is.
+The solution modifies the `DataTransformer` to preserve raw CSV arrays alongside transformed data. This follows the data-computation-separation steering document: collector-cli generates the data, backend serves it as-is.
 
 ## Architecture
 
@@ -12,7 +12,7 @@ The solution modifies the `DataTransformer` to preserve raw CSV arrays alongside
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              SCRAPER-CLI                                     │
+│                              COLLECTOR-CLI                                     │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  Raw CSV Files                    DataTransformer                            │
@@ -401,7 +401,7 @@ DistrictStatisticsFile Validation:
 
 ### Integration Tests
 
-**TransformService Integration** (`packages/scraper-cli/src/__tests__/TransformService.integration.test.ts`):
+**TransformService Integration** (`packages/collector-cli/src/__tests__/TransformService.integration.test.ts`):
 
 Backend Data Integrity (validates Property 4):
 
@@ -419,7 +419,7 @@ packages/
 ├── analytics-core/
 │   └── src/__tests__/
 │       └── DataTransformer.test.ts                  (unit tests)
-└── scraper-cli/
+└── collector-cli/
     └── src/__tests__/
         └── TransformService.integration.test.ts     (integration tests)
 ```

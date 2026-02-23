@@ -2,7 +2,7 @@
 
 ## Overview
 
-This implementation creates a new `@toastmasters/shared-contracts` package that serves as the single source of truth for file format types between scraper-cli and backend. The package provides TypeScript interfaces for compile-time verification and Zod schemas for runtime validation.
+This implementation creates a new `@toastmasters/shared-contracts` package that serves as the single source of truth for file format types between collector-cli and backend. The package provides TypeScript interfaces for compile-time verification and Zod schemas for runtime validation.
 
 ## Tasks
 
@@ -125,9 +125,9 @@ This implementation creates a new `@toastmasters/shared-contracts` package that 
   - Run `npm run test --workspace=@toastmasters/shared-contracts`
   - Ensure all tests pass, ask the user if questions arise.
 
-- [x] 8. Migrate scraper-cli to use shared contracts
-  - [x] 8.1 Add shared-contracts dependency to scraper-cli
-    - Update `packages/scraper-cli/package.json`
+- [x] 8. Migrate collector-cli to use shared contracts
+  - [x] 8.1 Add shared-contracts dependency to collector-cli
+    - Update `packages/collector-cli/package.json`
     - Add `@toastmasters/shared-contracts` as dependency
     - _Requirements: 7.1_
   - [x] 8.2 Update TransformService imports
@@ -170,7 +170,7 @@ This implementation creates a new `@toastmasters/shared-contracts` package that 
     - _Requirements: 9.5_
 
 - [x] 10. Final checkpoint - Integration verification
-  - Build all packages: `npm run build:analytics-core && npm run build:shared-contracts && npm run build:scraper-cli && npm run build:backend`
+  - Build all packages: `npm run build:analytics-core && npm run build:shared-contracts && npm run build:collector-cli && npm run build:backend`
   - Run all tests: `npm run test`
   - Verify no TypeScript errors: `npm run typecheck`
   - Ensure all tests pass, ask the user if questions arise.

@@ -1,4 +1,4 @@
-# Implementation Plan: Scraper CLI Separation
+# Implementation Plan: Collector CLI Separation
 
 ## Overview
 
@@ -6,15 +6,15 @@ This implementation plan separates the Toastmasters dashboard scraping functiona
 
 ## Tasks
 
-- [x] 1. Create Scraper CLI package structure
-  - Create `packages/scraper-cli/` directory structure
+- [x] 1. Create Collector CLI package structure
+  - Create `packages/collector-cli/` directory structure
   - Create `package.json` with dependencies (commander, playwright, csv-parse)
   - Create `tsconfig.json` extending root TypeScript config
-  - Create `bin/scraper-cli` executable entry point
+  - Create `bin/collector-cli` executable entry point
   - _Requirements: 1.1, 8.3_
 
-- [x] 2. Move ToastmastersScraper to Scraper CLI
-  - [x] 2.1 Copy ToastmastersScraper.ts to `packages/scraper-cli/src/services/`
+- [x] 2. Move ToastmastersCollector to Collector CLI
+  - [x] 2.1 Copy ToastmastersCollector.ts to `packages/collector-cli/src/services/`
     - Copy the file with all existing functionality
     - Update import paths for the new location
     - _Requirements: 8.3_
@@ -23,12 +23,12 @@ This implementation plan separates the Toastmasters dashboard scraping functiona
     - Update imports in both packages
     - _Requirements: 8.3_
   - [x] 2.3 Copy required utilities (logger, CircuitBreaker, RetryManager)
-    - Copy utility files needed by the scraper
+    - Copy utility files needed by the collector
     - Ensure no backend-specific dependencies
     - _Requirements: 8.3, 5.1_
 
-- [x] 3. Implement ScraperOrchestrator
-  - [x] 3.1 Create ScraperOrchestrator class
+- [x] 3. Implement CollectorOrchestrator
+  - [x] 3.1 Create CollectorOrchestrator class
     - Implement configuration loading from district config
     - Implement cache directory resolution
     - Implement scrape orchestration logic
@@ -42,7 +42,7 @@ This implementation plan separates the Toastmasters dashboard scraping functiona
     - **Property 3: Partial Failure Resilience**
     - **Validates: Requirements 1.10**
 
-- [x] 4. Implement Scraper CLI interface
+- [x] 4. Implement Collector CLI interface
   - [x] 4.1 Create CLI with commander.js
     - Implement `--date` option with YYYY-MM-DD validation
     - Implement `--districts` option with comma-separated parsing
@@ -64,7 +64,7 @@ This implementation plan separates the Toastmasters dashboard scraping functiona
     - **Property 1: CLI Date Parsing Validity**
     - **Validates: Requirements 1.3**
 
-- [x] 5. Checkpoint - Verify Scraper CLI works standalone
+- [x] 5. Checkpoint - Verify Collector CLI works standalone
   - Ensure all tests pass, ask the user if questions arise.
   - Verify CLI can be invoked and produces expected output
   - Verify cache files are created in correct structure
@@ -100,7 +100,7 @@ This implementation plan separates the Toastmasters dashboard scraping functiona
 
 - [x] 7. Modify RefreshService to use SnapshotBuilder
   - [x] 7.1 Remove scraping code from RefreshService
-    - Remove ToastmastersScraper dependency
+    - Remove ToastmastersCollector dependency
     - Remove scrapeData method
     - Remove browser-related cleanup code
     - _Requirements: 8.1, 8.2_
@@ -152,16 +152,16 @@ This implementation plan separates the Toastmasters dashboard scraping functiona
   - [x] 12.1 Update RefreshService tests
     - Remove scraping-related test cases
     - Add SnapshotBuilder integration tests
-    - Mock cache data instead of scraper
+    - Mock cache data instead of collector
     - _Requirements: 3.2, 4.2_
-  - [x] 12.2 Move scraper tests to Scraper CLI package
-    - Move ToastmastersScraper tests
+  - [x] 12.2 Move collector tests to Collector CLI package
+    - Move ToastmastersCollector tests
     - Update test imports and paths
     - _Requirements: 8.3_
 
 - [x] 13. Final checkpoint - Full integration verification
   - Ensure all tests pass, ask the user if questions arise.
-  - Verify end-to-end flow: scraper-cli → cache → backend refresh → snapshot
+  - Verify end-to-end flow: collector-cli → cache → backend refresh → snapshot
   - Verify both tools work independently
 
 ## Notes

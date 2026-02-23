@@ -2,9 +2,9 @@
 
 ## Introduction
 
-This feature introduces a read-only GCSSnapshotStorage implementation that reads snapshot data directly from a Google Cloud Storage (GCS) bucket. The scraper-cli uploads pre-computed snapshot JSON files to GCS, but the backend currently reads snapshot data from Firestore via FirestoreSnapshotStorage. GCSSnapshotStorage eliminates the Firestore dependency by reading directly from the GCS bucket where the scraper-cli uploads files.
+This feature introduces a read-only GCSSnapshotStorage implementation that reads snapshot data directly from a Google Cloud Storage (GCS) bucket. The collector-cli uploads pre-computed snapshot JSON files to GCS, but the backend currently reads snapshot data from Firestore via FirestoreSnapshotStorage. GCSSnapshotStorage eliminates the Firestore dependency by reading directly from the GCS bucket where the collector-cli uploads files.
 
-All data mutation (writes, deletes) is the exclusive responsibility of the scraper-cli. The backend is a read-only API server. GCSSnapshotStorage enforces this by throwing on any write or delete call. This aligns with the data-computation-separation principle: "pre-computed files are the contract."
+All data mutation (writes, deletes) is the exclusive responsibility of the collector-cli. The backend is a read-only API server. GCSSnapshotStorage enforces this by throwing on any write or delete call. This aligns with the data-computation-separation principle: "pre-computed files are the contract."
 
 GCS has no directory concept. All references to "listing snapshots" or "finding files" operate on object key prefixes with delimiters, not filesystem directories.
 
@@ -25,13 +25,13 @@ GCS has no directory concept. All references to "listing snapshots" or "finding 
 - **Rankings_File**: The all-districts-rankings.json object at {Object_Prefix}/{Snapshot_ID}/all-districts-rankings.json containing BordaCount rankings
 - **Circuit_Breaker**: A fault-tolerance pattern that prevents cascading failures by short-circuiting operations when error thresholds are exceeded. Scoped per-provider (one breaker for all GCSSnapshotStorage operations).
 - **StorageOperationError**: The standard error class for storage operation failures, including operation name, provider ("gcs"), cause, and retryable flag
-- **Write_Complete_Flag**: The writeComplete boolean field in the Manifest_File. Set to true by the scraper-cli as the final step of a snapshot upload. The backend treats a snapshot as coherent only when this flag is true.
+- **Write_Complete_Flag**: The writeComplete boolean field in the Manifest_File. Set to true by the collector-cli as the final step of a snapshot upload. The backend treats a snapshot as coherent only when this flag is true.
 
 ## Requirements
 
 ### Requirement 1: Read Snapshot Data from GCS
 
-**User Story:** As the backend application, I want to read snapshot data from GCS objects, so that I can serve pre-computed data uploaded by the scraper-cli without depending on Firestore.
+**User Story:** As the backend application, I want to read snapshot data from GCS objects, so that I can serve pre-computed data uploaded by the collector-cli without depending on Firestore.
 
 #### Acceptance Criteria
 
@@ -122,11 +122,11 @@ GCS has no directory concept. All references to "listing snapshots" or "finding 
 
 ### Requirement 9: Write Completion and Snapshot Coherence
 
-**User Story:** As the backend application, I want to verify that a snapshot was fully written by the scraper-cli before serving it, so that partially uploaded snapshots are never treated as complete.
+**User Story:** As the backend application, I want to verify that a snapshot was fully written by the collector-cli before serving it, so that partially uploaded snapshots are never treated as complete.
 
 #### Acceptance Criteria
 
-1. WHEN isSnapshotWriteComplete is called, THE GCSSnapshotStorage SHALL read the Manifest_File and check the Write_Complete_Flag to determine if the scraper-cli finished the upload
+1. WHEN isSnapshotWriteComplete is called, THE GCSSnapshotStorage SHALL read the Manifest_File and check the Write_Complete_Flag to determine if the collector-cli finished the upload
 2. WHEN the Manifest_File does not exist for a Snapshot_ID, THE GCSSnapshotStorage SHALL return false
 3. WHEN the Manifest_File exists but the Write_Complete_Flag is absent, THE GCSSnapshotStorage SHALL return false (no legacy exception — missing flag means incomplete)
 4. WHEN assembling a Snapshot object via getSnapshot, THE GCSSnapshotStorage SHALL verify isSnapshotWriteComplete both before and after reading constituent objects; if the write completion status changes or becomes false during the read, THE GCSSnapshotStorage SHALL return null

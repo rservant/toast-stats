@@ -10,7 +10,7 @@ This is a monorepo containing:
 
 - `frontend/` - React + TypeScript + Vite application
 - `backend/` - Node.js + Express + TypeScript API server (read-only, serves pre-computed data)
-- `packages/scraper-cli/` - Standalone CLI tool for scraping Toastmasters dashboard data
+- `packages/collector-cli/` - Standalone CLI tool for scraping Toastmasters dashboard data
 - `packages/analytics-core/` - Shared analytics computation library
 - `packages/shared-contracts/` - Data contracts (types + Zod schemas) between packages
 
@@ -126,12 +126,12 @@ The system uses a **two-process architecture** that separates data acquisition f
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Scraper CLI    │────▶│  Raw CSV Cache  │◀────│    Backend      │
+│  Collector CLI    │────▶│  Raw CSV Cache  │◀────│    Backend      │
 │  (scrapes data) │     │  (shared cache) │     │ (serves data)   │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
-1. **Scraper CLI** (`packages/scraper-cli/`): Standalone tool that scrapes Toastmasters dashboard, transforms data, and computes analytics
+1. **Collector CLI** (`packages/collector-cli/`): Standalone tool that scrapes Toastmasters dashboard, transforms data, and computes analytics
 2. **Backend** (`backend/`): Read-only API server that serves pre-computed data from snapshots (no scraping, no computation)
 
 This separation enables:
@@ -141,32 +141,32 @@ This separation enables:
 - Scraping failures don't affect data serving
 - Easier testing and maintenance
 
-### Running the Scraper
+### Running the Collector
 
 ```bash
 # Scrape all configured districts for today
-npm run scraper-cli -- scrape
+npm run collector-cli -- scrape
 
 # Scrape for a specific date
-npm run scraper-cli -- scrape --date 2025-01-10
+npm run collector-cli -- scrape --date 2025-01-10
 
 # Scrape specific districts
-npm run scraper-cli -- scrape --districts 57,58,59
+npm run collector-cli -- scrape --districts 57,58,59
 
 # Check cache status
-npm run scraper-cli -- status
+npm run collector-cli -- status
 ```
 
 ### Mock Data vs Real Data
 
 - **Mock Data** (default): Fast, fake data for development
-- **Real Data**: Uses scraper-cli to collect live data from Toastmasters dashboards
+- **Real Data**: Uses collector-cli to collect live data from Toastmasters dashboards
 
 Toggle between them in `backend/.env`:
 
 ```bash
 USE_MOCK_DATA=true   # Use mock data (fast)
-USE_MOCK_DATA=false  # Use real data from cache (requires scraper-cli to populate cache)
+USE_MOCK_DATA=false  # Use real data from cache (requires collector-cli to populate cache)
 ```
 
 ## Features
@@ -209,7 +209,7 @@ This project has evolved through multiple phases of development. Completed speci
 
 **Recent Completions (February 2026):**
 
-- **remove-backend-backfill**: Removed all backfill code, redirecting to scraper-cli
+- **remove-backend-backfill**: Removed all backfill code, redirecting to collector-cli
 - **v8-heap-configuration**: V8 heap memory management for production stability
 - **gcp-storage-migration**: Storage abstraction with GCP Firestore and Cloud Storage
 - **openapi-documentation**: Comprehensive OpenAPI 3.0 specification
@@ -217,8 +217,8 @@ This project has evolved through multiple phases of development. Completed speci
 
 **Infrastructure & Architecture:**
 
-- **scraper-cli-separation**: Standalone scraping CLI tool
-- **data-computation-separation**: Backend as read-only API, all computation in scraper-cli
+- **collector-cli-separation**: Standalone scraping CLI tool
+- **data-computation-separation**: Backend as read-only API, all computation in collector-cli
 - **data-refresh-architecture**: Snapshot-based data architecture
 - **raw-csv-cache-system**: CSV caching infrastructure
 
@@ -256,7 +256,7 @@ npm test
 npm run test:frontend
 npm run test:backend
 npm run test:analytics-core
-npm run test:scraper-cli
+npm run test:collector-cli
 npm run test:shared-contracts
 
 # Coverage report

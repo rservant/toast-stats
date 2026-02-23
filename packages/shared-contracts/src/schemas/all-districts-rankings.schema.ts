@@ -2,7 +2,7 @@
  * Zod validation schemas for all-districts rankings file format.
  *
  * These schemas provide runtime validation for all-districts rankings data,
- * ensuring that data written by scraper-cli and read by backend conforms
+ * ensuring that data written by collector-cli and read by backend conforms
  * to the expected structure.
  *
  * The schemas match the TypeScript interfaces in all-districts-rankings.ts exactly.

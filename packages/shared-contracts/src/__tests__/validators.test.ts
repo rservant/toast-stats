@@ -334,7 +334,7 @@ describe('validators error message quality', () => {
           failedDistricts: [],
           errors: [],
           processingDuration: 1000,
-          source: 'scraper-cli',
+          source: 'collector-cli',
           dataAsOfDate: '2024-01-15',
         }
 
@@ -357,7 +357,7 @@ describe('validators error message quality', () => {
           failedDistricts: [],
           errors: [],
           processingDuration: 1000,
-          source: 'scraper-cli',
+          source: 'collector-cli',
           dataAsOfDate: '2024-01-15',
         }
 
@@ -382,7 +382,7 @@ describe('validators error message quality', () => {
           failedDistricts: [],
           errors: [],
           processingDuration: 'not a number', // should be number
-          source: 'scraper-cli',
+          source: 'collector-cli',
           dataAsOfDate: '2024-01-15',
         }
 
@@ -405,7 +405,7 @@ describe('validators error message quality', () => {
           failedDistricts: [],
           errors: [],
           processingDuration: 1000,
-          source: 'scraper-cli',
+          source: 'collector-cli',
           dataAsOfDate: '2024-01-15',
         }
 
@@ -429,7 +429,7 @@ describe('validators error message quality', () => {
           failedDistricts: [],
           errors: [],
           processingDuration: 1000,
-          source: 'scraper-cli',
+          source: 'collector-cli',
           dataAsOfDate: '2024-01-15',
         }
 
@@ -454,7 +454,7 @@ describe('validators error message quality', () => {
           failedDistricts: [],
           errors: [],
           processingDuration: 1000,
-          source: 'scraper-cli',
+          source: 'collector-cli',
           dataAsOfDate: '2024-01-15',
         }
 
@@ -744,7 +744,7 @@ function createValidSnapshotMetadata() {
     failedDistricts: [],
     errors: [],
     processingDuration: 1000,
-    source: 'scraper-cli',
+    source: 'collector-cli',
     dataAsOfDate: '2024-01-15',
   }
 }

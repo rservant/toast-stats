@@ -141,7 +141,7 @@ This implementation removes on-demand analytics computation from the backend by 
     - Verify all files are generated in a single compute-analytics run
     - _Requirements: 12.3_
 
-- [x] 10. Checkpoint - Ensure scraper-cli tests pass
+- [x] 10. Checkpoint - Ensure collector-cli tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 11. Extend PreComputedAnalyticsReader to read new file types

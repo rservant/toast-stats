@@ -330,7 +330,7 @@ Membership              - Alternative membership field (optional)
 
 ```mermaid
 graph TD
-    A[ToastmastersScraper] --> B[getAllDistricts CSV]
+    A[ToastmastersCollector] --> B[getAllDistricts CSV]
     A --> C[getDistrictPerformance CSV - All Clubs with District Focus]
     A --> D[getDivisionPerformance CSV - All Clubs with Division Focus]
     A --> E[getClubPerformance CSV - All Clubs with Club Focus]
@@ -809,7 +809,7 @@ private async downloadCsv(page: Page): Promise<string> {
 
 ### Date Verification
 
-For historical data queries, the scraper verifies the dashboard returned the requested date:
+For historical data queries, the collector verifies the dashboard returned the requested date:
 
 ```typescript
 private async getSelectedDate(page: Page): Promise<DateInfo | null> {
@@ -1060,7 +1060,7 @@ const url = `${baseUrl}/Club.aspx?id=${districtId}&month=${month}&day=${formatte
 
 **Problem**: During month-end reconciliation periods, dates like October 1st may appear under September's data in the dashboard, not October's. The URL `?month=10&day=10/1/2025` may return November data instead of October 1st.
 
-**Solution**: The scraper implements a fallback mechanism:
+**Solution**: The collector implements a fallback mechanism:
 
 1. First, try the requested month: `?month=10&day=10/1/2025`
 2. If the dashboard returns a different date, try the previous month: `?month=9&day=10/1/2025`
@@ -1226,9 +1226,9 @@ interface MonthEndDataStrategy {
 
 ### Data Flow Integration
 
-**Scraper → RefreshService → Snapshot Store**:
+**Collector → RefreshService → Snapshot Store**:
 
-1. ToastmastersScraper fetches CSV data from dashboard
+1. ToastmastersCollector fetches CSV data from dashboard
 2. RefreshService normalizes CSV records to DistrictStatistics
 3. DataValidator ensures data quality and consistency
 4. Snapshot store persists immutable snapshots
@@ -1250,8 +1250,8 @@ USE_MOCK_DATA=false
 
 ```typescript
 const rawCSVCacheService = serviceFactory.createRawCSVCacheService()
-const scraper = new ToastmastersScraper(rawCSVCacheService)
-const apiService = new RealToastmastersAPIService(scraper)
+const collector = new ToastmastersCollector(rawCSVCacheService)
+const apiService = new RealToastmastersAPIService(collector)
 ```
 
 ### Monitoring and Observability

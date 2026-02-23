@@ -9,7 +9,7 @@ This design removes on-demand analytics computation from the backend to enforce 
 The backend analytics modules (`backend/src/services/analytics/`) have been hardened with bug fixes over weeks. The analytics-core modules are simpler versions. **We must NOT rewrite this code** - instead, we will:
 
 1. **Move the hardened backend analytics modules to analytics-core** (preserving all bug fixes)
-2. **Update scraper-cli to use the moved modules** for pre-computation
+2. **Update collector-cli to use the moved modules** for pre-computation
 3. **Update backend routes to read pre-computed files** instead of computing on-demand
 4. **Remove the original backend modules** after migration
 
@@ -47,7 +47,7 @@ flowchart TB
         C2 --> D2[Pre-Computed JSON Files]
         D2 --> E2[Response]
 
-        G2[scraper-cli] --> H2[AnalyticsComputer]
+        G2[collector-cli] --> H2[AnalyticsComputer]
         H2 --> I2[Moved Analytics Modules]
         I2 --> J2[AnalyticsWriter]
         J2 --> D2
@@ -62,8 +62,8 @@ flowchart TB
 The target architecture ensures:
 
 - Backend is a pure read-only API server
-- All computation happens in scraper-cli during the data pipeline
-- Pre-computed files are the contract between scraper-cli and backend
+- All computation happens in collector-cli during the data pipeline
+- Pre-computed files are the contract between collector-cli and backend
 - Sub-10ms response times are achievable
 - **Hardened code is preserved** by moving, not rewriting
 
@@ -125,7 +125,7 @@ New types for analytics data that needs to be pre-computed:
 ```typescript
 /**
  * Membership analytics data structure.
- * Pre-computed by scraper-cli, served by backend.
+ * Pre-computed by collector-cli, served by backend.
  */
 export interface MembershipAnalyticsData {
   districtId: string
@@ -322,7 +322,7 @@ export class AnalyticsComputer implements IAnalyticsComputer {
 }
 ```
 
-### 3. Extended AnalyticsWriter (scraper-cli)
+### 3. Extended AnalyticsWriter (collector-cli)
 
 New methods to write additional analytics files:
 
@@ -450,7 +450,7 @@ analyticsRouter.get('/:districtId/membership-analytics', async (req, res) => {
       error: {
         code: 'NO_DATA_AVAILABLE',
         message: 'No snapshot data available',
-        details: 'Run scraper-cli to fetch data',
+        details: 'Run collector-cli to fetch data',
       },
     })
   }
@@ -465,7 +465,7 @@ analyticsRouter.get('/:districtId/membership-analytics', async (req, res) => {
       error: {
         code: 'ANALYTICS_NOT_FOUND',
         message: 'Pre-computed membership analytics not found',
-        details: 'Run scraper-cli compute-analytics to generate analytics',
+        details: 'Run collector-cli compute-analytics to generate analytics',
       },
     })
   }
@@ -544,7 +544,7 @@ _For any_ district with at least two years of snapshot data, the year-over-year 
 
 ### Property 6: Missing Data Error Response
 
-_For any_ backend route request where the pre-computed file is missing, the backend SHALL return HTTP 404 with error code indicating which scraper-cli command to run.
+_For any_ backend route request where the pre-computed file is missing, the backend SHALL return HTTP 404 with error code indicating which collector-cli command to run.
 
 **Validates: Requirements 1.5, 2.5, 3.5, 4.4, 5.4, 6.5, 12.1, 12.2**
 
@@ -573,13 +573,13 @@ _For any_ export request, the CSV output SHALL be derived from pre-computed file
 
 ### Backend Serving Errors
 
-| Scenario                    | HTTP Code | Error Code              | Message                           |
-| --------------------------- | --------- | ----------------------- | --------------------------------- |
-| Pre-computed file not found | 404       | ANALYTICS_NOT_FOUND     | Run scraper-cli compute-analytics |
-| Schema version mismatch     | 500       | SCHEMA_VERSION_MISMATCH | Re-run compute-analytics          |
-| Corrupted JSON file         | 500       | CORRUPTED_FILE          | Re-run compute-analytics          |
-| No snapshot available       | 404       | NO_DATA_AVAILABLE       | Run scraper-cli to fetch data     |
-| Invalid district ID         | 400       | INVALID_DISTRICT_ID     | Check district ID format          |
+| Scenario                    | HTTP Code | Error Code              | Message                             |
+| --------------------------- | --------- | ----------------------- | ----------------------------------- |
+| Pre-computed file not found | 404       | ANALYTICS_NOT_FOUND     | Run collector-cli compute-analytics |
+| Schema version mismatch     | 500       | SCHEMA_VERSION_MISMATCH | Re-run compute-analytics            |
+| Corrupted JSON file         | 500       | CORRUPTED_FILE          | Re-run compute-analytics            |
+| No snapshot available       | 404       | NO_DATA_AVAILABLE       | Run collector-cli to fetch data     |
+| Invalid district ID         | 400       | INVALID_DISTRICT_ID     | Check district ID format            |
 
 ## Testing Strategy
 
@@ -651,6 +651,6 @@ const PROPERTY_TEST_CONFIG = {
 
 Integration tests should verify:
 
-1. **End-to-end pre-computation** - scraper-cli compute-analytics generates all files
+1. **End-to-end pre-computation** - collector-cli compute-analytics generates all files
 2. **Backend serving** - Routes correctly serve pre-computed data
 3. **Error handling** - Missing files return correct 404 responses

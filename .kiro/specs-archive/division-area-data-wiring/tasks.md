@@ -2,7 +2,7 @@
 
 ## Overview
 
-This implementation plan addresses the data format mismatch between the scraper-cli pipeline and the frontend's Divisions & Areas tab. The changes modify the `DataTransformer` to preserve raw CSV arrays alongside transformed data, following the data-computation-separation steering document.
+This implementation plan addresses the data format mismatch between the collector-cli pipeline and the frontend's Divisions & Areas tab. The changes modify the `DataTransformer` to preserve raw CSV arrays alongside transformed data, following the data-computation-separation steering document.
 
 ## Tasks
 
@@ -67,7 +67,7 @@ This implementation plan addresses the data format mismatch between the scraper-
 
 - [x] 6. Update TransformService integration tests
   - [x] 6.1 Add integration tests for raw data in transformed output
-    - Update `packages/scraper-cli/src/__tests__/TransformService.integration.test.ts`
+    - Update `packages/collector-cli/src/__tests__/TransformService.integration.test.ts`
     - Test that transformed district JSON includes raw arrays
     - Test that specific column values are preserved exactly
     - Test that Zod validation passes for generated files
@@ -82,5 +82,5 @@ This implementation plan addresses the data format mismatch between the scraper-
 
 - All tasks including tests are required for comprehensive implementation
 - The backend already has optional raw data fields in its DistrictStatistics type - no backend changes needed
-- After implementation, user should regenerate snapshots using scraper-cli to populate raw data fields
+- After implementation, user should regenerate snapshots using collector-cli to populate raw data fields
 - Frontend's `extractDivisionPerformance` function will automatically work once snapshots contain raw data

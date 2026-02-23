@@ -197,7 +197,7 @@ describe('RawCSVCacheService', () => {
 
       expect(metadata.date).toBe(date)
       expect(metadata.csvFiles.allDistricts).toBe(true)
-      expect(metadata.source).toBe('scraper')
+      expect(metadata.source).toBe('collector')
       expect(metadata.cacheVersion).toBe(1)
     })
   })
@@ -1458,7 +1458,7 @@ describe('RawCSVCacheService', () => {
 
       expect(metadata.date).toBe(date)
       expect(metadata.csvFiles.allDistricts).toBe(true)
-      expect(metadata.source).toBe('scraper')
+      expect(metadata.source).toBe('collector')
       expect(metadata.cacheVersion).toBe(1)
       expect(metadata.integrity).toHaveProperty('fileCount')
       expect(metadata.integrity).toHaveProperty('totalSize')

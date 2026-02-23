@@ -300,7 +300,7 @@ describe('LocalTimeSeriesIndexStorage', () => {
      *
      * This test verifies that after removing entries, the summary statistics
      * in the program year index file are NOT recalculated (per data-computation-separation).
-     * The summary will be stale until scraper-cli regenerates the index file.
+     * The summary will be stale until collector-cli regenerates the index file.
      */
     it('should NOT update summary statistics after removal (summary remains stale)', async () => {
       // Arrange: Create data with known membership values

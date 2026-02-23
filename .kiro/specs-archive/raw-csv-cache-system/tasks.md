@@ -2,7 +2,7 @@
 
 ## Overview
 
-This implementation plan creates a raw CSV caching system that intercepts CSV downloads in the ToastmastersScraper, providing cache-first lookup with automatic fallback to direct downloads. The system organizes cached files by date and district, maintains comprehensive metadata, and integrates seamlessly with existing services through dependency injection patterns.
+This implementation plan creates a raw CSV caching system that intercepts CSV downloads in the ToastmastersCollector, providing cache-first lookup with automatic fallback to direct downloads. The system organizes cached files by date and district, maintains comprehensive metadata, and integrates seamlessly with existing services through dependency injection patterns.
 
 ## Tasks
 
@@ -115,8 +115,8 @@ This implementation plan creates a raw CSV caching system that intercepts CSV do
   - **Property 19: Logging Completeness**
   - **Validates: Requirements 13.1, 10.5, 9.5**
 
-- [x] 8. Integrate cache service with ToastmastersScraper
-  - Modify ToastmastersScraper constructor to accept cache service dependency
+- [x] 8. Integrate cache service with ToastmastersCollector
+  - Modify ToastmastersCollector constructor to accept cache service dependency
   - Implement cache-first lookup in getAllDistricts method
   - Implement cache-first lookup in getDistrictPerformance method
   - Implement cache-first lookup in getDivisionPerformance method
@@ -138,7 +138,7 @@ This implementation plan creates a raw CSV caching system that intercepts CSV do
 
 - [x] 9. Update service container and dependency injection
   - Register RawCSVCacheService in ServiceContainer
-  - Update ToastmastersScraper factory to inject cache service
+  - Update ToastmastersCollector factory to inject cache service
   - Ensure proper service lifecycle management
   - Add configuration service integration
   - _Requirements: 6.5_
@@ -152,7 +152,7 @@ This implementation plan creates a raw CSV caching system that intercepts CSV do
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 11. Implement direct cache integration
-  - Update service container to always inject RawCSVCacheService into ToastmastersScraper
+  - Update service container to always inject RawCSVCacheService into ToastmastersCollector
   - Remove optional cache dependency - make it required
   - Verify all existing functionality is preserved
   - _Requirements: 6.1, 6.2, 6.3, 14.1, 14.2, 14.3_

@@ -2,7 +2,7 @@
 
 ## Problem
 
-Only 6 of 128 districts have per-district snapshot data (109, 117, 20, 42, 61, 86). This is intentional — the scraper pipeline targets specific districts. However, the site currently lets users navigate to any district detail page via the rankings table, where they see blank/zeroed data.
+Only 6 of 128 districts have per-district snapshot data (109, 117, 20, 42, 61, 86). This is intentional — the collector pipeline targets specific districts. However, the site currently lets users navigate to any district detail page via the rankings table, where they see blank/zeroed data.
 
 ## Current Behavior
 

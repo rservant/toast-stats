@@ -52,7 +52,7 @@ export interface AreaDirectorCorrelation {
 
 /**
  * Comprehensive leadership insights data structure.
- * Pre-computed by scraper-cli, served by backend.
+ * Pre-computed by collector-cli, served by backend.
  * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  */
 export interface LeadershipInsights {
@@ -89,7 +89,7 @@ export interface LeadershipInsights {
 
 /**
  * Leadership insights data structure for pre-computed files.
- * Pre-computed by scraper-cli, served by backend.
+ * Pre-computed by collector-cli, served by backend.
  * This is the wrapper type for the pre-computed leadership insights file.
  *
  * Contains leadership effectiveness metrics and officer performance data

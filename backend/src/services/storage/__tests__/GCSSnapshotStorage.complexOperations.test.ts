@@ -134,7 +134,7 @@ function makeMetadataBuffer(
       failedDistricts: status === 'failed' ? districtIds : [],
       errors: status === 'failed' ? ['Processing failed'] : [],
       processingDuration: 5000,
-      source: 'scraper-cli',
+      source: 'collector-cli',
       dataAsOfDate: snapshotId,
     })
   )

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This implementation removes all on-demand computation from the backend by **migrating hardened code to analytics-core** (not rewriting), extending scraper-cli to generate time-series indexes and rankings, and updating backend services to be read-only.
+This implementation removes all on-demand computation from the backend by **migrating hardened code to analytics-core** (not rewriting), extending collector-cli to generate time-series indexes and rankings, and updating backend services to be read-only.
 
 **Critical Principle:** Backend computation code has been hardened with bug fixes. We MOVE this code to analytics-core, preserving all logic. We do NOT rewrite from scratch.
 
@@ -69,8 +69,8 @@ This implementation removes all on-demand computation from the backend by **migr
   - Ensure all tests pass, ask the user if questions arise.
   - Verify migrated modules compile and work correctly
 
-- [x] 5. Create TimeSeriesIndexWriter in scraper-cli
-  - [x] 5.1 Create TimeSeriesIndexWriter class in scraper-cli/src/services/TimeSeriesIndexWriter.ts
+- [x] 5. Create TimeSeriesIndexWriter in collector-cli
+  - [x] 5.1 Create TimeSeriesIndexWriter class in collector-cli/src/services/TimeSeriesIndexWriter.ts
     - Use TimeSeriesDataPointBuilder from analytics-core
     - _Requirements: 4.1, 4.2_
   - [x] 5.2 Implement writeDataPoint method
@@ -118,7 +118,7 @@ This implementation removes all on-demand computation from the backend by **migr
   - [x] 7.5 Write unit tests for rankings generation in transform
     - _Requirements: 5.1, 5.2, 5.3_
 
-- [x] 8. Checkpoint - Ensure scraper-cli tests pass
+- [x] 8. Checkpoint - Ensure collector-cli tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 9. Update TimeSeriesIndexService to be read-only

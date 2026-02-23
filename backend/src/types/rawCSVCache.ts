@@ -2,7 +2,7 @@
  * Raw CSV Cache System Types
  *
  * Type definitions for the raw CSV caching system that stores CSV downloads
- * from the scraper-cli and provides cache-first lookup for the backend.
+ * from the collector-cli and provides cache-first lookup for the backend.
  */
 
 /**
@@ -47,7 +47,7 @@ export interface RawCSVCacheMetadata {
     totalSize: number
     fileCount: number
   }
-  source: 'scraper'
+  source: 'collector'
   cacheVersion: number
 }
 

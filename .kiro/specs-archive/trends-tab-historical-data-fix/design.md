@@ -8,7 +8,7 @@ Three bugs in the Trends tab produce incorrect or missing data displays. The fix
 
 2. **Frontend (usePaymentsTrend hook):** The hook hardcodes `getCurrentProgramYear()` to identify the "current year" trend. When the user selects a different program year (e.g., 2024-2025), the hook still looks for data under the 2025-2026 label, finds nothing, and shows "No Payment Data Available". The fix passes the selected program year into the hook.
 
-3. **Scraper-CLI (AnalyticsComputeService) + Frontend (YearOverYearComparison):** The scraper passes only one snapshot to `computeYearOverYear`, so `findSnapshotForDate` returns the same snapshot for both current and previous year, producing all-zero changes. The fix loads the previous year's snapshot. Additionally, the backend sends absolute `change` values but the frontend interprets them as `percentageChange` values — the fix aligns the contract by sending `percentageChange`.
+3. **Collector-CLI (AnalyticsComputeService) + Frontend (YearOverYearComparison):** The collector passes only one snapshot to `computeYearOverYear`, so `findSnapshotForDate` returns the same snapshot for both current and previous year, producing all-zero changes. The fix loads the previous year's snapshot. Additionally, the backend sends absolute `change` values but the frontend interprets them as `percentageChange` values — the fix aligns the contract by sending `percentageChange`.
 
 ## Architecture
 
@@ -143,9 +143,9 @@ const { data: paymentsTrendData, isLoading: isLoadingPaymentsTrend } =
   )
 ```
 
-### Bug 3a: Scraper-CLI — `AnalyticsComputeService.ts`
+### Bug 3a: Collector-CLI — `AnalyticsComputeService.ts`
 
-**File:** `packages/scraper-cli/src/services/AnalyticsComputeService.ts`
+**File:** `packages/collector-cli/src/services/AnalyticsComputeService.ts`
 
 **Change:** In `computeDistrictAnalytics`, after loading the current snapshot, attempt to load the previous program year's snapshot for the same district. Pass both snapshots to `AnalyticsComputer.computeDistrictAnalytics`.
 

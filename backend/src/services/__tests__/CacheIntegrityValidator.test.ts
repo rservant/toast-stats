@@ -67,7 +67,7 @@ function createTestMetadata(
       lastAccessed: Date.now(),
     },
     integrity: { checksums: {}, totalSize: 0, fileCount: 0 },
-    source: 'scraper',
+    source: 'collector',
     cacheVersion: 1,
     ...overrides,
   }

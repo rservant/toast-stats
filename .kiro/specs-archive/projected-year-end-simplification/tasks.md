@@ -70,18 +70,18 @@ Simplify the distinguished projection to a single `projectedDistinguished` field
     - File: `packages/analytics-core/src/analytics/AnalyticsComputer.integration.test.ts`
     - _Requirements: 2.5_
 
-- [x] 8. Update scraper-cli tests
+- [x] 8. Update collector-cli tests
   - [x] 8.1 Update AnalyticsWriter test fixtures
     - Remove `projectedSelect` and `projectedPresident` from test fixtures
-    - File: `packages/scraper-cli/src/__tests__/AnalyticsWriter.test.ts`
+    - File: `packages/collector-cli/src/__tests__/AnalyticsWriter.test.ts`
     - _Requirements: 2.5_
   - [x] 8.2 Update AnalyticsWriter property test generators
     - Update `distinguishedProjectionArb` arbitrary to generate only `projectedDistinguished`
-    - File: `packages/scraper-cli/src/__tests__/AnalyticsWriter.property.test.ts`
+    - File: `packages/collector-cli/src/__tests__/AnalyticsWriter.property.test.ts`
     - _Requirements: 2.5_
   - [x] 8.3 Update AnalyticsComputeService test fixtures
     - Remove `projectedSelect` and `projectedPresident` from test fixtures
-    - File: `packages/scraper-cli/src/__tests__/AnalyticsComputeService.test.ts`
+    - File: `packages/collector-cli/src/__tests__/AnalyticsComputeService.test.ts`
     - _Requirements: 2.5_
 
 - [x] 9. Fix frontend helper function
@@ -98,7 +98,7 @@ Simplify the distinguished projection to a single `projectedDistinguished` field
 - [x] 10. Final verification
   - [x] 10.1 Run all analytics-core tests
     - Verify all tests pass with simplified type
-  - [x] 10.2 Run all scraper-cli tests
+  - [x] 10.2 Run all collector-cli tests
     - Verify all tests pass with updated fixtures
   - [x] 10.3 Run all frontend tests
     - Verify all tests pass with updated fixtures

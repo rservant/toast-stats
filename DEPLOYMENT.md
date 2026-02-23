@@ -236,7 +236,7 @@ npm ci
 # Build applications
 npm run build:backend
 npm run build:frontend
-npm run build:scraper-cli
+npm run build:collector-cli
 
 # Start backend with PM2
 cd backend
@@ -337,48 +337,48 @@ gcloud run services update toast-stats-api \
   --set-env-vars="CORS_ORIGIN=https://your-custom-domain.com"
 ```
 
-### Scraper CLI Deployment
+### Collector CLI Deployment
 
-The scraper-cli is a standalone tool that collects data from Toastmasters dashboards and writes to the Raw CSV Cache. The backend reads from this cache to create snapshots.
+The collector-cli is a standalone tool that collects data from Toastmasters dashboards and writes to the Raw CSV Cache. The backend reads from this cache to create snapshots.
 
 #### Build and Install
 
 ```bash
-# Build the scraper-cli
-npm run build:scraper-cli
+# Build the collector-cli
+npm run build:collector-cli
 
-# The CLI is available at packages/scraper-cli/dist/
+# The CLI is available at packages/collector-cli/dist/
 ```
 
-#### Running the Scraper
+#### Running the Collector
 
 ```bash
 # Scrape all configured districts for today
-npm run scraper-cli -- scrape
+npm run collector-cli -- scrape
 
 # Scrape for a specific date
-npm run scraper-cli -- scrape --date 2025-01-10
+npm run collector-cli -- scrape --date 2025-01-10
 
 # Scrape specific districts
-npm run scraper-cli -- scrape --districts 57,58,59
+npm run collector-cli -- scrape --districts 57,58,59
 
 # Force re-scrape even if cache exists
-npm run scraper-cli -- scrape --force
+npm run collector-cli -- scrape --force
 
 # Check cache status
-npm run scraper-cli -- status
+npm run collector-cli -- status
 ```
 
 #### Scheduled Scraping with Cron
 
-Set up a cron job to run the scraper daily:
+Set up a cron job to run the collector daily:
 
 ```bash
 # Edit crontab
 crontab -e
 
 # Add daily scrape at 6 AM
-0 6 * * * cd /path/to/toast-stats && npm run scraper-cli -- scrape >> /var/log/scraper.log 2>&1
+0 6 * * * cd /path/to/toast-stats && npm run collector-cli -- scrape >> /var/log/collector.log 2>&1
 ```
 
 #### Exit Codes
@@ -819,8 +819,8 @@ This occurs when:
    # Via API (if refresh endpoint is available)
    curl -X POST https://your-api-gateway/api/refresh
 
-   # Or via scraper-cli
-   npm run scraper-cli -- scrape
+   # Or via collector-cli
+   npm run collector-cli -- scrape
    ```
 
 2. **Verify the refresh succeeded**:

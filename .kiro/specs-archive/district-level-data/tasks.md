@@ -15,7 +15,7 @@
     - _Requirements: 2.1, 2.2, 2.4_
   - [x] 2.2 Implement backfill processing logic
     - Generate list of dates to fetch (skip cached dates)
-    - For each date, fetch all three report types using existing scraper methods
+    - For each date, fetch all three report types using existing collector methods
     - Cache the combined data using DistrictCacheManager
     - Update job progress after each date
     - Handle errors gracefully (log and continue)

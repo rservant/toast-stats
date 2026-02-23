@@ -208,7 +208,7 @@ build_analytics_cli_options() {
     echo "$opts"
 }
 
-# Run scraper-cli command
+# Run collector-cli command
 run_cli() {
     local command="$1"
     local date="$2"
@@ -222,7 +222,7 @@ run_cli() {
         cli_opts=$(build_cli_options)
     fi
     
-    local full_cmd="npx scraper-cli $command --date $date $cli_opts $extra_opts"
+    local full_cmd="npx collector-cli $command --date $date $cli_opts $extra_opts"
     
     # Set CACHE_DIR environment variable if override is specified
     local env_prefix=""

@@ -1,13 +1,13 @@
-# Implementation Plan: Scraper CLI Month-End Compliance
+# Implementation Plan: Collector CLI Month-End Compliance
 
 ## Overview
 
-This implementation modifies the TransformService in the scraper-cli package to handle month-end closing periods correctly. The changes involve reading cache metadata, calculating correct snapshot dates for closing periods, and including closing period fields in snapshot metadata.
+This implementation modifies the TransformService in the collector-cli package to handle month-end closing periods correctly. The changes involve reading cache metadata, calculating correct snapshot dates for closing periods, and including closing period fields in snapshot metadata.
 
 ## Tasks
 
 - [x] 1. Create ClosingPeriodDetector utility
-  - [x] 1.1 Create `packages/scraper-cli/src/utils/ClosingPeriodDetector.ts`
+  - [x] 1.1 Create `packages/collector-cli/src/utils/ClosingPeriodDetector.ts`
     - Port logic from `backend/src/services/ClosingPeriodDetector.ts`
     - Implement `getLastDayOfMonth(year, month)` method
     - Implement `detect(requestedDate, metadata)` method
@@ -192,5 +192,5 @@ The following tasks extend the month-end compliance feature to the `compute-anal
 - Tasks marked with `*` are optional and can be skipped for faster MVP
 - The ClosingPeriodDetector utility is based on the existing backend implementation
 - The `SnapshotMetadataFile` interface in shared-contracts already has the required closing period fields
-- No API changes are required - this is purely a scraper-cli pipeline change
+- No API changes are required - this is purely a collector-cli pipeline change
 - The ClosingPeriodDetector utility created in tasks 1.x can be reused directly for the AnalyticsComputeService

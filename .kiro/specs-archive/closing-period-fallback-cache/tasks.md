@@ -2,17 +2,17 @@
 
 ## Overview
 
-This implementation adds an in-memory fallback cache to the ToastmastersScraper class that stores knowledge about which dates require fallback navigation. The implementation modifies the existing navigation flow to check the cache first and skip unnecessary failed requests for known fallback dates.
+This implementation adds an in-memory fallback cache to the ToastmastersCollector class that stores knowledge about which dates require fallback navigation. The implementation modifies the existing navigation flow to check the cache first and skip unnecessary failed requests for known fallback dates.
 
 ## Tasks
 
 - [x] 1. Add FallbackInfo and FallbackMetrics interfaces
   - Create `FallbackInfo` interface with requestedDate, fallbackMonth, fallbackYear, crossedProgramYearBoundary, actualDateString, cachedAt
   - Create `FallbackMetrics` interface with cacheHits, cacheMisses, fallbackDatesDiscovered
-  - Add to `packages/scraper-cli/src/types/scraper.ts`
+  - Add to `packages/collector-cli/src/types/collector.ts`
   - _Requirements: 2.1, 2.2, 2.3, 2.4, 7.1, 7.2_
 
-- [x] 2. Add cache instance properties to ToastmastersScraper
+- [x] 2. Add cache instance properties to ToastmastersCollector
   - Add `fallbackCache: Map<string, FallbackInfo>` private property
   - Add `fallbackMetrics: FallbackMetrics` private property with initial values
   - Initialize both in constructor
@@ -69,8 +69,8 @@ This implementation adds an in-memory fallback cache to the ToastmastersScraper 
 - [x] 6. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [x] 7. Update ScraperOrchestrator to report fallback metrics
-  - Get metrics from scraper via getFallbackMetrics()
+- [x] 7. Update CollectorOrchestrator to report fallback metrics
+  - Get metrics from collector via getFallbackMetrics()
   - Include cache hit/miss statistics in scrape result summary
   - Log metrics at end of scrape session
   - _Requirements: 7.3_
@@ -89,5 +89,5 @@ This implementation adds an in-memory fallback cache to the ToastmastersScraper 
 - Checkpoints ensure incremental validation
 - Property tests validate universal correctness properties
 - Unit tests validate specific examples and edge cases
-- The implementation is contained within the scraper-cli package
+- The implementation is contained within the collector-cli package
 - No changes to the backend are required

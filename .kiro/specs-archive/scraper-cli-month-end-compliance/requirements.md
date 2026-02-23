@@ -2,11 +2,11 @@
 
 ## Introduction
 
-This feature makes the scraper-cli pipeline compliant with the month-end reconciliation documentation in `TOASTMASTERS_DASHBOARD_KNOWLEDGE.md`. During month-end closing periods, the Toastmasters dashboard publishes data for a prior month with an "As of" date in the current month. The TransformService must read cache metadata to detect these closing periods and write snapshots to the correct date directory (last day of the data month) rather than the requested date.
+This feature makes the collector-cli pipeline compliant with the month-end reconciliation documentation in `TOASTMASTERS_DASHBOARD_KNOWLEDGE.md`. During month-end closing periods, the Toastmasters dashboard publishes data for a prior month with an "As of" date in the current month. The TransformService must read cache metadata to detect these closing periods and write snapshots to the correct date directory (last day of the data month) rather than the requested date.
 
 ## Background
 
-The scraper (`ToastmastersScraper.ts`) already:
+The collector (`ToastmastersCollector.ts`) already:
 
 - Detects closing periods by comparing the CSV's data month to the "As of" date
 - Stores `isClosingPeriod` and `dataMonth` in cache metadata via `setCachedCSVWithMetadata()`

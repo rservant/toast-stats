@@ -70,7 +70,7 @@ function createSampleDataPoint(
 
 /**
  * Create a pre-computed program year index file
- * This simulates what scraper-cli would generate
+ * This simulates what collector-cli would generate
  */
 function createProgramYearIndexFile(
   districtId: string,
@@ -80,7 +80,7 @@ function createProgramYearIndexFile(
   const startYear = parseInt(programYear.split('-')[0] ?? '0', 10)
   const endYear = parseInt(programYear.split('-')[1] ?? '0', 10)
 
-  // Calculate summary (this would be pre-computed by scraper-cli)
+  // Calculate summary (this would be pre-computed by collector-cli)
   const memberships = dataPoints.map(dp => dp.membership)
   const summary = {
     totalDataPoints: dataPoints.length,
@@ -102,7 +102,7 @@ function createProgramYearIndexFile(
 }
 
 /**
- * Write a pre-computed index file to disk (simulating scraper-cli output)
+ * Write a pre-computed index file to disk (simulating collector-cli output)
  */
 async function writePreComputedIndexFile(
   testDir: string,
@@ -434,7 +434,7 @@ describe('TimeSeriesIndexService (Read-Only)', () => {
           createSampleDataPoint('2024-01-15', 'snapshot-2', 1000),
           createSampleDataPoint('2024-01-20', 'snapshot-3', 1100),
         ],
-        // Pre-computed summary (would be computed by scraper-cli)
+        // Pre-computed summary (would be computed by collector-cli)
         summary: {
           totalDataPoints: 3,
           membershipStart: 900,

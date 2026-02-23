@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design introduces an in-memory cache within the ToastmastersScraper class that stores knowledge about which dates require fallback navigation. When the scraper successfully uses the previous-month fallback for a date, it caches this information so subsequent CSV downloads for the same date can skip the initial failed attempt and go directly to the fallback URL.
+This design introduces an in-memory cache within the ToastmastersCollector class that stores knowledge about which dates require fallback navigation. When the collector successfully uses the previous-month fallback for a date, it caches this information so subsequent CSV downloads for the same date can skip the initial failed attempt and go directly to the fallback URL.
 
 The optimization targets the inefficiency observed during closing period scraping where each of the 7+ CSV files (all-districts + 3 per district) independently discovers that fallback is needed, resulting in unnecessary failed requests.
 
@@ -10,7 +10,7 @@ The optimization targets the inefficiency observed during closing period scrapin
 
 ```mermaid
 flowchart TD
-    subgraph ToastmastersScraper
+    subgraph ToastmastersCollector
         FC[FallbackCache<br/>Map&lt;date, FallbackInfo&gt;]
         FM[FallbackMetrics<br/>hits, misses]
     end
@@ -91,12 +91,12 @@ interface FallbackMetrics {
 }
 ```
 
-### ToastmastersScraper Class Modifications
+### ToastmastersCollector Class Modifications
 
 Add instance properties:
 
 ```typescript
-class ToastmastersScraper {
+class ToastmastersCollector {
   // Existing properties...
 
   /** Cache of dates that require fallback navigation */
@@ -301,7 +301,7 @@ The cache uses the requested date string in YYYY-MM-DD format as the key. This e
 
 1. **Creation**: When fallback navigation succeeds for a date not in cache
 2. **Usage**: When any subsequent navigation request is made for the same date
-3. **Expiration**: When the ToastmastersScraper instance is garbage collected (session-scoped)
+3. **Expiration**: When the ToastmastersCollector instance is garbage collected (session-scoped)
 
 ## Correctness Properties
 
@@ -333,7 +333,7 @@ _For any_ entry in the FallbackCache, the entry SHALL contain: requestedDate mat
 
 ### Property 5: Cache isolation between instances
 
-_For any_ two ToastmastersScraper instances, populating the FallbackCache in one instance SHALL NOT affect the FallbackCache in the other instance.
+_For any_ two ToastmastersCollector instances, populating the FallbackCache in one instance SHALL NOT affect the FallbackCache in the other instance.
 
 **Validates: Requirements 6.3**
 
@@ -357,7 +357,7 @@ The cache is a simple Map, so lookup failures are not expected. If the Map imple
 
 ### Cached Fallback Navigation Failures
 
-If a cached fallback doesn't work (date mismatch after using cached params), the scraper should:
+If a cached fallback doesn't work (date mismatch after using cached params), the collector should:
 
 1. Log a warning
 2. Return failure (don't retry with standard navigation to avoid infinite loops)
@@ -367,7 +367,7 @@ This scenario is unlikely in practice since the dashboard behavior is consistent
 
 ### Metrics Overflow
 
-The metrics counters are JavaScript numbers, which can safely represent integers up to 2^53. For a scraper session, this is effectively unlimited.
+The metrics counters are JavaScript numbers, which can safely represent integers up to 2^53. For a collector session, this is effectively unlimited.
 
 ## Testing Strategy
 
@@ -401,4 +401,4 @@ Integration tests will verify:
 
 - **Unit/Property Tests**: Vitest with fast-check
 - **Minimum iterations**: 100 per property test
-- **Test isolation**: Each test creates fresh ToastmastersScraper instance
+- **Test isolation**: Each test creates fresh ToastmastersCollector instance

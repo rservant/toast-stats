@@ -255,7 +255,7 @@
     - Include program year information
     - Sort dates chronologically
     - _Requirements: 12.3, 12.4, 12.5_
-  - [x] 23.3 Enhance scraper to support date selection
+  - [x] 23.3 Enhance collector to support date selection
     - Add method to select specific month and day on dashboard
     - Implement dropdown interaction for month selection
     - Implement dropdown interaction for day selection

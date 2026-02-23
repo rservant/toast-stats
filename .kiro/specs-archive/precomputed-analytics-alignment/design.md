@@ -4,10 +4,10 @@
 
 This design addresses the misalignment between the pre-computed analytics pipeline and the frontend's expected `DistrictAnalytics` structure. The core issue is that two separate analytics computation paths exist:
 
-1. **scraper-cli's `AnalyticsComputer`** (in `analytics-core`) - Produces the correct full `DistrictAnalytics` structure
+1. **collector-cli's `AnalyticsComputer`** (in `analytics-core`) - Produces the correct full `DistrictAnalytics` structure
 2. **backend's `PreComputedAnalyticsService`** - Produces simplified summary counts
 
-The solution enhances the `analytics-core` types and modules to produce complete data that matches frontend expectations, ensuring the scraper-cli's output is the single source of truth.
+The solution enhances the `analytics-core` types and modules to produce complete data that matches frontend expectations, ensuring the collector-cli's output is the single source of truth.
 
 ### Key Changes
 
@@ -35,7 +35,7 @@ flowchart TB
     end
 ```
 
-The architecture remains the same - the scraper-cli computes analytics and stores them as JSON files. The backend reads and serves these files. The change is in the **content** of what's computed and stored.
+The architecture remains the same - the collector-cli computes analytics and stores them as JSON files. The backend reads and serves these files. The change is in the **content** of what's computed and stored.
 
 ## Components and Interfaces
 
@@ -171,7 +171,7 @@ export class ClubHealthAnalyticsModule {
 
 ### 4. Data Transformer Enhancement
 
-The `DataTransformer` in scraper-cli needs to extract additional fields from CSV:
+The `DataTransformer` in collector-cli needs to extract additional fields from CSV:
 
 ```typescript
 // Fields to extract from club performance CSV
@@ -192,7 +192,7 @@ const CLUB_FIELDS = {
 
 ### 5. Backend PreComputedAnalyticsReader (No Changes)
 
-The `PreComputedAnalyticsReader` already reads the correct file format. No changes needed - it will automatically serve the enhanced data once the scraper-cli produces it.
+The `PreComputedAnalyticsReader` already reads the correct file format. No changes needed - it will automatically serve the enhanced data once the collector-cli produces it.
 
 ### 6. Deprecation of PreComputedAnalyticsService
 
@@ -200,12 +200,12 @@ The `PreComputedAnalyticsService` will be marked as deprecated:
 
 ```typescript
 /**
- * @deprecated Use scraper-cli compute-analytics command instead.
+ * @deprecated Use collector-cli compute-analytics command instead.
  * This service produces simplified summaries that don't match frontend expectations.
  * The analytics-summary.json files are retained for backward compatibility only.
  *
  * Migration path:
- * 1. Run scraper-cli compute-analytics to generate full analytics
+ * 1. Run collector-cli compute-analytics to generate full analytics
  * 2. Backend will serve from analytics/ directory (full data)
  * 3. analytics-summary.json is no longer the primary data source
  */

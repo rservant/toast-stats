@@ -2,7 +2,7 @@
 
 ## Overview
 
-This feature is a large-scale code removal that eliminates all backfill capability from the backend and frontend. The backend currently contains two backfill systems (legacy and unified) that violate the project's core architectural principle: the backend is a read-only API server, and all data computation happens in scraper-cli.
+This feature is a large-scale code removal that eliminates all backfill capability from the backend and frontend. The backend currently contains two backfill systems (legacy and unified) that violate the project's core architectural principle: the backend is a read-only API server, and all data computation happens in collector-cli.
 
 The removal is purely subtractive — no new features are introduced. The design focuses on identifying every file, interface, import, and reference that must be deleted or modified, and defining the order of operations to keep the codebase compilable at each step.
 
@@ -126,8 +126,8 @@ After removal, the admin route index mounts only: snapshots, snapshot-management
 | `backend/src/services/storage/StorageProviderFactory.ts`                 | Remove `backfillJobStorage` from `StorageProviders` interface, remove `LocalBackfillJobStorage` and `FirestoreBackfillJobStorage` imports, remove creation logic                                                    |
 | `backend/src/routes/admin/monitoring.ts`                                 | Remove `getPendingBackfillJobCount` import, set `pendingOperations` to `0`                                                                                                                                          |
 | `backend/src/routes/districts/shared.ts`                                 | Remove `BackfillService` import, `_backfillService` variable, and `getBackfillService` function                                                                                                                     |
-| `backend/src/routes/districts/analyticsSummary.ts`                       | Replace backfill recommendation strings with scraper-cli guidance                                                                                                                                                   |
-| `backend/src/routes/districts/analytics.ts`                              | Replace backfill recommendation strings with scraper-cli guidance                                                                                                                                                   |
+| `backend/src/routes/districts/analyticsSummary.ts`                       | Replace backfill recommendation strings with collector-cli guidance                                                                                                                                                 |
+| `backend/src/routes/districts/analytics.ts`                              | Replace backfill recommendation strings with collector-cli guidance                                                                                                                                                 |
 | `backend/src/routes/__tests__/admin.integration.test.ts`                 | Remove `getUnifiedBackfillServiceInstance` mock                                                                                                                                                                     |
 | `backend/src/routes/__tests__/admin.test.ts`                             | Remove `getUnifiedBackfillServiceInstance` mock                                                                                                                                                                     |
 | `backend/src/routes/__tests__/admin.district-config.integration.test.ts` | Remove `getUnifiedBackfillServiceInstance` mock                                                                                                                                                                     |
@@ -271,8 +271,8 @@ All API request/response types for the unified backfill endpoints:
 
 **Updated in both specs:**
 
-- Analytics endpoint descriptions: replace "Use the unified backfill service" with "Run scraper-cli compute-analytics"
-- Snapshot descriptions: replace "backfill" references with "scraper-cli" references
+- Analytics endpoint descriptions: replace "Use the unified backfill service" with "Run collector-cli compute-analytics"
+- Snapshot descriptions: replace "backfill" references with "collector-cli" references
 
 ## Correctness Properties
 
@@ -290,8 +290,8 @@ Property 2: Monitoring health endpoint reports zero pending operations
 _For any_ call to the system health endpoint, the `pendingOperations` field in the response shall be `0`, since the backend no longer runs any background operations.
 **Validates: Requirements 5.1**
 
-Property 3: Analytics error messages reference scraper-cli
-_For any_ analytics endpoint response that returns an `ANALYTICS_NOT_AVAILABLE` error, the error details shall contain a recommendation referencing `scraper-cli` and shall not contain the word "backfill".
+Property 3: Analytics error messages reference collector-cli
+_For any_ analytics endpoint response that returns an `ANALYTICS_NOT_AVAILABLE` error, the error details shall contain a recommendation referencing `collector-cli` and shall not contain the word "backfill".
 **Validates: Requirements 5.3, 6.2**
 
 No additional property-based tests are warranted for this feature. The remaining acceptance criteria are verified through:
@@ -306,9 +306,9 @@ This feature removes error handling code rather than adding it. Key consideratio
 
 1. **Monitoring endpoint**: The `pendingOperations` field in `SystemHealthMetrics` is set to `0` rather than removed, preserving the response schema for any consumers.
 
-2. **Analytics error messages**: The `ANALYTICS_NOT_AVAILABLE` error responses in `analyticsSummary.ts` and `analytics.ts` are updated to recommend `scraper-cli compute-analytics` instead of the unified backfill service. The `backfillJobType` field is removed from error details since it references a removed system.
+2. **Analytics error messages**: The `ANALYTICS_NOT_AVAILABLE` error responses in `analyticsSummary.ts` and `analytics.ts` are updated to recommend `collector-cli compute-analytics` instead of the unified backfill service. The `backfillJobType` field is removed from error details since it references a removed system.
 
-3. **Missing data responses**: District routes that previously suggested "initiate a backfill" now suggest using the Admin Panel or scraper-cli for data collection. The error codes and HTTP status codes remain unchanged.
+3. **Missing data responses**: District routes that previously suggested "initiate a backfill" now suggest using the Admin Panel or collector-cli for data collection. The error codes and HTTP status codes remain unchanged.
 
 4. **Server startup**: The backfill recovery try/catch block is removed entirely. The server startup sequence no longer has a recovery step that could fail, simplifying the startup path.
 

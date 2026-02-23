@@ -152,7 +152,7 @@ describe('GCSSnapshotStorage — isSnapshotWriteComplete', () => {
 
   it('should return true when manifest exists but writeComplete field is missing (backward compat)', async () => {
     // Missing writeComplete is treated as true for backward compatibility
-    // with scraper-cli manifests that don't include the field
+    // with collector-cli manifests that don't include the field
     const mockFile = createMockFile('snapshots/2024-01-15/manifest.json')
     mockFile.download.mockResolvedValue([makeManifestBuffer(undefined)])
     mockBucket.file.mockReturnValue(mockFile)

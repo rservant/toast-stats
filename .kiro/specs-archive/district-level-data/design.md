@@ -2,14 +2,14 @@
 
 ## Overview
 
-This feature extends the existing Toastmasters District Visualizer to cache, backfill, and analyze district-level performance data. We'll leverage the existing scraper methods (`getDistrictPerformance`, `getDivisionPerformance`, `getClubPerformance`) and build upon the proven backfill architecture to provide deep insights into club, area, and division performance over time.
+This feature extends the existing Toastmasters District Visualizer to cache, backfill, and analyze district-level performance data. We'll leverage the existing collector methods (`getDistrictPerformance`, `getDivisionPerformance`, `getClubPerformance`) and build upon the proven backfill architecture to provide deep insights into club, area, and division performance over time.
 
 ## Architecture
 
 ### High-Level Flow
 
 ```
-User Request → API Layer → Service Layer → Cache Layer → Scraper
+User Request → API Layer → Service Layer → Cache Layer → Collector
                     ↓
               Analytics Engine
                     ↓

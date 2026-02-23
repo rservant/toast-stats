@@ -432,7 +432,7 @@ Manages background processing of historical data backfill requests:
    - If error: marks as "failed" (actual error)
 5. Returns completion summary with counts for each category
 
-#### ToastmastersScraper
+#### ToastmastersCollector
 
 Handles web scraping of Toastmasters dashboard using Playwright:
 

@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The scraper-cli `upload` command currently suffers from severe performance and usability issues when operating at scale (2,362+ snapshot dates, tens of thousands of files). This feature enhances the upload pipeline with conditional checksum computation, progress reporting, date range filtering, a local upload manifest with fast-path skipping, concurrent GCS uploads, and streaming file collection. These changes make the upload command practical for large-scale daily use.
+The collector-cli `upload` command currently suffers from severe performance and usability issues when operating at scale (2,362+ snapshot dates, tens of thousands of files). This feature enhances the upload pipeline with conditional checksum computation, progress reporting, date range filtering, a local upload manifest with fast-path skipping, concurrent GCS uploads, and streaming file collection. These changes make the upload command practical for large-scale daily use.
 
 ## Glossary
 

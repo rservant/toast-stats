@@ -21,10 +21,10 @@ const districtPerformance = district
 
 **Root Cause:**
 
-- `scraper.getAllDistricts()` returns system-wide ranking data for all districts
+- `collector.getAllDistricts()` returns system-wide ranking data for all districts
 - This data gets stored in each district's `districtPerformance[0]` field
 - Borda Count rankings are calculated from this duplicated data
-- District-specific data from `scraper.getDistrictPerformance(districtId)` gets mixed with system-wide data
+- District-specific data from `collector.getDistrictPerformance(districtId)` gets mixed with system-wide data
 
 ## Specification Requirements
 

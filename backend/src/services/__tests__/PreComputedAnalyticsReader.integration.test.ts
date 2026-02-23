@@ -9,7 +9,7 @@
  * - 4.3: THE Backend SHALL maintain API compatibility with existing frontend hooks
  * - 11.1: THE Backend SHALL read pre-computed analytics from the local file system when running locally
  * - 11.2: THE Backend SHALL use the same CACHE_DIR configuration for both local development and production
- * - 11.3: WHEN the Scraper_CLI generates pre-computed analytics locally, THE Backend SHALL be able to serve them immediately
+ * - 11.3: WHEN the Collector_CLI generates pre-computed analytics locally, THE Backend SHALL be able to serve them immediately
  *
  * Test cases:
  * 1. Backend serves pre-computed analytics from local file system
@@ -295,7 +295,7 @@ function createTestApp(
             code: 'NO_DATA_AVAILABLE',
             message: `Analytics not available for district ${districtId} on ${snapshotDate}`,
             details:
-              'Pre-computed analytics have not been generated for this district. Run the compute-analytics command in scraper-cli.',
+              'Pre-computed analytics have not been generated for this district. Run the compute-analytics command in collector-cli.',
           },
         })
         return

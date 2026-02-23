@@ -508,7 +508,7 @@ describe('GCSRawCSVStorage', () => {
             lastAccessed: Date.now(),
           },
           integrity: { checksums: {}, totalSize: 100, fileCount: 1 },
-          source: 'scraper',
+          source: 'collector',
           cacheVersion: 1,
         }
 
@@ -561,7 +561,7 @@ describe('GCSRawCSVStorage', () => {
             lastAccessed: Date.now(),
           },
           integrity: { checksums: {}, totalSize: 100, fileCount: 1 },
-          source: 'scraper',
+          source: 'collector',
           cacheVersion: 1,
         }
 

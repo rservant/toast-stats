@@ -4,12 +4,12 @@
 
 This feature aligns the pre-computed analytics pipeline to produce the full `DistrictAnalytics` structure expected by the frontend. Currently, there are two separate analytics computation paths:
 
-1. **scraper-cli's `AnalyticsComputer`** - Produces the correct full `DistrictAnalytics` structure with all club details, trends, and rankings
+1. **collector-cli's `AnalyticsComputer`** - Produces the correct full `DistrictAnalytics` structure with all club details, trends, and rankings
 2. **backend's `PreComputedAnalyticsService`** - Produces simplified summary counts during snapshot creation
 
 The backend serves pre-computed files via `PreComputedAnalyticsReader`, but the `PreComputedAnalyticsService` output lacks the detailed data the frontend needs, causing the clubs tab to crash and multiple features to be broken.
 
-The solution is to ensure the scraper-cli's `AnalyticsComputer` output (which produces the correct structure) is what gets stored and served, deprecating the simplified `PreComputedAnalyticsService` approach.
+The solution is to ensure the collector-cli's `AnalyticsComputer` output (which produces the correct structure) is what gets stored and served, deprecating the simplified `PreComputedAnalyticsService` approach.
 
 ## Glossary
 
@@ -122,7 +122,7 @@ The solution is to ensure the scraper-cli's `AnalyticsComputer` output (which pr
 #### Acceptance Criteria
 
 1. THE PreComputedAnalyticsService SHALL be marked as deprecated with documentation explaining the migration path
-2. THE System SHALL rely on scraper-cli's AnalyticsComputer for all pre-computed analytics generation
+2. THE System SHALL rely on collector-cli's AnalyticsComputer for all pre-computed analytics generation
 3. THE analytics-summary.json files SHALL remain for backward compatibility but SHALL NOT be the primary data source
 4. WHEN both full analytics and summary files exist, THE Backend SHALL prefer the full analytics files
 

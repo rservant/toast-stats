@@ -261,12 +261,12 @@ async function initializeServices(): Promise<void> {
   }
 
   // RefreshService no longer takes timeSeriesIndexService or rankingCalculator
-  // Time-series data and rankings are now pre-computed by scraper-cli
+  // Time-series data and rankings are now pre-computed by collector-cli
   _refreshService = new RefreshService(
     snapshotStore,
     rawCSVCacheService,
     districtConfigService,
-    undefined, // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
+    undefined, // rankingCalculator - DEPRECATED: rankings are pre-computed by collector-cli
     undefined, // closingPeriodDetector
     undefined, // dataNormalizer
     undefined, // validator

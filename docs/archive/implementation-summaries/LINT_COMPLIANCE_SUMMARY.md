@@ -38,7 +38,7 @@
    - `districts.integration.test.ts` - 15 errors (test mocks)
    - `reconciliation.ts` - Multiple API response types
    - `AnalyticsEngine.ts` - Data processing types
-   - `ToastmastersScraper.ts` - Web scraping data types
+   - `ToastmastersCollector.ts` - Web scraping data types
 
 2. **Test Files** - Many test files still use `any` for mock data
 3. **API Response Handling** - External API responses need proper interfaces

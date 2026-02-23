@@ -1,12 +1,12 @@
-# Playwright-Based Scraper Implementation
+# Playwright-Based Collector Implementation
 
 ## Summary
 
-Implemented a Playwright-based web scraper to fetch real data from the Toastmasters public dashboards at https://dashboards.toastmasters.org.
+Implemented a Playwright-based web collector to fetch real data from the Toastmasters public dashboards at https://dashboards.toastmasters.org.
 
 ## What Was Implemented
 
-### 1. Core Scraper Service (`ToastmastersScraper.ts`)
+### 1. Core Collector Service (`ToastmastersCollector.ts`)
 
 Low-level Playwright automation that:
 
@@ -27,7 +27,7 @@ Low-level Playwright automation that:
 
 High-level service that:
 
-- Uses the scraper to fetch CSV data
+- Uses the collector to fetch CSV data
 - Transforms raw CSV into our application's data format
 - Calculates derived metrics (growth %, distinguished clubs, etc.)
 - Matches the same interface as `MockToastmastersAPIService`
@@ -67,8 +67,8 @@ Chromium browser installed via: `npx playwright install chromium`
 
 ### 5. Documentation
 
-- `backend/src/services/SCRAPER_README.md` - Comprehensive scraper documentation
-- `backend/src/services/__test-scraper.ts` - Manual test script
+- `backend/src/services/COLLECTOR_README.md` - Comprehensive collector documentation
+- `backend/src/services/__test-collector.ts` - Manual test script
 - Updated main `README.md` with data source information
 
 ## How It Works
@@ -82,7 +82,7 @@ API Route (districts.ts)
     ↓
 RealToastmastersAPIService
     ↓
-ToastmastersScraper
+ToastmastersCollector
     ↓
 Playwright Browser
     ↓
@@ -99,7 +99,7 @@ Return to User
 
 1. User requests `/api/districts/61/statistics`
 2. `RealToastmastersAPIService.getDistrictStatistics('61')` is called
-3. Scraper navigates to `https://dashboards.toastmasters.org/District.aspx?id=61`
+3. Collector navigates to `https://dashboards.toastmasters.org/District.aspx?id=61`
 4. Clicks "Export CSV" and downloads the file
 5. Parses CSV into JavaScript objects
 6. Calculates totals, percentages, and aggregates
@@ -119,7 +119,7 @@ All scraped data is cached for 15 minutes to:
 
 ```bash
 cd backend
-npx tsx src/services/__test-scraper.ts
+npx tsx src/services/__test-collector.ts
 ```
 
 This will:
@@ -154,11 +154,11 @@ curl http://localhost:5001/api/districts/61/clubs
 
 3. **Daily Reports**: Returns empty data. May require a different data source or additional scraping.
 
-4. **Division/Area Data**: Scraper method exists but not yet integrated into the API service.
+4. **Division/Area Data**: Collector method exists but not yet integrated into the API service.
 
 ### CSV Column Mapping
 
-The scraper attempts to handle various column name variations, but if Toastmasters changes their CSV format, the mapping may need updates in `RealToastmastersAPIService.ts`.
+The collector attempts to handle various column name variations, but if Toastmasters changes their CSV format, the mapping may need updates in `RealToastmastersAPIService.ts`.
 
 ## Performance Considerations
 
@@ -218,7 +218,7 @@ npx playwright install chromium
 
 ### Timeout Errors
 
-Increase timeout in `ToastmastersScraper.ts`:
+Increase timeout in `ToastmastersCollector.ts`:
 
 ```typescript
 timeout: 60000 // 60 seconds
@@ -238,11 +238,11 @@ Check logs for actual CSV content and update column mapping in `RealToastmasters
 
 ### New Files
 
-- `backend/src/services/ToastmastersScraper.ts` - Core scraper
+- `backend/src/services/ToastmastersCollector.ts` - Core collector
 - `backend/src/services/RealToastmastersAPIService.ts` - API service
-- `backend/src/services/SCRAPER_README.md` - Documentation
-- `backend/src/services/__test-scraper.ts` - Test script
-- `SCRAPER_IMPLEMENTATION.md` - This file
+- `backend/src/services/COLLECTOR_README.md` - Documentation
+- `backend/src/services/__test-collector.ts` - Test script
+- `COLLECTOR_IMPLEMENTATION.md` - This file
 
 ### Modified Files
 
@@ -265,6 +265,6 @@ Plus Chromium browser (~130MB) installed via Playwright.
 
 ## Conclusion
 
-The Playwright-based scraper is fully implemented and ready to use. It provides a robust way to fetch real data from the Toastmasters public dashboards without requiring authentication. The implementation is production-ready with proper error handling, caching, and resource management.
+The Playwright-based collector is fully implemented and ready to use. It provides a robust way to fetch real data from the Toastmasters public dashboards without requiring authentication. The implementation is production-ready with proper error handling, caching, and resource management.
 
 To use it, simply set `USE_MOCK_DATA=false` in your `.env` file and restart the backend server.

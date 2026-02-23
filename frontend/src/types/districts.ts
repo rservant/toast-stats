@@ -75,7 +75,7 @@ export interface DistrictStatistics {
   // New ranking fields
   ranking?: DistrictRankingData
 
-  // Raw data arrays from scraper (for division/area performance cards)
+  // Raw data arrays from collector (for division/area performance cards)
   districtPerformance?: unknown[]
   divisionPerformance?: unknown[]
   clubPerformance?: unknown[]

@@ -70,7 +70,7 @@ export interface MembershipYearOverYearComparison {
 
 /**
  * Comprehensive membership analytics data structure.
- * Pre-computed by scraper-cli, served by backend.
+ * Pre-computed by collector-cli, served by backend.
  * Moved from backend/src/types/analytics.ts to preserve hardened logic.
  */
 export interface MembershipAnalytics {
@@ -92,7 +92,7 @@ export interface MembershipAnalytics {
 
 /**
  * Membership analytics data structure for pre-computed files.
- * Pre-computed by scraper-cli, served by backend.
+ * Pre-computed by collector-cli, served by backend.
  * This is the wrapper type for the pre-computed membership analytics file.
  *
  * Requirements: 1.1, 1.2

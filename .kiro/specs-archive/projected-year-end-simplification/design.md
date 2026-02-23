@@ -14,7 +14,7 @@ The change spans multiple packages in the monorepo:
 
 ```mermaid
 graph TD
-    A[analytics-core] -->|defines types & computation| B[scraper-cli]
+    A[analytics-core] -->|defines types & computation| B[collector-cli]
     B -->|writes pre-computed files| C[Storage]
     C -->|serves data| D[backend]
     D -->|API response| E[frontend]
@@ -175,9 +175,9 @@ interface DistinguishedProjection {
 | backend        | `src/services/__tests__/PreComputedAnalyticsReader.integration.test.ts` | Update test fixtures                                             |
 | backend        | `src/services/__tests__/PreComputedAnalyticsReader.extended.test.ts`    | Update test fixtures                                             |
 | backend        | `src/routes/districts/__tests__/analyticsSummary.test.ts`               | Update test fixtures                                             |
-| scraper-cli    | `src/__tests__/AnalyticsWriter.test.ts`                                 | Update test fixtures                                             |
-| scraper-cli    | `src/__tests__/AnalyticsWriter.property.test.ts`                        | Update arbitrary generators                                      |
-| scraper-cli    | `src/__tests__/AnalyticsComputeService.test.ts`                         | Update test fixtures                                             |
+| collector-cli  | `src/__tests__/AnalyticsWriter.test.ts`                                 | Update test fixtures                                             |
+| collector-cli  | `src/__tests__/AnalyticsWriter.property.test.ts`                        | Update arbitrary generators                                      |
+| collector-cli  | `src/__tests__/AnalyticsComputeService.test.ts`                         | Update test fixtures                                             |
 | frontend       | `src/pages/DistrictDetailPage.tsx`                                      | Simplify helper function                                         |
 | frontend       | `src/hooks/__tests__/useAggregatedAnalytics.test.tsx`                   | Update test fixtures                                             |
 

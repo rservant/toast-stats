@@ -22,8 +22,8 @@ graph TB
         Admin[Admin Endpoint] --> Auth[ADMIN_TOKEN Auth]
         CLI[CLI Script] --> RefreshLogic[Shared Refresh Logic]
         Auth --> RefreshLogic
-        RefreshLogic --> Scraper[ToastmastersScraper]
-        Scraper --> Normalize[Data Normalization]
+        RefreshLogic --> Collector[ToastmastersCollector]
+        Collector --> Normalize[Data Normalization]
         Normalize --> Validate[Schema Validation]
         Validate --> NewSnapshot[New Snapshot]
         NewSnapshot --> SS
@@ -167,7 +167,7 @@ interface SnapshotMetadata {
 class RefreshService {
   constructor(
     private snapshotStore: SnapshotStore,
-    private scraper: ToastmastersScraper,
+    private collector: ToastmastersCollector,
     private validator: DataValidator
   ) {}
 

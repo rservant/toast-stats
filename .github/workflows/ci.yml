@@ -194,8 +194,8 @@ jobs:
       - name: Run analytics-core tests
         run: npm run test --workspace=@toastmasters/analytics-core -- --coverage
 
-      - name: Run scraper-cli tests
-        run: npm run test --workspace=@toastmasters/scraper-cli -- --coverage
+      - name: Run collector-cli tests
+        run: npm run test --workspace=@toastmasters/collector-cli -- --coverage
 
       - name: Run backend tests
         run: npm run test --workspace=backend -- --coverage

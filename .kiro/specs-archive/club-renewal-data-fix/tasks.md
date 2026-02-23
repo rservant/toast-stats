@@ -60,7 +60,7 @@ Fix `DataTransformer.extractClubs()` to merge payment/renewal data from `distric
 ## Notes
 
 - Tasks marked with `*` are optional and can be skipped for faster MVP
-- This is a data-computation fix in the scraper-cli pipeline per the data-computation-separation steering document
+- This is a data-computation fix in the collector-cli pipeline per the data-computation-separation steering document
 - No backend changes needed — the backend remains read-only
 - No API changes — no OpenAPI spec updates required
 - The fix mirrors the existing pattern in `ClubHealthAnalyticsModuleBackend.analyzeClubTrends()`

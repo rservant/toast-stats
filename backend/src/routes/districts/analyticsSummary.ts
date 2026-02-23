@@ -232,7 +232,7 @@ analyticsSummaryRouter.get(
           operationId,
           districtId,
           analytics_gap: true,
-          recommendation: 'Run scraper-cli to generate snapshots',
+          recommendation: 'Run collector-cli to generate snapshots',
           duration_ms: duration,
         })
 
@@ -243,7 +243,7 @@ analyticsSummaryRouter.get(
             details: {
               districtId,
               recommendation:
-                'Run scraper-cli compute-analytics to generate pre-computed analytics for this snapshot.',
+                'Run collector-cli compute-analytics to generate pre-computed analytics for this snapshot.',
             },
           },
         })
@@ -395,7 +395,7 @@ analyticsSummaryRouter.get(
           districtId,
           snapshotId: 'latest', // We checked the latest snapshot
           analytics_gap: true,
-          recommendation: 'Run scraper-cli compute-analytics',
+          recommendation: 'Run collector-cli compute-analytics',
           duration_ms: duration,
         })
 
@@ -403,11 +403,11 @@ analyticsSummaryRouter.get(
         res.status(404).json({
           error: {
             code: 'ANALYTICS_NOT_AVAILABLE',
-            message: `Pre-computed analytics are not available for district ${districtId}. Run scraper-cli compute-analytics to generate them.`,
+            message: `Pre-computed analytics are not available for district ${districtId}. Run collector-cli compute-analytics to generate them.`,
             details: {
               districtId,
               recommendation:
-                'Run scraper-cli compute-analytics to generate pre-computed analytics for this snapshot.',
+                'Run collector-cli compute-analytics to generate pre-computed analytics for this snapshot.',
             },
           },
         })
@@ -504,7 +504,7 @@ analyticsSummaryRouter.get(
           error: {
             code: 'NO_DATA_AVAILABLE',
             message: 'No cached data available for analytics',
-            details: 'Run scraper-cli to collect historical data',
+            details: 'Run collector-cli to collect historical data',
           },
         })
         return

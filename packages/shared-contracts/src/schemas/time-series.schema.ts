@@ -2,7 +2,7 @@
  * Zod validation schemas for time-series data types.
  *
  * These schemas provide runtime validation for time-series data,
- * ensuring that data written by scraper-cli and read by backend conforms
+ * ensuring that data written by collector-cli and read by backend conforms
  * to the expected structure.
  *
  * The schemas match the TypeScript interfaces in time-series.ts exactly.
@@ -75,7 +75,7 @@ export const TimeSeriesDataPointSchema = z.object({
  * Zod schema for program year summary statistics.
  * Validates ProgramYearSummary interface structure.
  *
- * Pre-computed by scraper-cli during the compute-analytics pipeline.
+ * Pre-computed by collector-cli during the compute-analytics pipeline.
  */
 export const ProgramYearSummarySchema = z.object({
   /** Total number of data points in the program year */

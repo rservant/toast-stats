@@ -358,7 +358,7 @@ runIntegration('Post-Deployment Integration Tests', () => {
       )
 
       // Report coverage: currently expected to have a gap
-      // When the scraper covers all districts, this should be 0
+      // When the collector covers all districts, this should be 0
       console.log(
         `Data coverage: ${storedDistrictIds.size}/${rankedDistrictIds.size} districts have per-district data`
       )

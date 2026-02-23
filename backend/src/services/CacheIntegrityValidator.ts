@@ -437,7 +437,7 @@ export class CacheIntegrityValidator implements ICacheIntegrityValidator {
         lastAccessed: Date.now(),
       },
       integrity: { checksums: {}, totalSize: 0, fileCount: 0 },
-      source: 'scraper',
+      source: 'collector',
       cacheVersion: 1,
     }
   }

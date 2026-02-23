@@ -4,7 +4,7 @@
   "license": "MIT",
   "private": true,
   "type": "module",
-  "description": "Shared data contracts for file format types between scraper-cli and backend",
+  "description": "Shared data contracts for file format types between collector-cli and backend",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
   "types": "./dist/types/index.d.ts",

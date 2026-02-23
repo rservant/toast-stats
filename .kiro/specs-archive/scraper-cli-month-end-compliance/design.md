@@ -1,8 +1,8 @@
-# Design Document: Scraper CLI Month-End Compliance
+# Design Document: Collector CLI Month-End Compliance
 
 ## Overview
 
-This design modifies the TransformService in the scraper-cli package to handle month-end closing periods correctly. When the Toastmasters dashboard publishes data for a prior month (closing period), the TransformService will read cache metadata to detect this condition and write snapshots to the last day of the data month rather than the requested date.
+This design modifies the TransformService in the collector-cli package to handle month-end closing periods correctly. When the Toastmasters dashboard publishes data for a prior month (closing period), the TransformService will read cache metadata to detect this condition and write snapshots to the last day of the data month rather than the requested date.
 
 The key changes are:
 
@@ -43,7 +43,7 @@ graph LR
 
 ### 1. ClosingPeriodDetector (New Utility)
 
-A utility class to encapsulate closing period detection and date calculation logic. This mirrors the existing `ClosingPeriodDetector` in the backend but is adapted for the scraper-cli context.
+A utility class to encapsulate closing period detection and date calculation logic. This mirrors the existing `ClosingPeriodDetector` in the backend but is adapted for the collector-cli context.
 
 ```typescript
 interface ClosingPeriodInfo {
@@ -280,7 +280,7 @@ Property tests (using fast-check) are limited to:
 
 - Library: fast-check
 - Minimum iterations: 100 per property test
-- Tag format: **Feature: scraper-cli-month-end-compliance, Property {number}: {property_text}**
+- Tag format: **Feature: collector-cli-month-end-compliance, Property {number}: {property_text}**
 
 ### Integration Tests
 
@@ -295,21 +295,21 @@ Integration tests should verify:
 
 ### Key Files to Modify
 
-1. **`packages/scraper-cli/src/services/TransformService.ts`**
+1. **`packages/collector-cli/src/services/TransformService.ts`**
    - Add `readCacheMetadata()` method
    - Add `determineSnapshotDate()` method
    - Add `shouldUpdateSnapshot()` method
    - Modify `transform()` to use closing period logic
    - Modify `writeMetadata()` to include closing period fields
 
-2. **`packages/scraper-cli/src/utils/ClosingPeriodDetector.ts`** (New file)
+2. **`packages/collector-cli/src/utils/ClosingPeriodDetector.ts`** (New file)
    - Create utility class for closing period detection
    - Port logic from `backend/src/services/ClosingPeriodDetector.ts`
 
 ### What Does NOT Change
 
 - **Raw CSV Storage**: CSV files continue to be stored using the "As of" date
-- **Scraper Logic**: The `ToastmastersScraper` already handles closing period detection
+- **Collector Logic**: The `ToastmastersCollector` already handles closing period detection
 - **Cache Metadata Format**: The existing metadata format is sufficient
 - **Shared Contracts**: The `SnapshotMetadataFile` already has the required fields
 

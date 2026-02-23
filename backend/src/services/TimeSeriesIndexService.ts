@@ -5,7 +5,7 @@
  * Indexes are partitioned by program year (July 1 - June 30) to limit file sizes.
  *
  * IMPORTANT: This service is READ-ONLY. Time-series data is pre-computed by
- * scraper-cli during the compute-analytics pipeline. The backend does NOT
+ * collector-cli during the compute-analytics pipeline. The backend does NOT
  * perform any computation per the data-computation-separation steering document.
  *
  * Storage structure:
@@ -44,7 +44,7 @@ export interface TimeSeriesIndexServiceConfig {
  * Interface for the Time Series Index Service (Read-Only)
  *
  * This interface only includes read methods. Write operations are performed
- * by scraper-cli during the compute-analytics pipeline.
+ * by collector-cli during the compute-analytics pipeline.
  */
 export interface ITimeSeriesIndexService {
   /**
@@ -82,7 +82,7 @@ const VALID_PROGRAM_YEAR_PATTERN = /^\d{4}-\d{4}$/
  * Read-only service for accessing time-series indexes.
  *
  * This service reads pre-computed time-series data from index files.
- * All computation is performed by scraper-cli during the compute-analytics
+ * All computation is performed by collector-cli during the compute-analytics
  * pipeline per the data-computation-separation steering document.
  *
  * Requirement 8.1: Read time-series data from pre-computed files only
@@ -211,7 +211,7 @@ export class TimeSeriesIndexService implements ITimeSeriesIndexService {
    * Get all data for a program year
    *
    * Returns the complete program year index including all data points
-   * and summary statistics (pre-computed by scraper-cli).
+   * and summary statistics (pre-computed by collector-cli).
    *
    * Requirement 8.4: Return null when data is missing (not an error)
    *

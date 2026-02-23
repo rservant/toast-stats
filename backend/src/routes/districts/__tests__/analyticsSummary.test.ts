@@ -519,7 +519,7 @@ describe('Analytics Summary Route', () => {
 
         expect(response.body.error.details.districtId).toBe('42')
         expect(response.body.error.details.recommendation).toContain(
-          'scraper-cli compute-analytics'
+          'collector-cli compute-analytics'
         )
       })
 
@@ -614,7 +614,7 @@ describe('Analytics Summary Route', () => {
         expect(response.body.error.code).toBe('ANALYTICS_NOT_AVAILABLE')
         expect(response.body.error.details.districtId).toBe('42')
         expect(response.body.error.details.recommendation).toContain(
-          'scraper-cli compute-analytics'
+          'collector-cli compute-analytics'
         )
       })
 

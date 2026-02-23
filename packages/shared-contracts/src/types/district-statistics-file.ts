@@ -4,7 +4,7 @@
  * These interfaces define the exact structure of district statistics
  * as stored in JSON files. They match the analytics-core DistrictStatistics
  * structure to ensure compile-time compatibility between the data producer
- * (scraper-cli) and data consumer (backend).
+ * (collector-cli) and data consumer (backend).
  *
  * File location: snapshots/{date}/district_{id}.json (within PerDistrictData.data)
  *

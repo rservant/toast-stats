@@ -444,7 +444,7 @@ _For any_ snapshot created after this feature is implemented, the snapshot direc
    - Test scrapeData downloads when cache miss
    - Test rankings data passed to snapshot store
    - Test error handling when rankings calculation fails
-   - **Uses:** Mocked scraper responses, no network calls
+   - **Uses:** Mocked collector responses, no network calls
 
 4. **Districts Route Tests**
    - Test rankings endpoint with all-districts-rankings file
@@ -460,7 +460,7 @@ _For any_ snapshot created after this feature is implemented, the snapshot direc
    - Test rankings file contains all districts from CSV
    - Test rankings accessible via API endpoint
    - Test cache reuse on subsequent refresh for same date
-   - **Uses:** Mocked scraper and mocked CSV data
+   - **Uses:** Mocked collector and mocked CSV data
 
 2. **Cache Management**
    - Test cache cleanup removes old files

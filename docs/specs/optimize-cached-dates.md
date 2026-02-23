@@ -43,7 +43,7 @@ gs://toast-stats-data/config/district-snapshot-index.json
 
 ### Implementation Steps
 
-1. **Scraper pipeline update**: After writing per-district snapshot files, update the index file
+1. **Collector pipeline update**: After writing per-district snapshot files, update the index file
 2. **Backend endpoint update**: Read the index file (single GCS read, cached for 1 hour) instead of 2,370 HEAD requests
 3. **One-time backfill**: Run a script to generate the initial index from existing data
 
@@ -62,6 +62,6 @@ If the index file is missing or stale, fall back to the current HEAD-request app
 ## Acceptance Criteria
 
 - [ ] `cached-dates` endpoint responds in <500ms for all districts
-- [ ] Index file is updated by the scraper pipeline on each run
+- [ ] Index file is updated by the collector pipeline on each run
 - [ ] Backend gracefully falls back if index is missing
 - [ ] Integration test updated to enforce <500ms performance budget

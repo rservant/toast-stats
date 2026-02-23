@@ -3,7 +3,7 @@
  *
  * This type represents a single row from a CSV file with column names as keys
  * and cell values as strings, numbers, or null. It is used to preserve raw CSV
- * data from the Toastmasters dashboard scraper for frontend consumption.
+ * data from the Toastmasters dashboard collector for frontend consumption.
  *
  * The raw CSV arrays are required by the frontend's `extractDivisionPerformance`
  * function to calculate division/area status and recognition levels.

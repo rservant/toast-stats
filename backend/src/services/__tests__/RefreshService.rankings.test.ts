@@ -3,7 +3,7 @@
  *
  * Tests for RefreshService functionality using SnapshotBuilder
  *
- * NOTE: Rankings are now pre-computed by scraper-cli during the transform command.
+ * NOTE: Rankings are now pre-computed by collector-cli during the transform command.
  * The backend no longer performs ranking calculations per the data-computation-separation
  * steering document.
  */
@@ -44,12 +44,12 @@ describe('RefreshService', () => {
       getCacheMetadata: vi.fn().mockResolvedValue(null),
     } as unknown as RawCSVCacheService
 
-    // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
+    // Note: Rankings are pre-computed by collector-cli, no RankingCalculator needed
     refreshService = new RefreshService(
       mockSnapshotStore,
       mockRawCSVCache,
       undefined, // districtConfigService
-      undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
+      undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by collector-cli
     )
   })
 

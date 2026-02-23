@@ -217,7 +217,7 @@ while IFS= read -r SNAPSHOT_DATE; do
   fi
 
   # Compute analytics
-  if npx scraper-cli compute-analytics \
+  if npx collector-cli compute-analytics \
     --date "${SNAPSHOT_DATE}" \
     --districts "${DISTRICTS}" \
     --force-analytics 2>&1 | tail -3; then

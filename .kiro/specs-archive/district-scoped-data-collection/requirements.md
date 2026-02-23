@@ -32,9 +32,9 @@ The District-Scoped Data Collection feature enables administrators to configure 
 
 #### Acceptance Criteria
 
-1. WHEN executing a refresh operation, THE Scraper SHALL fetch the all-districts summary CSV as before
-2. WHEN processing district data, THE Scraper SHALL only fetch detailed data for districts in the configured scope
-3. THE Scraper SHALL fetch district performance, division performance, and club performance CSV files for each configured district
+1. WHEN executing a refresh operation, THE Collector SHALL fetch the all-districts summary CSV as before
+2. WHEN processing district data, THE Collector SHALL only fetch detailed data for districts in the configured scope
+3. THE Collector SHALL fetch district performance, division performance, and club performance CSV files for each configured district
 4. WHEN a configured district is not found in the all-districts summary, THE System SHALL log a warning but continue processing other districts
 5. THE System SHALL record which districts were successfully processed and which failed in snapshot metadata
 

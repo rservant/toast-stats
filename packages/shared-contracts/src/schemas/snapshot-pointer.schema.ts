@@ -2,7 +2,7 @@
  * Zod validation schema for snapshot pointer file format.
  *
  * This schema provides runtime validation for the snapshot pointer,
- * ensuring that data written by scraper-cli and read by backend conforms
+ * ensuring that data written by collector-cli and read by backend conforms
  * to the expected structure.
  *
  * The schema matches the TypeScript interface in snapshot-pointer.ts exactly.

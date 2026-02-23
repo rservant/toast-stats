@@ -51,15 +51,15 @@ Systematic removal of all backfill code from backend and frontend, working from 
   - [x] 4.2 Remove backfill service from district shared module
     - In `backend/src/routes/districts/shared.ts`: remove `BackfillService` import from `../../services/UnifiedBackfillService.js`, remove `_backfillService` variable, remove `_backfillService = new BackfillService(...)` initialization, remove `getBackfillService()` export function
     - _Requirements: 5.2_
-  - [x] 4.3 Update analytics error messages to reference scraper-cli
-    - In `backend/src/routes/districts/analyticsSummary.ts`: replace all "Use the unified backfill service with job type 'analytics-generation'" recommendations with "Run scraper-cli compute-analytics", remove `backfillJobType` field from error details objects
-    - In `backend/src/routes/districts/analytics.ts`: replace "Consider initiating a backfill" with "Run scraper-cli to collect historical data"
+  - [x] 4.3 Update analytics error messages to reference collector-cli
+    - In `backend/src/routes/districts/analyticsSummary.ts`: replace all "Use the unified backfill service with job type 'analytics-generation'" recommendations with "Run collector-cli compute-analytics", remove `backfillJobType` field from error details objects
+    - In `backend/src/routes/districts/analytics.ts`: replace "Consider initiating a backfill" with "Run collector-cli to collect historical data"
     - _Requirements: 5.3_
   - [x] 4.4 Update backend test files to remove backfill mocks
     - In `backend/src/routes/__tests__/admin.integration.test.ts`: remove `getUnifiedBackfillServiceInstance` from the `vi.mock('../../index.js', ...)` block
     - In `backend/src/routes/__tests__/admin.test.ts`: same removal
     - In `backend/src/routes/__tests__/admin.district-config.integration.test.ts`: same removal
-    - In `backend/src/routes/districts/__tests__/analyticsSummary.test.ts`: update assertion strings to match new scraper-cli recommendations, remove `backfillJobType` assertions
+    - In `backend/src/routes/districts/__tests__/analyticsSummary.test.ts`: update assertion strings to match new collector-cli recommendations, remove `backfillJobType` assertions
     - _Requirements: 5.4_
 
 - [x] 5. Checkpoint - Backend compilation and tests
@@ -75,14 +75,14 @@ Systematic removal of all backfill code from backend and frontend, working from 
     - Remove entire `/admin/unified-backfill/jobs` section (GET endpoint)
     - Remove entire `/admin/unified-backfill/preview` section (POST endpoint)
     - Remove entire `/admin/unified-backfill/config/rate-limit` section (GET, PUT endpoints)
-    - Update analytics endpoint descriptions to replace backfill references with scraper-cli guidance
+    - Update analytics endpoint descriptions to replace backfill references with collector-cli guidance
     - Remove `backfillJobType` from analytics error response details
     - _Requirements: 6.1, 6.2_
   - [x] 6.2 Remove backfill references from docs/openapi.yaml
     - Remove `Backfill` tag definition
     - Remove `BackfillRequest` and `BackfillStatus` schema definitions
     - Remove `BACKFILL_NOT_FOUND` and `BACKFILL_ERROR` from error code enums
-    - Update analytics and snapshot descriptions to replace backfill references with scraper-cli guidance
+    - Update analytics and snapshot descriptions to replace backfill references with collector-cli guidance
     - _Requirements: 6.3, 6.4_
 
 - [x] 7. Remove frontend backfill code

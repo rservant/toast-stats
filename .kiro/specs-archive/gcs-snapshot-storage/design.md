@@ -4,7 +4,7 @@
 
 GCSSnapshotStorage is a read-only implementation of the `ISnapshotStorage` interface that reads pre-computed snapshot data directly from a Google Cloud Storage bucket. It replaces `FirestoreSnapshotStorage` when `STORAGE_PROVIDER=gcp`, eliminating the Firestore dependency for snapshot reads.
 
-The scraper-cli uploads snapshot files to GCS via `UploadService` using the path convention `{prefix}/{YYYY-MM-DD}/{filename}`. GCSSnapshotStorage reads these files using the `@google-cloud/storage` SDK, validates them against shared-contracts Zod schemas, and serves them through the existing `ISnapshotStorage` interface.
+The collector-cli uploads snapshot files to GCS via `UploadService` using the path convention `{prefix}/{YYYY-MM-DD}/{filename}`. GCSSnapshotStorage reads these files using the `@google-cloud/storage` SDK, validates them against shared-contracts Zod schemas, and serves them through the existing `ISnapshotStorage` interface.
 
 All write and delete operations throw `StorageOperationError` unconditionally — the backend is a read-only API server per the data-computation-separation principle.
 
@@ -141,7 +141,7 @@ const snapshotStorage = new GCSSnapshotStorage({
 
 ### shared-contracts Schema Extension
 
-The `SnapshotManifest` type and `SnapshotManifestSchema` need a `writeComplete` field. The scraper-cli sets this to `true` as the final step of a snapshot upload. GCSSnapshotStorage checks this flag to determine snapshot coherence.
+The `SnapshotManifest` type and `SnapshotManifestSchema` need a `writeComplete` field. The collector-cli sets this to `true` as the final step of a snapshot upload. GCSSnapshotStorage checks this flag to determine snapshot coherence.
 
 ```typescript
 // Addition to SnapshotManifest type:
@@ -157,7 +157,7 @@ This is an additive, backward-compatible change. Manifests without the field are
 
 ### GCS Object Path Convention
 
-All paths follow the pattern established by the scraper-cli `UploadService`:
+All paths follow the pattern established by the collector-cli `UploadService`:
 
 | File          | GCS Object Key                                      |
 | ------------- | --------------------------------------------------- |
@@ -316,7 +316,7 @@ prefix strings (not objects) is ~50KB for 2000 snapshots. This is
 acceptable and avoids the complexity of reverse iteration hacks.
 
 If snapshot count grows beyond 5000, consider adding a
-latest-successful.json pointer object (written by scraper-cli)
+latest-successful.json pointer object (written by collector-cli)
 as an O(1) fast path, with prefix scan as fallback.
 ```
 
@@ -355,7 +355,7 @@ To avoid redundant manifest reads (issue #4 from review), the algorithm reads th
 7. Assemble and return Snapshot object
 ```
 
-This reduces manifest reads from 3 (in the original design) to 2 in the happy path. The post-read re-read is the minimum needed to detect concurrent scraper-cli overwrites.
+This reduces manifest reads from 3 (in the original design) to 2 in the happy path. The post-read re-read is the minimum needed to detect concurrent collector-cli overwrites.
 
 ### Key Algorithm: isSnapshotWriteComplete
 

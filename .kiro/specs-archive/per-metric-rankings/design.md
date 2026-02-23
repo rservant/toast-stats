@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design adds per-metric ranking data (world rank, world percentile, region rank) to the district performance targets. The rankings are computed in the scraper-cli pipeline by leveraging the existing `all-districts-rankings.json` file, which already contains per-metric ranks (`clubsRank`, `paymentsRank`, `distinguishedRank`).
+This design adds per-metric ranking data (world rank, world percentile, region rank) to the district performance targets. The rankings are computed in the collector-cli pipeline by leveraging the existing `all-districts-rankings.json` file, which already contains per-metric ranks (`clubsRank`, `paymentsRank`, `distinguishedRank`).
 
 The key insight is that we don't need to recompute rankings - we need to:
 
@@ -16,7 +16,7 @@ The key insight is that we don't need to recompute rankings - we need to:
 
 ```mermaid
 flowchart TD
-    subgraph "Scraper CLI Pipeline"
+    subgraph "Collector CLI Pipeline"
         T[TransformService] --> |writes| ADR[all-districts-rankings.json]
         ACS[AnalyticsComputeService] --> |loads| ADR
         ACS --> |passes to| AC[AnalyticsComputer]

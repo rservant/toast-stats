@@ -322,4 +322,4 @@ Per Section 9 of testing.md: "Threshold-based logic MUST be protected by tests t
 
 ### Regeneration Required
 
-After implementing these changes, all pre-computed analytics files must be regenerated using the scraper-cli to include the new `paidClubsCount` field and corrected `currentProgress.distinguished` values.
+After implementing these changes, all pre-computed analytics files must be regenerated using the collector-cli to include the new `paidClubsCount` field and corrected `currentProgress.distinguished` values.

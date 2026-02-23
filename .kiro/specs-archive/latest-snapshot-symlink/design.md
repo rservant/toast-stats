@@ -4,7 +4,7 @@
 
 The backend's cold-start performance is bottlenecked by a full directory scan of ~4,330 snapshot directories to find the latest successful snapshot. This takes ~2.5 minutes, during which the frontend hangs.
 
-The solution introduces a `latest-successful.json` pointer file in the `snapshots/` directory. The scraper-cli pipeline writes this file atomically after each successful transform. The backend reads it on startup to resolve the latest snapshot in O(1) instead of O(n). If the pointer is missing or invalid, the backend falls back to the existing directory scan.
+The solution introduces a `latest-successful.json` pointer file in the `snapshots/` directory. The collector-cli pipeline writes this file atomically after each successful transform. The backend reads it on startup to resolve the latest snapshot in O(1) instead of O(n). If the pointer is missing or invalid, the backend falls back to the existing directory scan.
 
 A JSON file is chosen over a symlink for cross-platform compatibility (Windows support) and because it can carry metadata (timestamp, schema version) that aids validation.
 
@@ -12,7 +12,7 @@ A JSON file is chosen over a symlink for cross-platform compatibility (Windows s
 
 ```mermaid
 flowchart LR
-    subgraph "Scraper CLI (Writer)"
+    subgraph "Collector CLI (Writer)"
         T[TransformService] -->|"success"| W[writeSnapshotPointer]
         W -->|"atomic write"| P["snapshots/latest-successful.json"]
     end
@@ -82,9 +82,9 @@ export function validateSnapshotPointer(
 }
 ```
 
-### 2. Scraper CLI: Pointer Writer
+### 2. Collector CLI: Pointer Writer
 
-**Package:** `packages/scraper-cli/`
+**Package:** `packages/collector-cli/`
 
 A new function in `TransformService` that writes the pointer file after a successful transform.
 
@@ -216,7 +216,7 @@ private async findLatestSuccessful(): Promise<Snapshot | null> {
 }
 ```
 
-The repair function writes the pointer from the backend side when the fallback scan succeeds, so subsequent cold starts are fast even before the updated scraper-cli runs:
+The repair function writes the pointer from the backend side when the fallback scan succeeds, so subsequent cold starts are fast even before the updated collector-cli runs:
 
 ```typescript
 private async repairSnapshotPointer(snapshotId: string): Promise<void> {
@@ -324,17 +324,17 @@ The remaining acceptance criteria are best covered by unit tests with well-chose
 
 ## Error Handling
 
-| Scenario                                   | Component   | Behavior                                                                                  |
-| ------------------------------------------ | ----------- | ----------------------------------------------------------------------------------------- |
-| Pointer file missing (ENOENT)              | Backend     | Log warning, fall back to directory scan                                                  |
-| Pointer file invalid JSON                  | Backend     | Log warning, fall back to directory scan                                                  |
-| Pointer file fails Zod validation          | Backend     | Log warning with validation error, fall back to directory scan                            |
-| Pointer references missing directory       | Backend     | Log warning, fall back to directory scan                                                  |
-| Pointer references non-success snapshot    | Backend     | Log warning with snapshot status, fall back to directory scan                             |
-| Fallback scan finds no successful snapshot | Backend     | Return null (existing behavior unchanged)                                                 |
-| Pointer repair fails after fallback        | Backend     | Log warning, continue (non-fatal)                                                         |
-| Pointer write fails in scraper-cli         | Scraper CLI | Log error, do not fail the transform operation (pointer is an optimization, not critical) |
-| Concurrent pointer writes                  | Scraper CLI | Read-compare-write with date comparison; later date always wins                           |
+| Scenario                                   | Component     | Behavior                                                                                  |
+| ------------------------------------------ | ------------- | ----------------------------------------------------------------------------------------- |
+| Pointer file missing (ENOENT)              | Backend       | Log warning, fall back to directory scan                                                  |
+| Pointer file invalid JSON                  | Backend       | Log warning, fall back to directory scan                                                  |
+| Pointer file fails Zod validation          | Backend       | Log warning with validation error, fall back to directory scan                            |
+| Pointer references missing directory       | Backend       | Log warning, fall back to directory scan                                                  |
+| Pointer references non-success snapshot    | Backend       | Log warning with snapshot status, fall back to directory scan                             |
+| Fallback scan finds no successful snapshot | Backend       | Return null (existing behavior unchanged)                                                 |
+| Pointer repair fails after fallback        | Backend       | Log warning, continue (non-fatal)                                                         |
+| Pointer write fails in collector-cli       | Collector CLI | Log error, do not fail the transform operation (pointer is an optimization, not critical) |
+| Concurrent pointer writes                  | Collector CLI | Read-compare-write with date comparison; later date always wins                           |
 
 All error handling follows the principle that the pointer is an optimization. Its absence or corruption must never prevent the system from functioning — it only affects cold-start performance.
 

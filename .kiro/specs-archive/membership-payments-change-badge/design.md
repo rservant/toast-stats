@@ -8,7 +8,7 @@ This design addresses two distinct bugs on the Membership Payments card change b
 
 **Bug 2 (Current):** The badge displays a payment-based change value (`totalPayments - paymentBase`) but labels it "members". In Toastmasters, payments and members are different metrics. The badge should show the change in actual member count (`totalMembership`), not payment change.
 
-The fix introduces a new `memberCountChange` field that flows through the full pre-computed analytics pipeline: `analytics-core` computes it → `scraper-cli` writes it to pre-computed files → backend serves it → frontend displays it. The existing `membershipChange` field (payment-based) is preserved for backward compatibility.
+The fix introduces a new `memberCountChange` field that flows through the full pre-computed analytics pipeline: `analytics-core` computes it → `collector-cli` writes it to pre-computed files → backend serves it → frontend displays it. The existing `membershipChange` field (payment-based) is preserved for backward compatibility.
 
 ## Architecture
 
@@ -16,11 +16,11 @@ The fix spans four layers, following the data-computation-separation architectur
 
 ```mermaid
 flowchart TD
-    A[analytics-core: AnalyticsComputer] -->|computes memberCountChange| B[scraper-cli: AnalyticsComputeService]
+    A[analytics-core: AnalyticsComputer] -->|computes memberCountChange| B[collector-cli: AnalyticsComputeService]
     B -->|writes pre-computed JSON| C[backend: serves read-only]
     C -->|returns memberCountChange in response| D[frontend: DistrictOverview badge]
 
-    subgraph "Computation Layer (scraper-cli pipeline)"
+    subgraph "Computation Layer (collector-cli pipeline)"
         A
         B
     end

@@ -3,7 +3,7 @@
  *
  * This module extracts the transformation logic from the backend's
  * DataNormalizer and SnapshotBuilder services, making it usable by
- * both scraper-cli and backend.
+ * both collector-cli and backend.
  *
  * Requirements: 2.2, 1.1
  * - Uses the same transformation logic as the Backend

@@ -3,10 +3,10 @@
  *
  * This service coordinates snapshot creation from cached CSV data.
  * It uses SnapshotBuilder to create snapshots without performing any scraping.
- * Scraping is handled separately by the scraper-cli tool.
+ * Scraping is handled separately by the collector-cli tool.
  *
  * IMPORTANT: This service is READ-ONLY. All computation (time-series data points,
- * rankings, analytics) is performed by scraper-cli during the data pipeline.
+ * rankings, analytics) is performed by collector-cli during the data pipeline.
  * The backend does NOT perform any computation per the data-computation-separation
  * steering document.
  *
@@ -86,7 +86,7 @@ export class RefreshService {
    * Create a new RefreshService instance
    *
    * IMPORTANT: This service is READ-ONLY. All computation (time-series data points,
-   * rankings, analytics) is performed by scraper-cli during the data pipeline.
+   * rankings, analytics) is performed by collector-cli during the data pipeline.
    * The backend does NOT perform any computation per the data-computation-separation
    * steering document.
    *
@@ -95,17 +95,17 @@ export class RefreshService {
    * @param rawCSVCache - Storage interface for raw CSV data (IRawCSVStorage)
    *                      Supports both local filesystem and cloud storage backends
    * @param districtConfigService - Optional district configuration service
-   * @param _rankingCalculator - DEPRECATED: Rankings are pre-computed by scraper-cli (kept for backward compatibility)
+   * @param _rankingCalculator - DEPRECATED: Rankings are pre-computed by collector-cli (kept for backward compatibility)
    * @param closingPeriodDetector - Optional closing period detector
    * @param dataNormalizer - Optional data normalizer
    * @param validator - Optional data validator
-   * @param _preComputedAnalyticsService - DEPRECATED: Analytics are now pre-computed by scraper-cli
+   * @param _preComputedAnalyticsService - DEPRECATED: Analytics are now pre-computed by collector-cli
    */
   constructor(
     snapshotStorage: ISnapshotStorage | SnapshotStore,
     rawCSVCache: IRawCSVStorage,
     districtConfigService?: DistrictConfigurationService,
-    _rankingCalculator?: unknown, // DEPRECATED: Rankings are pre-computed by scraper-cli
+    _rankingCalculator?: unknown, // DEPRECATED: Rankings are pre-computed by collector-cli
     closingPeriodDetector?: ClosingPeriodDetector,
     dataNormalizer?: DataNormalizer,
     validator?: DataValidator,
@@ -116,7 +116,7 @@ export class RefreshService {
     this.snapshotStorage = snapshotStorage as ISnapshotStorage
 
     // NOTE: preComputedAnalyticsService parameter is kept for backward compatibility
-    // but is no longer used. Analytics are now pre-computed by scraper-cli.
+    // but is no longer used. Analytics are now pre-computed by collector-cli.
 
     // Create DistrictConfigurationService with storage from StorageProviderFactory if not provided
     if (districtConfigService) {
@@ -142,7 +142,7 @@ export class RefreshService {
 
     // Initialize SnapshotBuilder with all dependencies
     // SnapshotBuilder accepts ISnapshotStorage for storage operations
-    // Note: Rankings are now pre-computed by scraper-cli, so no RankingCalculator is needed
+    // Note: Rankings are now pre-computed by collector-cli, so no RankingCalculator is needed
     this.snapshotBuilder = new SnapshotBuilder(
       rawCSVCache,
       this.districtConfigService,
@@ -226,7 +226,7 @@ export class RefreshService {
 
       if (!cacheAvailability.available) {
         // Requirement 4.4: Return informative error when cache is missing
-        const errorMessage = `No cached data available for date ${targetDate}. Please run scraper-cli to collect data first.`
+        const errorMessage = `No cached data available for date ${targetDate}. Please run collector-cli to collect data first.`
         logger.error('Refresh failed: no cached data available', {
           refreshId,
           operation: 'executeRefresh',
@@ -346,7 +346,7 @@ export class RefreshService {
    * Requirement 1.1: Compute and store analytics summaries for each district in the snapshot
    * Requirement 1.4: Log errors and continue if individual district fails
    *
-   * NOTE: Time-series index updates are now handled by scraper-cli during the
+   * NOTE: Time-series index updates are now handled by collector-cli during the
    * compute-analytics pipeline per the data-computation-separation steering document.
    */
   private async convertBuildResultToRefreshResult(
@@ -358,7 +358,7 @@ export class RefreshService {
     const duration_ms = Date.now() - startTime
 
     // NOTE: Pre-computed analytics and time-series index updates are now handled
-    // by scraper-cli during the compute-analytics pipeline. The backend no longer
+    // by collector-cli during the compute-analytics pipeline. The backend no longer
     // performs any computation per the data-computation-separation steering document.
 
     logger.info('Refresh completed', {

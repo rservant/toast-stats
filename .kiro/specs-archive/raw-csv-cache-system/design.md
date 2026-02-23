@@ -14,7 +14,7 @@ The Raw CSV Cache System follows a layered architecture that integrates with exi
 graph TB
     subgraph "Application Layer"
         RS[RefreshService]
-        TS[ToastmastersScraper]
+        TS[ToastmastersCollector]
     end
 
     subgraph "Cache Layer"
@@ -57,7 +57,7 @@ graph TB
 
 ### Integration Points
 
-The cache system integrates at the ToastmastersScraper level, intercepting CSV download requests and providing cached responses when available. This approach ensures:
+The cache system integrates at the ToastmastersCollector level, intercepting CSV download requests and providing cached responses when available. This approach ensures:
 
 - Zero changes to RefreshService or higher-level components
 - Transparent caching that maintains existing API contracts
@@ -147,13 +147,13 @@ export interface RawCSVCacheConfig {
 }
 ```
 
-### Integration with ToastmastersScraper
+### Integration with ToastmastersCollector
 
-The scraper methods are enhanced with cache-first lookup:
+The collector methods are enhanced with cache-first lookup:
 
 ```typescript
-// Enhanced scraper methods (internal implementation changes only)
-class ToastmastersScraper {
+// Enhanced collector methods (internal implementation changes only)
+class ToastmastersCollector {
   constructor(private rawCSVCache?: IRawCSVCacheService) {}
 
   async getAllDistricts(dateString?: string): Promise<ScrapedRecord[]> {
@@ -229,7 +229,7 @@ export interface RawCSVCacheMetadata {
     totalSize: number
     fileCount: number
   }
-  source: 'scraper'
+  source: 'collector'
   cacheVersion: number
 }
 ```
@@ -298,7 +298,7 @@ _For any_ CSV request where cached data does not exist, the system should downlo
 
 ### Property 6: API Contract Preservation
 
-_For any_ existing ToastmastersScraper method call, the return type and data structure should remain identical regardless of whether data comes from cache or direct download.
+_For any_ existing ToastmastersCollector method call, the return type and data structure should remain identical regardless of whether data comes from cache or direct download.
 **Validates: Requirements 2.4, 6.1, 6.2**
 
 ### Property 7: Graceful Fallback
@@ -383,7 +383,7 @@ The system implements comprehensive error handling at multiple levels:
 
 ### Integration Errors
 
-- **Scraper Integration**: Cache service unavailable, dependency injection failures
+- **Collector Integration**: Cache service unavailable, dependency injection failures
 - **Fallback Scenarios**: Cache read failures, cache write failures, partial cache states
 
 ### Security Errors
@@ -438,7 +438,7 @@ describe('Raw CSV Cache System Properties', () => {
 
 ### Integration Testing
 
-- **Scraper Integration**: Test cache-first lookup with ToastmastersScraper
+- **Collector Integration**: Test cache-first lookup with ToastmastersCollector
 - **Service Container**: Test dependency injection and service lifecycle
 - **Configuration Integration**: Test with CacheConfigService
 - **End-to-End**: Test complete refresh workflows with caching

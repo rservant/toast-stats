@@ -2,9 +2,9 @@
 
 ## Overview
 
-This design establishes a shared contracts package (`@toastmasters/shared-contracts`) that serves as the single source of truth for all file format types exchanged between the scraper-cli (data producer) and backend (data consumer). The package provides TypeScript interfaces for compile-time verification and Zod schemas for runtime validation.
+This design establishes a shared contracts package (`@toastmasters/shared-contracts`) that serves as the single source of truth for all file format types exchanged between the collector-cli (data producer) and backend (data consumer). The package provides TypeScript interfaces for compile-time verification and Zod schemas for runtime validation.
 
-The key insight is that pre-computed files are the contract between scraper-cli and backend (per `data-computation-separation.md`). By centralizing these file format definitions, we ensure both sides agree on the exact structure at compile time, eliminating the current runtime failures caused by type mismatches.
+The key insight is that pre-computed files are the contract between collector-cli and backend (per `data-computation-separation.md`). By centralizing these file format definitions, we ensure both sides agree on the exact structure at compile time, eliminating the current runtime failures caused by type mismatches.
 
 ## Architecture
 
@@ -19,7 +19,7 @@ graph TB
     end
 
     subgraph "Data Producer"
-        CLI[scraper-cli]
+        CLI[collector-cli]
         CLI -->|imports| SC
         CLI -->|writes| Files[(Snapshot Files)]
     end
@@ -43,7 +43,7 @@ graph TB
 | -------------------------------- | --------------------------------------------- |
 | `@toastmasters/shared-contracts` | File format types (what gets written to disk) |
 | `@toastmasters/analytics-core`   | Domain types and computation logic            |
-| `@toastmasters/scraper-cli`      | Data acquisition and file writing             |
+| `@toastmasters/collector-cli`    | Data acquisition and file writing             |
 | `backend`                        | Data serving and API responses                |
 
 ## Components and Interfaces
@@ -811,7 +811,7 @@ Property tests verify invariants across complex input spaces:
 
 Integration tests verify end-to-end contract compliance:
 
-- Scraper-cli writes file → Backend reads file successfully
+- Collector-cli writes file → Backend reads file successfully
 - Version constants are consistent across packages
 - Real-world malformed data is caught by validation
 

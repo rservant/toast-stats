@@ -3,7 +3,7 @@
  *
  * Tests that the service factories correctly wire services together.
  * Note: RankingCalculator has been moved to analytics-core and is no longer
- * part of the backend. Rankings are now pre-computed by scraper-cli.
+ * part of the backend. Rankings are now pre-computed by collector-cli.
  */
 
 import { describe, it, expect, afterEach } from 'vitest'

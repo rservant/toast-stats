@@ -119,7 +119,7 @@ echo ""
 # -------------------------------------------------------------------
 echo "🔄 Step 3: Recomputing analytics with dense club trends..."
 DISTRICT_LIST=$(IFS=,; echo "${DISTRICTS[*]}")
-npx scraper-cli compute-analytics \
+npx collector-cli compute-analytics \
   --date "${LATEST_DATE}" \
   --districts "${DISTRICT_LIST}" \
   --force-analytics \

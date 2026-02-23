@@ -2,8 +2,8 @@
  * SnapshotBuilder Service
  *
  * Creates snapshots exclusively from cached CSV data without performing any scraping.
- * This service is part of the scraper-cli separation architecture where:
- * - Scraper CLI: Handles data collection and caching
+ * This service is part of the collector-cli separation architecture where:
+ * - Collector CLI: Handles data collection and caching
  * - SnapshotBuilder: Creates snapshots from cached data
  *
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.7, 6.3, 6.4, 9.4, 9.5
@@ -267,7 +267,7 @@ export class SnapshotBuilder {
       const normalizedData = normalizationResult.normalizedData
 
       // Step 4: Read pre-computed rankings from file (if available)
-      // Rankings are pre-computed by scraper-cli during the transform command
+      // Rankings are pre-computed by collector-cli during the transform command
       let allDistrictsRankings: AllDistrictsRankingsData | undefined
       try {
         allDistrictsRankings = await this.readPreComputedRankings(targetDate)
@@ -825,7 +825,7 @@ export class SnapshotBuilder {
   /**
    * Read pre-computed rankings from the snapshot directory
    *
-   * Rankings are pre-computed by scraper-cli during the transform command
+   * Rankings are pre-computed by collector-cli during the transform command
    * and stored in all-districts-rankings.json in the snapshot directory.
    *
    * Requirements: 3.3 - Read pre-computed rankings from transform output

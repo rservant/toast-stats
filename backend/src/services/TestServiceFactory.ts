@@ -259,12 +259,12 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
     const mockCacheService = createMockCacheService()
 
     // RefreshService now uses SnapshotBuilder internally (no scraping)
-    // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
+    // Note: Rankings are pre-computed by collector-cli, no RankingCalculator needed
     const service = new RefreshService(
       store,
       mockCacheService as unknown as RawCSVCacheService,
       undefined, // districtConfigService
-      undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
+      undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by collector-cli
     )
     // RefreshService doesn't have dispose method, so we don't track it
     return service
@@ -337,7 +337,7 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
     )
 
     // Register RefreshService
-    // Note: Rankings are pre-computed by scraper-cli, no RankingCalculator needed
+    // Note: Rankings are pre-computed by collector-cli, no RankingCalculator needed
     container.register(
       ServiceTokens.RefreshService,
       createServiceFactory(
@@ -350,7 +350,7 @@ export class DefaultTestServiceFactory implements TestServiceFactory {
             snapshotStore,
             mockCacheService as unknown as RawCSVCacheService,
             undefined, // districtConfigService
-            undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by scraper-cli
+            undefined // rankingCalculator - DEPRECATED: rankings are pre-computed by collector-cli
           )
         },
         async () => {

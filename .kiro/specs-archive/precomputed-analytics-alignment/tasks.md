@@ -88,7 +88,7 @@ This implementation aligns the pre-computed analytics pipeline to produce the fu
   - Ensure all tests pass, ask the user if questions arise.
   - Run `npm test` in analytics-core to verify module changes
 
-- [x] 5. Update DataTransformer in scraper-cli
+- [x] 5. Update DataTransformer in collector-cli
   - [x] 5.1 Add division/area name extraction from CSV
     - Parse 'Division' field to extract divisionId and divisionName
     - Parse 'Area' field to extract areaId and areaName
@@ -117,7 +117,7 @@ This implementation aligns the pre-computed analytics pipeline to produce the fu
 
 - [x] 6. Checkpoint - DataTransformer complete
   - Ensure all tests pass, ask the user if questions arise.
-  - Run `npm test` in scraper-cli to verify transformer changes
+  - Run `npm test` in collector-cli to verify transformer changes
 
 - [x] 7. Verify DistrictAnalytics structure completeness
   - [x] 7.1 Verify allClubs contains complete ClubTrend objects
@@ -154,7 +154,7 @@ This implementation aligns the pre-computed analytics pipeline to produce the fu
 - [x] 9. Deprecate PreComputedAnalyticsService
   - [x] 9.1 Add deprecation notice to PreComputedAnalyticsService
     - Add @deprecated JSDoc tag with migration path explanation
-    - Document that scraper-cli compute-analytics is the preferred approach
+    - Document that collector-cli compute-analytics is the preferred approach
     - _Requirements: 8.1_
 
   - [x] 9.2 Update backend to prefer full analytics files

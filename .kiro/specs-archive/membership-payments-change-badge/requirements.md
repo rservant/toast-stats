@@ -12,7 +12,7 @@ This spec addresses two distinct bugs on the Membership Payments card change bad
 
 - **Analytics_Computer**: The class in `packages/analytics-core` that orchestrates all district analytics computation (`AnalyticsComputer`)
 - **Membership_Analytics_Module**: The module in `packages/analytics-core` that handles membership-specific calculations (`MembershipAnalyticsModule`)
-- **Analytics_Compute_Service**: The scraper-cli service that invokes Analytics_Computer with snapshot data (`AnalyticsComputeService`)
+- **Analytics_Compute_Service**: The collector-cli service that invokes Analytics_Computer with snapshot data (`AnalyticsComputeService`)
 - **All_Districts_Rankings**: Pre-computed rankings data containing `paymentBase` and `totalPayments` per district
 - **Payment_Base**: The baseline payment count from the rankings data, representing program year start
 - **Payment_Change**: The computed value `totalPayments - paymentBase` representing membership payment growth (previously named Membership_Change)
@@ -75,9 +75,9 @@ This spec addresses two distinct bugs on the Membership Payments card change bad
 #### Acceptance Criteria
 
 1. THE PreComputed_Analytics_Summary interface SHALL include a `memberCountChange` field of type number
-2. WHEN the scraper-cli pipeline computes analytics, THE Analytics_Compute_Service SHALL include `memberCountChange` in the pre-computed analytics output
+2. WHEN the collector-cli pipeline computes analytics, THE Analytics_Compute_Service SHALL include `memberCountChange` in the pre-computed analytics output
 3. WHEN the backend serves analytics data, THE backend SHALL include `memberCountChange` in the response without performing any computation
-4. THE shared contracts SHALL define the `memberCountChange` field so that both scraper-cli and backend use the same type definition
+4. THE shared contracts SHALL define the `memberCountChange` field so that both collector-cli and backend use the same type definition
 
 ### Requirement 6: Test Coverage for Member Count Change
 

@@ -12,7 +12,7 @@ Three categories of dead code are addressed:
 
 ## Architecture
 
-No architectural changes. The existing two-process architecture (scraper-cli for computation, backend for serving) is unaffected. The admin backfill endpoints at `/api/admin/unified-backfill` remain the active replacement and are untouched.
+No architectural changes. The existing two-process architecture (collector-cli for computation, backend for serving) is unaffected. The admin backfill endpoints at `/api/admin/unified-backfill` remain the active replacement and are untouched.
 
 ### Affected Files
 

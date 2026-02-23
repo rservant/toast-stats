@@ -2,7 +2,7 @@
  * Integration tests for ProcessSeparationValidator
  * Tests real-world scenarios with actual refresh and read operations
  *
- * Note: ToastmastersScraper has been moved to the scraper-cli package.
+ * Note: ToastmastersCollector has been moved to the collector-cli package.
  * RefreshService now uses SnapshotBuilder to create snapshots from cached data.
  */
 

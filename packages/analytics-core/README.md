@@ -4,7 +4,7 @@ Shared analytics computation logic for Toastmasters statistics.
 
 ## Overview
 
-This package contains the core analytics computation algorithms extracted from the backend, making them usable by both `scraper-cli` (for pre-computing analytics) and `backend` (for validation and serving).
+This package contains the core analytics computation algorithms extracted from the backend, making them usable by both `collector-cli` (for pre-computing analytics) and `backend` (for validation and serving).
 
 The package ensures that analytics computed by the CLI pipeline are identical to what the backend would compute, maintaining consistency across the system.
 
@@ -165,10 +165,10 @@ This package is part of the pre-computed analytics pipeline:
 
 ### Package Consumers
 
-| Consumer      | Usage                                                                   |
-| ------------- | ----------------------------------------------------------------------- |
-| `scraper-cli` | Uses `DataTransformer` and `AnalyticsComputer` to pre-compute analytics |
-| `backend`     | Uses types for validation and `isCompatibleVersion` for schema checking |
+| Consumer        | Usage                                                                   |
+| --------------- | ----------------------------------------------------------------------- |
+| `collector-cli` | Uses `DataTransformer` and `AnalyticsComputer` to pre-compute analytics |
+| `backend`       | Uses types for validation and `isCompatibleVersion` for schema checking |
 
 ### Version Compatibility
 

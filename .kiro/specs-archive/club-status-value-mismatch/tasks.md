@@ -51,12 +51,12 @@ This implementation fixes the `ClubHealthStatus` type mismatch by establishing a
     - Update `clubCategorization.property.test.ts`
     - _Requirements: 2.2_
 
-- [x] 3. Update scraper-cli tests
+- [x] 3. Update collector-cli tests
   - [x] 3.1 Update AnalyticsWriter.property.test.ts
     - Change `'intervention_required'` to `'intervention-required'` in clubHealthStatusArb
     - _Requirements: 2.2_
 
-- [x] 4. Checkpoint - Verify analytics-core and scraper-cli build
+- [x] 4. Checkpoint - Verify analytics-core and collector-cli build
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 5. Update backend to use shared type
@@ -87,7 +87,7 @@ This implementation fixes the `ClubHealthStatus` type mismatch by establishing a
 ## Notes
 
 - All tasks are required for comprehensive testing
-- The fix requires updating multiple files across analytics-core, scraper-cli, backend, and frontend
+- The fix requires updating multiple files across analytics-core, collector-cli, backend, and frontend
 - No data migration is required - new analytics files will use the correct format
 - Frontend already expects hyphen format in production code, but property tests use outdated values
 - The useColumnFilters.property.test.ts file uses legacy status values that predate the current classification system

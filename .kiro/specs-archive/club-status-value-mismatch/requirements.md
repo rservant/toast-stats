@@ -7,7 +7,7 @@ This document specifies the requirements for fixing the `ClubHealthStatus` type 
 ## Glossary
 
 - **ClubHealthStatus**: A type representing the health classification of a club. Valid values are 'thriving', 'stable', 'vulnerable', or 'intervention-required'.
-- **shared-contracts**: The canonical package (`packages/shared-contracts/`) that defines data contracts between scraper-cli and backend.
+- **shared-contracts**: The canonical package (`packages/shared-contracts/`) that defines data contracts between collector-cli and backend.
 - **analytics-core**: The package (`packages/analytics-core/`) that computes analytics data including club health status.
 - **Frontend**: The React application that displays club data to users.
 - **Backend**: The Express server that serves pre-computed analytics data.

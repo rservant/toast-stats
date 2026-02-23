@@ -217,7 +217,7 @@ describe('FileSnapshotStore Pointer Reader and Fallback', () => {
      *
      * When the pointer file does not exist, the store should fall back
      * to scanning directories and still find the latest successful snapshot.
-     * This ensures backward compatibility when the scraper-cli hasn't been
+     * This ensures backward compatibility when the collector-cli hasn't been
      * updated yet.
      */
     it('should fall back to directory scan when pointer file is missing', async () => {
@@ -453,7 +453,7 @@ describe('FileSnapshotStore Pointer Reader and Fallback', () => {
      *
      * **Validates: Requirements 5.1**
      *
-     * When the backend is updated but the scraper-cli has not yet been
+     * When the backend is updated but the collector-cli has not yet been
      * updated to write pointer files, the backend should operate using
      * the existing full directory scan without errors.
      */

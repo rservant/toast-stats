@@ -16,7 +16,7 @@ The system follows strict data-computation-separation:
 ```mermaid
 graph LR
     subgraph "Computation Layer"
-        SC[scraper-cli] --> AC[analytics-core]
+        SC[collector-cli] --> AC[analytics-core]
         AC --> PF[Pre-computed Files]
         AC --> TSI[Time-Series Index Files]
     end
@@ -74,7 +74,7 @@ if (typeof startDate === 'string' && typeof endDate === 'string') {
 }
 ```
 
-This is a read-only operation — no computation. The time-series index files are pre-computed by scraper-cli, consistent with the data-computation-separation steering document.
+This is a read-only operation — no computation. The time-series index files are pre-computed by collector-cli, consistent with the data-computation-separation steering document.
 
 ### Component 2: findSnapshotForDate — Date Proximity Guard
 

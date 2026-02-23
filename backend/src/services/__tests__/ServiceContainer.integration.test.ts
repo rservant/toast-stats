@@ -4,7 +4,7 @@
  * Tests the integration of RawCSVCacheService with RefreshService
  * through the service container dependency injection system.
  *
- * Note: ToastmastersScraper has been moved to the scraper-cli package.
+ * Note: ToastmastersCollector has been moved to the collector-cli package.
  * RefreshService now uses SnapshotBuilder to create snapshots from cached data.
  */
 

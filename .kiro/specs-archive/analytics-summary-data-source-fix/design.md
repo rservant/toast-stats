@@ -2,7 +2,7 @@
 
 ## Overview
 
-The analytics-summary route currently fails with a 404 because it reads summary data from `PreComputedAnalyticsService.getLatestSummary()`, which depends on an `analytics-summary.json` file that the scraper-cli never generates. The per-district analytics files (e.g., `analytics/district_42_analytics.json`) already contain all the data needed and are already partially used by the same route for year-over-year and distinguished projection data.
+The analytics-summary route currently fails with a 404 because it reads summary data from `PreComputedAnalyticsService.getLatestSummary()`, which depends on an `analytics-summary.json` file that the collector-cli never generates. The per-district analytics files (e.g., `analytics/district_42_analytics.json`) already contain all the data needed and are already partially used by the same route for year-over-year and distinguished projection data.
 
 This fix rewires the route to use a single `PreComputedAnalyticsReader.readDistrictAnalytics()` call for all per-district data (summary, distinguished projection), eliminating the dependency on the missing file and the redundant second `readDistrictAnalytics()` call.
 

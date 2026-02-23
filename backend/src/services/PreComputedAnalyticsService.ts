@@ -2,15 +2,15 @@
  * PreComputedAnalyticsService
  *
  * This service reads pre-computed analytics summaries from storage.
- * Analytics are computed by scraper-cli's `compute-analytics` command.
+ * Analytics are computed by collector-cli's `compute-analytics` command.
  *
  * Per the data-computation-separation steering document:
  * - The backend MUST NOT perform any on-demand data computation
- * - All computation happens in scraper-cli
+ * - All computation happens in collector-cli
  * - This service only reads pre-computed files
  *
  * Migration path:
- * 1. Run `scraper-cli compute-analytics` to generate full analytics
+ * 1. Run `collector-cli compute-analytics` to generate full analytics
  * 2. Backend serves from analytics/ directory (full DistrictAnalytics data)
  * 3. analytics-summary.json is retained for backward compatibility only
  */
@@ -35,11 +35,11 @@ export interface PreComputedAnalyticsServiceConfig {
  * Service for reading pre-computed analytics summaries.
  *
  * This service is READ-ONLY. All analytics computation is performed by
- * scraper-cli's compute-analytics command.
+ * collector-cli's compute-analytics command.
  *
  * Per the data-computation-separation steering document:
  * - The backend has a computation budget of 0ms for data computation
- * - All computation happens in scraper-cli
+ * - All computation happens in collector-cli
  */
 export class PreComputedAnalyticsService {
   private readonly snapshotsDir: string

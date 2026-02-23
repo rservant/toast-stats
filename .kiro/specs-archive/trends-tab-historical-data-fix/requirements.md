@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The Trends tab on the DistrictDetailPage has three data display bugs affecting the Membership Trend chart, Membership Payments Trend chart, and Year-Over-Year Comparison panel. These bugs span the frontend, backend, and analytics-core computation pipeline. The root causes are: (1) the backend returns empty membership trend data when the selected date falls before the first available data point in a sparse time-series index, (2) the `usePaymentsTrend` hook hardcodes `getCurrentProgramYear()` instead of using the user-selected program year, and (3) the scraper-cli passes only one snapshot to `computeYearOverYear`, causing it to compare the same snapshot against itself, producing zero-change results. Additionally, the backend sends absolute change values for YoY but the frontend interprets them as percentage changes.
+The Trends tab on the DistrictDetailPage has three data display bugs affecting the Membership Trend chart, Membership Payments Trend chart, and Year-Over-Year Comparison panel. These bugs span the frontend, backend, and analytics-core computation pipeline. The root causes are: (1) the backend returns empty membership trend data when the selected date falls before the first available data point in a sparse time-series index, (2) the `usePaymentsTrend` hook hardcodes `getCurrentProgramYear()` instead of using the user-selected program year, and (3) the collector-cli passes only one snapshot to `computeYearOverYear`, causing it to compare the same snapshot against itself, producing zero-change results. Additionally, the backend sends absolute change values for YoY but the frontend interprets them as percentage changes.
 
 ## Glossary
 
@@ -10,7 +10,7 @@ The Trends tab on the DistrictDetailPage has three data display bugs affecting t
 - **Time_Series_Index**: A per-district, per-program-year JSON file containing data points (date, membership, payments, etc.) stored at `time-series/district_{id}/{year}.json`. May be sparse (e.g., 4 monthly data points) or dense (e.g., 240 daily data points).
 - **Analytics_Summary_Route**: The backend endpoint `GET /api/districts/:districtId/analytics-summary` that serves aggregated analytics including membership trend data from the Time_Series_Index and YoY comparison from pre-computed files.
 - **UsePaymentsTrend_Hook**: The React hook `usePaymentsTrend` that fetches and transforms payment trend data with multi-year comparison. Groups data by program year and extracts the "current year" trend for display.
-- **AnalyticsComputeService**: The scraper-cli service that orchestrates analytics computation for a district, loading snapshots and calling AnalyticsComputer methods.
+- **AnalyticsComputeService**: The collector-cli service that orchestrates analytics computation for a district, loading snapshots and calling AnalyticsComputer methods.
 - **AnalyticsComputer**: The analytics-core class that computes year-over-year comparison data via `computeYearOverYear()`, which requires snapshots from both the current and previous program year.
 - **MetricComparison**: A shared-contracts type containing `current`, `previous`, `change` (absolute), and `percentageChange` (percentage) fields for comparing metrics across years.
 - **YearOverYearComparison_Component**: The React component that displays year-over-year metric comparisons. Receives `yearOverYear` data with `membershipChange`, `distinguishedChange`, and `clubHealthChange` fields.

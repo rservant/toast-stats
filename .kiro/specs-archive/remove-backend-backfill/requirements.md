@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This feature removes all backfill capability from the backend application to enforce the architectural principle that the backend is a read-only API server. The backend currently contains two backfill systems (legacy and unified) that violate the data-computation-separation steering document. All data computation and historical data collection must happen in the scraper-cli pipeline, not in the backend. This removal covers backend routes, services, storage implementations, types, singleton lifecycle management, documentation, OpenAPI specifications, and all frontend code that references backfill functionality.
+This feature removes all backfill capability from the backend application to enforce the architectural principle that the backend is a read-only API server. The backend currently contains two backfill systems (legacy and unified) that violate the data-computation-separation steering document. All data computation and historical data collection must happen in the collector-cli pipeline, not in the backend. This removal covers backend routes, services, storage implementations, types, singleton lifecycle management, documentation, OpenAPI specifications, and all frontend code that references backfill functionality.
 
 ## Glossary
 
@@ -77,7 +77,7 @@ This feature removes all backfill capability from the backend application to enf
 
 1. WHEN the `getPendingBackfillJobCount` import and usage is removed from `backend/src/routes/admin/monitoring.ts`, THE Monitoring_Route SHALL set `pendingOperations` to `0` in the system health response
 2. WHEN backfill-related service initialization is removed from `backend/src/routes/districts/shared.ts`, THE file SHALL no longer import `BackfillService` or maintain a `_backfillService` variable, and the `getBackfillService` function SHALL be removed
-3. WHEN backfill-related error message strings in district route files (`analyticsSummary.ts`, `analytics.ts`) are updated, THE District_Routes SHALL replace backfill-specific recommendations with guidance to use the scraper-cli pipeline
+3. WHEN backfill-related error message strings in district route files (`analyticsSummary.ts`, `analytics.ts`) are updated, THE District_Routes SHALL replace backfill-specific recommendations with guidance to use the collector-cli pipeline
 4. WHEN test files that mock `getUnifiedBackfillServiceInstance` are updated, THE test files SHALL no longer mock that function
 5. THE Backend SHALL compile without TypeScript errors after all backfill references are cleaned up
 
@@ -88,9 +88,9 @@ This feature removes all backfill capability from the backend application to enf
 #### Acceptance Criteria
 
 1. WHEN backfill endpoints are removed from `backend/openapi.yaml`, THE OpenAPI_Spec SHALL no longer contain the `/admin/backfill`, `/admin/backfill/{jobId}`, `/admin/unified-backfill`, `/admin/unified-backfill/jobs`, `/admin/unified-backfill/preview`, or `/admin/unified-backfill/config/rate-limit` endpoint definitions
-2. WHEN backfill-related references in analytics endpoint descriptions are updated in `backend/openapi.yaml`, THE descriptions SHALL replace backfill recommendations with guidance to use the scraper-cli pipeline
+2. WHEN backfill-related references in analytics endpoint descriptions are updated in `backend/openapi.yaml`, THE descriptions SHALL replace backfill recommendations with guidance to use the collector-cli pipeline
 3. WHEN backfill schemas and references are removed from `docs/openapi.yaml`, THE file SHALL no longer contain `BackfillRequest`, `BackfillStatus`, `BACKFILL_NOT_FOUND`, `BACKFILL_ERROR`, or the `Backfill` tag definition
-4. WHEN backfill-related references in analytics and snapshot descriptions are updated in `docs/openapi.yaml`, THE descriptions SHALL replace backfill recommendations with guidance to use the scraper-cli pipeline
+4. WHEN backfill-related references in analytics and snapshot descriptions are updated in `docs/openapi.yaml`, THE descriptions SHALL replace backfill recommendations with guidance to use the collector-cli pipeline
 5. THE OpenAPI_Spec files SHALL remain valid after all backfill references are removed
 
 ### Requirement 7: Remove Frontend Backfill Code
@@ -104,7 +104,7 @@ This feature removes all backfill capability from the backend application to enf
 3. WHEN the backfill components `DistrictBackfillButton.tsx`, `BackfillProgressBar.tsx`, `JobProgressDisplay.tsx`, `JobHistoryList.tsx`, and `RateLimitConfigPanel.tsx` are removed from `frontend/src/components/`, THE Frontend_Backfill_Code SHALL no longer contain those component files
 4. WHEN the `BackfillProvider` wrapper and `BackfillProgressBar` rendering are removed from `frontend/src/App.tsx`, THE App component SHALL render the application without any backfill context or progress UI
 5. WHEN the `BackfillSection` and all backfill-related UI are removed from `frontend/src/pages/AdminPage.tsx`, THE AdminPage SHALL display remaining admin sections (Snapshots, System Health) without any backfill controls
-6. WHEN backfill-related text and icons are updated in `frontend/src/pages/DistrictDetailPage.tsx`, `frontend/src/pages/LandingPage.tsx`, `frontend/src/components/DistrictOverview.tsx`, `frontend/src/components/LeadershipInsights.tsx`, and `frontend/src/components/DCPGoalAnalysis.tsx`, THE pages and components SHALL replace backfill references with guidance to use the scraper-cli or Admin Panel for data collection
+6. WHEN backfill-related text and icons are updated in `frontend/src/pages/DistrictDetailPage.tsx`, `frontend/src/pages/LandingPage.tsx`, `frontend/src/components/DistrictOverview.tsx`, `frontend/src/components/LeadershipInsights.tsx`, and `frontend/src/components/DCPGoalAnalysis.tsx`, THE pages and components SHALL replace backfill references with guidance to use the collector-cli or Admin Panel for data collection
 7. WHEN the `BackfillProvider` is removed from test utilities in `frontend/src/__tests__/test-utils.tsx`, THE test utility SHALL render without the backfill context wrapper
 8. WHEN test files that mock or import `BackfillContext` are updated, THE test files SHALL no longer reference backfill context or providers
 9. THE Frontend SHALL compile without TypeScript errors after all backfill code is removed

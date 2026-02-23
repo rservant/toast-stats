@@ -54,7 +54,7 @@ Thriving clubs are on track to achieve distinguished status by year-end. Using t
 
 ## Technical Notes
 
-- The change spans multiple packages: `analytics-core`, `shared-contracts`, `scraper-cli`, `backend`, and `frontend`
+- The change spans multiple packages: `analytics-core`, `shared-contracts`, `collector-cli`, `backend`, and `frontend`
 - The `DistinguishedProjection` interface is defined in `packages/analytics-core`
 - The backend has its own copy of `DistinguishedClubAnalytics` in `backend/src/types/analytics.ts` that must be updated
 - Breaking changes to the API response structure are acceptable

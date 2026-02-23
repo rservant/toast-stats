@@ -82,7 +82,7 @@ export interface ClubTrend {
 
 #### ClubPerformanceRecord Interface (Already Exists)
 
-The `ClubPerformanceRecord` in `packages/scraper-cli/src/types/scraper.ts` already includes the optional `'Club Status'?: string` field, so no changes are needed there.
+The `ClubPerformanceRecord` in `packages/collector-cli/src/types/collector.ts` already includes the optional `'Club Status'?: string` field, so no changes are needed there.
 
 #### SortField Type (Modified)
 
@@ -237,7 +237,7 @@ The club status field contains one of the following values from the Toastmasters
 
 ### Data Flow
 
-1. **Scraper**: Fetches club-performance.csv from Toastmasters dashboard (already includes "Club Status" column)
+1. **Collector**: Fetches club-performance.csv from Toastmasters dashboard (already includes "Club Status" column)
 2. **Cache**: Stores raw CSV data in snapshot storage
 3. **Analytics Module**: Parses CSV and extracts clubStatus into ClubTrend objects
 4. **API**: Returns ClubTrend array via `/districts/:id/analytics` endpoint

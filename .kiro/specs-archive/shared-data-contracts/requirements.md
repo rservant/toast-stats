@@ -2,15 +2,15 @@
 
 ## Introduction
 
-This document specifies requirements for a shared data contracts package (`@toastmasters/shared-contracts`) that establishes a single source of truth for file format types between the scraper-cli (data producer) and backend (data consumer). The current system has two independent type definitions for the same data structures, causing runtime failures that TypeScript cannot catch at compile time.
+This document specifies requirements for a shared data contracts package (`@toastmasters/shared-contracts`) that establishes a single source of truth for file format types between the collector-cli (data producer) and backend (data consumer). The current system has two independent type definitions for the same data structures, causing runtime failures that TypeScript cannot catch at compile time.
 
-The core problem is that scraper-cli writes `DistrictStatistics` from `analytics-core` (with fields like `snapshotDate`, `clubs[]`, `divisions[]`, `areas[]`, `totals`) while the backend expects `DistrictStatistics` from `backend/src/types/districts.ts` (with fields like `asOfDate`, `membership`, `clubs`, `education`, `goals`, `performance`, `ranking`). These are fundamentally different structures with the same name.
+The core problem is that collector-cli writes `DistrictStatistics` from `analytics-core` (with fields like `snapshotDate`, `clubs[]`, `divisions[]`, `areas[]`, `totals`) while the backend expects `DistrictStatistics` from `backend/src/types/districts.ts` (with fields like `asOfDate`, `membership`, `clubs`, `education`, `goals`, `performance`, `ranking`). These are fundamentally different structures with the same name.
 
 ## Glossary
 
-- **Shared_Contracts_Package**: A new npm workspace package (`@toastmasters/shared-contracts`) that defines all file format types used for data exchange between scraper-cli and backend
-- **File_Format_Type**: A TypeScript interface that defines the exact structure of JSON files written to disk by scraper-cli and read by backend
-- **Data_Producer**: The scraper-cli package that writes pre-computed data files to the snapshot directory
+- **Shared_Contracts_Package**: A new npm workspace package (`@toastmasters/shared-contracts`) that defines all file format types used for data exchange between collector-cli and backend
+- **File_Format_Type**: A TypeScript interface that defines the exact structure of JSON files written to disk by collector-cli and read by backend
+- **Data_Producer**: The collector-cli package that writes pre-computed data files to the snapshot directory
 - **Data_Consumer**: The backend package that reads pre-computed data files from the snapshot directory
 - **Contract_Violation**: A runtime error that occurs when the data written by the producer does not match the structure expected by the consumer
 - **Compile_Time_Verification**: TypeScript type checking that ensures both producer and consumer use identical type definitions
@@ -21,7 +21,7 @@ The core problem is that scraper-cli writes `DistrictStatistics` from `analytics
 
 ### Requirement 1: Shared Contracts Package Creation
 
-**User Story:** As a developer, I want a single source of truth for file format types, so that compile-time type checking prevents data contract mismatches between scraper-cli and backend.
+**User Story:** As a developer, I want a single source of truth for file format types, so that compile-time type checking prevents data contract mismatches between collector-cli and backend.
 
 #### Acceptance Criteria
 
@@ -32,7 +32,7 @@ The core problem is that scraper-cli writes `DistrictStatistics` from `analytics
 
 ### Requirement 2: Per-District Data Contract
 
-**User Story:** As a developer, I want a single `PerDistrictData` type definition, so that the district JSON files written by scraper-cli match exactly what the backend expects to read.
+**User Story:** As a developer, I want a single `PerDistrictData` type definition, so that the district JSON files written by collector-cli match exactly what the backend expects to read.
 
 #### Acceptance Criteria
 
@@ -44,7 +44,7 @@ The core problem is that scraper-cli writes `DistrictStatistics` from `analytics
 
 ### Requirement 3: All-Districts Rankings Contract
 
-**User Story:** As a developer, I want a single `AllDistrictsRankingsData` type definition, so that the rankings file written by scraper-cli matches exactly what the backend expects to read.
+**User Story:** As a developer, I want a single `AllDistrictsRankingsData` type definition, so that the rankings file written by collector-cli matches exactly what the backend expects to read.
 
 #### Acceptance Criteria
 
@@ -57,7 +57,7 @@ The core problem is that scraper-cli writes `DistrictStatistics` from `analytics
 
 ### Requirement 4: Snapshot Metadata Contract
 
-**User Story:** As a developer, I want a single snapshot metadata type definition, so that the metadata.json file written by scraper-cli matches exactly what the backend expects to read.
+**User Story:** As a developer, I want a single snapshot metadata type definition, so that the metadata.json file written by collector-cli matches exactly what the backend expects to read.
 
 #### Acceptance Criteria
 
@@ -69,7 +69,7 @@ The core problem is that scraper-cli writes `DistrictStatistics` from `analytics
 
 ### Requirement 5: Snapshot Manifest Contract
 
-**User Story:** As a developer, I want a single snapshot manifest type definition, so that the manifest.json file written by scraper-cli matches exactly what the backend expects to read.
+**User Story:** As a developer, I want a single snapshot manifest type definition, so that the manifest.json file written by collector-cli matches exactly what the backend expects to read.
 
 #### Acceptance Criteria
 
@@ -91,9 +91,9 @@ The core problem is that scraper-cli writes `DistrictStatistics` from `analytics
 4. THE Shared_Contracts_Package SHALL export validation helper functions: `validatePerDistrictData`, `validateAllDistrictsRankings`, `validateSnapshotMetadata`, `validateSnapshotManifest`
 5. WHEN validation fails, THE validation helper functions SHALL return a descriptive error message indicating which fields are invalid
 
-### Requirement 7: Scraper-CLI Migration
+### Requirement 7: Collector-CLI Migration
 
-**User Story:** As a developer, I want the scraper-cli to use shared contracts, so that any type changes are caught at compile time.
+**User Story:** As a developer, I want the collector-cli to use shared contracts, so that any type changes are caught at compile time.
 
 #### Acceptance Criteria
 

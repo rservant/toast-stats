@@ -69,7 +69,7 @@ This directory contains specifications that have been completed and are no longe
 #### raw-csv-cache-system/
 
 **Status**: ✅ COMPLETE  
-**Purpose**: Raw CSV caching for ToastmastersScraper with cache-first lookup
+**Purpose**: Raw CSV caching for ToastmastersCollector with cache-first lookup
 
 #### refresh-service-refactor/
 
@@ -86,20 +86,20 @@ This directory contains specifications that have been completed and are no longe
 **Status**: ✅ COMPLETE  
 **Purpose**: Legacy cache removal
 
-#### scraper-cli-separation/
+#### collector-cli-separation/
 
 **Status**: ✅ COMPLETE  
 **Purpose**: Separated scraping into standalone CLI tool
 
-#### scraper-cli-month-end-compliance/
+#### collector-cli-month-end-compliance/
 
 **Status**: ✅ COMPLETE  
-**Purpose**: Month-end data compliance for scraper CLI pipeline
+**Purpose**: Month-end data compliance for collector CLI pipeline
 
 #### shared-data-contracts/
 
 **Status**: ✅ COMPLETE  
-**Purpose**: Shared TypeScript types and Zod schemas between scraper-cli and backend
+**Purpose**: Shared TypeScript types and Zod schemas between collector-cli and backend
 
 #### snapshot-deletion-storage-abstraction/
 
@@ -124,7 +124,7 @@ This directory contains specifications that have been completed and are no longe
 #### closing-period-fallback-cache/
 
 **Status**: ✅ COMPLETE  
-**Purpose**: In-memory fallback cache for ToastmastersScraper during closing periods
+**Purpose**: In-memory fallback cache for ToastmastersCollector during closing periods
 
 #### v8-heap-configuration/
 
@@ -263,12 +263,12 @@ This directory contains specifications that have been completed and are no longe
 #### precomputed-analytics-pipeline/
 
 **Status**: ✅ COMPLETE  
-**Purpose**: Pre-computed analytics generation pipeline in scraper-cli
+**Purpose**: Pre-computed analytics generation pipeline in collector-cli
 
 #### precomputed-analytics-alignment/
 
 **Status**: ✅ COMPLETE  
-**Purpose**: Align pre-computed analytics format between scraper-cli and backend
+**Purpose**: Align pre-computed analytics format between collector-cli and backend
 
 #### precomputed-analytics-availability/
 

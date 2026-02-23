@@ -118,7 +118,7 @@ This implementation plan addresses the bug where All Districts CSV data with Bor
     - Test scrapeData downloads when cache miss
     - Test cache metadata is included in RawData
     - Test configured districts still fetch all 3 CSV files
-    - Use mocked scraper responses, no network calls
+    - Use mocked collector responses, no network calls
     - **Property 2: Cache Consistency**
     - **Validates: Requirements 2.1, 2.2, 2.5, 5.2**
 
@@ -172,7 +172,7 @@ This implementation plan addresses the bug where All Districts CSV data with Bor
     - Test rankings accessible via API endpoint
     - Test cache reuse on subsequent refresh for same date
     - Test configured districts still get detailed data
-    - Use mocked scraper and CSV data, no network calls
+    - Use mocked collector and CSV data, no network calls
     - **Property 1: All Districts Rankings Completeness**
     - **Property 2: Cache Consistency**
     - **Validates: Requirements 1.1, 1.2, 1.3, 2.1, 2.2, 4.1, 4.3, 5.2**

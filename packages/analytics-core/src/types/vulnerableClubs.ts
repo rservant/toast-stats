@@ -31,7 +31,7 @@ export interface VulnerableClubsData {
 /**
  * Club trends data for individual club lookup.
  * Stored per-district with clubs indexed by club ID for efficient O(1) retrieval.
- * Pre-computed by scraper-cli, served by backend.
+ * Pre-computed by collector-cli, served by backend.
  *
  * Requirements: 2.2
  */

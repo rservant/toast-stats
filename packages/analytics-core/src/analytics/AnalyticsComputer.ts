@@ -2,7 +2,7 @@
  * Analytics Computer
  *
  * Main class that orchestrates analytics computation using specialized modules.
- * Implements the IAnalyticsComputer interface for use by both scraper-cli and backend.
+ * Implements the IAnalyticsComputer interface for use by both collector-cli and backend.
  *
  * This class uses the hardened backend analytics modules that were moved to analytics-core:
  * - MembershipAnalyticsModule: Membership trends, year-over-year comparisons, seasonal patterns

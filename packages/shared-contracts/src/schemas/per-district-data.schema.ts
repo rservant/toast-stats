@@ -2,7 +2,7 @@
  * Zod validation schema for per-district data wrapper.
  *
  * This schema provides runtime validation for the per-district data wrapper
- * structure, ensuring that district JSON files written by scraper-cli and
+ * structure, ensuring that district JSON files written by collector-cli and
  * read by backend conform to the expected structure.
  *
  * The schema matches the TypeScript interface in per-district-data.ts exactly.

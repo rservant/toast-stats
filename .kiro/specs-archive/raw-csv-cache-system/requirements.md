@@ -11,7 +11,7 @@ The Raw CSV Cache System addresses inefficiencies in the current Toastmasters St
 - **Cache_Miss**: Absence of requested CSV data in local cache, requiring download
 - **CSV_Type**: Enumeration of supported CSV file types (all-districts, district-performance, division-performance, club-performance)
 - **Cache_Metadata**: Structured information about cached files including timestamps, statistics, and integrity data
-- **ToastmastersScraper**: Existing service responsible for downloading and parsing CSV data from Toastmasters dashboard
+- **ToastmastersCollector**: Existing service responsible for downloading and parsing CSV data from Toastmasters dashboard
 - **RefreshService**: Existing service that orchestrates data refresh operations
 - **Snapshot**: Immutable, time-specific representation of normalized application data
 - **District_ID**: Unique identifier for Toastmasters districts
@@ -33,15 +33,15 @@ The Raw CSV Cache System addresses inefficiencies in the current Toastmasters St
 
 ### Requirement 2: Cache-First Data Acquisition
 
-**User Story:** As a system operator, I want the scraper to check cache before downloading, so that unnecessary external service calls are avoided and refresh operations are faster.
+**User Story:** As a system operator, I want the collector to check cache before downloading, so that unnecessary external service calls are avoided and refresh operations are faster.
 
 #### Acceptance Criteria
 
-1. WHEN requesting CSV data, THE ToastmastersScraper SHALL first check the Raw_CSV_Cache for existing data
-2. IF cached data exists for the requested date and type, THEN THE ToastmastersScraper SHALL return cached content
-3. IF cached data does not exist, THEN THE ToastmastersScraper SHALL download from external service and cache the result
-4. THE ToastmastersScraper SHALL maintain existing API contracts and return types
-5. WHEN cache operations fail, THE ToastmastersScraper SHALL gracefully fallback to direct download
+1. WHEN requesting CSV data, THE ToastmastersCollector SHALL first check the Raw_CSV_Cache for existing data
+2. IF cached data exists for the requested date and type, THEN THE ToastmastersCollector SHALL return cached content
+3. IF cached data does not exist, THEN THE ToastmastersCollector SHALL download from external service and cache the result
+4. THE ToastmastersCollector SHALL maintain existing API contracts and return types
+5. WHEN cache operations fail, THE ToastmastersCollector SHALL gracefully fallback to direct download
 
 ### Requirement 3: Raw CSV Cache Service
 
@@ -83,12 +83,12 @@ The Raw CSV Cache System addresses inefficiencies in the current Toastmasters St
 
 ### Requirement 6: Integration with Existing Services
 
-**User Story:** As a developer, I want seamless integration with existing scraper and refresh services, so that cache functionality is transparent to existing workflows.
+**User Story:** As a developer, I want seamless integration with existing collector and refresh services, so that cache functionality is transparent to existing workflows.
 
 #### Acceptance Criteria
 
-1. THE ToastmastersScraper SHALL integrate cache lookups without changing existing method signatures
-2. THE ToastmastersScraper SHALL return identical data structures regardless of cache hit or miss
+1. THE ToastmastersCollector SHALL integrate cache lookups without changing existing method signatures
+2. THE ToastmastersCollector SHALL return identical data structures regardless of cache hit or miss
 3. THE RefreshService SHALL continue operating without modification
 4. WHEN cache integration fails, THE system SHALL maintain existing functionality through fallback mechanisms
 5. THE integration SHALL use dependency injection patterns consistent with existing services
@@ -183,7 +183,7 @@ The Raw CSV Cache System addresses inefficiencies in the current Toastmasters St
 
 #### Acceptance Criteria
 
-1. THE Raw_CSV_Cache SHALL be directly integrated into the ToastmastersScraper through dependency injection
+1. THE Raw_CSV_Cache SHALL be directly integrated into the ToastmastersCollector through dependency injection
 2. THE Raw_CSV_Cache SHALL be enabled by default in all environments
 3. THE Raw_CSV_Cache SHALL preserve all existing snapshot and data processing functionality
 
@@ -194,7 +194,7 @@ The Raw CSV Cache System addresses inefficiencies in the current Toastmasters St
 #### Acceptance Criteria
 
 1. THE Raw_CSV_Cache SHALL be covered by unit tests for all public methods and error scenarios
-2. THE Raw_CSV_Cache SHALL be covered by integration tests with ToastmastersScraper
+2. THE Raw_CSV_Cache SHALL be covered by integration tests with ToastmastersCollector
 3. THE Raw_CSV_Cache SHALL be covered by property-based tests for cache consistency properties
 4. THE Raw_CSV_Cache SHALL be covered by performance tests for large CSV file handling
 5. THE Raw_CSV_Cache SHALL use proper test isolation with unique cache directories per test

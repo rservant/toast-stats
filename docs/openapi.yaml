@@ -12,7 +12,7 @@ info:
     - **District Data**: Access district statistics, club information, and performance metrics
     - **Rankings**: Global and district-level ranking comparisons
     - **Analytics**: Membership trends, club health analysis, and leadership insights
-    - **Historical Data**: Historical data collected via scraper-cli pipeline
+    - **Historical Data**: Historical data collected via collector-cli pipeline
     - **Administration**: Snapshot management and system administration
 
     ## Data Model
@@ -87,7 +87,7 @@ paths:
                   status: success
                   is_closing_period: false
                   is_fallback: false
-                  data_source: scraper
+                  data_source: collector
                   from_cache: true
         '404':
           description: No data available - no cached district data exists
@@ -194,7 +194,7 @@ paths:
                       status: success
                       is_closing_period: false
                       is_fallback: false
-                      data_source: scraper
+                      data_source: collector
                       from_cache: true
                 fallback:
                   summary: Response with fallback applied
@@ -220,7 +220,7 @@ paths:
                       fallback_reason: no_snapshot_for_date
                       requested_date: "2026-01-24"
                       actual_date: "2026-01-23"
-                      data_source: scraper
+                      data_source: collector
                       from_cache: true
         '400':
           description: Bad request - invalid date format or parameters
@@ -355,7 +355,7 @@ paths:
                   status: success
                   is_closing_period: false
                   is_fallback: false
-                  data_source: scraper
+                  data_source: collector
                   from_cache: true
         '400':
           description: Bad request - invalid district ID or date format
@@ -502,7 +502,7 @@ paths:
                   status: success
                   is_closing_period: false
                   is_fallback: false
-                  data_source: scraper
+                  data_source: collector
                   from_cache: true
         '400':
           description: Bad request - invalid district ID format
@@ -609,7 +609,7 @@ paths:
                   status: success
                   is_closing_period: false
                   is_fallback: false
-                  data_source: scraper
+                  data_source: collector
                   from_cache: true
         '400':
           description: Bad request - invalid district ID or months parameter
@@ -754,7 +754,7 @@ paths:
                   status: success
                   is_closing_period: false
                   is_fallback: false
-                  data_source: scraper
+                  data_source: collector
                   from_cache: true
         '400':
           description: Bad request - invalid district ID or months parameter
@@ -902,7 +902,7 @@ paths:
                   status: success
                   is_closing_period: false
                   is_fallback: false
-                  data_source: scraper
+                  data_source: collector
                   from_cache: true
         '400':
           description: Bad request - missing date parameters, invalid date format, or invalid date range
@@ -1054,7 +1054,7 @@ paths:
                   status: success
                   is_closing_period: false
                   is_fallback: false
-                  data_source: scraper
+                  data_source: collector
                   from_cache: true
         '400':
           description: Bad request - invalid district ID or date format
@@ -1196,7 +1196,7 @@ paths:
                   status: success
                   is_closing_period: false
                   is_fallback: false
-                  data_source: scraper
+                  data_source: collector
                   from_cache: true
         '400':
           description: Bad request - invalid district ID, date format, or date range
@@ -1389,7 +1389,7 @@ paths:
                   status: success
                   is_closing_period: false
                   is_fallback: false
-                  data_source: scraper
+                  data_source: collector
                   from_cache: true
         '400':
           description: Bad request - invalid district ID format
@@ -1483,7 +1483,7 @@ paths:
                   status: success
                   is_closing_period: false
                   is_fallback: false
-                  data_source: scraper
+                  data_source: collector
                   from_cache: true
         '400':
           description: Bad request - invalid district ID format
@@ -1577,7 +1577,7 @@ paths:
                   status: success
                   is_closing_period: false
                   is_fallback: false
-                  data_source: scraper
+                  data_source: collector
                   from_cache: true
         '404':
           description: No cached dates available - no snapshots exist in the system
@@ -1591,7 +1591,7 @@ paths:
                   message: No cached dates available
                   details: No snapshots have been collected yet
                   suggestions:
-                    - Run scraper-cli to collect historical data
+                    - Run collector-cli to collect historical data
                     - Check if the data collection service is running
         '500':
           description: Internal server error
@@ -1727,7 +1727,7 @@ paths:
                   status: success
                   is_closing_period: false
                   is_fallback: false
-                  data_source: scraper
+                  data_source: collector
                   from_cache: true
         '400':
           description: Bad request - invalid parameters
@@ -1774,7 +1774,7 @@ paths:
                       suggestions:
                         - "Try a different date range"
                         - "Check available dates using GET /districts/{districtId}/cached-dates"
-                        - "Run scraper-cli to collect historical data"
+                        - "Run collector-cli to collect historical data"
                 snapshotNotFound:
                   summary: Requested snapshot does not exist
                   value:
@@ -1819,10 +1819,10 @@ paths:
         over a specified date range.
 
         **Pre-computed Analytics Required**: This endpoint serves pre-computed
-        analytics files generated by the scraper-cli. If analytics have not been
+        analytics files generated by the collector-cli. If analytics have not been
         generated for the requested district, a 404 error is returned.
 
-        Use the scraper-cli `compute-analytics` command to generate pre-computed
+        Use the collector-cli `compute-analytics` command to generate pre-computed
         analytics for snapshots that are missing them.
 
         This endpoint provides in-depth membership analysis including:
@@ -2253,7 +2253,7 @@ paths:
                   status: success
                   is_closing_period: false
                   is_fallback: false
-                  data_source: scraper
+                  data_source: collector
                   from_cache: true
         '400':
           description: Bad request - invalid parameters
@@ -2307,7 +2307,7 @@ paths:
                       message: "Pre-computed membership analytics not found"
                       details: "No pre-computed membership analytics file exists for district 57"
                       suggestions:
-                        - "Run scraper-cli compute-analytics to generate membership analytics"
+                        - "Run collector-cli compute-analytics to generate membership analytics"
                         - "Verify the district ID is correct"
                         - "Check if analytics have been generated for this snapshot"
                 noDataAvailable:
@@ -2320,7 +2320,7 @@ paths:
                       suggestions:
                         - "Try a different date range"
                         - "Check available dates using GET /districts/{districtId}/cached-dates"
-                        - "Run scraper-cli to collect historical data"
+                        - "Run collector-cli to collect historical data"
                 snapshotNotFound:
                   summary: Requested snapshot does not exist
                   value:
@@ -2364,10 +2364,10 @@ paths:
         Retrieves pre-computed trend and analytics data for a specific club within a district.
 
         **Pre-computed Analytics Required**: This endpoint serves pre-computed
-        club trends from the club-trends-index file generated by scraper-cli.
+        club trends from the club-trends-index file generated by collector-cli.
         If the club trends index has not been generated, a 404 error is returned.
 
-        Use the scraper-cli `compute-analytics` command to generate pre-computed
+        Use the collector-cli `compute-analytics` command to generate pre-computed
         analytics including club trends for snapshots that are missing them.
 
         This endpoint provides detailed insights into a club's performance over time, including:
@@ -2447,7 +2447,7 @@ paths:
                   status: success
                   is_closing_period: false
                   is_fallback: false
-                  data_source: scraper
+                  data_source: collector
                   from_cache: true
         '400':
           description: Bad request - invalid district ID or club ID format
@@ -2491,7 +2491,7 @@ paths:
                       message: "Pre-computed club trends not found"
                       details: "No pre-computed club trends index exists for district 57"
                       suggestions:
-                        - "Run scraper-cli compute-analytics to generate club trends data"
+                        - "Run collector-cli compute-analytics to generate club trends data"
                         - "Verify the district ID is correct"
                         - "Check if analytics have been generated for this snapshot"
                 clubNotFound:
@@ -2549,10 +2549,10 @@ paths:
         or requiring intervention based on various risk factors.
 
         **Pre-computed Analytics Required**: This endpoint serves pre-computed
-        vulnerable clubs data generated by the scraper-cli. If the vulnerable
+        vulnerable clubs data generated by the collector-cli. If the vulnerable
         clubs file has not been generated, a 404 error is returned.
 
-        Use the scraper-cli `compute-analytics` command to generate pre-computed
+        Use the collector-cli `compute-analytics` command to generate pre-computed
         analytics including vulnerable clubs for snapshots that are missing them.
 
         This endpoint provides critical insights for district leadership to identify
@@ -2702,9 +2702,9 @@ paths:
                       code: ANALYTICS_NOT_FOUND
                       message: "Pre-computed vulnerable clubs data not found"
                       details: "No pre-computed vulnerable clubs file exists for district 57. \
-                        Run scraper-cli compute-analytics to generate analytics."
+                        Run collector-cli compute-analytics to generate analytics."
                       suggestions:
-                        - "Run scraper-cli compute-analytics to generate vulnerable clubs data"
+                        - "Run collector-cli compute-analytics to generate vulnerable clubs data"
                         - "Verify the district ID is correct"
                         - "Check if analytics have been generated for this snapshot"
                 snapshotNotFound:
@@ -2752,10 +2752,10 @@ paths:
         leadership development metrics, and actionable recommendations for district leadership.
 
         **Pre-computed Analytics Required**: This endpoint serves pre-computed
-        leadership insights generated by the scraper-cli. If leadership insights
+        leadership insights generated by the collector-cli. If leadership insights
         have not been generated, a 404 error is returned.
 
-        Use the scraper-cli `compute-analytics` command to generate pre-computed
+        Use the collector-cli `compute-analytics` command to generate pre-computed
         analytics including leadership insights for snapshots that are missing them.
 
         This endpoint is designed to help district leaders understand the effectiveness
@@ -2918,7 +2918,7 @@ paths:
                       status: success
                       is_closing_period: false
                       is_fallback: false
-                      data_source: scraper
+                      data_source: collector
                       from_cache: true
                 minimalInsights:
                   summary: District with limited leadership data
@@ -2959,7 +2959,7 @@ paths:
                       status: success
                       is_closing_period: false
                       is_fallback: false
-                      data_source: scraper
+                      data_source: collector
                       from_cache: true
         '400':
           description: Bad request - invalid district ID or date parameters
@@ -3012,9 +3012,9 @@ paths:
                       code: ANALYTICS_NOT_FOUND
                       message: "Pre-computed leadership insights not found"
                       details: "No pre-computed leadership insights file exists for district 57. \
-                        Run scraper-cli compute-analytics to generate analytics."
+                        Run collector-cli compute-analytics to generate analytics."
                       suggestions:
-                        - "Run scraper-cli compute-analytics to generate leadership insights"
+                        - "Run collector-cli compute-analytics to generate leadership insights"
                         - "Verify the district ID is correct"
                         - "Check if analytics have been generated for this snapshot"
                 snapshotNotFound:
@@ -3063,10 +3063,10 @@ paths:
         and historical trends.
 
         **Pre-computed Analytics Required**: This endpoint serves pre-computed
-        distinguished club analytics generated by the scraper-cli. If the analytics
+        distinguished club analytics generated by the collector-cli. If the analytics
         have not been generated, a 404 error is returned.
 
-        Use the scraper-cli `compute-analytics` command to generate pre-computed
+        Use the collector-cli `compute-analytics` command to generate pre-computed
         analytics including distinguished club data for snapshots that are missing them.
 
         The Distinguished Club Program is Toastmasters' recognition program that measures
@@ -3261,7 +3261,7 @@ paths:
                       status: success
                       is_closing_period: false
                       is_fallback: false
-                      data_source: scraper
+                      data_source: collector
                       from_cache: true
                 earlySeasonAnalytics:
                   summary: Early season analytics with limited distinguished clubs
@@ -3350,7 +3350,7 @@ paths:
                       status: success
                       is_closing_period: false
                       is_fallback: false
-                      data_source: scraper
+                      data_source: collector
                       from_cache: true
         '400':
           description: Bad request - invalid district ID or date parameters
@@ -3403,9 +3403,9 @@ paths:
                       code: ANALYTICS_NOT_FOUND
                       message: "Pre-computed distinguished club analytics not found"
                       details: "No pre-computed distinguished club analytics file exists. \
-                        Run scraper-cli compute-analytics to generate analytics."
+                        Run collector-cli compute-analytics to generate analytics."
                       suggestions:
-                        - "Run scraper-cli compute-analytics to generate distinguished club analytics"
+                        - "Run collector-cli compute-analytics to generate distinguished club analytics"
                         - "Verify the district ID is correct"
                         - "Check if analytics have been generated for this snapshot"
                 snapshotNotFound:
@@ -3453,10 +3453,10 @@ paths:
         same point in time.
 
         **Pre-computed Analytics Required**: This endpoint serves pre-computed
-        year-over-year comparison data generated by the scraper-cli. If the
+        year-over-year comparison data generated by the collector-cli. If the
         comparison data has not been generated, a 404 error is returned.
 
-        Use the scraper-cli `compute-analytics` command to generate pre-computed
+        Use the collector-cli `compute-analytics` command to generate pre-computed
         analytics including year-over-year comparisons for snapshots that are missing them.
 
         This endpoint is essential for district leadership to understand progress,
@@ -3631,7 +3631,7 @@ paths:
                       status: success
                       is_closing_period: false
                       is_fallback: false
-                      data_source: scraper
+                      data_source: collector
                       from_cache: true
                 dataUnavailable:
                   summary: Comparison when previous year data is not available
@@ -3651,7 +3651,7 @@ paths:
                       status: success
                       is_closing_period: false
                       is_fallback: false
-                      data_source: scraper
+                      data_source: collector
                       from_cache: true
                 earlySeasonComparison:
                   summary: Early season comparison with limited distinguished clubs
@@ -3749,7 +3749,7 @@ paths:
                       status: success
                       is_closing_period: false
                       is_fallback: false
-                      data_source: scraper
+                      data_source: collector
                       from_cache: true
         '400':
           description: Bad request - invalid district ID or date format
@@ -3802,9 +3802,9 @@ paths:
                       code: ANALYTICS_NOT_FOUND
                       message: "Pre-computed year-over-year data not found"
                       details: "No pre-computed year-over-year file exists for district 57. \
-                        Run scraper-cli compute-analytics to generate analytics."
+                        Run collector-cli compute-analytics to generate analytics."
                       suggestions:
-                        - "Run scraper-cli compute-analytics to generate year-over-year data"
+                        - "Run collector-cli compute-analytics to generate year-over-year data"
                         - "Verify the district ID is correct"
                         - "Check if analytics have been generated for this snapshot"
                 noDataAvailable:
@@ -3816,7 +3816,7 @@ paths:
                       details: "Year-over-year comparison requires data for the requested date"
                       suggestions:
                         - "Verify the district ID is correct"
-                        - "Run scraper-cli to collect historical data for this district"
+                        - "Run collector-cli to collect historical data for this district"
                         - "Check available dates using the /districts/{districtId}/cached-dates endpoint"
                 snapshotNotFound:
                   summary: No snapshot for requested date
@@ -3981,7 +3981,7 @@ paths:
                   status: success
                   is_closing_period: false
                   is_fallback: false
-                  data_source: scraper
+                  data_source: collector
                   from_cache: true
         '400':
           description: Bad request - invalid parameters
@@ -4103,9 +4103,9 @@ paths:
 
         The `analytics_available` field indicates whether pre-computed analytics
         (analytics-summary.json) exist for each snapshot. This is useful for:
-        - Identifying snapshots that need analytics generation via scraper-cli
+        - Identifying snapshots that need analytics generation via collector-cli
         - Understanding which snapshots can serve fast analytics requests
-        - Planning scraper-cli compute-analytics runs
+        - Planning collector-cli compute-analytics runs
 
         The response metadata includes:
         - `analytics_available_count`: Number of snapshots with analytics
@@ -4134,7 +4134,7 @@ paths:
         - Finding snapshots with specific characteristics
         - Monitoring data collection health over time
         - Debugging data quality issues
-        - Identifying snapshots that need analytics generation via scraper-cli
+        - Identifying snapshots that need analytics generation via collector-cli
       parameters:
         - name: limit
           in: query
@@ -4298,21 +4298,21 @@ paths:
                         created_at: "2026-01-24T06:00:00Z"
                         status: success
                         is_closing_period: false
-                        data_source: scraper
+                        data_source: collector
                         from_cache: true
                         analytics_available: true
                       - snapshot_id: "2026-01-23"
                         created_at: "2026-01-23T06:00:00Z"
                         status: success
                         is_closing_period: false
-                        data_source: scraper
+                        data_source: collector
                         from_cache: true
                         analytics_available: true
                       - snapshot_id: "2026-01-22"
                         created_at: "2026-01-22T06:00:00Z"
                         status: partial
                         is_closing_period: false
-                        data_source: scraper
+                        data_source: collector
                         from_cache: true
                         analytics_available: false
                     metadata:
@@ -4331,14 +4331,14 @@ paths:
                         created_at: "2026-01-24T06:00:00Z"
                         status: success
                         is_closing_period: false
-                        data_source: scraper
+                        data_source: collector
                         from_cache: true
                         analytics_available: true
                       - snapshot_id: "2026-01-23"
                         created_at: "2026-01-23T06:00:00Z"
                         status: success
                         is_closing_period: false
-                        data_source: scraper
+                        data_source: collector
                         from_cache: true
                         analytics_available: false
                     metadata:
@@ -4358,14 +4358,14 @@ paths:
                         created_at: "2026-01-22T06:00:00Z"
                         status: success
                         is_closing_period: false
-                        data_source: scraper
+                        data_source: collector
                         from_cache: true
                         analytics_available: false
                       - snapshot_id: "2026-01-21"
                         created_at: "2026-01-21T06:00:00Z"
                         status: success
                         is_closing_period: false
-                        data_source: scraper
+                        data_source: collector
                         from_cache: true
                         analytics_available: false
                     metadata:
@@ -4549,8 +4549,8 @@ paths:
                     type: string
                     description: |
                       Source of the snapshot data, indicating how the data was obtained.
-                      Common values include 'scraper' or 'manual'.
-                    example: scraper
+                      Common values include 'collector' or 'manual'.
+                    example: collector
                   is_closing_period:
                     type: boolean
                     description: |
@@ -4685,7 +4685,7 @@ paths:
                     status: success
                     schema_version: "1.0.0"
                     calculation_version: "2.1.0"
-                    data_source: scraper
+                    data_source: collector
                     is_closing_period: false
                     district_count: 120
                     districts:
@@ -4712,7 +4712,7 @@ paths:
                     status: partial
                     schema_version: "1.0.0"
                     calculation_version: "2.1.0"
-                    data_source: scraper
+                    data_source: collector
                     is_closing_period: false
                     district_count: 118
                     districts:
@@ -4744,7 +4744,7 @@ paths:
                     status: success
                     schema_version: "1.0.0"
                     calculation_version: "2.1.0"
-                    data_source: scraper
+                    data_source: collector
                     is_closing_period: true
                     closing_period_type: month-end
                     district_count: 120
@@ -4935,8 +4935,8 @@ paths:
                     type: string
                     description: |
                       Source of the snapshot data, indicating how the data was obtained.
-                      Common values include 'scraper' or 'manual'.
-                    example: scraper
+                      Common values include 'collector' or 'manual'.
+                    example: collector
                   is_closing_period:
                     type: boolean
                     description: |
@@ -5182,7 +5182,7 @@ paths:
                     status: success
                     schema_version: "1.0.0"
                     calculation_version: "2.1.0"
-                    data_source: scraper
+                    data_source: collector
                     is_closing_period: false
                     districts:
                       - district_id: "57"
@@ -5250,7 +5250,7 @@ paths:
                     status: success
                     schema_version: "1.0.0"
                     calculation_version: "2.1.0"
-                    data_source: scraper
+                    data_source: collector
                     is_closing_period: false
                     districts: []
                     rankings_summary:
@@ -5538,8 +5538,8 @@ components:
           type: string
           description: |
             Source of the snapshot data, indicating how the data was obtained.
-            Common values include 'scraper' or 'manual'.
-          example: scraper
+            Common values include 'collector' or 'manual'.
+          example: collector
         from_cache:
           type: boolean
           description: |
@@ -5551,7 +5551,7 @@ components:
           description: |
             Indicates whether pre-computed analytics (analytics-summary.json)
             exist for this snapshot. When false, analytics requests for this
-            snapshot will return a 404 error and require running scraper-cli
+            snapshot will return a 404 error and require running collector-cli
             compute-analytics.
           example: true
       example:
@@ -5560,7 +5560,7 @@ components:
         status: success
         is_closing_period: false
         is_fallback: false
-        data_source: scraper
+        data_source: collector
         from_cache: true
         analytics_available: true
 
@@ -5641,7 +5641,7 @@ components:
           status: success
           is_closing_period: false
           is_fallback: false
-          data_source: scraper
+          data_source: collector
           from_cache: true
 
     # District Statistics Schemas
@@ -6341,7 +6341,7 @@ components:
           status: success
           is_closing_period: false
           is_fallback: false
-          data_source: scraper
+          data_source: collector
           from_cache: true
 
     # Club Schemas
@@ -6612,7 +6612,7 @@ components:
           status: success
           is_closing_period: false
           is_fallback: false
-          data_source: scraper
+          data_source: collector
           from_cache: true
 
     # Membership History Response Schema
@@ -6679,7 +6679,7 @@ components:
           status: success
           is_closing_period: false
           is_fallback: false
-          data_source: scraper
+          data_source: collector
           from_cache: true
 
     # Educational Awards Response Schema
@@ -6753,7 +6753,7 @@ components:
           status: success
           is_closing_period: false
           is_fallback: false
-          data_source: scraper
+          data_source: collector
           from_cache: true
 
     # Daily Reports Response Schema
@@ -6833,7 +6833,7 @@ components:
           status: success
           is_closing_period: false
           is_fallback: false
-          data_source: scraper
+          data_source: collector
           from_cache: true
 
     # Daily Report Summary Schema
@@ -7055,7 +7055,7 @@ components:
           status: success
           is_closing_period: false
           is_fallback: false
-          data_source: scraper
+          data_source: collector
           from_cache: true
 
     RankHistoryResponse:
@@ -7125,7 +7125,7 @@ components:
           status: success
           is_closing_period: false
           is_fallback: false
-          data_source: scraper
+          data_source: collector
           from_cache: true
 
     RankHistoryDataPoint:
@@ -7236,7 +7236,7 @@ components:
           status: success
           is_closing_period: false
           is_fallback: false
-          data_source: scraper
+          data_source: collector
           from_cache: true
 
     CachedDatesResponse:
@@ -7316,7 +7316,7 @@ components:
           status: success
           is_closing_period: false
           is_fallback: false
-          data_source: scraper
+          data_source: collector
           from_cache: true
 
     GlobalCachedDatesResponse:
@@ -7385,7 +7385,7 @@ components:
           status: success
           is_closing_period: false
           is_fallback: false
-          data_source: scraper
+          data_source: collector
           from_cache: true
 
     # Analytics Schemas
@@ -7851,7 +7851,7 @@ components:
           status: success
           is_closing_period: false
           is_fallback: false
-          data_source: scraper
+          data_source: collector
           from_cache: true
 
     # Club Trend Schemas (for Club-Specific Analytics)
@@ -8101,7 +8101,7 @@ components:
           status: success
           is_closing_period: false
           is_fallback: false
-          data_source: scraper
+          data_source: collector
           from_cache: true
 
     # Vulnerable Clubs Schemas
@@ -8917,7 +8917,7 @@ components:
           status: success
           is_closing_period: false
           is_fallback: false
-          data_source: scraper
+          data_source: collector
           from_cache: true
 
     # Distinguished Club Analytics Schemas
@@ -9550,7 +9550,7 @@ components:
           status: success
           is_closing_period: false
           is_fallback: false
-          data_source: scraper
+          data_source: collector
           from_cache: true
 
     # Year-Over-Year Comparison Schemas
@@ -10202,7 +10202,7 @@ components:
           status: success
           is_closing_period: false
           is_fallback: false
-          data_source: scraper
+          data_source: collector
           from_cache: true
 
     # Export Response Schemas
@@ -10404,7 +10404,7 @@ components:
           status: success
           is_closing_period: false
           is_fallback: false
-          data_source: scraper
+          data_source: collector
           from_cache: true
 
   parameters:

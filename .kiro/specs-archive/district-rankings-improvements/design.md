@@ -30,7 +30,7 @@ The changes will affect both the backend ranking calculation logic and the front
 │                    Backend (Express/Node)                    │
 │  ┌────────────────────────────────────────────────────────┐ │
 │  │         RealToastmastersAPIService.ts                  │ │
-│  │  - Fetch district data from scraper                    │ │
+│  │  - Fetch district data from collector                    │ │
 │  │  - Calculate Borda points for each category           │ │
 │  │  - Calculate aggregate Borda score                     │ │
 │  │  - Return rankings with all metrics                    │ │

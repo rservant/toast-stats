@@ -5,7 +5,7 @@
 #   1. Run scripts/setup-wif.sh (one-time)
 #   2. Add GitHub secrets: GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
 #
-# The scraper uses Playwright (chromium) to scrape Toastmasters dashboards.
+# The collector uses Playwright (chromium) to scrape Toastmasters dashboards.
 # Data is processed locally and uploaded to GCS for the backend to consume.
 
 name: Data Pipeline
@@ -65,7 +65,7 @@ jobs:
         run: |
           npm run build --workspace=@toastmasters/shared-contracts
           npm run build --workspace=@toastmasters/analytics-core
-          npm run build --workspace=@toastmasters/scraper-cli
+          npm run build --workspace=@toastmasters/collector-cli
 
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
@@ -81,7 +81,7 @@ jobs:
 
       # ── Step 1: Sync config + raw-csv cache from GCS ────────
       # Pull district configuration and previously scraped CSVs
-      # so the scraper knows which districts to process and can
+      # so the collector knows which districts to process and can
       # skip re-downloading cached dates.
       - name: Sync config and raw-csv from GCS
         id: config
@@ -152,8 +152,8 @@ jobs:
             ARGS="$ARGS --force"
           fi
 
-          echo "Running: npx scraper-cli scrape $ARGS"
-          npx scraper-cli scrape $ARGS | tee /tmp/scrape-output.json
+          echo "Running: npx collector-cli scrape $ARGS"
+          npx collector-cli scrape $ARGS | tee /tmp/scrape-output.json
 
           # Extract date from output for subsequent steps
           DATE=$(jq -r '.date' /tmp/scrape-output.json)
@@ -225,15 +225,15 @@ jobs:
           DISTRICT_LIST="${{ inputs.districts || steps.config.outputs.districts }}"
           ARGS="--date ${DATE} --districts ${DISTRICT_LIST} --verbose"
 
-          echo "Running: npx scraper-cli compute-analytics $ARGS"
-          npx scraper-cli compute-analytics $ARGS | tee /tmp/analytics-output.json
+          echo "Running: npx collector-cli compute-analytics $ARGS"
+          npx collector-cli compute-analytics $ARGS | tee /tmp/analytics-output.json
 
           echo "## 📊 Analytics Results" >> "$GITHUB_STEP_SUMMARY"
           SUCCEEDED=$(jq '.districts.succeeded' /tmp/analytics-output.json)
           echo "- **Districts computed**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
 
       # ── Step 5: Sync cache to GCS ───────────────────────────
-      # Single rsync replaces scraper-cli upload + separate syncs.
+      # Single rsync replaces collector-cli upload + separate syncs.
       # gsutil rsync compares against remote state — truly incremental
       # with no local manifest needed (which was useless on ephemeral runners).
       - name: Sync cache to GCS

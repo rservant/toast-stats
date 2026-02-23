@@ -2,7 +2,7 @@
 
 ## Overview
 
-This implementation transforms the Toast-Stats application from "compute on request" to "serve pre-computed files". The work is organized into phases: shared package creation, scraper-cli enhancements, backend modifications, and integration testing.
+This implementation transforms the Toast-Stats application from "compute on request" to "serve pre-computed files". The work is organized into phases: shared package creation, collector-cli enhancements, backend modifications, and integration testing.
 
 ## Tasks
 
@@ -40,7 +40,7 @@ This implementation transforms the Toast-Stats application from "compute on requ
   - Ensure all tests pass, ask the user if questions arise.
   - Verify package builds and exports correctly
 
-- [x] 3. Implement scraper-cli transform command
+- [x] 3. Implement collector-cli transform command
   - [x] 3.1 Create transform command structure
     - Add `transform` command to CLI with Commander.js
     - Implement `--date`, `--districts`, `--force`, `--verbose` options
@@ -61,7 +61,7 @@ This implementation transforms the Toast-Stats application from "compute on requ
     - Test file structure output
     - _Requirements: 2.4_
 
-- [x] 4. Implement scraper-cli compute-analytics command
+- [x] 4. Implement collector-cli compute-analytics command
   - [x] 4.1 Create compute-analytics command structure
     - Add `compute-analytics` command to CLI
     - Implement `--date`, `--districts`, `--force-analytics`, `--verbose` options
@@ -110,7 +110,7 @@ This implementation transforms the Toast-Stats application from "compute on requ
     - Test error isolation with injected failures
     - _Requirements: 5.2, 1.5_
 
-- [x] 5. Checkpoint - Scraper CLI commands complete
+- [x] 5. Checkpoint - Collector CLI commands complete
   - Ensure all tests pass, ask the user if questions arise.
   - Verify transform and compute-analytics commands work end-to-end
 
@@ -150,7 +150,7 @@ This implementation transforms the Toast-Stats application from "compute on requ
   - Ensure all tests pass, ask the user if questions arise.
   - Verify API returns pre-computed analytics correctly
 
-- [x] 8. Implement scraper-cli upload command
+- [x] 8. Implement collector-cli upload command
   - [x] 8.1 Create upload command structure
     - Add `upload` command to CLI
     - Implement `--date`, `--incremental`, `--dry-run`, `--verbose` options

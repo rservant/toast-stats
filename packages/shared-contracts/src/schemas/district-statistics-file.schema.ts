@@ -2,7 +2,7 @@
  * Zod validation schemas for district statistics file format.
  *
  * These schemas provide runtime validation for district statistics data,
- * ensuring that data written by scraper-cli and read by backend conforms
+ * ensuring that data written by collector-cli and read by backend conforms
  * to the expected structure.
  *
  * The schemas match the TypeScript interfaces in district-statistics-file.ts exactly.

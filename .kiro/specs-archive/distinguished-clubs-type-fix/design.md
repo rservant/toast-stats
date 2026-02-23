@@ -16,7 +16,7 @@ The change is localized to the analytics computation layer and backend serving l
 ```mermaid
 flowchart TB
     subgraph "Data Flow (Current - Broken)"
-        SC1[scraper-cli] --> |computes| AC1[analytics-core]
+        SC1[collector-cli] --> |computes| AC1[analytics-core]
         AC1 --> |produces array| PF1[Pre-computed Files]
         PF1 --> |serves array| BE1[Backend]
         BE1 --> |sends array| FE1[Frontend]
@@ -27,7 +27,7 @@ flowchart TB
 ```mermaid
 flowchart TB
     subgraph "Data Flow (Fixed)"
-        SC2[scraper-cli] --> |computes| AC2[analytics-core]
+        SC2[collector-cli] --> |computes| AC2[analytics-core]
         AC2 --> |produces object + list| PF2[Pre-computed Files]
         PF2 --> |serves| BE2[Backend]
         BE2 --> |transforms if legacy| TR[Transformer]

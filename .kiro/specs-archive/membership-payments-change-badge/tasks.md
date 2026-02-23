@@ -88,5 +88,5 @@ Fix `AnalyticsComputer.calculateMembershipChangeWithBase()` to produce correct m
 - Tasks 3–6 address the new Bug 2 (badge showing payment change instead of member count change)
 - Tasks marked with `*` are optional and can be skipped for faster MVP
 - No new API endpoints are created — only the response schema of the existing analytics-summary endpoint is extended with a new field
-- After implementing, re-running `scraper-cli compute-analytics` will regenerate pre-computed files with the new `memberCountChange` field
+- After implementing, re-running `collector-cli compute-analytics` will regenerate pre-computed files with the new `memberCountChange` field
 - The frontend fallback (`memberCountChange ?? membershipChange`) ensures the badge works even with old pre-computed files

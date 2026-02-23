@@ -2,7 +2,7 @@
 
 ## Overview
 
-Implement a `latest-successful.json` pointer file to eliminate the ~2.5 minute cold-start directory scan. The work flows bottom-up: shared contract first, then scraper-cli writer, then backend reader with fallback.
+Implement a `latest-successful.json` pointer file to eliminate the ~2.5 minute cold-start directory scan. The work flows bottom-up: shared contract first, then collector-cli writer, then backend reader with fallback.
 
 ## Tasks
 
@@ -22,7 +22,7 @@ Implement a `latest-successful.json` pointer file to eliminate the ~2.5 minute c
     - **Property 2: Snapshot pointer schema round-trip**
     - **Validates: Requirements 4.2**
 
-- [x] 2. Implement pointer writer in scraper-cli TransformService
+- [x] 2. Implement pointer writer in collector-cli TransformService
   - [x] 2.1 Add `writeSnapshotPointer` private method to `TransformService`
     - Read existing pointer, compare dates, skip if existing is newer
     - Write atomically via temp file + rename
@@ -42,7 +42,7 @@ Implement a `latest-successful.json` pointer file to eliminate the ~2.5 minute c
     - **Property 1: Chronological ordering of pointer updates**
     - **Validates: Requirements 1.5**
 
-- [x] 3. Checkpoint - Ensure shared-contracts and scraper-cli tests pass
+- [x] 3. Checkpoint - Ensure shared-contracts and collector-cli tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 4. Implement pointer reader in backend FileSnapshotStore

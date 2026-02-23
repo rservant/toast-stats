@@ -31,7 +31,7 @@ graph TB
 
     subgraph "Refresh Process"
         RS[RefreshService]
-        TS[ToastmastersScraper]
+        TS[ToastmastersCollector]
     end
 
     subgraph "Storage Layer"
@@ -307,12 +307,12 @@ _For any_ district ID being added to configuration, the system should validate i
 
 ### Property 5: Selective Data Collection
 
-_For any_ configured set of districts, when executing a refresh operation, the scraper should fetch detailed data only for those districts and no others.
+_For any_ configured set of districts, when executing a refresh operation, the collector should fetch detailed data only for those districts and no others.
 **Validates: Requirements 2.2**
 
 ### Property 6: Complete District Data Fetching
 
-_For any_ configured district, the scraper should fetch all three required CSV files: district performance, division performance, and club performance.
+_For any_ configured district, the collector should fetch all three required CSV files: district performance, division performance, and club performance.
 **Validates: Requirements 2.3**
 
 ### Property 7: Resilient Processing
@@ -510,7 +510,7 @@ The system employs both unit testing and property-based testing to ensure compre
 
 **API Integration**: Tests ensure that configuration endpoints work correctly with authentication and validation.
 
-**Scraper Integration**: Tests verify that the scraper respects district configuration and handles partial failures appropriately.
+**Collector Integration**: Tests verify that the collector respects district configuration and handles partial failures appropriately.
 
 ### Performance Testing
 

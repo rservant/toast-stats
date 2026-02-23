@@ -181,8 +181,8 @@ gsutil ls gs://YOUR_BUCKET_NAME
 # Trigger refresh via API
 curl -X POST https://your-app-url/api/refresh
 
-# Or use the scraper CLI to populate cache first
-npx scraper-cli scrape --date 2024-01-15
+# Or use the collector CLI to populate cache first
+npx collector-cli scrape --date 2024-01-15
 ```
 
 ### Step 5: Verify Migration
@@ -306,8 +306,8 @@ When the application starts with empty storage (no snapshots available), it retu
    # Via API
    curl -X POST https://your-app-url/api/refresh
 
-   # Or use the scraper CLI
-   npx scraper-cli scrape --date $(date +%Y-%m-%d)
+   # Or use the collector CLI
+   npx collector-cli scrape --date $(date +%Y-%m-%d)
    ```
 
 2. **Verify the refresh completed successfully**:
