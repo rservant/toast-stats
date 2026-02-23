@@ -19,6 +19,16 @@
 
 ---
 
+## 🗓️ 2026-02-22 — Lesson 06: Identify the Correct Component Before Writing Code
+
+**The Discovery**: Issue #83 was about the _landing page_ (`LandingPage.tsx`) — the page with 15 region checkboxes and sort buttons. I incorrectly modified the _district detail page_'s `GlobalRankingsTab.tsx` instead, had to revert, and start over. Reading the issue carefully and matching UI elements (region checkboxes, sort buttons) to the correct component would have saved ~40 minutes.
+
+**The Resulting Rule**: Before implementing any layout issue, open the live page, visually confirm which component owns the UI described in the issue, and trace that component in the codebase. Never assume from the issue title alone.
+
+**Secondary Lesson**: When "above the fold" is the goal, prioritize content reordering and progressive disclosure (`<details>`) over size tweaks. Native HTML `<details>` provides collapse behavior with zero JS overhead and built-in accessibility.
+
+---
+
 ## 🗓️ 2026-02-22 — Lesson 05: Sparse Input = Sparse Output in Pre-computed Analytics
 
 **The Discovery**: The club-trends-index only had 2 data points per club because `AnalyticsComputeService` loads exactly 2 snapshots (current + previous year) for YoY computation. The `AnalyticsComputer` faithfully copies this sparsity into all derived data including club trends.
