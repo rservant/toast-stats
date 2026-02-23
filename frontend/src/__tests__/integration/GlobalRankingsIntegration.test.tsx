@@ -314,15 +314,6 @@ describe('GlobalRankingsIntegration', () => {
       expect(screen.getAllByText('2022-2023').length).toBeGreaterThan(0)
     })
 
-    it('should display data freshness timestamp', async () => {
-      mockUseGlobalRankings.mockReturnValue(createMockHookResult())
-
-      renderWithProviders(<GlobalRankingsTab {...baseProps} />)
-
-      // Verify timestamp is displayed
-      expect(screen.getByText(/Last updated:/)).toBeInTheDocument()
-    })
-
     it('should correctly display rank positions with total districts', async () => {
       mockUseGlobalRankings.mockReturnValue(createMockHookResult())
 

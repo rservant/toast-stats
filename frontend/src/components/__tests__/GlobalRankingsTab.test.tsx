@@ -432,11 +432,14 @@ describe('GlobalRankingsTab', () => {
       // Should render EndOfYearRankingsPanel
       expect(screen.getByText('End-of-Year Rankings')).toBeInTheDocument()
 
-      // Should render FullYearRankingChart
-      expect(screen.getByText('Ranking Progression')).toBeInTheDocument()
-
       // Should render MultiYearComparisonTable
       expect(screen.getByText('Multi-Year Comparison')).toBeInTheDocument()
+
+      // Should render FullYearRankingChart inside collapsed details
+      const details = screen.getByRole('group', {
+        name: /Historical Rank Progression/i,
+      })
+      expect(details).toBeInTheDocument()
     })
 
     it('does not render its own ProgramYearSelector', () => {
@@ -583,36 +586,60 @@ describe('GlobalRankingsTab', () => {
     })
   })
 
-  describe('Data Freshness Timestamp', () => {
-    it('displays data freshness timestamp when available', () => {
+  describe('Layout Order', () => {
+    it('renders MultiYearComparisonTable before FullYearRankingChart in DOM order', () => {
       mockUseGlobalRankings.mockReturnValue(createMockHookResult())
 
-      renderWithProviders(<GlobalRankingsTab {...baseProps} />)
-
-      // Should show last updated timestamp
-      expect(screen.getByText(/Last updated:/)).toBeInTheDocument()
-    })
-
-    it('does not display timestamp when endOfYearRankings is null', () => {
-      mockUseGlobalRankings.mockReturnValue(
-        createMockHookResult({
-          endOfYearRankings: null,
-        })
+      const { container } = renderWithProviders(
+        <GlobalRankingsTab {...baseProps} />
       )
 
-      renderWithProviders(<GlobalRankingsTab {...baseProps} />)
+      const multiYearHeading = screen.getByText('Multi-Year Comparison')
+      const chartDetails = container.querySelector('details')
 
-      // Should not show last updated timestamp
-      expect(screen.queryByText(/Last updated:/)).not.toBeInTheDocument()
+      // Both should exist
+      expect(multiYearHeading).toBeInTheDocument()
+      expect(chartDetails).toBeInTheDocument()
+
+      // MultiYear should come before the chart details element in DOM order
+      const mainRegion = screen.getByRole('region', {
+        name: /Global rankings/i,
+      })
+      const children = Array.from(mainRegion.children)
+      const multiYearIndex = children.findIndex(el =>
+        el.contains(multiYearHeading)
+      )
+      const chartIndex = children.findIndex(
+        el => el === chartDetails || el.contains(chartDetails)
+      )
+      expect(multiYearIndex).toBeLessThan(chartIndex)
     })
 
-    it('timestamp has proper accessibility label', () => {
+    it('renders chart inside a collapsed details element by default', () => {
+      mockUseGlobalRankings.mockReturnValue(createMockHookResult())
+
+      const { container } = renderWithProviders(
+        <GlobalRankingsTab {...baseProps} />
+      )
+
+      const details = container.querySelector('details')
+      expect(details).toBeInTheDocument()
+      // Should NOT have the open attribute by default
+      expect(details).not.toHaveAttribute('open')
+
+      // Summary text should be visible
+      const summary = details!.querySelector('summary')
+      expect(summary).toBeInTheDocument()
+      expect(summary).toHaveTextContent(/Historical Rank Progression/i)
+    })
+
+    it('does not render standalone DataFreshness timestamp', () => {
       mockUseGlobalRankings.mockReturnValue(createMockHookResult())
 
       renderWithProviders(<GlobalRankingsTab {...baseProps} />)
 
-      const timestampElement = screen.getByLabelText(/Rankings last updated/i)
-      expect(timestampElement).toBeInTheDocument()
+      // The standalone DataFreshness section should not exist
+      expect(screen.queryByText(/Last updated:/)).not.toBeInTheDocument()
     })
   })
 
@@ -679,8 +706,8 @@ describe('GlobalRankingsTab', () => {
         <GlobalRankingsTab {...baseProps} />
       )
 
-      // Main container should have space-y-6 for vertical spacing
-      const mainContainer = container.querySelector('.space-y-6')
+      // Main container should have space-y-4 for compact vertical spacing
+      const mainContainer = container.querySelector('.space-y-4')
       expect(mainContainer).toBeInTheDocument()
     })
   })
