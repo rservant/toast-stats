@@ -7,6 +7,7 @@ import HistoricalRankChart from '../components/HistoricalRankChart'
 import { useProgramYear } from '../contexts/ProgramYearContext'
 import { ProgramYearSelector } from '../components/ProgramYearSelector'
 import { useRankHistory } from '../hooks/useRankHistory'
+import InfoTooltip from '../components/InfoTooltip'
 import {
   getAvailableProgramYears,
   filterDatesByProgramYear,
@@ -634,15 +635,19 @@ const LandingPage: React.FC = () => {
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Paid Clubs
+                    <InfoTooltip text="Number of clubs with paid memberships. Rank and year-over-year growth shown below." />
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Total Payments
+                    <InfoTooltip text="Year-to-date membership payment count. Higher payments indicate active member engagement." />
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Distinguished
+                    <InfoTooltip text="Clubs achieving Distinguished status or higher. Reflects club-level goal completion." />
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Score
+                    <InfoTooltip text="Borda-count composite of Paid Clubs, Payments, and Distinguished rankings. Higher is better." />
                   </th>
                 </tr>
               </thead>
