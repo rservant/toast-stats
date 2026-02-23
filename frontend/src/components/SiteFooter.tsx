@@ -4,13 +4,13 @@ const SiteFooter: React.FC = () => {
   return (
     <footer
       role="contentinfo"
-      className="bg-tm-loyal-blue text-white py-6 mt-auto"
+      className="bg-tm-loyal-blue text-white py-4 mt-auto"
       style={{
         borderTop: '3px solid var(--tm-happy-yellow, #F2A900)',
       }}
     >
       <div className="container mx-auto px-4 max-w-[2560px]">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-sm font-tm-body">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-sm font-tm-body leading-relaxed">
           {/* Attribution */}
           <div className="text-white/80 md:flex-1">
             Built by{' '}
@@ -25,7 +25,7 @@ const SiteFooter: React.FC = () => {
           </div>
 
           {/* Links */}
-          <div className="flex items-center gap-4">
+          <div className="inline-flex items-center gap-4">
             <a
               href="https://github.com/rservant/toast-stats"
               target="_blank"
@@ -51,7 +51,7 @@ const SiteFooter: React.FC = () => {
               href="https://github.com/rservant/toast-stats/issues"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-white/80 hover:text-white transition-colors"
+              className="inline-flex items-center text-white/80 hover:text-white transition-colors"
             >
               Feedback & Issues
             </a>
