@@ -32,6 +32,7 @@ import { TopGrowthClubs } from '../components/TopGrowthClubs'
 import { DCPGoalAnalysis } from '../components/DCPGoalAnalysis'
 import { DivisionPerformanceCards } from '../components/DivisionPerformanceCards'
 import { DivisionAreaRecognitionPanel } from '../components/DivisionAreaRecognitionPanel'
+import { DCPProjectionsTable } from '../components/DCPProjectionsTable'
 
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
@@ -778,6 +779,14 @@ const DistrictDetailPage: React.FC = () => {
                       isLoading={isLoadingDistinguished}
                     />
                   </LazyChart>
+                )}
+
+                {/* DCP Projections Table */}
+                {analytics && (
+                  <DCPProjectionsTable
+                    clubs={analytics.allClubs}
+                    isLoading={isLoadingAnalytics}
+                  />
                 )}
               </>
             )}
