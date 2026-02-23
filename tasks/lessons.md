@@ -17,6 +17,20 @@
 
 ---
 
+## 🗓️ 2026-02-23 — Lesson 12: Global UI Elements Belong in the Router Layout (#88)
+
+**The Discovery**: Adding a site-wide footer required placing it in the `Layout` function inside `App.tsx` — the component that wraps all routes via `<Outlet />`. Placing it in individual pages or in `DashboardLayout` would have missed some pages or required duplication.
+
+**The Scientific Proof**: After adding `<SiteFooter />` after `<Outlet />` in Layout, both the landing page and all district detail pages rendered the footer without any page-specific changes.
+
+**The Farley Principle Applied**: Single Responsibility + DRY — global decorators (header, footer, skip links) belong at the router layout level, not in individual pages.
+
+**The Resulting Rule**: Any UI element that must appear on _every_ page should be added to the `Layout` function in `App.tsx`. Never duplicate global elements across individual page components.
+
+**Future Warning**: If adding a header/nav bar in the future, it should also go in `Layout`. Be careful not to nest it inside `DashboardLayout` (which is page-specific) or individual pages.
+
+---
+
 ## 🗓️ 2026-02-23 — Lesson 11: Check Type Definitions for Unused Fields Before Adding Backend Work (#89)
 
 **The Discovery**: The ranking chart's Overall tab showed Borda count score (`aggregateScore`) instead of rank. The fix required switching to `overallRank`, which was already pre-computed by `BordaCountRankingCalculator`, served by the API, and typed as `overallRank?: number` in `HistoricalRankPoint` — but never wired into the chart component.
