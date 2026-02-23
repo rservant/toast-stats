@@ -4,6 +4,7 @@ import { queryClient } from './config/queryClient'
 import { ProgramYearProvider } from './contexts/ProgramYearContext'
 import LandingPage from './pages/LandingPage'
 import DistrictDetailPage from './pages/DistrictDetailPage'
+import SiteFooter from './components/SiteFooter'
 
 function Layout(): React.JSX.Element {
   return (
@@ -12,6 +13,7 @@ function Layout(): React.JSX.Element {
         Skip to main content
       </a>
       <Outlet />
+      <SiteFooter />
     </>
   )
 }
