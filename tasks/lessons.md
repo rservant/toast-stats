@@ -3,6 +3,15 @@
 <!-- Each lesson follows this structure. Newest entries go at the top. -->
 <!-- The agent reads the last 5 entries before starting any task. -->
 
+### Lesson 09 — Batch Similar Mobile Issues for Efficient CSS-Only Fixes (#85, #86, #87)
+
+**Date**: 2026-02-23  
+**Context**: Three mobile UX issues — sticky table columns, tab overflow indicator, and oversized export button — were all CSS/markup-only fixes touching 4 files. Combining them into a single TDD cycle (8 tests, one commit) was faster than three separate issue branches.  
+**Lesson**: When multiple issues share the same root cause (responsive CSS gaps at a specific breakpoint), batch them. Write all failing tests first, then implement all fixes, then verify once. This avoids redundant test suite runs and context switches.  
+**Future Warning**: Batching only works for independent, non-overlapping fixes. If two issues modify the same component in conflicting ways, handle them sequentially.
+
+---
+
 ### Lesson 08 — Pre-computed Type Contracts Must Mirror Frontend Expectations (Issue #84)
 
 **Date**: 2026-02-22  
