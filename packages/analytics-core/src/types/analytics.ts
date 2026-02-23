@@ -53,6 +53,8 @@ export interface DistrictAnalytics {
   distinguishedProjection: DistinguishedProjection
   divisionRankings: DivisionRanking[]
   topPerformingAreas: AreaPerformance[]
+  /** Top clubs by membership growth (positive growth only, sorted descending) */
+  topGrowthClubs: Array<{ clubId: string; clubName: string; growth: number }>
 }
 
 /**

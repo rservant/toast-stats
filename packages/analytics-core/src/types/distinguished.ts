@@ -164,4 +164,9 @@ export interface DistinguishedClubAnalyticsData {
     select: { current: number; projected: number; trend: string }
     distinguished: { current: number; projected: number; trend: string }
   }
+  /** DCP goal analysis — most/least commonly achieved goals across clubs */
+  dcpGoalAnalysis?: {
+    mostCommonlyAchieved: DCPGoalAnalysis[]
+    leastCommonlyAchieved: DCPGoalAnalysis[]
+  }
 }

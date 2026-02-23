@@ -185,6 +185,20 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       new Date().toISOString().split('T')[0] ||
       ''
 
+    // Compute membership analytics first so we can include topGrowthClubs in districtAnalytics
+    // Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1
+    const membershipAnalytics = this.computeMembershipAnalytics(
+      districtId,
+      sortedSnapshots
+    )
+
+    // Compute top growth clubs from MembershipAnalyticsModule
+    // Issue #84: topGrowthClubs must be included in the base districtAnalytics
+    const topGrowthClubs = this.membershipModule.generateMembershipAnalytics(
+      districtId,
+      sortedSnapshots
+    ).topGrowthClubs
+
     // Build district analytics (base result)
     const districtAnalytics: DistrictAnalytics = {
       districtId,
@@ -203,14 +217,10 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       distinguishedProjection,
       divisionRankings,
       topPerformingAreas,
+      topGrowthClubs,
     }
 
-    // Compute all extended analytics using the new methods
-    // Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 6.1, 7.1
-    const membershipAnalytics = this.computeMembershipAnalytics(
-      districtId,
-      sortedSnapshots
-    )
+    // Compute remaining extended analytics
     const vulnerableClubs = this.computeVulnerableClubs(districtId, clubHealth)
     const leadershipInsights = this.computeLeadershipInsights(
       districtId,
@@ -889,6 +899,14 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       districtSnapshots
     )
 
+    // Compute DCP goal analysis (Issue #84)
+    // Uses the full generateDistinguishedClubAnalytics pipeline which includes analyzeDCPGoals
+    const fullAnalytics =
+      this.distinguishedModule.generateDistinguishedClubAnalytics(
+        districtId,
+        districtSnapshots
+      )
+
     return {
       districtId,
       dateRange,
@@ -896,6 +914,7 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       distinguishedClubsList,
       distinguishedProjection,
       progressByLevel,
+      dcpGoalAnalysis: fullAnalytics.dcpGoalAnalysis,
     }
   }
 
