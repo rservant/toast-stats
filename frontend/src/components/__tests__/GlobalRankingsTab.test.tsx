@@ -480,7 +480,7 @@ describe('GlobalRankingsTab', () => {
 
       // Check that chart metric toggles are present
       expect(
-        screen.getByRole('button', { name: /View Overall Score/i })
+        screen.getByRole('button', { name: /View Overall Rank/i })
       ).toBeInTheDocument()
       expect(
         screen.getByRole('button', { name: /View Paid Clubs Rank/i })
@@ -542,7 +542,7 @@ describe('GlobalRankingsTab', () => {
 
       // Find metric toggle buttons
       const overallButton = screen.getByRole('button', {
-        name: /View Overall Score/i,
+        name: /View Overall Rank/i,
       })
       const clubsButton = screen.getByRole('button', {
         name: /View Paid Clubs Rank/i,
@@ -567,7 +567,7 @@ describe('GlobalRankingsTab', () => {
 
       // Initially aggregate should be selected
       const aggregateButton = screen.getByRole('button', {
-        name: /View Overall Score/i,
+        name: /View Overall Rank/i,
       })
       expect(aggregateButton).toHaveAttribute('aria-pressed', 'true')
 

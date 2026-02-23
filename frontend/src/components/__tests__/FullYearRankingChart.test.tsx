@@ -53,6 +53,8 @@ describe('FullYearRankingChart', () => {
         clubsRank: 15,
         paymentsRank: 20,
         distinguishedRank: 10,
+        totalDistricts: 120,
+        overallRank: 50,
       },
       {
         date: '2024-08-15',
@@ -60,6 +62,8 @@ describe('FullYearRankingChart', () => {
         clubsRank: 12,
         paymentsRank: 18,
         distinguishedRank: 8,
+        totalDistricts: 120,
+        overallRank: 40,
       },
       {
         date: '2024-09-15',
@@ -67,6 +71,8 @@ describe('FullYearRankingChart', () => {
         clubsRank: 10,
         paymentsRank: 15,
         distinguishedRank: 5,
+        totalDistricts: 120,
+        overallRank: 30,
       },
     ],
     programYear: {
@@ -174,7 +180,7 @@ describe('FullYearRankingChart', () => {
       renderWithProviders(<FullYearRankingChart {...baseProps} />)
 
       expect(
-        screen.getByRole('button', { name: /View Overall Score/i })
+        screen.getByRole('button', { name: /View Overall Rank/i })
       ).toBeInTheDocument()
       expect(
         screen.getByRole('button', { name: /View Paid Clubs Rank/i })
@@ -198,7 +204,7 @@ describe('FullYearRankingChart', () => {
       expect(clubsButton).toHaveAttribute('aria-pressed', 'true')
 
       const overallButton = screen.getByRole('button', {
-        name: /View Overall Score/i,
+        name: /View Overall Rank/i,
       })
       expect(overallButton).toHaveAttribute('aria-pressed', 'false')
     })
@@ -224,7 +230,7 @@ describe('FullYearRankingChart', () => {
         'distinguished',
       ]
       const buttonLabels = [
-        /View Overall Score/i,
+        /View Overall Rank/i,
         /View Paid Clubs Rank/i,
         /View Membership Payments Rank/i,
         /View Distinguished Clubs Rank/i,
@@ -275,13 +281,13 @@ describe('FullYearRankingChart', () => {
       expect(yAxis).toHaveAttribute('data-reversed', 'true')
     })
 
-    it('Y-axis is NOT reversed for aggregate score', () => {
+    it('Y-axis IS reversed for overall rank', () => {
       renderWithProviders(
         <FullYearRankingChart {...baseProps} selectedMetric="aggregate" />
       )
 
       const yAxis = screen.getByTestId('y-axis')
-      expect(yAxis).toHaveAttribute('data-reversed', 'false')
+      expect(yAxis).toHaveAttribute('data-reversed', 'true')
     })
   })
 
@@ -374,6 +380,8 @@ describe('FullYearRankingChart', () => {
             clubsRank: 5,
             paymentsRank: 10,
             distinguishedRank: 8,
+            totalDistricts: 120,
+            overallRank: 20,
           },
           {
             date: '2024-08-15',
@@ -381,6 +389,8 @@ describe('FullYearRankingChart', () => {
             clubsRank: 10,
             paymentsRank: 15,
             distinguishedRank: 12,
+            totalDistricts: 120,
+            overallRank: 30,
           },
         ],
       }
@@ -409,6 +419,8 @@ describe('FullYearRankingChart', () => {
             clubsRank: 10,
             paymentsRank: 15,
             distinguishedRank: 8,
+            totalDistricts: 120,
+            overallRank: 25,
           },
           {
             date: '2024-08-15',
@@ -416,6 +428,8 @@ describe('FullYearRankingChart', () => {
             clubsRank: 10,
             paymentsRank: 15,
             distinguishedRank: 8,
+            totalDistricts: 120,
+            overallRank: 25,
           },
         ],
       }
@@ -445,7 +459,7 @@ describe('FullYearRankingChart', () => {
       expect(srDescription?.textContent).toContain('rank 1 at the top')
     })
 
-    it('does not mention inverted Y-axis for aggregate score', () => {
+    it('mentions inverted Y-axis for overall rank', () => {
       const { container } = renderWithProviders(
         <FullYearRankingChart {...baseProps} selectedMetric="aggregate" />
       )
@@ -453,7 +467,7 @@ describe('FullYearRankingChart', () => {
       const srDescription = container.querySelector(
         '#full-year-rank-chart-desc'
       )
-      expect(srDescription?.textContent).not.toContain('rank 1 at the top')
+      expect(srDescription?.textContent).toContain('rank 1 at the top')
     })
   })
 
@@ -502,7 +516,7 @@ describe('FullYearRankingChart', () => {
       )
 
       const unselectedButton = screen.getByRole('button', {
-        name: /View Overall Score/i,
+        name: /View Overall Rank/i,
       })
       expect(unselectedButton).toHaveClass('bg-gray-200')
     })
@@ -520,6 +534,8 @@ describe('FullYearRankingChart', () => {
             clubsRank: 10,
             paymentsRank: 15,
             distinguishedRank: 5,
+            totalDistricts: 120,
+            overallRank: 30,
           },
           {
             date: '2024-07-15',
@@ -527,6 +543,8 @@ describe('FullYearRankingChart', () => {
             clubsRank: 15,
             paymentsRank: 20,
             distinguishedRank: 10,
+            totalDistricts: 120,
+            overallRank: 50,
           },
           {
             date: '2024-08-15',
@@ -534,6 +552,8 @@ describe('FullYearRankingChart', () => {
             clubsRank: 12,
             paymentsRank: 18,
             distinguishedRank: 8,
+            totalDistricts: 120,
+            overallRank: 40,
           },
         ],
       }

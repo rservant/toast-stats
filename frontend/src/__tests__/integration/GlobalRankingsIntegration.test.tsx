@@ -273,7 +273,7 @@ describe('GlobalRankingsIntegration', () => {
 
       // Verify metric toggle buttons are present
       expect(
-        screen.getByRole('button', { name: /View Overall Score/i })
+        screen.getByRole('button', { name: /View Overall Rank/i })
       ).toBeInTheDocument()
       expect(
         screen.getByRole('button', { name: /View Paid Clubs Rank/i })
@@ -395,7 +395,7 @@ describe('GlobalRankingsIntegration', () => {
 
       // Find metric toggle buttons
       const overallButton = screen.getByRole('button', {
-        name: /View Overall Score/i,
+        name: /View Overall Rank/i,
       })
       const clubsButton = screen.getByRole('button', {
         name: /View Paid Clubs Rank/i,
@@ -716,7 +716,7 @@ describe('GlobalRankingsIntegration', () => {
 
       // Find metric toggle buttons
       const overallButton = screen.getByRole('button', {
-        name: /View Overall Score/i,
+        name: /View Overall Rank/i,
       })
       const clubsButton = screen.getByRole('button', {
         name: /View Paid Clubs Rank/i,

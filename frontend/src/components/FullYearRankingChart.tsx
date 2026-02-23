@@ -48,10 +48,10 @@ interface MetricConfig {
 
 const METRIC_CONFIG: Record<RankMetric, MetricConfig> = {
   aggregate: {
-    label: 'Overall Score',
+    label: 'Overall Rank',
     shortLabel: 'Overall',
-    dataKey: 'aggregateScore',
-    description: 'Aggregate Borda count score (lower is better)',
+    dataKey: 'overallRank',
+    description: 'Overall ranking position based on aggregate score (1 = best)',
   },
   clubs: {
     label: 'Paid Clubs Rank',
@@ -123,7 +123,6 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
     ? formatLongDate(dateToFormat)
     : 'Unknown date'
   const metricConfig = METRIC_CONFIG[selectedMetric]
-  const isRankMetric = selectedMetric !== 'aggregate'
 
   // Get the value - it could be in dataPoint.value or dataPoint.payload.value
   const value = dataPoint.value ?? dataPoint.payload?.value ?? 0
@@ -137,8 +136,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
         {formattedDate}
       </p>
       <p className="text-sm text-tm-loyal-blue whitespace-nowrap">
-        {metricConfig.shortLabel}:{' '}
-        {isRankMetric ? `Rank #${value}` : `Score ${Math.round(value)}`}
+        {metricConfig.shortLabel}: Rank #{value}
       </p>
     </div>
   )
@@ -272,7 +270,6 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
   }
 
   const metricConfig = METRIC_CONFIG[selectedMetric]
-  const isRankMetric = selectedMetric !== 'aggregate'
 
   // Sort history chronologically
   const sortedHistory = [...data.history].sort((a, b) =>
@@ -380,14 +377,10 @@ const FullYearRankingChart: React.FC<FullYearRankingChartProps> = ({
                 stroke="var(--tm-cool-gray)"
                 style={{ fontSize: '10px' }}
                 width={50}
-                reversed={isRankMetric}
-                {...(isRankMetric
-                  ? { domain: ['dataMin', 'dataMax'] as const }
-                  : {})}
+                reversed={true}
+                domain={['dataMin', 'dataMax'] as const}
                 label={{
-                  value: isRankMetric
-                    ? 'Rank (1 = best)'
-                    : 'Score (lower is better)',
+                  value: 'Rank (1 = best)',
                   angle: -90,
                   position: 'insideLeft',
                   style: { fontSize: '12px' },
@@ -450,36 +443,22 @@ function generateChartDescription(
     return `${metricConfig.label} chart for ${data.districtName} in the ${programYear.label} program year.`
   }
 
-  const isRankMetric = selectedMetric !== 'aggregate'
-  const valueLabel = isRankMetric ? 'rank' : 'score'
-
   // Calculate trend
   const startValue = firstPoint.value
   const endValue = lastPoint.value
   const change = endValue - startValue
 
+  // All metrics are now rank-based (#89), lower rank is better
   let trendDescription: string
-  if (isRankMetric) {
-    // For ranks, lower is better
-    if (change < 0) {
-      trendDescription = `improved from rank ${startValue} to rank ${endValue}`
-    } else if (change > 0) {
-      trendDescription = `declined from rank ${startValue} to rank ${endValue}`
-    } else {
-      trendDescription = `remained at rank ${startValue}`
-    }
+  if (change < 0) {
+    trendDescription = `improved from rank ${startValue} to rank ${endValue}`
+  } else if (change > 0) {
+    trendDescription = `declined from rank ${startValue} to rank ${endValue}`
   } else {
-    // For aggregate score, lower is better
-    if (change < 0) {
-      trendDescription = `improved from score ${Math.round(startValue)} to score ${Math.round(endValue)}`
-    } else if (change > 0) {
-      trendDescription = `declined from score ${Math.round(startValue)} to score ${Math.round(endValue)}`
-    } else {
-      trendDescription = `remained at score ${Math.round(startValue)}`
-    }
+    trendDescription = `remained at rank ${startValue}`
   }
 
-  return `Line chart showing ${metricConfig.label} progression for ${data.districtName} over the ${programYear.label} program year. The chart contains ${dataPointCount} data points. The district ${trendDescription}. The ${valueLabel} is displayed on the Y-axis${isRankMetric ? ' with rank 1 at the top' : ''}, and dates are shown on the X-axis.`
+  return `Line chart showing ${metricConfig.label} progression for ${data.districtName} over the ${programYear.label} program year. The chart contains ${dataPointCount} data points. The district ${trendDescription}. The rank is displayed on the Y-axis with rank 1 at the top, and dates are shown on the X-axis.`
 }
 
 export default FullYearRankingChart

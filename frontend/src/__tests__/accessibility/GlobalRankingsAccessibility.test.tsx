@@ -474,7 +474,7 @@ describe('Global Rankings Accessibility Tests', () => {
 
         // Find all metric toggle buttons
         const overallButton = screen.getByRole('button', {
-          name: /View Overall Score/i,
+          name: /View Overall Rank/i,
         })
         const clubsButton = screen.getByRole('button', {
           name: /View Paid Clubs Rank/i,
@@ -523,7 +523,7 @@ describe('Global Rankings Accessibility Tests', () => {
           name: /View Paid Clubs Rank/i,
         })
         const overallButton = screen.getByRole('button', {
-          name: /View Overall Score/i,
+          name: /View Overall Rank/i,
         })
 
         expect(clubsButton).toHaveAttribute('aria-pressed', 'true')
