@@ -3,6 +3,14 @@
 <!-- Each lesson follows this structure. Newest entries go at the top. -->
 <!-- The agent reads the last 5 entries before starting any task. -->
 
+### Lesson 08 — Pre-computed Type Contracts Must Mirror Frontend Expectations (Issue #84)
+
+**Date**: 2026-02-22  
+**Context**: `topGrowthClubs` and `dcpGoalAnalysis` were **computed** correctly by `MembershipAnalyticsModule` and `DistinguishedClubAnalyticsModule` respectively, but never included in the pre-computed JSON types (`DistrictAnalytics`, `DistinguishedClubAnalyticsData`). The data was there internally but never surfaced to the JSON files that the backend serves.  
+**Root Cause**: When `AnalyticsComputer` was designed, these fields were placed in separate extended analytics types but omitted from the base types that map to the actual JSON files served by the API. The frontend types expected them, but the backend pipeline didn't produce them.  
+**Fix**: Added the fields to the pre-computed types and wired the already-computed data into the output objects.  
+**Lesson**: When adding a new field to the frontend, always trace the data through to the pre-computed type that backs the API endpoint. The type contracts at the serialization boundary (JSON files) are what matter, not just the internal computation types.
+
 <!--
 ## 🗓️ [YYYY-MM-DD] — Lesson NN: [Title]
 
