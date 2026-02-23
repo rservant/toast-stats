@@ -164,30 +164,37 @@ const LandingPage: React.FC = () => {
     return rankings.filter(r => selectedRegions.includes(r.region))
   }, [rankings, selectedRegions])
 
-  // Filter by search query (district number or name)
-  const searchFilteredRankings = React.useMemo(() => {
-    if (!searchQuery.trim()) return filteredRankings
+  // Sort by selected column (before search, so ranks are stable)
+  const sortedRankings = React.useMemo(() => {
+    const sorted = [...filteredRankings]
+    switch (sortBy) {
+      case 'clubs':
+        return sorted.sort((a, b) => a.clubsRank - b.clubsRank)
+      case 'payments':
+        return sorted.sort((a, b) => a.paymentsRank - b.paymentsRank)
+      case 'distinguished':
+        return sorted.sort((a, b) => a.distinguishedRank - b.distinguishedRank)
+      default:
+        return sorted.sort((a, b) => b.aggregateScore - a.aggregateScore)
+    }
+  }, [filteredRankings, sortBy])
+
+  // Assign stable ranks BEFORE search filtering
+  const rankedRankings = React.useMemo(
+    () => sortedRankings.map((d, i) => ({ ...d, displayRank: i + 1 })),
+    [sortedRankings]
+  )
+
+  // Filter by search query (district number or name) — rank is preserved
+  const displayRankings = React.useMemo(() => {
+    if (!searchQuery.trim()) return rankedRankings
     const query = searchQuery.trim().toLowerCase()
-    return filteredRankings.filter(
+    return rankedRankings.filter(
       r =>
         r.districtId.toLowerCase().includes(query) ||
         r.districtName.toLowerCase().includes(query)
     )
-  }, [filteredRankings, searchQuery])
-
-  const sortedRankings = React.useMemo(() => {
-    const sorted = [...searchFilteredRankings]
-    switch (sortBy) {
-      case 'clubs':
-        return sorted.sort((a, b) => a.clubsRank - b.clubsRank) // Lower rank is better
-      case 'payments':
-        return sorted.sort((a, b) => a.paymentsRank - b.paymentsRank) // Lower rank is better
-      case 'distinguished':
-        return sorted.sort((a, b) => a.distinguishedRank - b.distinguishedRank) // Lower rank is better
-      default:
-        return sorted.sort((a, b) => b.aggregateScore - a.aggregateScore) // Higher Borda score is better
-    }
-  }, [searchFilteredRankings, sortBy])
+  }, [rankedRankings, searchQuery])
 
   const handleDistrictClick = (districtId: string) => {
     navigate(`/district/${districtId}`)
@@ -652,8 +659,8 @@ const LandingPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {sortedRankings.map((district, index) => {
-                  const rank = index + 1
+                {displayRankings.map(district => {
+                  const rank = district.displayRank
                   return (
                     <tr
                       key={district.districtId}

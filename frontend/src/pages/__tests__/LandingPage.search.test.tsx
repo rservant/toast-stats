@@ -176,4 +176,32 @@ describe('LandingPage - District Search (#91)', () => {
     expect(screen.getByText('District 61')).toBeInTheDocument()
     expect(screen.getByText('District 83')).toBeInTheDocument()
   })
+
+  it('should retain original rank when filtering (#102)', async () => {
+    setupWithData()
+    renderWithProviders(<LandingPage />)
+
+    await screen.findByText('District 57')
+
+    // Before filtering: D57=rank 1 (score 300), D61=rank 2 (score 250), D83=rank 3 (score 200)
+    const searchInput = screen.getByPlaceholderText(/search/i)
+    fireEvent.change(searchInput, { target: { value: '61' } })
+
+    // District 61 should retain its original rank of 2, NOT become rank 1
+    expect(screen.getByText('District 61')).toBeInTheDocument()
+
+    // The rank badge should show "2" not "1"
+    const rankBadges = screen.getAllByText('2')
+    const rankBadge = rankBadges.find(el =>
+      el.closest('td')?.classList.contains('sticky')
+    )
+    expect(rankBadge).toBeDefined()
+
+    // Rank "1" should NOT be present (District 57 is filtered out)
+    const allOnes = screen.queryAllByText('1')
+    const rankOneInSticky = allOnes.find(el =>
+      el.closest('td')?.classList.contains('sticky')
+    )
+    expect(rankOneInSticky).toBeUndefined()
+  })
 })
