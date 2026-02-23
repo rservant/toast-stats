@@ -10,7 +10,7 @@
  * - 7.3: WHEN district configuration changes, THE Collector_CLI SHALL respect the updated configuration on next run
  */
 
-import * as path from 'path'
+import * as path from 'node:path'
 
 /**
  * Default cache directory path (matches backend's default)

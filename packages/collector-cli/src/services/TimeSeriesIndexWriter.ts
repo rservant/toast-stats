@@ -18,8 +18,8 @@
  * @see Requirements 4.1, 4.2, 4.5, 9.3, 10.2, 16.3
  */
 
-import fs from 'fs/promises'
-import path from 'path'
+import fs from 'node:fs/promises'
+import path from 'node:path'
 import { TimeSeriesDataPointBuilder } from '@toastmasters/analytics-core'
 import type {
   TimeSeriesDataPoint,

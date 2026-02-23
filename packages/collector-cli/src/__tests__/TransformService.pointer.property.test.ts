@@ -19,9 +19,9 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import * as fc from 'fast-check'
-import * as fs from 'fs/promises'
-import * as path from 'path'
-import * as os from 'os'
+import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
+import * as os from 'node:os'
 import { TransformService } from '../services/TransformService.js'
 import { SnapshotPointerSchema } from '@toastmasters/shared-contracts'
 

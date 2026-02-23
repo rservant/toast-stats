@@ -33,7 +33,6 @@
     "isolatedModules": true,
     "skipLibCheck": true,
     "types": ["node"],
-    "lib": ["ES2020", "DOM"],
     // Declaration files for library usage
     "declaration": true,
     "declarationMap": true

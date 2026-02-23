@@ -15,8 +15,8 @@
  * - 7.2: THE Collector_CLI SHALL use the same cache directory configuration as the Backend
  */
 
-import * as fs from 'fs/promises'
-import * as path from 'path'
+import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
 import { logger } from './utils/logger.js'
 import { CircuitBreaker, CircuitState } from './utils/CircuitBreaker.js'
 import { RetryManager } from './utils/RetryManager.js'

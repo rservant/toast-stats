@@ -18,7 +18,7 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fc from 'fast-check'
-import * as path from 'path'
+import * as path from 'node:path'
 import {
   resolveConfiguration,
   resolveCacheDirectory,

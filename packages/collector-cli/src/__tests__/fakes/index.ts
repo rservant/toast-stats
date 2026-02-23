@@ -7,8 +7,8 @@
  * Requirements: 8.4
  */
 
-import { type Dirent } from 'fs'
-import { Readable } from 'stream'
+import { type Dirent } from 'node:fs'
+import { Readable } from 'node:stream'
 import type {
   FileSystem,
   Hasher,
@@ -16,7 +16,7 @@ import type {
   Clock,
   ProgressReporter,
 } from '../../services/UploadService.js'
-import * as crypto from 'crypto'
+import * as crypto from 'node:crypto'
 
 // ─── FakeFileSystem ──────────────────────────────────────────────────────────
 

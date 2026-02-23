@@ -23,12 +23,12 @@
  */
 
 import { Storage, Bucket } from '@google-cloud/storage'
-import * as fs from 'fs/promises'
-import * as path from 'path'
-import * as crypto from 'crypto'
-import { type Dirent } from 'fs'
-import { Readable } from 'stream'
-import { pipeline } from 'stream/promises'
+import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
+import * as crypto from 'node:crypto'
+import { type Dirent } from 'node:fs'
+import { Readable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
 import type { Logger } from '@toastmasters/analytics-core'
 import type { UploadResult } from '../types/index.js'
 

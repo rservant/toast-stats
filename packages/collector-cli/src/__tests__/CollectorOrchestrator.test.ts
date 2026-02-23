@@ -9,8 +9,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import * as fs from 'fs/promises'
-import * as path from 'path'
+import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
 import { CollectorOrchestrator } from '../CollectorOrchestrator.js'
 import type { CollectorOrchestratorConfig } from '../types/index.js'
 

@@ -13,8 +13,8 @@
  *        files, metadata.json, manifest.json, and all-districts-rankings.json
  */
 
-import * as fs from 'fs/promises'
-import * as path from 'path'
+import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
 import { parse } from 'csv-parse/sync'
 import {
   DataTransformer,
