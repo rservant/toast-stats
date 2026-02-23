@@ -220,11 +220,12 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       const tabNav = screen.getByRole('navigation')
 
       // Verify all tabs are present within the navigation
-      // Note: Analytics tab is currently hidden (commented out in component)
+      // Note: Analytics tab is now re-enabled (#78)
       expect(tabNav).toHaveTextContent(/overview/i)
       expect(tabNav).toHaveTextContent(/clubs/i)
       expect(tabNav).toHaveTextContent(/divisions & areas/i)
       expect(tabNav).toHaveTextContent(/trends/i)
+      expect(tabNav).toHaveTextContent(/analytics/i)
       expect(tabNav).toHaveTextContent(/global rankings/i)
     })
 
@@ -235,13 +236,14 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
       const tabNav = screen.getByRole('navigation')
       const tabButtons = tabNav.querySelectorAll('button')
 
-      // Verify the order (Analytics tab is currently hidden)
-      expect(tabButtons).toHaveLength(5)
+      // Verify the order (Analytics tab is now re-enabled #78)
+      expect(tabButtons).toHaveLength(6)
       expect(tabButtons[0]).toHaveTextContent(/overview/i)
       expect(tabButtons[1]).toHaveTextContent(/clubs/i)
       expect(tabButtons[2]).toHaveTextContent(/divisions & areas/i)
       expect(tabButtons[3]).toHaveTextContent(/trends/i)
-      expect(tabButtons[4]).toHaveTextContent(/global rankings/i)
+      expect(tabButtons[4]).toHaveTextContent(/analytics/i)
+      expect(tabButtons[5]).toHaveTextContent(/global rankings/i)
     })
   })
 
@@ -370,7 +372,7 @@ describe('DistrictDetailPage - Global Rankings Tab Navigation Integration', () =
         name: /global rankings/i,
       })
 
-      // Get the tab navigation and find the Trends tab within it (Analytics is currently hidden)
+      // Get the tab navigation and find the Trends tab within it (Analytics is now re-enabled)
       const tabNav = screen.getByRole('navigation')
       const tabButtons = tabNav.querySelectorAll('button')
       const trendsTab = Array.from(tabButtons).find(btn =>
