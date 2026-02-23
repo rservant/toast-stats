@@ -12,7 +12,7 @@ const SiteFooter: React.FC = () => {
       <div className="container mx-auto px-4 max-w-[2560px]">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 text-sm font-tm-body">
           {/* Attribution */}
-          <div className="text-white/80">
+          <div className="text-white/80 md:flex-1">
             Built by{' '}
             <a
               href="https://github.com/rservant"
@@ -58,7 +58,7 @@ const SiteFooter: React.FC = () => {
           </div>
 
           {/* Disclaimer */}
-          <div className="text-white/60 text-xs">
+          <div className="text-white/60 text-xs md:flex-1 md:text-right">
             Unofficial tool — not affiliated with Toastmasters International
           </div>
         </div>
