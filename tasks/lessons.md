@@ -120,3 +120,10 @@
 **The Resulting Rule**: When a façade delegates to sub-modules, any method that constructs paths directly (rather than delegating) must also call the shared validation utilities (`validateDistrictId`, `resolvePathUnderBase`).
 
 **Future Warning**: If a new method is added to `SnapshotStore` that accepts `districtId` or `snapshotId` and constructs paths inline, it must validate inputs. Audit all `path.join` calls using user-supplied values.
+
+### Lesson 11 — Check Type Definitions for Unused Fields Before Adding Backend Work (#89)
+
+**Date**: 2026-02-23  
+**Context**: The ranking chart's Overall tab showed Borda count score (`aggregateScore`) instead of rank. The fix required switching to `overallRank`, which was already pre-computed by `BordaCountRankingCalculator`, served by the API, and typed as `overallRank?: number` in `HistoricalRankPoint` — but never wired into the chart component.  
+**Lesson**: When a frontend feature needs a "new" data field, always check the existing type definitions first. Fields may already be computed and served but not yet used by the UI. This saved what could have been a backend + pipeline change into a frontend-only fix.  
+**Future Warning**: When all metrics in a chart share the same semantics (e.g., all are ranks), remove conditional branching entirely rather than leaving `const isRankMetric = true`. Dead branches hide design intent and cause confusion in future maintenance.
