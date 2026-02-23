@@ -25,9 +25,8 @@ Use this checklist to ensure a secure and successful production deployment.
 
 ### Build Verification
 
-- [ ] Backend builds successfully: `cd backend && npm run build`
-- [ ] Frontend builds successfully: `cd frontend && npm run build`
-- [ ] All tests pass: `npm run test:backend && npm run test:frontend`
+- [ ] All workspaces build successfully: `npm run build:frontend && npm run build:backend && npm run build:analytics-core && npm run build:scraper-cli`
+- [ ] All tests pass: `npm test`
 - [ ] No TypeScript errors
 - [ ] No linting errors
 
@@ -102,16 +101,15 @@ Use this checklist to ensure a secure and successful production deployment.
 
 ### Verification
 
-- [ ] Backend health check responds: `curl https://api.yourdomain.com/health`
-- [ ] Frontend loads correctly: `curl https://yourdomain.com/health`
-- [ ] Login functionality works
-- [ ] District selection works
-- [ ] Data visualizations load
+- [ ] Frontend loads correctly at production URL
+- [ ] Global Rankings table displays correctly
+- [ ] District detail pages load with Overview tab
+- [ ] Analytics tab shows leadership scores and DCP data
+- [ ] Trends tab shows historical charts
+- [ ] Global Rankings tab shows per-district ranking data
+- [ ] Data visualizations load without errors
 - [ ] Export functionality works
 - [ ] Mobile responsive design works
-- [ ] All API endpoints respond correctly
-- [ ] District rankings display correctly
-- [ ] All data visualizations load properly
 
 ### Security Verification
 

@@ -1,6 +1,8 @@
 # Toastmasters District Statistics Visualizer
 
-A web application for visualizing Toastmasters district statistics with an intuitive interface for viewing and analyzing district-level performance data.
+A data visualization platform for Toastmasters district leaders to track performance metrics, compare districts globally, and make data-driven decisions.
+
+**Live site:** [ts.taverns.red](https://ts.taverns.red)
 
 ## Project Structure
 
@@ -111,8 +113,8 @@ npm run lint
 
 ### Shared Packages
 
-- `@toastmasters-tracker/shared-contracts` - TypeScript types and Zod schemas
-- `@toastmasters/analytics-core` - Analytics computation logic
+- `@toastmasters/shared-contracts` - TypeScript types and Zod schemas shared across all packages
+- `@toastmasters/analytics-core` - Analytics computation engine (membership, club health, distinguished, leadership)
 
 ## Data Source
 
@@ -169,15 +171,37 @@ USE_MOCK_DATA=false  # Use real data from cache (requires scraper-cli to populat
 
 ## Features
 
-- User authentication (placeholder for development)
-- District selection and statistics viewing
-- Membership statistics visualization
-- Club performance metrics
-- Educational achievement tracking
-- Daily report viewing and analysis
-- Data export functionality
-- Responsive design for all devices
-- Accessibility compliant
+### Global Rankings
+
+- Composite scoring system (Borda count) across all districts worldwide
+- Region-level filtering and historical rank progression charts
+- Scoring methodology breakdown with per-metric rankings
+
+### District Overview
+
+- Performance target cards with recognition-level thresholds (Distinguished → Smedley)
+- World rank, region rank, and percentile for each metric
+- Club health categorization (thriving / vulnerable / intervention required)
+- Distinguished club projection and progress tracking
+- DAP/DDP (Distinguished Area/Division Program) recognition panels
+
+### Analytics
+
+- Leadership effectiveness scores by division (weighted Health/Growth/DCP)
+- Top growth clubs and DCP goal analysis
+- Membership and payments trend charts with year-over-year comparison
+
+### Club Detail
+
+- Per-club membership trend graphs with historical data
+- DCP goal progress, health score, and risk factors
+- Division and area performance comparison
+
+### Data & Export
+
+- CSV export of district analytics
+- Program year and date-specific snapshot selection
+- Pre-computed analytics pipeline for fast page loads
 
 ## Project History
 
@@ -210,27 +234,33 @@ Production architecture:
 - **Backend**: Google Cloud Run (containerized API)
 - **Storage**: Firestore (snapshots) + Cloud Storage (CSV cache)
 
-### Cache Management
+### CI/CD Pipeline
 
-The application uses a versioned cache system to track changes in data format and calculations. When deploying updates that change cached data structure:
+The project uses GitHub Actions for continuous integration and deployment:
 
-- Review [backend/CACHE_MIGRATION_GUIDE.md](./backend/CACHE_MIGRATION_GUIDE.md) for migration instructions
-- Check [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md) for cache clearing requirements
-- Current cache version: **v2** (Borda count scoring system)
+- **CI** (`ci.yml`): Runs on every push — typecheck, lint, and test across all workspaces
+- **Deploy** (`deploy.yml`): Builds Docker image, deploys backend to Cloud Run, deploys frontend to Firebase Hosting
+- **Data Pipeline** (`data-pipeline.yml`): Scheduled scraping and analytics computation
+
+See [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md) for pre-deployment verification steps.
 
 ## Testing
 
 Run tests:
 
 ```bash
-# Frontend tests
+# All tests
+npm test
+
+# Individual workspaces
 npm run test:frontend
-
-# Backend tests
 npm run test:backend
-
-# Scraper CLI tests
+npm run test:analytics-core
 npm run test:scraper-cli
+npm run test:shared-contracts
+
+# Coverage report
+npm run test:coverage
 ```
 
 ## License
