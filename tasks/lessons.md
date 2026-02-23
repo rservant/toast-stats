@@ -29,6 +29,8 @@
 
 ---
 
+## 🗓️ 2026-02-22 — Lesson 06: Identify the Correct Component Before Writing Code
+
 **The Discovery**: Issue #83 was about the _landing page_ (`LandingPage.tsx`) — the page with 15 region checkboxes and sort buttons. I incorrectly modified the _district detail page_'s `GlobalRankingsTab.tsx` instead, had to revert, and start over. Reading the issue carefully and matching UI elements (region checkboxes, sort buttons) to the correct component would have saved ~40 minutes.
 
 **The Resulting Rule**: Before implementing any layout issue, open the live page, visually confirm which component owns the UI described in the issue, and trace that component in the codebase. Never assume from the issue title alone.
