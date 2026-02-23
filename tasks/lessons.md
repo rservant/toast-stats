@@ -17,6 +17,20 @@
 
 ---
 
+## 🗓️ 2026-02-23 — Lesson 13: Reuse Existing Helpers Before Creating New Ones (#90)
+
+**The Discovery**: The Leadership Effectiveness table already had `getScoreColor()` and `getScoreBgColor()` helpers for the Overall column's pill pattern — but the three sub-score columns (Health, Growth, DCP) were rendered as plain gray text. The fix was a one-liner per cell: apply the same helpers.
+
+**The Scientific Proof**: 4 TDD tests verified that sub-scores at ≥75 get green, 50-74 get yellow, and <50 get red — matching the existing scale. No new helpers or threshold logic needed.
+
+**The Farley Principle Applied**: DRY — Don't Repeat Yourself, and don't re-invent what already exists in the same component.
+
+**The Resulting Rule**: Before creating new color/formatting logic, search the same component for existing helpers. Extend their usage before adding new code.
+
+**Future Warning**: If the color thresholds need to change, they're defined in `getScoreColor` and `getScoreBgColor` inside `LeadershipInsights.tsx`. A single change there updates all four columns.
+
+---
+
 ## 🗓️ 2026-02-23 — Lesson 12: Global UI Elements Belong in the Router Layout (#88)
 
 **The Discovery**: Adding a site-wide footer required placing it in the `Layout` function inside `App.tsx` — the component that wraps all routes via `<Outlet />`. Placing it in individual pages or in `DashboardLayout` would have missed some pages or required duplication.
