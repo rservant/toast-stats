@@ -332,23 +332,23 @@ export class DistinguishedClubAnalyticsModule {
     currentDate: string
   ):
     | {
-      currentTotal: number
-      previousTotal: number
-      change: number
-      percentageChange: number
-      currentByLevel: {
-        smedley: number
-        presidents: number
-        select: number
-        distinguished: number
+        currentTotal: number
+        previousTotal: number
+        change: number
+        percentageChange: number
+        currentByLevel: {
+          smedley: number
+          presidents: number
+          select: number
+          distinguished: number
+        }
+        previousByLevel: {
+          smedley: number
+          presidents: number
+          select: number
+          distinguished: number
+        }
       }
-      previousByLevel: {
-        smedley: number
-        presidents: number
-        select: number
-        distinguished: number
-      }
-    }
     | undefined {
     if (snapshots.length === 0) {
       return undefined
