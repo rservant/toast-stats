@@ -245,14 +245,26 @@ export const LeadershipInsights: React.FC<LeadershipInsightsProps> = ({
                       {score.overallScore}
                     </span>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-600">
-                    {score.healthScore}
+                  <td className="px-4 py-3 whitespace-nowrap text-center">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getScoreBgColor(score.healthScore)} ${getScoreColor(score.healthScore)}`}
+                    >
+                      {score.healthScore}
+                    </span>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-600">
-                    {score.growthScore}
+                  <td className="px-4 py-3 whitespace-nowrap text-center">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getScoreBgColor(score.growthScore)} ${getScoreColor(score.growthScore)}`}
+                    >
+                      {score.growthScore}
+                    </span>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center text-sm text-gray-600">
-                    {score.dcpScore}
+                  <td className="px-4 py-3 whitespace-nowrap text-center">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getScoreBgColor(score.dcpScore)} ${getScoreColor(score.dcpScore)}`}
+                    >
+                      {score.dcpScore}
+                    </span>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-center">
                     {score.isBestPractice && (
