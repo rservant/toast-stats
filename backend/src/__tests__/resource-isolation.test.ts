@@ -86,7 +86,9 @@ describe('Resource Isolation', () => {
         const testResources = await Promise.all(resources)
         expect(testResources).toHaveLength(resourcesPerTest)
 
-        expect(cacheConfigService.getCacheDirectory()).toBe(cacheDirectory)
+        expect(cacheConfigService.getCacheDirectory()).toBe(
+          path.resolve(cacheDirectory)
+        )
         expect(cacheConfigService.getCacheDirectory()).toContain(
           `test-${testIndex}`
         )

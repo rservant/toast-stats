@@ -55,7 +55,9 @@ describe('Concurrent Test Execution Safety', () => {
 
             const dirStats = await fs.stat(opDir)
             expect(dirStats.isDirectory()).toBe(true)
-            expect(cacheConfigService.getCacheDirectory()).toBe(cacheDirectory)
+            expect(cacheConfigService.getCacheDirectory()).toBe(
+              path.resolve(cacheDirectory)
+            )
             expect(cacheConfigService.isReady()).toBe(true)
 
             return { operationId: `${testId}-op-${opIndex}`, opDir }
@@ -143,7 +145,9 @@ describe('Concurrent Test Execution Safety', () => {
         await cacheConfigService.initialize()
 
         expect(cacheConfigService.isReady()).toBe(true)
-        expect(cacheConfigService.getCacheDirectory()).toBe(cacheDirectory)
+        expect(cacheConfigService.getCacheDirectory()).toBe(
+          path.resolve(cacheDirectory)
+        )
 
         await cacheConfigService.dispose()
         await isolationManager.removeIsolatedDirectory(testDir)

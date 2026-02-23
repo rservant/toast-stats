@@ -40,7 +40,9 @@ describe('CacheConfigService - Converted Property Tests', () => {
     })
     await cacheConfigService.initialize()
 
-    expect(cacheConfigService.getCacheDirectory()).toBe(cacheDirectory)
+    expect(cacheConfigService.getCacheDirectory()).toBe(
+      path.resolve(cacheDirectory)
+    )
     expect(cacheConfigService.isReady()).toBe(true)
 
     const stats = await fs.stat(cacheDirectory)
@@ -127,7 +129,7 @@ describe('CacheConfigService - Converted Property Tests', () => {
     await service.initialize()
 
     expect(service.isReady()).toBe(true)
-    expect(service.getCacheDirectory()).toBe(cacheDirectory)
+    expect(service.getCacheDirectory()).toBe(path.resolve(cacheDirectory))
 
     await service.dispose()
     await isolationManager.removeIsolatedDirectory(testDir)
@@ -145,7 +147,9 @@ describe('CacheConfigService - Converted Property Tests', () => {
     await cacheConfigService.initialize()
 
     expect(cacheConfigService.isReady()).toBe(true)
-    expect(cacheConfigService.getCacheDirectory()).toBe(cacheDirectory)
+    expect(cacheConfigService.getCacheDirectory()).toBe(
+      path.resolve(cacheDirectory)
+    )
 
     const stats = await fs.stat(cacheDirectory)
     expect(stats.isDirectory()).toBe(true)
