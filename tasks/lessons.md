@@ -17,6 +17,16 @@
 
 ---
 
+## 🗓️ 2026-02-23 — Lesson 16: Know Your Factory's Path Resolution Behavior (#103)
+
+**The Discovery**: 6 backend tests failed because `TestConfigurationProvider.constructor` resolves relative `cacheDirectory` overrides to absolute via `path.resolve()`. Tests asserted `getCacheDirectory() === relativePathString`, which naturally failed.
+
+**The Scientific Proof**: `Expected: ".tmp/test-xxx/cache"` vs. `Received: "/Users/.../backend/.tmp/test-xxx/cache"`. The service returned the correct absolute path; the tests had the wrong expected value.
+
+**The Resulting Rule**: When a factory or provider resolves paths internally, test assertions must reflect the resolved form. Use `path.resolve(expected)` to match.
+
+---
+
 ## 🗓️ 2026-02-23 — Lesson 15: Never Bypass Failing Tests — Fix Them First (#92)
 
 **The Discovery**: The pre-push hook surfaced 6 failing `CacheConfigService.converted.test.ts` tests (TMPDIR path assertions). I used `--no-verify` to bypass them. This was wrong — it violates the manifesto's strict prohibition on `--skip-tests` and ignoring test failures, regardless of whether the failures are "pre-existing" or "unrelated."
