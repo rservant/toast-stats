@@ -20,6 +20,7 @@ const LandingPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<
     'aggregate' | 'clubs' | 'payments' | 'distinguished'
   >('aggregate')
+  const [searchQuery, setSearchQuery] = useState<string>('')
 
   // Fetch tracked districts to show indicator badges
   const { data: districtsData } = useDistricts()
@@ -162,8 +163,19 @@ const LandingPage: React.FC = () => {
     return rankings.filter(r => selectedRegions.includes(r.region))
   }, [rankings, selectedRegions])
 
+  // Filter by search query (district number or name)
+  const searchFilteredRankings = React.useMemo(() => {
+    if (!searchQuery.trim()) return filteredRankings
+    const query = searchQuery.trim().toLowerCase()
+    return filteredRankings.filter(
+      r =>
+        r.districtId.toLowerCase().includes(query) ||
+        r.districtName.toLowerCase().includes(query)
+    )
+  }, [filteredRankings, searchQuery])
+
   const sortedRankings = React.useMemo(() => {
-    const sorted = [...filteredRankings]
+    const sorted = [...searchFilteredRankings]
     switch (sortBy) {
       case 'clubs':
         return sorted.sort((a, b) => a.clubsRank - b.clubsRank) // Lower rank is better
@@ -174,7 +186,7 @@ const LandingPage: React.FC = () => {
       default:
         return sorted.sort((a, b) => b.aggregateScore - a.aggregateScore) // Higher Borda score is better
     }
-  }, [filteredRankings, sortBy])
+  }, [searchFilteredRankings, sortBy])
 
   const handleDistrictClick = (districtId: string) => {
     navigate(`/district/${districtId}`)
@@ -552,6 +564,57 @@ const LandingPage: React.FC = () => {
                 )}
             </div>
           </details>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-3">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg
+                className="w-5 h-5 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search by district number or name…"
+              className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white hover:border-tm-loyal-blue-50 focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue transition-colors font-tm-body"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Rankings Table */}
