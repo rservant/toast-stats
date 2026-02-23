@@ -19,6 +19,16 @@
 
 ---
 
+## 🗓️ 2026-02-22 — Lesson 06: Above-the-Fold Means Reorder, Not Just Resize
+
+**The Discovery**: The Global Rankings table was invisible without scrolling because a 400px chart sat above it. Reducing header sizes alone wouldn't reclaim enough space — the solution was reordering (table before chart) and collapsing the chart by default using a native `<details>` element.
+
+**The Resulting Rule**: When "above the fold" is the goal, prioritize content reordering and progressive disclosure (`<details>`) over size tweaks. Native HTML elements like `<details>` provide collapse behavior with zero JS overhead and built-in accessibility.
+
+**Future Warning**: If new sections are added to `GlobalRankingsTab`, verify the rankings table remains above the fold at 1440×900. Run a browser check rather than estimating pixel counts.
+
+---
+
 ## 🗓️ 2026-02-22 — Lesson 05: Sparse Input = Sparse Output in Pre-computed Analytics
 
 **The Discovery**: The club-trends-index only had 2 data points per club because `AnalyticsComputeService` loads exactly 2 snapshots (current + previous year) for YoY computation. The `AnalyticsComputer` faithfully copies this sparsity into all derived data including club trends.
