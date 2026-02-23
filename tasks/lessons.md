@@ -19,7 +19,15 @@
 
 ---
 
-## 🗓️ 2026-02-22 — Lesson 06: Identify the Correct Component Before Writing Code
+## 🗓️ 2026-02-22 — Lesson 07: Pure Frontend Projections Can Reuse Backend Tier Logic
+
+**The Discovery**: The per-club DCP projections feature (#6) required zero backend changes. All data (`dcpGoals`, `membership`, `aprilRenewals`) was already surfaced via `analytics.allClubs` in the frontend. The tier thresholds from `ClubEligibilityUtils` could be duplicated as simple constants in a pure utility module, keeping the projection calculation entirely client-side.
+
+**The Resulting Rule**: Before designing a backend API extension, verify whether the data is already available in existing frontend payloads. Pure frontend features ship faster and have simpler blast radius.
+
+**Future Warning**: If the Toastmasters tier thresholds change, they must be updated in both `ClubEligibilityUtils.ts` (analytics-core) and `dcpProjections.ts` (frontend). Consider extracting thresholds into shared-contracts to avoid drift.
+
+---
 
 **The Discovery**: Issue #83 was about the _landing page_ (`LandingPage.tsx`) — the page with 15 region checkboxes and sort buttons. I incorrectly modified the _district detail page_'s `GlobalRankingsTab.tsx` instead, had to revert, and start over. Reading the issue carefully and matching UI elements (region checkboxes, sort buttons) to the correct component would have saved ~40 minutes.
 
