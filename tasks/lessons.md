@@ -17,6 +17,14 @@
 
 ---
 
+## 🗓️ 2026-02-23 — Lesson 17: Include Hidden Directories in Bulk Renames (#99)
+
+**The Discovery**: Bulk sed across the codebase missed `.husky/pre-push` because the `find` command didn't include hidden directories. The pre-push hook still referenced `@toastmasters/scraper-cli`, causing `git push` to fail.
+
+**The Resulting Rule**: When doing codebase-wide renames, remember to include hidden directories (`.husky/`, `.github/`, etc.) in your search scope. Always verify by grepping the entire repo root — `grep -r "old-name" .` catches everything including hidden files.
+
+---
+
 ## 🗓️ 2026-02-23 — Lesson 16: Know Your Factory's Path Resolution Behavior (#103)
 
 **The Discovery**: 6 backend tests failed because `TestConfigurationProvider.constructor` resolves relative `cacheDirectory` overrides to absolute via `path.resolve()`. Tests asserted `getCacheDirectory() === relativePathString`, which naturally failed.
