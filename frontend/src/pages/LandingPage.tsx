@@ -560,10 +560,10 @@ const LandingPage: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 z-10 bg-gray-50">
                     Rank
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-[72px] z-10 bg-gray-50 sticky-column-shadow">
                     District
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -592,14 +592,14 @@ const LandingPage: React.FC = () => {
                       onClick={() => handleDistrictClick(district.districtId)}
                       className="hover:bg-tm-loyal-blue-10 cursor-pointer transition-colors"
                     >
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap sticky left-0 z-10 bg-white">
                         <span
                           className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold ${getRankBadgeColor(rank)}`}
                         >
                           {rank}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap sticky left-[72px] z-10 bg-white sticky-column-shadow">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium text-gray-900">
                             {district.districtName}

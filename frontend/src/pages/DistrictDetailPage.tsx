@@ -70,6 +70,31 @@ const DistrictDetailPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [selectedClub, setSelectedClub] = useState<ClubTrend | null>(null)
 
+  // Tab scroll-fade detection refs (#86)
+  const tabScrollRef = React.useRef<HTMLDivElement>(null)
+  const tabNavRef = React.useRef<HTMLElement>(null)
+  const [isTabScrollableRight, setIsTabScrollableRight] = useState(false)
+
+  React.useEffect(() => {
+    const nav = tabNavRef.current
+    if (!nav) return
+
+    const checkScroll = () => {
+      const canScrollRight =
+        nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 1
+      setIsTabScrollableRight(canScrollRight)
+    }
+
+    checkScroll()
+    nav.addEventListener('scroll', checkScroll, { passive: true })
+    window.addEventListener('resize', checkScroll)
+
+    return () => {
+      nav.removeEventListener('scroll', checkScroll)
+      window.removeEventListener('resize', checkScroll)
+    }
+  }, [])
+
   // Use program year context
   const {
     selectedProgramYear,
@@ -517,32 +542,41 @@ const DistrictDetailPage: React.FC = () => {
           {/* Tabs */}
           <div className="bg-white rounded-lg shadow-md mb-4 sm:mb-6">
             <div className="border-b border-gray-200">
-              <nav className="flex -mb-px overflow-x-auto scrollbar-hide">
-                {tabs.map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => !tab.disabled && setActiveTab(tab.id)}
-                    disabled={tab.disabled}
-                    className={`
-                      px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-tm-headline font-medium whitespace-nowrap transition-colors
-                      ${
-                        activeTab === tab.id
-                          ? 'border-b-2 border-tm-loyal-blue text-tm-loyal-blue'
-                          : tab.disabled
-                            ? 'text-gray-400 cursor-not-allowed'
-                            : 'text-gray-600 hover:text-gray-900 hover:border-b-2 hover:border-tm-cool-gray'
-                      }
-                    `}
-                  >
-                    {tab.label}
-                    {tab.disabled && (
-                      <span className="ml-2 text-xs font-tm-body text-gray-400">
-                        (Coming Soon)
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </nav>
+              <div
+                className="tab-scroll-fade"
+                ref={tabScrollRef}
+                data-scrollable-right={isTabScrollableRight}
+              >
+                <nav
+                  className="flex -mb-px overflow-x-auto scrollbar-hide"
+                  ref={tabNavRef}
+                >
+                  {tabs.map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => !tab.disabled && setActiveTab(tab.id)}
+                      disabled={tab.disabled}
+                      className={`
+                        px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-tm-headline font-medium whitespace-nowrap transition-colors
+                        ${
+                          activeTab === tab.id
+                            ? 'border-b-2 border-tm-loyal-blue text-tm-loyal-blue'
+                            : tab.disabled
+                              ? 'text-gray-400 cursor-not-allowed'
+                              : 'text-gray-600 hover:text-gray-900 hover:border-b-2 hover:border-tm-cool-gray'
+                        }
+                      `}
+                    >
+                      {tab.label}
+                      {tab.disabled && (
+                        <span className="ml-2 text-xs font-tm-body text-gray-400">
+                          (Coming Soon)
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </nav>
+              </div>
             </div>
           </div>
 
