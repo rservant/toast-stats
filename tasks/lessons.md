@@ -15,6 +15,12 @@
 <!--                                                                                      -->
 <!-- **Future Warning**: [What to watch for — a tripwire for the agent]                    -->
 
+## 🗓️ 2026-02-23 — Lesson 20: CSS-Level Theme Overrides Beat Component-Level Changes (#120)
+
+**The Discovery**: Adding dark mode to an app with `bg-white` used 150+ times across 50+ component files. Instead of modifying every component (adding `dark:` variants), a thin CSS override layer targeting `[data-theme='dark'] .bg-white { ... }` achieved the same result with zero component file changes. However, any component rendered with `useDarkMode` in tests needs `DarkModeProvider` — this broke `SiteFooter.test.tsx` when `ThemeToggle` was added to the footer. Also, jsdom in this project's vitest setup doesn't provide `localStorage` at all — must use `vi.stubGlobal('localStorage', {...})` in every test that touches localStorage.
+
+**The Resulting Rule**: (1) When adding cross-cutting concerns (theme, i18n, auth), prefer CSS-level or context-level overrides over touching individual component files. (2) When adding a context-dependent component to an existing component, always update that component's tests to wrap with the required provider. (3) Always stub `localStorage` and `matchMedia` via `vi.stubGlobal()` in vitest tests — don't assume jsdom provides them.
+
 ---
 
 ## 🗓️ 2026-02-23 — Lesson 19: Dependabot Major Bumps Require Holistic Compatibility Checks (#105)
