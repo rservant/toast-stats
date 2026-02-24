@@ -23,8 +23,7 @@ export async function run(): Promise<void> {
 // Auto-run when executed directly (e.g., via npx tsx)
 const isMainModule =
   process.argv[1] &&
-  (process.argv[1].includes('index.ts') ||
-    process.argv[1].includes('index.js'))
+  (process.argv[1].includes('index.ts') || process.argv[1].includes('index.js'))
 
 if (isMainModule) {
   run().catch(error => {

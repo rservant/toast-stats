@@ -929,9 +929,8 @@ export function createCLI(): Command {
         gcsBucket?: string
         gcsPrefix: string
       }) => {
-        const { BackfillOrchestrator, GcsBackfillStorage } = await import(
-          './services/BackfillOrchestrator.js'
-        )
+        const { BackfillOrchestrator, GcsBackfillStorage } =
+          await import('./services/BackfillOrchestrator.js')
         type DateFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly'
 
         const startYear = options.startYear ?? 2017
@@ -939,7 +938,9 @@ export function createCLI(): Command {
         const frequency = options.frequency as DateFrequency
 
         // Determine storage backend
-        let storage: import('./services/BackfillOrchestrator.js').BackfillStorage | undefined
+        let storage:
+          | import('./services/BackfillOrchestrator.js').BackfillStorage
+          | undefined
         let outputDir: string
 
         if (options.gcsBucket) {
@@ -953,13 +954,14 @@ export function createCLI(): Command {
           outputDir = options.gcsPrefix
         } else {
           outputDir =
-            options.output ??
-            resolveConfiguration({}).cacheDir + '/backfill'
+            options.output ?? resolveConfiguration({}).cacheDir + '/backfill'
         }
 
         if (options.verbose) {
           console.error(`[INFO] Starting backfill`)
-          console.error(`[INFO] Program years: ${startYear}-${startYear + 1} to ${endYear}-${endYear + 1}`)
+          console.error(
+            `[INFO] Program years: ${startYear}-${startYear + 1} to ${endYear}-${endYear + 1}`
+          )
           console.error(`[INFO] Frequency: ${frequency}`)
           console.error(`[INFO] Rate: ${options.rate} req/s`)
           console.error(`[INFO] Phase: ${options.phase}`)
@@ -990,9 +992,7 @@ export function createCLI(): Command {
         console.error(`[SCOPE] Program years: ${scope.programYears.length}`)
         console.error(`[SCOPE] Dates per year: ${scope.datesPerYear}`)
         console.error(`[SCOPE] Phase 1 requests: ${scope.phase1Requests}`)
-        console.error(
-          `[SCOPE] Phase 1 estimate: ${estimate.humanReadable}`
-        )
+        console.error(`[SCOPE] Phase 1 estimate: ${estimate.humanReadable}`)
         console.error(
           `[SCOPE] Phase 2 requests per district: ${scope.requestsPerDistrict}`
         )
