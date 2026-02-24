@@ -412,7 +412,8 @@ export class TransformService {
     } catch (error) {
       this.logger.error('Failed to parse CSV content', error)
       throw new Error(
-        `CSV parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `CSV parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        { cause: error }
       )
     }
   }
@@ -442,7 +443,8 @@ export class TransformService {
     } catch (error) {
       this.logger.error('Failed to parse CSV to records', error)
       throw new Error(
-        `CSV parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `CSV parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        { cause: error }
       )
     }
   }
