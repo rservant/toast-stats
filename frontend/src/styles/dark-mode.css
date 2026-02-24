@@ -53,6 +53,33 @@
     --accent-amber: #F5C36A;
     --accent-cream: #FFF8ED;
 
+    /* ─── Toastmasters Brand Token Overrides ─── */
+    --tm-black: #F0ECF5;
+    --tm-loyal-blue: #5DADE2;
+    --tm-loyal-blue-100: rgba(93, 173, 226, 1.0);
+    --tm-loyal-blue-90: rgba(93, 173, 226, 0.9);
+    --tm-loyal-blue-80: rgba(93, 173, 226, 0.8);
+    --tm-loyal-blue-70: rgba(93, 173, 226, 0.7);
+    --tm-loyal-blue-60: rgba(93, 173, 226, 0.6);
+    --tm-loyal-blue-50: rgba(93, 173, 226, 0.5);
+    --tm-loyal-blue-40: rgba(93, 173, 226, 0.4);
+    --tm-loyal-blue-30: rgba(93, 173, 226, 0.3);
+    --tm-loyal-blue-20: rgba(93, 173, 226, 0.2);
+    --tm-loyal-blue-10: rgba(93, 173, 226, 0.1);
+    --tm-true-maroon: #E8879A;
+    --tm-true-maroon-100: rgba(232, 135, 154, 1.0);
+    --tm-true-maroon-90: rgba(232, 135, 154, 0.9);
+    --tm-true-maroon-80: rgba(232, 135, 154, 0.8);
+    --tm-true-maroon-70: rgba(232, 135, 154, 0.7);
+    --tm-true-maroon-60: rgba(232, 135, 154, 0.6);
+    --tm-true-maroon-50: rgba(232, 135, 154, 0.5);
+    --tm-cool-gray: #C0C8C7;
+    --tm-cool-gray-80: rgba(192, 200, 199, 0.8);
+    --tm-cool-gray-60: rgba(192, 200, 199, 0.6);
+    --tm-cool-gray-40: rgba(192, 200, 199, 0.4);
+    --tm-cool-gray-20: rgba(192, 200, 199, 0.2);
+    --tm-cool-gray-10: rgba(192, 200, 199, 0.1);
+
     /* Override the body base styles */
     color-scheme: dark;
 }
@@ -454,6 +481,79 @@
 /* Pinned row sticky columns */
 [data-theme='dark'] tr.bg-blue-50 td.sticky {
     background-color: rgba(37, 99, 235, 0.10) !important;
+}
+
+/* ═══════════════════════════════════════════
+   Gradient Backgrounds (Summary Cards)
+   Light gradients → dark translucent gradients
+   ═══════════════════════════════════════════ */
+
+[data-theme='dark'] .from-blue-50 {
+    --tw-gradient-from: rgba(37, 99, 235, 0.10) !important;
+}
+
+[data-theme='dark'] .to-blue-100 {
+    --tw-gradient-to: rgba(37, 99, 235, 0.18) !important;
+}
+
+[data-theme='dark'] .from-green-50 {
+    --tw-gradient-from: rgba(22, 163, 74, 0.10) !important;
+}
+
+[data-theme='dark'] .to-green-100 {
+    --tw-gradient-to: rgba(22, 163, 74, 0.18) !important;
+}
+
+[data-theme='dark'] .from-red-50 {
+    --tw-gradient-from: rgba(185, 28, 28, 0.10) !important;
+}
+
+[data-theme='dark'] .to-red-100 {
+    --tw-gradient-to: rgba(185, 28, 28, 0.18) !important;
+}
+
+[data-theme='dark'] .from-yellow-50 {
+    --tw-gradient-from: rgba(161, 98, 7, 0.10) !important;
+}
+
+[data-theme='dark'] .to-yellow-100 {
+    --tw-gradient-to: rgba(161, 98, 7, 0.18) !important;
+}
+
+/* ═══════════════════════════════════════════
+   Tailwind Brand Color Class Overrides
+   These use Tailwind's text-tm-* / bg-tm-* classes
+   which map to the CSS custom properties we already
+   override above, but some components set colors
+   via Tailwind's generated rgba() values instead.
+   ═══════════════════════════════════════════ */
+
+[data-theme='dark'] .text-tm-black {
+    color: var(--text-heading) !important;
+}
+
+[data-theme='dark'] .text-tm-loyal-blue {
+    color: #5DADE2 !important;
+}
+
+[data-theme='dark'] .text-tm-true-maroon {
+    color: #E8879A !important;
+}
+
+[data-theme='dark'] .text-tm-cool-gray {
+    color: #C0C8C7 !important;
+}
+
+[data-theme='dark'] .bg-tm-loyal-blue {
+    background-color: #1A6B8A !important;
+}
+
+[data-theme='dark'] .bg-tm-loyal-blue-10 {
+    background-color: rgba(93, 173, 226, 0.10) !important;
+}
+
+[data-theme='dark'] .border-tm-loyal-blue {
+    border-color: #5DADE2 !important;
 }
 
 /* ─── Transition for Theme Switch ─── */
