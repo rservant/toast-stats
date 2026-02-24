@@ -536,6 +536,14 @@
     color: #5DADE2 !important;
 }
 
+[data-theme='dark'] .text-tm-loyal-blue-80 {
+    color: rgba(93, 173, 226, 0.85) !important;
+}
+
+[data-theme='dark'] .text-tm-loyal-blue-70 {
+    color: rgba(93, 173, 226, 0.75) !important;
+}
+
 [data-theme='dark'] .text-tm-true-maroon {
     color: #E8879A !important;
 }
@@ -552,8 +560,54 @@
     background-color: rgba(93, 173, 226, 0.10) !important;
 }
 
+[data-theme='dark'] .bg-tm-loyal-blue-20 {
+    background-color: rgba(93, 173, 226, 0.15) !important;
+}
+
+[data-theme='dark'] .bg-tm-loyal-blue-30 {
+    background-color: rgba(93, 173, 226, 0.22) !important;
+}
+
 [data-theme='dark'] .border-tm-loyal-blue {
     border-color: #5DADE2 !important;
+}
+
+[data-theme='dark'] .border-tm-loyal-blue-20 {
+    border-color: rgba(93, 173, 226, 0.25) !important;
+}
+
+/* ═══════════════════════════════════════════
+   Amber Overrides (DCP Projections, Badges)
+   ═══════════════════════════════════════════ */
+
+[data-theme='dark'] .bg-amber-50 {
+    background-color: rgba(161, 98, 7, 0.10) !important;
+}
+
+[data-theme='dark'] .bg-amber-100 {
+    background-color: rgba(161, 98, 7, 0.18) !important;
+}
+
+[data-theme='dark'] .text-amber-800 {
+    color: #FCD34D !important;
+}
+
+[data-theme='dark'] .text-amber-900 {
+    color: #FDE68A !important;
+}
+
+/* bg-amber-50/50 is generated as a Tailwind arbitrary modifier */
+[data-theme='dark'] [class*="bg-amber-50\\/"] {
+    background-color: rgba(161, 98, 7, 0.12) !important;
+}
+
+/* Orange text used in DCP projections status */
+[data-theme='dark'] .text-orange-600 {
+    color: #FB923C !important;
+}
+
+[data-theme='dark'] .text-orange-700 {
+    color: #FDBA74 !important;
 }
 
 /* ─── Transition for Theme Switch ─── */
