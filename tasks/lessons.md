@@ -17,6 +17,20 @@
 
 ---
 
+## 🗓️ 2026-02-23 — Lesson 18: Normalize Heterogeneous Metrics for Radar Chart Comparison (#93)
+
+**The Discovery**: The district comparison radar chart needs to display ranks, percentages, and scores on the same axes. Raw values are incomparable (rank 1 is best but lowest number; distinguished 50% is mid-range; aggregate score 300 depends on total districts). Each metric type requires a different normalization to a 0-100 scale.
+
+**The Scientific Proof**: `normalizeRank` inverts rank (`(total - rank + 1) / total * 100`) so rank 1 = 100%. `normalizePercent` clamps to 0-100. Aggregate score uses `score / (totalDistricts * 3) * 100`. All axes now share a consistent 0-100 scale and higher = better.
+
+**The Farley Principle Applied**: Uniform Interface — when composing heterogeneous data on a shared visualization, normalize to a common unit before rendering. The chart component shouldn't know about domain-specific scales.
+
+**The Resulting Rule**: Multi-metric comparison charts (radar, bar) must normalize all axes to the same scale. Keep normalization functions pure and co-located with the chart component, not buried in utility files.
+
+**Future Warning**: If adding new axes to the radar chart (e.g., membership growth), ensure the normalization preserves the "higher is better" invariant. Metrics where lower is better (like rank) must be inverted.
+
+---
+
 ## 🗓️ 2026-02-23 — Lesson 17: Include Hidden Directories in Bulk Renames (#99)
 
 **The Discovery**: Bulk sed across the codebase missed `.husky/pre-push` because the `find` command didn't include hidden directories. The pre-push hook still referenced `@toastmasters/scraper-cli`, causing `git push` to fail.
