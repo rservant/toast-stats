@@ -1,5 +1,5 @@
 /**
- * Unit tests for ComparisonPanel (#93)
+ * Unit tests for ComparisonPanel (#93, #109, #110)
  *
  * Verifies:
  * - Does not render when fewer than 2 districts pinned
@@ -8,6 +8,7 @@
  * - "Clear All" button calls onClearAll
  * - Individual remove button calls onRemove(districtId)
  * - Displays correct metric values for pinned districts
+ * - (#109) Overall Rank shows actual position, not percentage
  */
 
 import { describe, it, expect, vi } from 'vitest'
@@ -84,6 +85,7 @@ describe('ComparisonPanel (#93)', () => {
     const { container } = render(
       <ComparisonPanel
         pinnedDistricts={[MOCK_DISTRICTS[0]]}
+        allRankings={MOCK_DISTRICTS}
         totalDistricts={3}
         onRemove={vi.fn()}
         onClearAll={vi.fn()}
@@ -96,6 +98,7 @@ describe('ComparisonPanel (#93)', () => {
     render(
       <ComparisonPanel
         pinnedDistricts={[MOCK_DISTRICTS[0], MOCK_DISTRICTS[1]]}
+        allRankings={MOCK_DISTRICTS}
         totalDistricts={3}
         onRemove={vi.fn()}
         onClearAll={vi.fn()}
@@ -109,6 +112,7 @@ describe('ComparisonPanel (#93)', () => {
     render(
       <ComparisonPanel
         pinnedDistricts={[MOCK_DISTRICTS[0], MOCK_DISTRICTS[1]]}
+        allRankings={MOCK_DISTRICTS}
         totalDistricts={3}
         onRemove={vi.fn()}
         onClearAll={vi.fn()}
@@ -123,6 +127,7 @@ describe('ComparisonPanel (#93)', () => {
     render(
       <ComparisonPanel
         pinnedDistricts={[MOCK_DISTRICTS[0], MOCK_DISTRICTS[1]]}
+        allRankings={MOCK_DISTRICTS}
         totalDistricts={3}
         onRemove={vi.fn()}
         onClearAll={vi.fn()}
@@ -139,6 +144,7 @@ describe('ComparisonPanel (#93)', () => {
     const { container } = render(
       <ComparisonPanel
         pinnedDistricts={[MOCK_DISTRICTS[0], MOCK_DISTRICTS[1]]}
+        allRankings={MOCK_DISTRICTS}
         totalDistricts={3}
         onRemove={vi.fn()}
         onClearAll={vi.fn()}
@@ -155,6 +161,7 @@ describe('ComparisonPanel (#93)', () => {
     render(
       <ComparisonPanel
         pinnedDistricts={[MOCK_DISTRICTS[0], MOCK_DISTRICTS[1]]}
+        allRankings={MOCK_DISTRICTS}
         totalDistricts={3}
         onRemove={vi.fn()}
         onClearAll={onClearAll}
@@ -171,6 +178,7 @@ describe('ComparisonPanel (#93)', () => {
     render(
       <ComparisonPanel
         pinnedDistricts={[MOCK_DISTRICTS[0], MOCK_DISTRICTS[1]]}
+        allRankings={MOCK_DISTRICTS}
         totalDistricts={3}
         onRemove={onRemove}
         onClearAll={vi.fn()}
@@ -189,6 +197,7 @@ describe('ComparisonPanel (#93)', () => {
     render(
       <ComparisonPanel
         pinnedDistricts={MOCK_DISTRICTS}
+        allRankings={MOCK_DISTRICTS}
         totalDistricts={3}
         onRemove={vi.fn()}
         onClearAll={vi.fn()}
@@ -199,5 +208,24 @@ describe('ComparisonPanel (#93)', () => {
     expect(screen.getByText('District 57')).toBeInTheDocument()
     expect(screen.getByText('District 61')).toBeInTheDocument()
     expect(screen.getByText('District 83')).toBeInTheDocument()
+  })
+
+  // #109: Verify Overall Rank shows actual rank position, not percentage
+  it('should display correct overall rank from position in allRankings (#109)', () => {
+    render(
+      <ComparisonPanel
+        pinnedDistricts={[MOCK_DISTRICTS[0], MOCK_DISTRICTS[1]]}
+        allRankings={MOCK_DISTRICTS}
+        totalDistricts={3}
+        onRemove={vi.fn()}
+        onClearAll={vi.fn()}
+      />
+    )
+
+    // District 57 is at index 0 in allRankings (sorted by score desc) → rank #1
+    // District 61 is at index 1 → rank #2
+    // The old bug showed #100 and #83 (percentage formula)
+    expect(screen.getByText('#1')).toBeInTheDocument()
+    expect(screen.getByText('#2')).toBeInTheDocument()
   })
 })

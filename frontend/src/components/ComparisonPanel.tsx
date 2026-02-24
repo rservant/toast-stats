@@ -3,6 +3,9 @@
  *
  * Displays a sticky panel above the rankings table when 2-3 districts
  * are pinned. Includes a radar chart and metrics comparison table.
+ *
+ * Fix #109: Overall Rank now shows actual position in allRankings
+ * Fix #110: Radar chart 'Overall' axis uses normalizeRank with actual rank
  */
 
 import React from 'react'
@@ -18,6 +21,7 @@ import { DistrictRanking } from '../types/districts'
 
 export interface ComparisonPanelProps {
   pinnedDistricts: DistrictRanking[]
+  allRankings: DistrictRanking[]
   totalDistricts: number
   onRemove: (districtId: string) => void
   onClearAll: () => void
@@ -36,59 +40,80 @@ const normalizePercent = (pct: number): number => {
   return Math.max(0, Math.min(100, pct))
 }
 
-const METRIC_ROWS = [
-  {
-    key: 'rank',
-    label: 'Overall Rank',
-    format: (d: DistrictRanking) =>
-      `#${Math.round((d.aggregateScore / 300) * 100) || '-'}`,
-  },
-  {
-    key: 'paidClubs',
-    label: 'Paid Clubs',
-    format: (d: DistrictRanking) => d.paidClubs.toLocaleString(),
-  },
-  {
-    key: 'clubGrowth',
-    label: 'Club Growth',
-    format: (d: DistrictRanking) =>
-      `${d.clubGrowthPercent > 0 ? '+' : ''}${d.clubGrowthPercent.toFixed(1)}%`,
-  },
-  {
-    key: 'payments',
-    label: 'Payments',
-    format: (d: DistrictRanking) => d.totalPayments.toLocaleString(),
-  },
-  {
-    key: 'paymentGrowth',
-    label: 'Payment Growth',
-    format: (d: DistrictRanking) =>
-      `${d.paymentGrowthPercent > 0 ? '+' : ''}${d.paymentGrowthPercent.toFixed(1)}%`,
-  },
-  {
-    key: 'distinguished',
-    label: 'Distinguished',
-    format: (d: DistrictRanking) => d.distinguishedClubs.toLocaleString(),
-  },
-  {
-    key: 'distPct',
-    label: 'Distinguished %',
-    format: (d: DistrictRanking) => `${d.distinguishedPercent.toFixed(1)}%`,
-  },
-  {
-    key: 'score',
-    label: 'Score',
-    format: (d: DistrictRanking) =>
-      Math.round(d.aggregateScore).toLocaleString(),
-  },
-] as const
+/**
+ * Look up a district's overall rank (1-indexed position) in the sorted list.
+ * Returns the position or '-' if not found.
+ */
+const getOverallRank = (
+  d: DistrictRanking,
+  allRankings: DistrictRanking[]
+): number | null => {
+  const idx = allRankings.findIndex(r => r.districtId === d.districtId)
+  return idx >= 0 ? idx + 1 : null
+}
+
+const buildMetricRows = (allRankings: DistrictRanking[]) =>
+  [
+    {
+      key: 'rank',
+      label: 'Overall Rank',
+      format: (d: DistrictRanking) => {
+        const rank = getOverallRank(d, allRankings)
+        return rank !== null ? `#${rank}` : '-'
+      },
+    },
+    {
+      key: 'paidClubs',
+      label: 'Paid Clubs',
+      format: (d: DistrictRanking) => d.paidClubs.toLocaleString(),
+    },
+    {
+      key: 'clubGrowth',
+      label: 'Club Growth',
+      format: (d: DistrictRanking) =>
+        `${d.clubGrowthPercent > 0 ? '+' : ''}${d.clubGrowthPercent.toFixed(1)}%`,
+    },
+    {
+      key: 'payments',
+      label: 'Payments',
+      format: (d: DistrictRanking) => d.totalPayments.toLocaleString(),
+    },
+    {
+      key: 'paymentGrowth',
+      label: 'Payment Growth',
+      format: (d: DistrictRanking) =>
+        `${d.paymentGrowthPercent > 0 ? '+' : ''}${d.paymentGrowthPercent.toFixed(1)}%`,
+    },
+    {
+      key: 'distinguished',
+      label: 'Distinguished',
+      format: (d: DistrictRanking) => d.distinguishedClubs.toLocaleString(),
+    },
+    {
+      key: 'distPct',
+      label: 'Distinguished %',
+      format: (d: DistrictRanking) => `${d.distinguishedPercent.toFixed(1)}%`,
+    },
+    {
+      key: 'score',
+      label: 'Score',
+      format: (d: DistrictRanking) =>
+        Math.round(d.aggregateScore).toLocaleString(),
+    },
+  ] as const
 
 const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
   pinnedDistricts,
+  allRankings,
   totalDistricts,
   onRemove,
   onClearAll,
 }) => {
+  const metricRows = React.useMemo(
+    () => buildMetricRows(allRankings),
+    [allRankings]
+  )
+
   if (pinnedDistricts.length < 2) return null
 
   // Radar chart data: 4 axes, each district is a separate series
@@ -123,11 +148,11 @@ const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
     {
       metric: 'Overall',
       ...Object.fromEntries(
-        pinnedDistricts.map(d => [
-          d.districtId,
-          // Normalize aggregate score as a percentile of max possible
-          Math.round((d.aggregateScore / (totalDistricts * 3)) * 100),
-        ])
+        pinnedDistricts.map(d => {
+          // Fix #110: Use actual rank from allRankings, normalized like other rank axes
+          const rank = getOverallRank(d, allRankings) ?? totalDistricts
+          return [d.districtId, normalizeRank(rank, totalDistricts)]
+        })
       ),
     },
   ]
@@ -215,7 +240,7 @@ const ComparisonPanel: React.FC<ComparisonPanelProps> = ({
               </tr>
             </thead>
             <tbody>
-              {METRIC_ROWS.map(row => (
+              {metricRows.map(row => (
                 <tr
                   key={row.key}
                   className="border-b border-gray-100 hover:bg-gray-50"

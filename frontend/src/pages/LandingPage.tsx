@@ -651,6 +651,7 @@ const LandingPage: React.FC = () => {
         {/* Comparison Panel (#93) */}
         <ComparisonPanel
           pinnedDistricts={pinnedDistricts}
+          allRankings={rankings}
           totalDistricts={rankings.length}
           onRemove={districtId => togglePin(districtId)}
           onClearAll={() => setPinnedDistrictIds(new Set())}
