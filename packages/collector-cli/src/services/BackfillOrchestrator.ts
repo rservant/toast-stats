@@ -228,6 +228,75 @@ export function buildCompatiblePath(
   return `${cacheDir}/raw-csv/${dateStr}/district-${districtId}/${csvType}.csv`
 }
 
+/**
+ * Build the path for a date's metadata.json file.
+ */
+export function buildMetadataPath(cacheDir: string, date: Date): string {
+  return `${cacheDir}/raw-csv/${toYYYYMMDD(date)}/metadata.json`
+}
+
+/**
+ * Calculate program year from a Date.
+ * Toastmasters program year runs July–June: July 2024 → "2024-2025".
+ */
+function calculateProgramYearFromDate(date: Date): string {
+  const year = date.getFullYear()
+  const month = date.getMonth() + 1
+  return month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`
+}
+
+/**
+ * Build a metadata.json object compatible with OrchestratorCacheAdapter.
+ *
+ * The TransformService reads: date, isClosingPeriod, dataMonth, programYear.
+ * The full FullCacheMetadata shape is maintained for compatibility.
+ */
+export function buildBackfillMetadata(
+  date: Date,
+  districtIds: string[]
+): Record<string, unknown> {
+  const dateStr = toYYYYMMDD(date)
+  const districts: Record<
+    string,
+    {
+      districtPerformance: boolean
+      divisionPerformance: boolean
+      clubPerformance: boolean
+    }
+  > = {}
+  for (const id of districtIds) {
+    districts[id] = {
+      districtPerformance: true,
+      divisionPerformance: true,
+      clubPerformance: true,
+    }
+  }
+
+  return {
+    date: dateStr,
+    timestamp: Date.now(),
+    programYear: calculateProgramYearFromDate(date),
+    isClosingPeriod: false,
+    csvFiles: {
+      allDistricts: true,
+      districts,
+    },
+    downloadStats: {
+      totalDownloads: districtIds.length * 3 + 1,
+      cacheHits: 0,
+      cacheMisses: districtIds.length * 3 + 1,
+      lastAccessed: Date.now(),
+    },
+    integrity: {
+      checksums: {},
+      totalSize: 0,
+      fileCount: districtIds.length * 3 + 1,
+    },
+    source: 'backfill',
+    cacheVersion: 1,
+  }
+}
+
 // ── Orchestrator ─────────────────────────────────────────────────────
 
 export class BackfillOrchestrator {
@@ -454,6 +523,12 @@ export class BackfillOrchestrator {
       estimate: this.estimateTime(total, this.config.ratePerSecond),
     })
 
+    // Track all dates touched for metadata generation
+    const datesTouched = new Map<
+      string,
+      { date: Date; districtIds: Set<string> }
+    >()
+
     for (const [year, districts] of Object.entries(districtsPerYear)) {
       if (this.aborted) break
 
@@ -502,6 +577,13 @@ export class BackfillOrchestrator {
 
               await this.storage.write(key, result.content)
 
+              // Track this date + district for metadata
+              const dateKey = toYYYYMMDD(date)
+              if (!datesTouched.has(dateKey)) {
+                datesTouched.set(dateKey, { date, districtIds: new Set() })
+              }
+              datesTouched.get(dateKey)!.districtIds.add(districtId)
+
               if (this.progress.completed % 100 === 0) {
                 logger.info('Phase 2 progress', {
                   year,
@@ -527,6 +609,27 @@ export class BackfillOrchestrator {
             }
           }
         }
+      }
+    }
+
+    // Write metadata.json for each date touched
+    for (const [dateKey, { date, districtIds }] of datesTouched) {
+      try {
+        const metadataPath = buildMetadataPath(this.config.outputDir, date)
+        const metadata = buildBackfillMetadata(
+          date,
+          Array.from(districtIds).sort()
+        )
+        await this.storage.write(
+          metadataPath,
+          JSON.stringify(metadata, null, 2)
+        )
+        logger.info('Wrote metadata.json', {
+          date: dateKey,
+          districts: districtIds.size,
+        })
+      } catch (error) {
+        logger.error('Failed to write metadata.json', { date: dateKey, error })
       }
     }
 
