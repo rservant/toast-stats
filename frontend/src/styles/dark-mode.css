@@ -1,0 +1,241 @@
+/* ═══════════════════════════════════════════
+   Dark Mode Overrides (#120)
+   Taverns-Red Colour Palette
+   ═══════════════════════════════════════════
+
+   This file intercepts common Tailwind utility classes when
+   [data-theme='dark'] is active on the document root, avoiding
+   the need to add dark: variants to 50+ component files.
+*/
+
+/* ─── Semantic Design Tokens ─── */
+
+:root {
+    /* Light mode defaults (matching existing Tailwind values) */
+    --surface-primary: #FFFFFF;
+    --surface-secondary: #F9FAFB;
+    --surface-card: #FFFFFF;
+    --surface-card-hover: #F3F4F6;
+    --text-heading: #111827;
+    --text-body: #374151;
+    --text-muted: #6B7280;
+    --border-default: #E5E7EB;
+    --border-subtle: #D1D5DB;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+/* ─── Taverns-Red Dark Palette ─── */
+
+[data-theme='dark'] {
+    /* Backgrounds */
+    --surface-primary: #0C0A0F;
+    --surface-secondary: #14111A;
+    --surface-card: #1A1722;
+    --surface-card-hover: #221E2D;
+
+    /* Text */
+    --text-heading: #F0ECF5;
+    --text-body: rgba(240, 236, 245, 0.87);
+    --text-muted: #9B95A5;
+
+    /* Borders */
+    --border-default: rgba(255, 255, 255, 0.06);
+    --border-subtle: rgba(255, 255, 255, 0.10);
+
+    /* Shadows */
+    --shadow-color: rgba(0, 0, 0, 0.4);
+
+    /* Taverns-red accents */
+    --accent-red: #C13B3B;
+    --accent-red-dark: #8B1A1A;
+    --accent-maple: #D4873F;
+    --accent-maple-light: #E8A55C;
+    --accent-amber: #F5C36A;
+    --accent-cream: #FFF8ED;
+
+    /* Override the body base styles */
+    color-scheme: dark;
+}
+
+/* ─── Root & Body Overrides ─── */
+
+[data-theme='dark'] body {
+    background-color: var(--surface-primary);
+    color: var(--text-body);
+}
+
+/* ─── Background Overrides ─── */
+
+[data-theme='dark'] .bg-white {
+    background-color: var(--surface-card) !important;
+}
+
+[data-theme='dark'] .bg-gray-50 {
+    background-color: var(--surface-secondary) !important;
+}
+
+[data-theme='dark'] .bg-gray-100 {
+    background-color: #1E1B27 !important;
+}
+
+[data-theme='dark'] .bg-gray-200 {
+    background-color: #252230 !important;
+}
+
+[data-theme='dark'] .bg-gray-300 {
+    background-color: #2D2A38 !important;
+}
+
+[data-theme='dark'] .bg-gray-400 {
+    background-color: #3A3648 !important;
+}
+
+[data-theme='dark'] .bg-gray-500 {
+    background-color: #4A4658 !important;
+}
+
+[data-theme='dark'] .bg-gray-900 {
+    background-color: #0C0A0F !important;
+}
+
+/* ─── Text Overrides ─── */
+
+[data-theme='dark'] .text-gray-900 {
+    color: var(--text-heading) !important;
+}
+
+[data-theme='dark'] .text-gray-800 {
+    color: var(--text-heading) !important;
+}
+
+[data-theme='dark'] .text-gray-700 {
+    color: var(--text-body) !important;
+}
+
+[data-theme='dark'] .text-gray-600 {
+    color: var(--text-muted) !important;
+}
+
+[data-theme='dark'] .text-gray-500 {
+    color: #6B6575 !important;
+}
+
+[data-theme='dark'] .text-gray-400 {
+    color: #6B6575 !important;
+}
+
+[data-theme='dark'] .text-gray-300 {
+    color: #9B95A5 !important;
+}
+
+/* ─── Border Overrides ─── */
+
+[data-theme='dark'] .border-gray-100 {
+    border-color: var(--border-default) !important;
+}
+
+[data-theme='dark'] .border-gray-200 {
+    border-color: var(--border-default) !important;
+}
+
+[data-theme='dark'] .border-gray-300 {
+    border-color: var(--border-subtle) !important;
+}
+
+[data-theme='dark'] .border-gray-400 {
+    border-color: var(--border-subtle) !important;
+}
+
+[data-theme='dark'] .border-tm-cool-gray-20 {
+    border-color: var(--border-default) !important;
+}
+
+[data-theme='dark'] .border-tm-cool-gray-30 {
+    border-color: var(--border-subtle) !important;
+}
+
+[data-theme='dark'] .border-tm-cool-gray {
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* ─── Shadow Overrides ─── */
+
+[data-theme='dark'] .shadow-sm {
+    box-shadow: 0 1px 2px var(--shadow-color) !important;
+}
+
+[data-theme='dark'] .shadow-md {
+    box-shadow: 0 4px 6px var(--shadow-color), 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+[data-theme='dark'] .shadow-lg {
+    box-shadow: 0 10px 15px var(--shadow-color), 0 4px 6px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* ─── Brand Component Overrides ─── */
+
+[data-theme='dark'] .tm-card {
+    background-color: var(--surface-card);
+    color: var(--text-body);
+    border-color: var(--border-default);
+}
+
+[data-theme='dark'] .tm-card:hover {
+    background-color: var(--surface-card-hover);
+}
+
+[data-theme='dark'] .tm-card-header h1,
+[data-theme='dark'] .tm-card-header h2,
+[data-theme='dark'] .tm-card-header h3 {
+    color: var(--text-heading);
+}
+
+[data-theme='dark'] .tm-card-header {
+    border-bottom-color: var(--border-default);
+}
+
+[data-theme='dark'] .tm-card-footer {
+    border-top-color: var(--border-default);
+}
+
+[data-theme='dark'] .tm-panel {
+    color: var(--text-body);
+}
+
+[data-theme='dark'] .tm-panel-default {
+    background-color: var(--surface-secondary);
+    border-color: var(--border-default);
+}
+
+[data-theme='dark'] .tm-panel-subtle {
+    background-color: rgba(26, 23, 34, 0.5);
+    border-color: var(--border-default);
+}
+
+/* ─── Scroll Fade ─── */
+
+[data-theme='dark'] .tab-scroll-fade[data-scrollable-right="true"]::after {
+    background: linear-gradient(to right, transparent, var(--surface-primary));
+}
+
+/* ─── Sticky Column Shadow ─── */
+
+[data-theme='dark'] .sticky-column-shadow {
+    box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.4);
+}
+
+/* ─── Hover State Overrides ─── */
+
+[data-theme='dark'] .hover\:bg-gray-50:hover {
+    background-color: var(--surface-card-hover) !important;
+}
+
+[data-theme='dark'] .hover\:bg-gray-100:hover {
+    background-color: #252230 !important;
+}
+
+/* ─── Transition for Theme Switch ─── */
+
+html[data-theme] body {
+    transition: background-color 0.3s ease, color 0.3s ease;
+}

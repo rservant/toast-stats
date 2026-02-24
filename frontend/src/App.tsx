@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './config/queryClient'
 import { ProgramYearProvider } from './contexts/ProgramYearContext'
+import { DarkModeProvider } from './contexts/DarkModeContext'
 import LandingPage from './pages/LandingPage'
 import DistrictDetailPage from './pages/DistrictDetailPage'
 import SiteFooter from './components/SiteFooter'
@@ -49,7 +50,9 @@ function App(): React.JSX.Element {
   return (
     <QueryClientProvider client={queryClient}>
       <ProgramYearProvider>
-        <RouterProvider router={router} />
+        <DarkModeProvider>
+          <RouterProvider router={router} />
+        </DarkModeProvider>
       </ProgramYearProvider>
     </QueryClientProvider>
   )

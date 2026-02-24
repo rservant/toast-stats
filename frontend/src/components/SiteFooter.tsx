@@ -1,4 +1,5 @@
 import React from 'react'
+import ThemeToggle from './ThemeToggle'
 
 const SiteFooter: React.FC = () => {
   return (
@@ -55,6 +56,8 @@ const SiteFooter: React.FC = () => {
             >
               Feedback & Issues
             </a>
+            <span className="text-white/30">•</span>
+            <ThemeToggle />
           </div>
 
           {/* Disclaimer */}

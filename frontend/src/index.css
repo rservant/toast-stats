@@ -27,6 +27,7 @@
 @import './styles/components/status-indicators.css';
 @import './styles/components/alerts.css';
 @import './styles/responsive.css';
+@import './styles/dark-mode.css';
 
 /* Tailwind v4 Theme Configuration - replaces tailwind.config.js */
 @theme {
