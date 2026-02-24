@@ -447,9 +447,9 @@ describe('useGlobalRankings', () => {
       })
 
       expect(result.current.availableProgramYears).toHaveLength(0)
-      // When there are no program years, currentYearHistory will have empty history
-      expect(result.current.currentYearHistory?.history).toHaveLength(0)
-      // End of year rankings should be null when history is empty
+      // When there are no program years, no selected year exists → null history
+      expect(result.current.currentYearHistory).toBeNull()
+      // End of year rankings should be null when history is null
       expect(result.current.endOfYearRankings).toBeNull()
     })
   })

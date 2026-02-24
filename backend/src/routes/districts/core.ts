@@ -29,6 +29,7 @@ import {
   serveDistrictFromPerDistrictSnapshot,
   serveDistrictFromPerDistrictSnapshotByDate,
   perDistrictSnapshotStore,
+  rankHistoryIndex,
   buildSnapshotResponseMetadata,
   findNearestSnapshot,
   getProgramYearInfo,
@@ -913,12 +914,10 @@ coreRouter.get(
           : undefined
 
       // Determine program year boundaries (July 1 to June 30)
-      // Use provided startDate to determine program year, or fall back to current date
       const referenceDate =
         startDateParam ?? new Date().toISOString().split('T')[0] ?? '2025-01-01'
       const programYear = getProgramYearInfo(referenceDate)
 
-      // If explicit date range provided, use those instead of computed program year boundaries
       const effectiveStartDate = startDateParam ?? programYear.startDate
       const effectiveEndDate = endDateParam ?? programYear.endDate
 
@@ -931,172 +930,36 @@ coreRouter.get(
         effectiveStartDate,
         effectiveEndDate,
         programYear: programYear.year,
+        using_index: true,
       })
 
-      // Get all snapshot IDs using fast prefix listing (~1s vs ~91s for listSnapshots)
-      // listSnapshotIds() uses a single GCS list API call instead of reading
-      // metadata.json from each of the ~2,370 snapshots individually.
-      const allSnapshotIds = await perDistrictSnapshotStore.listSnapshotIds()
-
-      // Pre-filter snapshot IDs by date range BEFORE downloading any files.
-      // This eliminates GCS reads for snapshots outside the requested range.
-      const filteredSnapshotIds = allSnapshotIds.filter(
-        id => id >= effectiveStartDate && id <= effectiveEndDate
+      // Use the in-memory RankHistoryIndex (#115)
+      const results = await rankHistoryIndex.getRankHistory(
+        [districtId],
+        effectiveStartDate,
+        effectiveEndDate
       )
 
-      logger.info('Pre-filtered snapshots by date range', {
-        operation: 'GET /api/districts/:districtId/rank-history',
-        operation_id: operationId,
-        total_snapshots: allSnapshotIds.length,
-        filtered_snapshots: filteredSnapshotIds.length,
-        effectiveStartDate,
-        effectiveEndDate,
-      })
+      const result = results[0]!
 
-      if (filteredSnapshotIds.length === 0) {
-        res.json({
-          districtId,
-          districtName: `District ${districtId}`,
-          history: [],
-          programYear,
-        })
-        return
-      }
-
-      // Build history by reading rankings from snapshots in parallel
-      interface HistoryEntry {
-        date: string
-        aggregateScore: number
-        clubsRank: number
-        paymentsRank: number
-        distinguishedRank: number
-        totalDistricts: number
-        overallRank: number // Position when sorted by aggregateScore (1 = best)
-      }
-      interface SnapshotResult extends HistoryEntry {
-        districtName: string
-      }
-      let districtName = `District ${districtId}`
-      const seenDates = new Set<string>()
-
-      // Process pre-filtered snapshots in parallel batches.
-      // GCS in the same region (us-east1) handles high concurrency well.
-      const CONCURRENCY_LIMIT = 25
-
-      const processSnapshot = async (
-        snapshotId: string
-      ): Promise<SnapshotResult | null> => {
-        try {
-          const rankings =
-            await perDistrictSnapshotStore.readAllDistrictsRankings(snapshotId)
-
-          if (!rankings) return null
-
-          const date = rankings.metadata.sourceCsvDate
-
-          const districtRanking = rankings.rankings.find(
-            r => r.districtId === districtId
-          )
-          if (!districtRanking) return null
-
-          const overallRank = districtRanking.overallRank ?? 0
-
-          return {
-            date,
-            aggregateScore: districtRanking.aggregateScore,
-            clubsRank: districtRanking.clubsRank,
-            paymentsRank: districtRanking.paymentsRank,
-            distinguishedRank: districtRanking.distinguishedRank,
-            totalDistricts: rankings.metadata.totalDistricts,
-            overallRank,
-            districtName: districtRanking.districtName,
-          }
-        } catch (error) {
-          logger.warn('Failed to read rankings from snapshot', {
-            operation: 'GET /api/districts/:districtId/rank-history',
-            operation_id: operationId,
-            snapshot_id: snapshotId,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          })
-          return null
-        }
-      }
-
-      // Process in batches to limit concurrent GCS reads
-      const history: HistoryEntry[] = []
-      for (let i = 0; i < filteredSnapshotIds.length; i += CONCURRENCY_LIMIT) {
-        const batch = filteredSnapshotIds.slice(i, i + CONCURRENCY_LIMIT)
-        const results = await Promise.all(batch.map(processSnapshot))
-
-        for (const entry of results) {
-          if (entry === null) continue
-
-          // Skip duplicate dates (keep the first/newest one, since snapshots are newest-first)
-          if (seenDates.has(entry.date)) continue
-          seenDates.add(entry.date)
-
-          // Capture district name from the first found entry
-          if (districtName === `District ${districtId}`) {
-            districtName = entry.districtName
-          }
-
-          // Push history entry (without the extra districtName field)
-          history.push({
-            date: entry.date,
-            aggregateScore: entry.aggregateScore,
-            clubsRank: entry.clubsRank,
-            paymentsRank: entry.paymentsRank,
-            distinguishedRank: entry.distinguishedRank,
-            totalDistricts: entry.totalDistricts,
-            overallRank: entry.overallRank,
-          })
-        }
-      }
-
-      // Sort history chronologically (oldest first for chart display)
-      history.sort((a, b) => a.date.localeCompare(b.date))
-
-      if (history.length === 0) {
-        // District not found in any snapshot within program year
-        logger.info(
-          'District not found in any snapshot rankings for current program year, returning empty rank history',
-          {
-            operation: 'GET /api/districts/:districtId/rank-history',
-            operation_id: operationId,
-            district_id: districtId,
-            snapshots_checked: filteredSnapshotIds.length,
-            program_year: programYear.year,
-          }
-        )
-
-        res.json({
-          districtId,
-          districtName,
-          history: [],
-          programYear,
-        })
-        return
-      }
-
-      logger.info('Successfully served rank history from multiple snapshots', {
+      logger.info('Successfully served rank history from index', {
         operation: 'GET /api/districts/:districtId/rank-history',
         operation_id: operationId,
         district_id: districtId,
-        district_name: districtName,
-        history_points: history.length,
-        snapshots_checked: filteredSnapshotIds.length,
+        district_name: result.districtName,
+        history_points: result.history.length,
         program_year: programYear.year,
         date_range:
-          history.length > 0
-            ? `${history[0]?.date} to ${history[history.length - 1]?.date}`
+          result.history.length > 0
+            ? `${result.history[0]?.date} to ${result.history[result.history.length - 1]?.date}`
             : 'none',
       })
 
       // Return response in RankHistoryResponse format expected by frontend
       res.json({
         districtId,
-        districtName,
-        history,
+        districtName: result.districtName,
+        history: result.history,
         programYear,
       })
     } catch (error) {
@@ -1190,113 +1053,35 @@ coreRouter.post(
       const effectiveStartDate = startDateParam ?? programYear.startDate
       const effectiveEndDate = endDateParam ?? programYear.endDate
 
-      // List all snapshot IDs once (single GCS call, ~1s)
-      const allSnapshotIds = await perDistrictSnapshotStore.listSnapshotIds()
-      const filteredSnapshotIds = allSnapshotIds.filter(
-        id => id >= effectiveStartDate && id <= effectiveEndDate
-      )
-
       logger.info('Batch rank history request', {
         operation: 'POST /api/districts/rank-history-batch',
         operation_id: operationId,
         district_count: districtIds.length,
-        total_snapshots: allSnapshotIds.length,
-        filtered_snapshots: filteredSnapshotIds.length,
         effectiveStartDate,
         effectiveEndDate,
+        using_index: true,
       })
 
-      // Initialize per-district accumulators
-      const districtResults = new Map<
-        string,
-        {
-          districtName: string
-          history: Array<{
-            date: string
-            aggregateScore: number
-            clubsRank: number
-            paymentsRank: number
-            distinguishedRank: number
-            totalDistricts: number
-            overallRank: number
-          }>
-          seenDates: Set<string>
-        }
-      >()
+      // Use the in-memory RankHistoryIndex (#115)
+      // First request builds the index (~10s), subsequent requests are < 1ms.
+      const results = await rankHistoryIndex.getRankHistory(
+        districtIds,
+        effectiveStartDate,
+        effectiveEndDate
+      )
 
-      for (const id of districtIds) {
-        districtResults.set(id, {
-          districtName: `District ${id}`,
-          history: [],
-          seenDates: new Set(),
-        })
-      }
-
-      const districtIdSet = new Set(districtIds)
-
-      // Read each rankings file ONCE and extract data for ALL requested districts
-      const CONCURRENCY_LIMIT = 25
-      for (let i = 0; i < filteredSnapshotIds.length; i += CONCURRENCY_LIMIT) {
-        const batch = filteredSnapshotIds.slice(i, i + CONCURRENCY_LIMIT)
-        const rankingsResults = await Promise.all(
-          batch.map(async snapshotId => {
-            try {
-              return await perDistrictSnapshotStore.readAllDistrictsRankings(
-                snapshotId
-              )
-            } catch {
-              return null
-            }
-          })
-        )
-
-        for (const rankings of rankingsResults) {
-          if (!rankings) continue
-
-          const date = rankings.metadata.sourceCsvDate
-
-          for (const ranking of rankings.rankings) {
-            if (!districtIdSet.has(ranking.districtId)) continue
-
-            const result = districtResults.get(ranking.districtId)
-            if (!result) continue
-            if (result.seenDates.has(date)) continue
-
-            result.seenDates.add(date)
-            if (result.districtName === `District ${ranking.districtId}`) {
-              result.districtName = ranking.districtName
-            }
-
-            result.history.push({
-              date,
-              aggregateScore: ranking.aggregateScore,
-              clubsRank: ranking.clubsRank,
-              paymentsRank: ranking.paymentsRank,
-              distinguishedRank: ranking.distinguishedRank,
-              totalDistricts: rankings.metadata.totalDistricts,
-              overallRank: ranking.overallRank ?? 0,
-            })
-          }
-        }
-      }
-
-      // Build response array
-      const response = districtIds.map(id => {
-        const result = districtResults.get(id)!
-        result.history.sort((a, b) => a.date.localeCompare(b.date))
-        return {
-          districtId: id,
-          districtName: result.districtName,
-          history: result.history,
-          programYear,
-        }
-      })
+      // Build response in the expected format
+      const response = results.map(result => ({
+        districtId: result.districtId,
+        districtName: result.districtName,
+        history: result.history,
+        programYear,
+      }))
 
       logger.info('Batch rank history completed', {
         operation: 'POST /api/districts/rank-history-batch',
         operation_id: operationId,
         district_count: districtIds.length,
-        snapshots_read: filteredSnapshotIds.length,
         total_history_points: response.reduce(
           (sum, r) => sum + r.history.length,
           0

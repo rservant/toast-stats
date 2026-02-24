@@ -52,6 +52,10 @@ export const snapshotStore: ISnapshotStorage = storageProviders.snapshotStorage
 // Backward compatibility alias
 export const perDistrictSnapshotStore = snapshotStore
 
+// Rank history index — lazy-loaded in-memory cache (#115)
+import { RankHistoryIndex } from '../../services/RankHistoryIndex.js'
+export const rankHistoryIndex = new RankHistoryIndex(snapshotStore)
+
 /**
  * Creates an analytics file reader appropriate for the current storage provider.
  *
