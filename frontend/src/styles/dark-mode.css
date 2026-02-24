@@ -234,6 +234,228 @@
     background-color: #252230 !important;
 }
 
+[data-theme='dark'] .hover\:bg-gray-200:hover {
+    background-color: #2D2A38 !important;
+}
+
+[data-theme='dark'] .hover\:bg-tm-loyal-blue-10:hover {
+    background-color: rgba(0, 60, 113, 0.15) !important;
+}
+
+/* ─── Colored Row Hover Overrides ─── */
+
+[data-theme='dark'] .hover\:bg-red-100:hover {
+    background-color: rgba(185, 28, 28, 0.20) !important;
+}
+
+[data-theme='dark'] .hover\:bg-yellow-100:hover {
+    background-color: rgba(161, 98, 7, 0.20) !important;
+}
+
+[data-theme='dark'] .hover\:bg-green-200:hover {
+    background-color: rgba(22, 163, 74, 0.20) !important;
+}
+
+[data-theme='dark'] .hover\:bg-blue-200:hover {
+    background-color: rgba(37, 99, 235, 0.20) !important;
+}
+
+[data-theme='dark'] .hover\:bg-blue-50:hover {
+    background-color: rgba(37, 99, 235, 0.10) !important;
+}
+
+/* ═══════════════════════════════════════════
+   Colored Background Overrides (#121, #122)
+   Light tinted backgrounds → dark translucent
+   ═══════════════════════════════════════════ */
+
+/* ─── Red Backgrounds ─── */
+
+[data-theme='dark'] .bg-red-50 {
+    background-color: rgba(185, 28, 28, 0.10) !important;
+}
+
+[data-theme='dark'] .bg-red-100 {
+    background-color: rgba(185, 28, 28, 0.18) !important;
+}
+
+[data-theme='dark'] .bg-red-200 {
+    background-color: rgba(185, 28, 28, 0.25) !important;
+}
+
+/* ─── Yellow/Amber Backgrounds ─── */
+
+[data-theme='dark'] .bg-yellow-50 {
+    background-color: rgba(161, 98, 7, 0.10) !important;
+}
+
+[data-theme='dark'] .bg-yellow-100 {
+    background-color: rgba(161, 98, 7, 0.18) !important;
+}
+
+[data-theme='dark'] .bg-yellow-200 {
+    background-color: rgba(161, 98, 7, 0.25) !important;
+}
+
+/* ─── Green Backgrounds ─── */
+
+[data-theme='dark'] .bg-green-50 {
+    background-color: rgba(22, 163, 74, 0.10) !important;
+}
+
+[data-theme='dark'] .bg-green-100 {
+    background-color: rgba(22, 163, 74, 0.18) !important;
+}
+
+[data-theme='dark'] .bg-green-200 {
+    background-color: rgba(22, 163, 74, 0.25) !important;
+}
+
+/* ─── Blue Backgrounds ─── */
+
+[data-theme='dark'] .bg-blue-50 {
+    background-color: rgba(37, 99, 235, 0.10) !important;
+}
+
+[data-theme='dark'] .bg-blue-100 {
+    background-color: rgba(37, 99, 235, 0.18) !important;
+}
+
+[data-theme='dark'] .bg-blue-200 {
+    background-color: rgba(37, 99, 235, 0.25) !important;
+}
+
+/* ═══════════════════════════════════════════
+   Colored Text Overrides
+   Dark text-on-color → light text-on-color
+   ═══════════════════════════════════════════ */
+
+[data-theme='dark'] .text-red-700,
+[data-theme='dark'] .text-red-800 {
+    color: #FCA5A5 !important;
+}
+
+[data-theme='dark'] .text-red-600 {
+    color: #F87171 !important;
+}
+
+[data-theme='dark'] .text-yellow-700,
+[data-theme='dark'] .text-yellow-800 {
+    color: #FDE68A !important;
+}
+
+[data-theme='dark'] .text-yellow-600 {
+    color: #FBBF24 !important;
+}
+
+[data-theme='dark'] .text-green-700,
+[data-theme='dark'] .text-green-800 {
+    color: #86EFAC !important;
+}
+
+[data-theme='dark'] .text-green-600 {
+    color: #4ADE80 !important;
+}
+
+[data-theme='dark'] .text-blue-700,
+[data-theme='dark'] .text-blue-800 {
+    color: #93C5FD !important;
+}
+
+[data-theme='dark'] .text-blue-600 {
+    color: #60A5FA !important;
+}
+
+/* ═══════════════════════════════════════════
+   Colored Border Overrides
+   ═══════════════════════════════════════════ */
+
+[data-theme='dark'] .border-red-200,
+[data-theme='dark'] .border-red-300,
+[data-theme='dark'] .border-red-400 {
+    border-color: rgba(248, 113, 113, 0.30) !important;
+}
+
+[data-theme='dark'] .border-yellow-200,
+[data-theme='dark'] .border-yellow-300 {
+    border-color: rgba(251, 191, 36, 0.30) !important;
+}
+
+[data-theme='dark'] .border-green-200,
+[data-theme='dark'] .border-green-300 {
+    border-color: rgba(74, 222, 128, 0.30) !important;
+}
+
+[data-theme='dark'] .border-blue-200,
+[data-theme='dark'] .border-blue-300 {
+    border-color: rgba(96, 165, 250, 0.30) !important;
+}
+
+/* ═══════════════════════════════════════════
+   Form Controls & Inputs (#121)
+   White selects/inputs → dark bg + light text
+   ═══════════════════════════════════════════ */
+
+[data-theme='dark'] select,
+[data-theme='dark'] input[type="text"],
+[data-theme='dark'] input[type="search"],
+[data-theme='dark'] input[type="date"],
+[data-theme='dark'] input[type="number"] {
+    background-color: var(--surface-card) !important;
+    color: var(--text-body) !important;
+    border-color: var(--border-subtle) !important;
+}
+
+[data-theme='dark'] select option {
+    background-color: var(--surface-card);
+    color: var(--text-body);
+}
+
+/* Search bar placeholder */
+[data-theme='dark'] input::placeholder {
+    color: var(--text-muted) !important;
+}
+
+/* ═══════════════════════════════════════════
+   Blockquote / Scoring Methodology (#121)
+   ═══════════════════════════════════════════ */
+
+[data-theme='dark'] blockquote {
+    background-color: var(--surface-secondary) !important;
+    border-color: var(--border-subtle) !important;
+    color: var(--text-body) !important;
+}
+
+/* ═══════════════════════════════════════════
+   Divider Overrides
+   ═══════════════════════════════════════════ */
+
+[data-theme='dark'] .divide-gray-200>*+* {
+    border-color: var(--border-default) !important;
+}
+
+[data-theme='dark'] .divide-gray-100>*+* {
+    border-color: var(--border-default) !important;
+}
+
+/* ═══════════════════════════════════════════
+   Sticky Column Background Override (#122)
+   Sticky columns inherit bg-white in light mode
+   ═══════════════════════════════════════════ */
+
+[data-theme='dark'] td.sticky {
+    background-color: var(--surface-card) !important;
+}
+
+[data-theme='dark'] th.sticky {
+    background-color: var(--surface-secondary) !important;
+}
+
+/* Pinned row sticky columns */
+[data-theme='dark'] tr.bg-blue-50 td.sticky {
+    background-color: rgba(37, 99, 235, 0.10) !important;
+}
+
 /* ─── Transition for Theme Switch ─── */
 
 html[data-theme] body {
