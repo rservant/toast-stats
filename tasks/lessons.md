@@ -15,6 +15,20 @@
 <!--                                                                                      -->
 <!-- **Future Warning**: [What to watch for — a tripwire for the agent]                    -->
 
+## 🗓️ 2026-02-24 — Lesson 25: Data Collection Components Must Share a Storage Contract (#125)
+
+**The Discovery**: The `backfill` CLI downloaded the correct CSVs from the same Toastmasters dashboard as the `scrape` CLI, but stored them in an incompatible directory structure (`{prefix}/{year}/{reportType}/{id}/{date}.csv` vs. `raw-csv/{date}/district-{id}/{type}.csv`). The downstream `TransformService` could never find them.
+
+**The Scientific Proof**: Tracing `TransformService.readAllDistrictsCsv()` showed it reads `raw-csv/{date}/all-districts.csv`. The backfill wrote to `{prefix}/{year}/districtsummary/{date}.csv`. Path mismatch confirmed by comparing `OrchestratorCacheAdapter.buildFilePath()` output to `buildStorageKey()` output.
+
+**The Farley Principle Applied**: Contract-First Design — when multiple producers write data that a single consumer reads, they must all share the same contract (path format, naming convention, metadata schema).
+
+**The Resulting Rule**: Any new data collection tool must use `OrchestratorCacheAdapter`'s path convention (`raw-csv/{YYYY-MM-DD}/district-{id}/{type}.csv`). Export a `buildCompatiblePath()` function for reuse. Test compatibility by asserting regex patterns against written paths.
+
+**Future Warning**: The report type names differ between URL params (`clubperformance`) and CSVType enum values (`club-performance`). Always use `REPORT_TYPE_MAP` when translating between the dashboard API and internal storage. Also check `all-districts.csv` vs `districtsummary` — same data, different file name conventions.
+
+---
+
 ## 🗓️ 2026-02-24 — Lesson 24: Replace Per-Request I/O Loops with Lazy-Loaded In-Memory Indexes (#115)
 
 **The Discovery**: The `rank-history-batch` endpoint read `all-districts-rankings.json` from every GCS snapshot (~2,370 files) on each request, taking 30-60s. This N-read pattern was the primary bottleneck, not network latency or compute.
