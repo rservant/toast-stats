@@ -15,12 +15,11 @@ const ThemeToggle: React.FC = () => {
     <button
       onClick={toggle}
       aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      className="inline-flex items-center justify-center rounded-lg p-2 transition-colors duration-200 hover:bg-gray-200"
+      className="inline-flex items-center justify-center rounded-lg p-2 transition-colors duration-200"
       style={{
         minHeight: '44px',
         minWidth: '44px',
-        background: isDark ? 'rgba(255,255,255,0.08)' : undefined,
-        color: isDark ? '#F0ECF5' : '#374151',
+        color: 'rgba(255, 255, 255, 0.8)',
       }}
     >
       {isDark ? (
