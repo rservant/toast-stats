@@ -907,6 +907,15 @@ export function createCLI(): Command {
     .option('--resume', 'Skip already-downloaded files', true)
     .option('-v, --verbose', 'Enable detailed logging output', false)
     .option('-o, --output <dir>', 'Output directory for downloaded CSVs')
+    .option(
+      '--gcs-bucket <name>',
+      'Write CSVs directly to a GCS bucket instead of local disk'
+    )
+    .option(
+      '--gcs-prefix <prefix>',
+      'GCS object key prefix (default: backfill)',
+      'backfill'
+    )
     .action(
       async (options: {
         startYear?: number
@@ -917,8 +926,10 @@ export function createCLI(): Command {
         resume: boolean
         verbose: boolean
         output?: string
+        gcsBucket?: string
+        gcsPrefix: string
       }) => {
-        const { BackfillOrchestrator } = await import(
+        const { BackfillOrchestrator, GcsBackfillStorage } = await import(
           './services/BackfillOrchestrator.js'
         )
         type DateFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly'
@@ -926,9 +937,25 @@ export function createCLI(): Command {
         const startYear = options.startYear ?? 2017
         const endYear = options.endYear ?? new Date().getFullYear()
         const frequency = options.frequency as DateFrequency
-        const outputDir =
-          options.output ??
-          resolveConfiguration({}).cacheDir + '/backfill'
+
+        // Determine storage backend
+        let storage: import('./services/BackfillOrchestrator.js').BackfillStorage | undefined
+        let outputDir: string
+
+        if (options.gcsBucket) {
+          console.error(
+            `[INFO] Using GCS storage: gs://${options.gcsBucket}/${options.gcsPrefix}/`
+          )
+          storage = await GcsBackfillStorage.create(
+            options.gcsBucket,
+            process.env['GCP_PROJECT_ID']
+          )
+          outputDir = options.gcsPrefix
+        } else {
+          outputDir =
+            options.output ??
+            resolveConfiguration({}).cacheDir + '/backfill'
+        }
 
         if (options.verbose) {
           console.error(`[INFO] Starting backfill`)
@@ -937,7 +964,9 @@ export function createCLI(): Command {
           console.error(`[INFO] Rate: ${options.rate} req/s`)
           console.error(`[INFO] Phase: ${options.phase}`)
           console.error(`[INFO] Resume: ${options.resume}`)
-          console.error(`[INFO] Output: ${outputDir}`)
+          console.error(
+            `[INFO] Storage: ${options.gcsBucket ? `GCS (gs://${options.gcsBucket})` : `local (${outputDir})`}`
+          )
         }
 
         const orchestrator = new BackfillOrchestrator({
@@ -948,6 +977,7 @@ export function createCLI(): Command {
           outputDir,
           phase: options.phase as 'discover' | 'collect' | 'all',
           resume: options.resume,
+          storage,
         })
 
         // Show scope before starting

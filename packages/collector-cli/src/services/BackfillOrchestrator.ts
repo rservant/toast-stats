@@ -10,6 +10,7 @@
  *   - Resume-capable (skip already-cached files)
  *   - Progress reporting
  *   - Graceful shutdown on SIGINT
+ *   - Storage-agnostic: supports local filesystem or GCS
  */
 
 import * as fs from 'node:fs/promises'
@@ -21,6 +22,90 @@ import {
 } from './HttpCsvDownloader.js'
 import { logger } from '../utils/logger.js'
 
+// ── Storage Abstraction ──────────────────────────────────────────────
+
+/**
+ * Storage backend interface for backfill data.
+ * Implementations handle local filesystem or cloud storage.
+ */
+export interface BackfillStorage {
+    /** Check if a file already exists (for resume). */
+    exists(filePath: string): Promise<boolean>
+    /** Read a file's content (for parsing cached summaries). */
+    read(filePath: string): Promise<string>
+    /** Write content to a file, creating directories as needed. */
+    write(filePath: string, content: string): Promise<void>
+}
+
+/**
+ * Local filesystem storage backend.
+ */
+export class LocalBackfillStorage implements BackfillStorage {
+    async exists(filePath: string): Promise<boolean> {
+        try {
+            await fs.access(filePath)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    async read(filePath: string): Promise<string> {
+        return fs.readFile(filePath, 'utf-8')
+    }
+
+    async write(filePath: string, content: string): Promise<void> {
+        await fs.mkdir(path.dirname(filePath), { recursive: true })
+        await fs.writeFile(filePath, content, 'utf-8')
+    }
+}
+
+/**
+ * Google Cloud Storage backend.
+ * Streams CSV data directly to GCS without touching local disk.
+ */
+export class GcsBackfillStorage implements BackfillStorage {
+    private readonly bucket: import('@google-cloud/storage').Bucket
+
+    constructor(
+        bucket: import('@google-cloud/storage').Bucket
+    ) {
+        this.bucket = bucket
+    }
+
+    /**
+     * Create a GcsBackfillStorage from a bucket name.
+     */
+    static async create(
+        bucketName: string,
+        projectId?: string
+    ): Promise<GcsBackfillStorage> {
+        const { Storage } = await import('@google-cloud/storage')
+        const storage = new Storage({ projectId })
+        const bucket = storage.bucket(bucketName)
+        return new GcsBackfillStorage(bucket)
+    }
+
+    async exists(filePath: string): Promise<boolean> {
+        const file = this.bucket.file(filePath)
+        const [exists] = await file.exists()
+        return exists
+    }
+
+    async read(filePath: string): Promise<string> {
+        const file = this.bucket.file(filePath)
+        const [buffer] = await file.download()
+        return buffer.toString('utf-8')
+    }
+
+    async write(filePath: string, content: string): Promise<void> {
+        const file = this.bucket.file(filePath)
+        await file.save(content, { contentType: 'text/csv' })
+    }
+}
+
+// ── Config & Types ───────────────────────────────────────────────────
+
 export interface BackfillConfig {
     startYear: number
     endYear: number
@@ -31,6 +116,7 @@ export interface BackfillConfig {
     cooldownMs?: number
     phase?: 'discover' | 'collect' | 'all'
     resume?: boolean
+    storage?: BackfillStorage
 }
 
 export interface BackfillScope {
@@ -61,28 +147,34 @@ export interface TimeEstimate {
     humanReadable: string
 }
 
+// ── Helpers ──────────────────────────────────────────────────────────
+
 /**
- * Build the cache file path for a given download spec.
+ * Build the storage key for a given download spec.
+ * Works for both local paths and GCS object keys.
  */
-function buildCachePath(
-    outputDir: string,
+function buildStorageKey(
+    prefix: string,
     programYear: string,
     reportType: ReportType,
     dateStr: string,
     districtId?: string
 ): string {
     const safeDate = dateStr.replace(/\//g, '-')
-    const parts = [outputDir, programYear, reportType]
+    const parts = [prefix, programYear, reportType]
     if (districtId) {
         parts.push(districtId)
     }
-    return path.join(...parts, `${safeDate}.csv`)
+    parts.push(`${safeDate}.csv`)
+    return parts.join('/')
 }
+
+// ── Orchestrator ─────────────────────────────────────────────────────
 
 export class BackfillOrchestrator {
     private readonly config: BackfillConfig
-    // Using 'public' for test access — the test accesses this via cast
     public readonly downloader: HttpCsvDownloader
+    private readonly storage: BackfillStorage
     private aborted = false
     private progress: BackfillProgress = {
         phase: 0,
@@ -100,6 +192,7 @@ export class BackfillOrchestrator {
             cooldownEvery: config.cooldownEvery ?? 100,
             cooldownMs: config.cooldownMs ?? 5000,
         })
+        this.storage = config.storage ?? new LocalBackfillStorage()
     }
 
     /**
@@ -110,7 +203,6 @@ export class BackfillOrchestrator {
             this.config.startYear,
             this.config.endYear
         )
-        // Use first year to estimate dates per year (they're all approximately the same)
         const dates = this.downloader.generateDateGrid(
             programYears[0]!,
             this.config.frequency
@@ -121,7 +213,6 @@ export class BackfillOrchestrator {
             programYears,
             datesPerYear,
             phase1Requests: datesPerYear * programYears.length,
-            // Per district: 3 report types × dates per year
             requestsPerDistrict: datesPerYear * 3,
         }
     }
@@ -173,31 +264,37 @@ export class BackfillOrchestrator {
             if (this.aborted) break
 
             this.progress.currentYear = year
-            const dates = this.downloader.generateDateGrid(year, this.config.frequency)
+            const dates = this.downloader.generateDateGrid(
+                year,
+                this.config.frequency
+            )
             const discoveredDistricts = new Set<string>()
 
             for (const date of dates) {
                 if (this.aborted) break
 
-                const cachePath = buildCachePath(
+                const dateStr = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`
+                const key = buildStorageKey(
                     this.config.outputDir,
                     year,
                     'districtsummary',
-                    `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`
+                    dateStr
                 )
 
-                // Resume: skip if already cached
+                // Resume: skip if already stored
                 if (this.config.resume) {
-                    try {
-                        await fs.access(cachePath)
+                    const cached = await this.storage.exists(key)
+                    if (cached) {
                         this.progress.completed++
-                        // Read the cached file to discover districts
-                        const cached = await fs.readFile(cachePath, 'utf-8')
-                        const districts = this.downloader.parseDistrictsFromSummary(cached)
-                        for (const d of districts) discoveredDistricts.add(d)
+                        try {
+                            const content = await this.storage.read(key)
+                            const districts =
+                                this.downloader.parseDistrictsFromSummary(content)
+                            for (const d of districts) discoveredDistricts.add(d)
+                        } catch {
+                            // Read failed, will re-download
+                        }
                         continue
-                    } catch {
-                        // File doesn't exist, download it
                     }
                 }
 
@@ -212,9 +309,8 @@ export class BackfillOrchestrator {
                     this.progress.completed++
                     this.progress.requestsMade = requestsMade
 
-                    // Save to cache
-                    await fs.mkdir(path.dirname(cachePath), { recursive: true })
-                    await fs.writeFile(cachePath, result.content, 'utf-8')
+                    // Save to storage
+                    await this.storage.write(key, result.content)
 
                     // Parse districts from this summary
                     const districts = this.downloader.parseDistrictsFromSummary(
@@ -238,14 +334,16 @@ export class BackfillOrchestrator {
                 }
             }
 
-            const sortedDistricts = Array.from(discoveredDistricts).sort((a, b) => {
-                const numA = parseInt(a, 10)
-                const numB = parseInt(b, 10)
-                if (isNaN(numA) && isNaN(numB)) return a.localeCompare(b)
-                if (isNaN(numA)) return 1
-                if (isNaN(numB)) return -1
-                return numA - numB
-            })
+            const sortedDistricts = Array.from(discoveredDistricts).sort(
+                (a, b) => {
+                    const numA = parseInt(a, 10)
+                    const numB = parseInt(b, 10)
+                    if (isNaN(numA) && isNaN(numB)) return a.localeCompare(b)
+                    if (isNaN(numA)) return 1
+                    if (isNaN(numB)) return -1
+                    return numA - numB
+                }
+            )
 
             districtsPerYear[year] = sortedDistricts
 
@@ -320,7 +418,7 @@ export class BackfillOrchestrator {
                         if (this.aborted) break
 
                         const dateStr = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`
-                        const cachePath = buildCachePath(
+                        const key = buildStorageKey(
                             this.config.outputDir,
                             year,
                             reportType,
@@ -328,14 +426,12 @@ export class BackfillOrchestrator {
                             districtId
                         )
 
-                        // Resume: skip if already cached
+                        // Resume: skip if already stored
                         if (this.config.resume) {
-                            try {
-                                await fs.access(cachePath)
+                            const cached = await this.storage.exists(key)
+                            if (cached) {
                                 this.progress.completed++
                                 continue
-                            } catch {
-                                // File doesn't exist, download it
                             }
                         }
 
@@ -351,8 +447,7 @@ export class BackfillOrchestrator {
                             this.progress.completed++
                             this.progress.requestsMade = requestsMade
 
-                            await fs.mkdir(path.dirname(cachePath), { recursive: true })
-                            await fs.writeFile(cachePath, result.content, 'utf-8')
+                            await this.storage.write(key, result.content)
 
                             if (this.progress.completed % 100 === 0) {
                                 logger.info('Phase 2 progress', {
@@ -405,7 +500,9 @@ export class BackfillOrchestrator {
 
         // Set up graceful shutdown
         const handler = (): void => {
-            logger.info('Received SIGINT — finishing current request and saving progress...')
+            logger.info(
+                'Received SIGINT — finishing current request and saving progress...'
+            )
             this.aborted = true
         }
         process.on('SIGINT', handler)
@@ -457,16 +554,10 @@ export class BackfillOrchestrator {
         }
     }
 
-    /**
-     * Get current progress snapshot.
-     */
     getProgress(): BackfillProgress {
         return { ...this.progress }
     }
 
-    /**
-     * Signal abort.
-     */
     abort(): void {
         this.aborted = true
     }
