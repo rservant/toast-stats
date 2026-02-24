@@ -15,6 +15,20 @@
 <!--                                                                                      -->
 <!-- **Future Warning**: [What to watch for — a tripwire for the agent]                    -->
 
+## 🗓️ 2026-02-24 — Lesson 24: Replace Per-Request I/O Loops with Lazy-Loaded In-Memory Indexes (#115)
+
+**The Discovery**: The `rank-history-batch` endpoint read `all-districts-rankings.json` from every GCS snapshot (~2,370 files) on each request, taking 30-60s. This N-read pattern was the primary bottleneck, not network latency or compute.
+
+**The Scientific Proof**: Profiling showed 95% of request time was GCS I/O. Replacing per-request reads with a `RankHistoryIndex` (builds once, caches 1hr, supports incremental updates) reduced subsequent requests to <1ms. When combined with frontend waterfall elimination (3 sequential → 2 parallel API calls), total load time dropped from ~60s to <1s.
+
+**The Farley Principle Applied**: Caching Principle — trade memory for latency by materializing frequently-read data into an in-memory index. Incremental updates ensure the cache stays current without full rebuilds.
+
+**The Resulting Rule**: When an endpoint reads O(N) files where N grows over time, build a lazy-loaded in-memory index with TTL. First request pays the build cost; all subsequent requests serve from memory. Use `invalidate()` for full resets (tests) vs. incremental updates (production).
+
+**Future Warning**: The `RankHistoryIndex.invalidate()` fully clears state (needed for test isolation). If production code calls `invalidate()` at high frequency, it will cause thundering herd rebuilds. Only invalidate when new data is confirmed written.
+
+---
+
 ## 🗓️ 2026-02-24 — Lesson 23: Probe For Direct Download URLs Before Building Scrapers (#123)
 
 **The Discovery**: The Toastmasters dashboard CSV export uses a simple `window.open('export.aspx?type=CSV&report=...')` call — a plain, unauthenticated HTTP GET. The existing scraper used Playwright to simulate a browser, select a dropdown, and intercept the download event — **13× slower** than a direct `fetch`.
