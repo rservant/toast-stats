@@ -62,8 +62,13 @@ debug_*.js
 # Temporary files
 *.tmp
 *.temp
+.tmp/
+.tmp-test/
 logs
 logs.json
 logs.txt
 .firebase/
 .npm-cache/
+
+# Data (local-only)
+data/
