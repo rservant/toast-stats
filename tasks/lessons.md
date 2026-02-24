@@ -17,6 +17,14 @@
 
 ---
 
+## 🗓️ 2026-02-23 — Lesson 19: Dependabot Major Bumps Require Holistic Compatibility Checks (#105)
+
+**The Discovery**: Dependabot PR #95 grouped eslint 9→10, jsdom 27→28, and @eslint/js together. Eslint v10 introduced `preserve-caught-error` (needing `{ cause: error }`) and `no-useless-assignment` rules — mechanical fixes. But adding `{ cause: error }` required `es2022.error` in the TypeScript lib since the project targets ES2020. Meanwhile, jsdom v28 broke vitest's npm workspace module resolution entirely (97 test failures). The jsdom issue was invisible in CI's "Quality Gates" because it only ran typecheck/lint, not tests.
+
+**The Resulting Rule**: When a Dependabot PR bundles multiple major bumps, test each upgrade independently. A passing lint doesn't mean passing tests. Always run the full test suite locally before pushing, especially for test-infrastructure deps like jsdom.
+
+---
+
 ## 🗓️ 2026-02-23 — Lesson 18: Normalize Heterogeneous Metrics for Radar Chart Comparison (#93)
 
 **The Discovery**: The district comparison radar chart needs to display ranks, percentages, and scores on the same axes. Raw values are incomparable (rank 1 is best but lowest number; distinguished 50% is mid-range; aggregate score 300 depends on total districts). Each metric type requires a different normalization to a 0-100 scale.
