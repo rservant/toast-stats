@@ -264,9 +264,12 @@ export class RankHistoryIndex {
   }
 
   /**
-   * Force a cache invalidation. Called when the backend detects new data.
+   * Force a full cache invalidation. Clears all in-memory state.
+   * Called when the backend detects new data, or from tests for isolation.
    */
   invalidate(): void {
+    this.index = null
+    this.indexedSnapshotIds = new Set()
     this.lastBuiltAt = 0
   }
 

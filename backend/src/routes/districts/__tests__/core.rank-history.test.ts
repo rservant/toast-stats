@@ -74,39 +74,57 @@ const createMockRankingsData = (
 // Mock the shared module to control snapshot behavior
 vi.mock('../shared.js', async importOriginal => {
   const original = await importOriginal<typeof import('../shared.js')>()
+  const { RankHistoryIndex } =
+    await import('../../../services/RankHistoryIndex.js')
 
   // Create mock snapshot store with configurable data
   const mockSnapshots: MockSnapshot[] = []
   let mockRankingsDataBySnapshot: Map<string, MockRankingsData> = new Map()
+
+  const mockStore = {
+    listSnapshots: vi.fn(async () => mockSnapshots),
+    listSnapshotIds: vi.fn(async () => mockSnapshots.map(s => s.snapshot_id)),
+    readAllDistrictsRankings: vi.fn(
+      async (snapshotId: string) =>
+        mockRankingsDataBySnapshot.get(snapshotId) ?? null
+    ),
+    getLatestSuccessful: vi.fn(async () => mockSnapshots[0] ?? null),
+    getSnapshot: vi.fn(async (snapshotId: string) =>
+      mockSnapshots.find(s => s.snapshot_id === snapshotId)
+    ),
+  }
+
+  // Create a RankHistoryIndex backed by the mock store (with 0ms TTL so it always rebuilds)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mockRankHistoryIndex = new RankHistoryIndex(mockStore as any, {
+    cacheTtlMs: 0,
+  })
 
   return {
     ...original,
     validateDistrictId: original.validateDistrictId,
     getValidDistrictId: original.getValidDistrictId,
     getProgramYearInfo: original.getProgramYearInfo,
-    perDistrictSnapshotStore: {
-      listSnapshots: vi.fn(async () => mockSnapshots),
-      listSnapshotIds: vi.fn(async () => mockSnapshots.map(s => s.snapshot_id)),
-      readAllDistrictsRankings: vi.fn(
-        async (snapshotId: string) =>
-          mockRankingsDataBySnapshot.get(snapshotId) ?? null
-      ),
-      getLatestSuccessful: vi.fn(async () => mockSnapshots[0] ?? null),
-      getSnapshot: vi.fn(async (snapshotId: string) =>
-        mockSnapshots.find(s => s.snapshot_id === snapshotId)
-      ),
-    },
+    perDistrictSnapshotStore: mockStore,
+    rankHistoryIndex: mockRankHistoryIndex,
     // Expose setters for test configuration
     __setMockSnapshots: (snapshots: MockSnapshot[]) => {
       mockSnapshots.length = 0
       mockSnapshots.push(...snapshots)
+      mockRankHistoryIndex.invalidate() // Force re-read on next query
     },
     __setMockRankingsData: (data: Map<string, MockRankingsData>) => {
       mockRankingsDataBySnapshot = data
+      // Update the mock fn to use the new data
+      mockStore.readAllDistrictsRankings.mockImplementation(
+        async (snapshotId: string) => data.get(snapshotId) ?? null
+      )
+      mockRankHistoryIndex.invalidate() // Force re-read on next query
     },
     __clearMocks: () => {
       mockSnapshots.length = 0
       mockRankingsDataBySnapshot = new Map()
+      mockRankHistoryIndex.invalidate()
     },
   }
 })
