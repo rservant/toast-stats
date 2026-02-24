@@ -66,6 +66,7 @@ export class LocalBackfillStorage implements BackfillStorage {
  */
 export class GcsBackfillStorage implements BackfillStorage {
     private readonly bucket: import('@google-cloud/storage').Bucket
+    private existingKeys: Set<string> | null = null
 
     constructor(
         bucket: import('@google-cloud/storage').Bucket
@@ -86,7 +87,31 @@ export class GcsBackfillStorage implements BackfillStorage {
         return new GcsBackfillStorage(bucket)
     }
 
+    /**
+     * Pre-load all existing object keys under a prefix into memory.
+     * This converts O(N) HTTP HEAD requests into a single paginated LIST.
+     * Call this before starting a phase to make exists() O(1).
+     */
+    async warmCache(prefix: string): Promise<number> {
+        const keys = new Set<string>()
+        const [files] = await this.bucket.getFiles({
+            prefix,
+            // Only fetch the name, not full metadata
+            autoPaginate: true,
+        })
+        for (const file of files) {
+            keys.add(file.name)
+        }
+        this.existingKeys = keys
+        return keys.size
+    }
+
     async exists(filePath: string): Promise<boolean> {
+        // Use in-memory cache if warmed
+        if (this.existingKeys) {
+            return this.existingKeys.has(filePath)
+        }
+        // Fallback to individual check
         const file = this.bucket.file(filePath)
         const [exists] = await file.exists()
         return exists
@@ -101,6 +126,10 @@ export class GcsBackfillStorage implements BackfillStorage {
     async write(filePath: string, content: string): Promise<void> {
         const file = this.bucket.file(filePath)
         await file.save(content, { contentType: 'text/csv' })
+        // Keep cache in sync
+        if (this.existingKeys) {
+            this.existingKeys.add(filePath)
+        }
     }
 }
 
@@ -508,6 +537,14 @@ export class BackfillOrchestrator {
         process.on('SIGINT', handler)
 
         try {
+            // Pre-warm GCS cache if using GCS storage (converts O(N) HEAD → O(1) SET lookups)
+            if (this.config.resume && 'warmCache' in this.storage) {
+                const gcsStorage = this.storage as GcsBackfillStorage
+                logger.info('Warming GCS cache — listing existing objects...')
+                const cachedCount = await gcsStorage.warmCache(this.config.outputDir)
+                logger.info('GCS cache warmed', { existingFiles: cachedCount })
+            }
+
             // Phase 1: Discovery
             const phase1Result = await this.runPhase1Discovery()
             logger.info('Phase 1 complete', {
