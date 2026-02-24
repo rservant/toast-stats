@@ -15,6 +15,18 @@
 <!--                                                                                      -->
 <!-- **Future Warning**: [What to watch for — a tripwire for the agent]                    -->
 
+## 🗓️ 2026-02-24 — Lesson 22: Don't Infer Context from Data When the Parent Already Knows (#119)
+
+**The Discovery**: `ClubDetailModal` inferred the program year from the first data point's date via `getProgramYearForDate(firstDataDate)`. When the backend returned data spanning multiple years, the first point was from the prior year, causing the modal to display the wrong year label and prior-year data.
+
+**The Scientific Proof**: Test `ClubDetailModal.programYear.test.tsx` — passing `programYear={2025-2026}` with mixed-year data confirmed 3 circles (current year) instead of 5 (all data), and the correct label.
+
+**The Farley Principle Applied**: Separation of Concerns — the parent page already manages the selected program year via `useProgramYear()`. Child components should receive this as a prop rather than re-deriving it from data.
+
+**The Resulting Rule**: When a parent component has authoritative context (program year, date range, filter state), pass it explicitly to children as a prop. Never re-derive context from API data when the parent already knows the answer.
+
+**Future Warning**: Any new modal or detail component that displays date-scoped data MUST receive the program year or date range as a prop, not infer it. Search for `getProgramYearForDate` calls in rendering components — each one is a potential bug.
+
 ## 🗓️ 2026-02-24 — Lesson 21: Tailwind Opacity-Variant Classes Bypass CSS Variable Overrides (#121, #122)
 
 **The Discovery**: Overriding `--tm-loyal-blue` in `[data-theme='dark']` fixes `text-tm-loyal-blue`, but does NOT fix `text-tm-loyal-blue-80` (the 80% opacity variant). Tailwind generates the opacity variant as a separate class with a hardcoded `rgba()` value instead of referencing the CSS custom property.
