@@ -15,6 +15,18 @@
 <!--                                                                                      -->
 <!-- **Future Warning**: [What to watch for — a tripwire for the agent]                    -->
 
+## 🗓️ 2026-02-24 — Lesson 23: Probe For Direct Download URLs Before Building Scrapers (#123)
+
+**The Discovery**: The Toastmasters dashboard CSV export uses a simple `window.open('export.aspx?type=CSV&report=...')` call — a plain, unauthenticated HTTP GET. The existing scraper used Playwright to simulate a browser, select a dropdown, and intercept the download event — **13× slower** than a direct `fetch`.
+
+**The Scientific Proof**: `curl -s "https://dashboards.toastmasters.org/2024-2025/export.aspx?type=CSV&report=districtsummary~6/30/2025~~2024-2025"` returned 200 OK with 16,860 bytes of valid CSV. No cookies, no session. Works back to 2008-2009.
+
+**The Farley Principle Applied**: YAGNI + Simplest Thing That Could Work. Browser automation is a heavy abstraction. Before building a scraper, always check if the data is available via a simpler mechanism.
+
+**The Resulting Rule**: Before writing a Playwright/Puppeteer scraper, **always inspect the JavaScript export handler** to check if it uses `window.open` or `fetch` with a constructible URL. If so, use plain HTTP instead.
+
+**Future Warning**: If the Toastmasters dashboard ever adds CSRF tokens or session cookies to the export URL, the direct HTTP approach will break. Monitor for 403/401 responses in the backfill logs.
+
 ## 🗓️ 2026-02-24 — Lesson 22: Don't Infer Context from Data When the Parent Already Knows (#119)
 
 **The Discovery**: `ClubDetailModal` inferred the program year from the first data point's date via `getProgramYearForDate(firstDataDate)`. When the backend returned data spanning multiple years, the first point was from the prior year, causing the modal to display the wrong year label and prior-year data.
