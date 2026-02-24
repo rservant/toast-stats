@@ -217,7 +217,9 @@ export class TimeSeriesIndexWriter {
         date: dataPoint.date,
         error: errorMessage,
       })
-      throw new Error(`Failed to write data point: ${errorMessage}`)
+      throw new Error(`Failed to write data point: ${errorMessage}`, {
+        cause: error,
+      })
     }
   }
 
@@ -293,7 +295,9 @@ export class TimeSeriesIndexWriter {
         districtId,
         error: errorMessage,
       })
-      throw new Error(`Failed to update metadata: ${errorMessage}`)
+      throw new Error(`Failed to update metadata: ${errorMessage}`, {
+        cause: error,
+      })
     }
   }
 
@@ -391,7 +395,9 @@ export class TimeSeriesIndexWriter {
         filePath: finalPath,
         error: errorMessage,
       })
-      throw new Error(`Failed to write metadata file: ${errorMessage}`)
+      throw new Error(`Failed to write metadata file: ${errorMessage}`, {
+        cause: error,
+      })
     }
   }
 
@@ -614,7 +620,9 @@ export class TimeSeriesIndexWriter {
         filePath: resolvedPath,
         error: errorMessage,
       })
-      throw new Error(`Failed to read program year index: ${errorMessage}`)
+      throw new Error(`Failed to read program year index: ${errorMessage}`, {
+        cause: error,
+      })
     }
   }
 
@@ -669,7 +677,9 @@ export class TimeSeriesIndexWriter {
         filePath: finalPath,
         error: errorMessage,
       })
-      throw new Error(`Failed to write program year index: ${errorMessage}`)
+      throw new Error(`Failed to write program year index: ${errorMessage}`, {
+        cause: error,
+      })
     }
   }
 

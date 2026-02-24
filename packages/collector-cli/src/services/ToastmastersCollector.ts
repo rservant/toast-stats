@@ -896,7 +896,8 @@ export class ToastmastersCollector {
     } catch (error) {
       logger.error('Failed to download CSV', error)
       throw new Error(
-        `CSV download failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `CSV download failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        { cause: error }
       )
     }
   }
@@ -931,7 +932,8 @@ export class ToastmastersCollector {
     } catch (error) {
       logger.error('Failed to parse CSV', error)
       throw new Error(
-        `CSV parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `CSV parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        { cause: error }
       )
     }
   }

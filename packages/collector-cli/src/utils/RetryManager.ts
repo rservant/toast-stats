@@ -60,7 +60,7 @@ export class RetryManager {
     const config = { ...RetryManager.DEFAULT_OPTIONS, ...options }
     const startTime = Date.now()
     let lastError: Error | undefined
-    let attempts = 0
+    let attempts: number
 
     logger.debug('Starting retry operation', {
       context,
