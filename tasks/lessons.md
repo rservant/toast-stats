@@ -15,6 +15,20 @@
 <!--                                                                                      -->
 <!-- **Future Warning**: [What to watch for — a tripwire for the agent]                    -->
 
+## 🗓️ 2026-02-24 — Lesson 21: Tailwind Opacity-Variant Classes Bypass CSS Variable Overrides (#121, #122)
+
+**The Discovery**: Overriding `--tm-loyal-blue` in `[data-theme='dark']` fixes `text-tm-loyal-blue`, but does NOT fix `text-tm-loyal-blue-80` (the 80% opacity variant). Tailwind generates the opacity variant as a separate class with a hardcoded `rgba()` value instead of referencing the CSS custom property.
+
+**The Scientific Proof**: After deploying brand token overrides, `text-tm-loyal-blue` headers turned bright blue, but body text using `text-tm-loyal-blue-80` remained `rgba(0, 65, 101, 0.8)` — the original dark value at 80% opacity.
+
+**The Farley Principle Applied**: Leaky Abstraction — Tailwind's color system appears to use CSS custom properties uniformly, but opacity variants silently bake in hardcoded `rgba()` values at build time. The abstraction leaks at the variant boundary.
+
+**The Resulting Rule**: When adding dark mode overrides for brand color tokens, you must ALSO add explicit class overrides for every opacity variant (`-80`, `-70`, `-50`, etc.) used in the codebase. Grep for `text-tm-*-` and `bg-tm-*-` to find all variants.
+
+**Future Warning**: When adding new brand colors or changing existing token values, audit all opacity variants (`-10` through `-90`) in the Tailwind config. Each one generates a separate class that won't inherit the CSS variable override.
+
+---
+
 ## 🗓️ 2026-02-23 — Lesson 20: CSS-Level Theme Overrides Beat Component-Level Changes (#120)
 
 **The Discovery**: Adding dark mode to an app with `bg-white` used 150+ times across 50+ component files. Instead of modifying every component (adding `dark:` variants), a thin CSS override layer targeting `[data-theme='dark'] .bg-white { ... }` achieved the same result with zero component file changes. However, any component rendered with `useDarkMode` in tests needs `DarkModeProvider` — this broke `SiteFooter.test.tsx` when `ThemeToggle` was added to the footer. Also, jsdom in this project's vitest setup doesn't provide `localStorage` at all — must use `vi.stubGlobal('localStorage', {...})` in every test that touches localStorage.
@@ -270,13 +284,3 @@
 **The Resulting Rule**: When a façade delegates to sub-modules, any method that constructs paths directly (rather than delegating) must also call the shared validation utilities (`validateDistrictId`, `resolvePathUnderBase`).
 
 **Future Warning**: If a new method is added to `SnapshotStore` that accepts `districtId` or `snapshotId` and constructs paths inline, it must validate inputs. Audit all `path.join` calls using user-supplied values.
-
----
-
-## 🗓️ 2026-02-24 — Lesson 02: Tailwind Opacity-Variant Classes Bypass CSS Variable Overrides
-
-**The Discovery**: Overriding `--tm-loyal-blue` in `[data-theme='dark']` fixes `text-tm-loyal-blue`, but does NOT fix `text-tm-loyal-blue-80` (the 80% opacity variant). Tailwind generates the opacity variant as a separate class with a hardcoded `rgba()` value instead of referencing the CSS custom property.
-
-**The Scientific Proof**: After deploying brand token overrides, `text-tm-loyal-blue` headers turned bright blue, but body text using `text-tm-loyal-blue-80` remained `rgba(0, 65, 101, 0.8)` — the original dark value at 80% opacity.
-
-**The Resulting Rule**: When adding dark mode overrides for brand color tokens, you must ALSO add explicit class overrides for every opacity variant (`-80`, `-70`, `-50`, etc.) used in the codebase. Grep for `text-tm-*-` and `bg-tm-*-` to find all variants.
