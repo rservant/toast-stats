@@ -845,5 +845,140 @@ export function createCLI(): Command {
       process.exit(exitCode)
     })
 
+  // Add backfill command for historical data collection (#123)
+  program
+    .command('backfill')
+    .description(
+      'Backfill historical data for all districts via direct HTTP CSV downloads'
+    )
+    .option(
+      '--start-year <YYYY>',
+      'Start program year (e.g., 2017 for 2017-2018)',
+      (value: string) => {
+        const year = parseInt(value, 10)
+        if (isNaN(year) || year < 2008 || year > 2030) {
+          console.error(
+            `Error: Invalid start year "${value}". Must be between 2008 and 2030.`
+          )
+          process.exit(ExitCode.COMPLETE_FAILURE)
+        }
+        return year
+      }
+    )
+    .option(
+      '--end-year <YYYY>',
+      'End program year (e.g., 2024 for 2024-2025)',
+      (value: string) => {
+        const year = parseInt(value, 10)
+        if (isNaN(year) || year < 2008 || year > 2030) {
+          console.error(
+            `Error: Invalid end year "${value}". Must be between 2008 and 2030.`
+          )
+          process.exit(ExitCode.COMPLETE_FAILURE)
+        }
+        return year
+      }
+    )
+    .option(
+      '--frequency <freq>',
+      'Date sampling frequency: daily, weekly, biweekly, monthly (default: biweekly)',
+      'biweekly'
+    )
+    .option(
+      '--rate <number>',
+      'Maximum requests per second (default: 2)',
+      (value: string) => {
+        const rate = parseFloat(value)
+        if (isNaN(rate) || rate <= 0 || rate > 10) {
+          console.error(
+            `Error: Invalid rate "${value}". Must be between 0.1 and 10.`
+          )
+          process.exit(ExitCode.COMPLETE_FAILURE)
+        }
+        return rate
+      },
+      2
+    )
+    .option(
+      '--phase <phase>',
+      'Run only a specific phase: discover, collect, or all (default: all)',
+      'all'
+    )
+    .option('--resume', 'Skip already-downloaded files', true)
+    .option('-v, --verbose', 'Enable detailed logging output', false)
+    .option('-o, --output <dir>', 'Output directory for downloaded CSVs')
+    .action(
+      async (options: {
+        startYear?: number
+        endYear?: number
+        frequency: string
+        rate: number
+        phase: string
+        resume: boolean
+        verbose: boolean
+        output?: string
+      }) => {
+        const { BackfillOrchestrator } = await import(
+          './services/BackfillOrchestrator.js'
+        )
+        type DateFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly'
+
+        const startYear = options.startYear ?? 2017
+        const endYear = options.endYear ?? new Date().getFullYear()
+        const frequency = options.frequency as DateFrequency
+        const outputDir =
+          options.output ??
+          resolveConfiguration({}).cacheDir + '/backfill'
+
+        if (options.verbose) {
+          console.error(`[INFO] Starting backfill`)
+          console.error(`[INFO] Program years: ${startYear}-${startYear + 1} to ${endYear}-${endYear + 1}`)
+          console.error(`[INFO] Frequency: ${frequency}`)
+          console.error(`[INFO] Rate: ${options.rate} req/s`)
+          console.error(`[INFO] Phase: ${options.phase}`)
+          console.error(`[INFO] Resume: ${options.resume}`)
+          console.error(`[INFO] Output: ${outputDir}`)
+        }
+
+        const orchestrator = new BackfillOrchestrator({
+          startYear,
+          endYear,
+          frequency,
+          ratePerSecond: options.rate,
+          outputDir,
+          phase: options.phase as 'discover' | 'collect' | 'all',
+          resume: options.resume,
+        })
+
+        // Show scope before starting
+        const scope = orchestrator.calculateScope()
+        const estimate = orchestrator.estimateTime(
+          scope.phase1Requests,
+          options.rate
+        )
+
+        console.error(`[SCOPE] Program years: ${scope.programYears.length}`)
+        console.error(`[SCOPE] Dates per year: ${scope.datesPerYear}`)
+        console.error(`[SCOPE] Phase 1 requests: ${scope.phase1Requests}`)
+        console.error(
+          `[SCOPE] Phase 1 estimate: ${estimate.humanReadable}`
+        )
+        console.error(
+          `[SCOPE] Phase 2 requests per district: ${scope.requestsPerDistrict}`
+        )
+
+        try {
+          await orchestrator.run()
+          console.error('[DONE] Backfill complete')
+          process.exit(ExitCode.SUCCESS)
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error'
+          console.error(`[ERROR] Backfill failed: ${errorMessage}`)
+          process.exit(ExitCode.COMPLETE_FAILURE)
+        }
+      }
+    )
+
   return program
 }
