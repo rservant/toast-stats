@@ -20,6 +20,19 @@ export async function run(): Promise<void> {
   await program.parseAsync(process.argv)
 }
 
+// Auto-run when executed directly (e.g., via npx tsx)
+const isMainModule =
+  process.argv[1] &&
+  (process.argv[1].includes('index.ts') ||
+    process.argv[1].includes('index.js'))
+
+if (isMainModule) {
+  run().catch(error => {
+    console.error('Fatal error:', error.message)
+    process.exit(2)
+  })
+}
+
 // Export CLI creation for testing
 export { createCLI } from './cli.js'
 
