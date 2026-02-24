@@ -1,15 +1,35 @@
 /**
- * Unit Tests for BackfillOrchestrator (#123)
+ * Unit Tests for BackfillOrchestrator (#123, #125)
  *
  * Tests the 3-phase backfill orchestration logic.
+ * #125: Verifies storage paths are compatible with OrchestratorCacheAdapter.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   BackfillOrchestrator,
+  buildCompatiblePath,
   type BackfillConfig,
+  type BackfillStorage,
 } from '../services/BackfillOrchestrator.js'
 import type { BackfillDateSpec } from '../services/HttpCsvDownloader.js'
+
+/** Spy storage that records all writes for path assertions. */
+function createSpyStorage(): BackfillStorage & { writtenPaths: string[] } {
+  const writtenPaths: string[] = []
+  return {
+    writtenPaths,
+    async exists() {
+      return false
+    },
+    async read() {
+      return ''
+    },
+    async write(filePath: string) {
+      writtenPaths.push(filePath)
+    },
+  }
+}
 
 describe('BackfillOrchestrator (#123)', () => {
   const defaultConfig: BackfillConfig = {
@@ -117,5 +137,124 @@ describe('BackfillOrchestrator (#123)', () => {
       expect(estimate.totalSeconds).toBeCloseTo(36000, -1)
       expect(estimate.humanReadable).toContain('h')
     })
+  })
+})
+
+// #125: Storage path compatibility tests
+describe('buildCompatiblePath (#125)', () => {
+  it('should produce OrchestratorCacheAdapter-compatible path for club CSV', () => {
+    const date = new Date(2025, 0, 15) // Jan 15, 2025
+    const result = buildCompatiblePath(
+      '/data/cache',
+      date,
+      'clubperformance',
+      '109'
+    )
+    expect(result).toBe(
+      '/data/cache/raw-csv/2025-01-15/district-109/club-performance.csv'
+    )
+  })
+
+  it('should produce correct path for division CSV', () => {
+    const date = new Date(2025, 6, 1) // Jul 1, 2025
+    const result = buildCompatiblePath(
+      '/data/cache',
+      date,
+      'divisionperformance',
+      '42'
+    )
+    expect(result).toBe(
+      '/data/cache/raw-csv/2025-07-01/district-42/division-performance.csv'
+    )
+  })
+
+  it('should produce correct path for district CSV', () => {
+    const date = new Date(2025, 11, 31) // Dec 31, 2025
+    const result = buildCompatiblePath(
+      '/data/cache',
+      date,
+      'districtperformance',
+      '02'
+    )
+    expect(result).toBe(
+      '/data/cache/raw-csv/2025-12-31/district-02/district-performance.csv'
+    )
+  })
+
+  it('should produce correct path for all-districts summary', () => {
+    const date = new Date(2025, 0, 15)
+    const result = buildCompatiblePath('/data/cache', date, 'districtsummary')
+    expect(result).toBe('/data/cache/raw-csv/2025-01-15/all-districts.csv')
+  })
+
+  it('should throw when districtId is missing for per-district report', () => {
+    const date = new Date(2025, 0, 15)
+    expect(() =>
+      buildCompatiblePath('/data/cache', date, 'clubperformance')
+    ).toThrow('districtId is required')
+  })
+})
+
+describe('BackfillOrchestrator storage paths (#125)', () => {
+  it('Phase 1 should write to raw-csv/{date}/all-districts.csv', async () => {
+    const spyStorage = createSpyStorage()
+    const orchestrator = new BackfillOrchestrator({
+      startYear: 2024,
+      endYear: 2024,
+      frequency: 'monthly',
+      ratePerSecond: 100,
+      outputDir: '/data/cache',
+      storage: spyStorage,
+    })
+
+    orchestrator.downloader.downloadCsv = vi.fn().mockResolvedValue({
+      url: 'https://test.example.com',
+      content: '"REGION","DISTRICT"\n"01","09"\n',
+      statusCode: 200,
+      byteSize: 50,
+    })
+
+    await orchestrator.runPhase1Discovery()
+
+    // Every written path should match all-districts format
+    for (const p of spyStorage.writtenPaths) {
+      expect(p).toMatch(
+        /^\/data\/cache\/raw-csv\/\d{4}-\d{2}-\d{2}\/all-districts\.csv$/
+      )
+    }
+    expect(spyStorage.writtenPaths.length).toBeGreaterThan(0)
+  })
+
+  it('Phase 2 should write to raw-csv/{date}/district-{id}/{type}.csv', async () => {
+    const spyStorage = createSpyStorage()
+    const orchestrator = new BackfillOrchestrator({
+      startYear: 2024,
+      endYear: 2024,
+      frequency: 'monthly',
+      ratePerSecond: 100,
+      outputDir: '/data/cache',
+      storage: spyStorage,
+    })
+
+    orchestrator.downloader.downloadCsv = vi.fn().mockResolvedValue({
+      url: 'https://test.example.com',
+      content: 'some,csv,data\n',
+      statusCode: 200,
+      byteSize: 14,
+    })
+
+    await orchestrator.runPhase2Collection({
+      '2024-2025': ['09'],
+    })
+
+    // Should have written 3 report types × N dates
+    expect(spyStorage.writtenPaths.length).toBeGreaterThan(0)
+
+    // Every path should follow the compatible format
+    for (const p of spyStorage.writtenPaths) {
+      expect(p).toMatch(
+        /^\/data\/cache\/raw-csv\/\d{4}-\d{2}-\d{2}\/district-09\/(club|division|district)-performance\.csv$/
+      )
+    }
   })
 })

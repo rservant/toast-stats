@@ -177,23 +177,55 @@ export interface TimeEstimate {
 // ── Helpers ──────────────────────────────────────────────────────────
 
 /**
- * Build the storage key for a given download spec.
- * Works for both local paths and GCS object keys.
+ * Map backfill report type names to the CSVType enum names used by
+ * OrchestratorCacheAdapter / TransformService.
  */
-function buildStorageKey(
-  prefix: string,
-  programYear: string,
+const REPORT_TYPE_MAP: Record<ReportType, string> = {
+  clubperformance: 'club-performance',
+  divisionperformance: 'division-performance',
+  districtperformance: 'district-performance',
+  districtsummary: 'all-districts',
+}
+
+/**
+ * Format a Date as YYYY-MM-DD for storage paths.
+ */
+function toYYYYMMDD(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+/**
+ * Build a storage path compatible with OrchestratorCacheAdapter.
+ *
+ * Produces paths that the downstream `transform` pipeline can read:
+ *   - District CSVs: `{cacheDir}/raw-csv/{YYYY-MM-DD}/district-{id}/{type}.csv`
+ *   - All-districts:  `{cacheDir}/raw-csv/{YYYY-MM-DD}/all-districts.csv`
+ *
+ * @param cacheDir  Root cache directory (e.g. `/data/cache` or GCS prefix)
+ * @param date      Date of the snapshot
+ * @param reportType Dashboard report type
+ * @param districtId District ID (required for per-district reports)
+ */
+export function buildCompatiblePath(
+  cacheDir: string,
+  date: Date,
   reportType: ReportType,
-  dateStr: string,
   districtId?: string
 ): string {
-  const safeDate = dateStr.replace(/\//g, '-')
-  const parts = [prefix, programYear, reportType]
-  if (districtId) {
-    parts.push(districtId)
+  const dateStr = toYYYYMMDD(date)
+  const csvType = REPORT_TYPE_MAP[reportType]
+
+  if (reportType === 'districtsummary') {
+    return `${cacheDir}/raw-csv/${dateStr}/${csvType}.csv`
   }
-  parts.push(`${safeDate}.csv`)
-  return parts.join('/')
+
+  if (!districtId) {
+    throw new Error(`districtId is required for report type: ${reportType}`)
+  }
+  return `${cacheDir}/raw-csv/${dateStr}/district-${districtId}/${csvType}.csv`
 }
 
 // ── Orchestrator ─────────────────────────────────────────────────────
@@ -300,12 +332,10 @@ export class BackfillOrchestrator {
       for (const date of dates) {
         if (this.aborted) break
 
-        const dateStr = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`
-        const key = buildStorageKey(
+        const key = buildCompatiblePath(
           this.config.outputDir,
-          year,
-          'districtsummary',
-          dateStr
+          date,
+          'districtsummary'
         )
 
         // Resume: skip if already stored
@@ -442,12 +472,10 @@ export class BackfillOrchestrator {
           for (const date of dates) {
             if (this.aborted) break
 
-            const dateStr = `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`
-            const key = buildStorageKey(
+            const key = buildCompatiblePath(
               this.config.outputDir,
-              year,
+              date,
               reportType,
-              dateStr,
               districtId
             )
 
