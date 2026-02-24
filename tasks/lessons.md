@@ -270,3 +270,13 @@
 **The Resulting Rule**: When a façade delegates to sub-modules, any method that constructs paths directly (rather than delegating) must also call the shared validation utilities (`validateDistrictId`, `resolvePathUnderBase`).
 
 **Future Warning**: If a new method is added to `SnapshotStore` that accepts `districtId` or `snapshotId` and constructs paths inline, it must validate inputs. Audit all `path.join` calls using user-supplied values.
+
+---
+
+## 🗓️ 2026-02-24 — Lesson 02: Tailwind Opacity-Variant Classes Bypass CSS Variable Overrides
+
+**The Discovery**: Overriding `--tm-loyal-blue` in `[data-theme='dark']` fixes `text-tm-loyal-blue`, but does NOT fix `text-tm-loyal-blue-80` (the 80% opacity variant). Tailwind generates the opacity variant as a separate class with a hardcoded `rgba()` value instead of referencing the CSS custom property.
+
+**The Scientific Proof**: After deploying brand token overrides, `text-tm-loyal-blue` headers turned bright blue, but body text using `text-tm-loyal-blue-80` remained `rgba(0, 65, 101, 0.8)` — the original dark value at 80% opacity.
+
+**The Resulting Rule**: When adding dark mode overrides for brand color tokens, you must ALSO add explicit class overrides for every opacity variant (`-80`, `-70`, `-50`, etc.) used in the codebase. Grep for `text-tm-*-` and `bg-tm-*-` to find all variants.
