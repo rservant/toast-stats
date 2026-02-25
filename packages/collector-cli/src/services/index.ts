@@ -4,7 +4,6 @@
  * This module exports the collector services for the Collector CLI package.
  *
  * Requirements:
- * - 8.3: THE ToastmastersCollector class SHALL be moved to the Collector_CLI package
  * - 2.2: TransformService uses the same DataTransformationService logic as the Backend
  * - 1.6: AnalyticsWriter stores analytics in `analytics/` subdirectory
  * - 3.1: AnalyticsWriter stores in `CACHE_DIR/snapshots/{date}/analytics/`
@@ -14,7 +13,6 @@
  * - 6.3: UploadService supports incremental uploads (compare checksums)
  */
 
-export { ToastmastersCollector } from './ToastmastersCollector.js'
 export {
   TransformService,
   type TransformServiceConfig,

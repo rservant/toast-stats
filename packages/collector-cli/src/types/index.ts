@@ -20,8 +20,6 @@ export type {
   DivisionPerformanceRecord,
   DistrictPerformanceRecord,
   AllDistrictsCSVRecord,
-  FallbackInfo,
-  FallbackMetrics,
 } from './collector.js'
 
 export { CSVType } from './collector.js'
