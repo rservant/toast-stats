@@ -85,4 +85,12 @@ describe('SiteFooter', () => {
     renderFooter()
     expect(screen.getByText(/built by/i)).toBeInTheDocument()
   })
+
+  it('displays the app version', () => {
+    renderFooter()
+    const versionEl = screen.getByTestId('app-version')
+    expect(versionEl).toBeInTheDocument()
+    // In test environment, __APP_VERSION__ is 'dev' (Vite define fallback)
+    expect(versionEl.textContent).toBeTruthy()
+  })
 })

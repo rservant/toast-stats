@@ -1,7 +1,12 @@
 import React from 'react'
 import ThemeToggle from './ThemeToggle'
 
+declare const __APP_VERSION__: string
+
 const SiteFooter: React.FC = () => {
+  const version =
+    typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'
+
   return (
     <footer
       role="contentinfo"
@@ -59,6 +64,14 @@ const SiteFooter: React.FC = () => {
             <span className="text-white/30">•</span>
             <ThemeToggle />
           </div>
+
+          {/* Version */}
+          <span
+            className="text-white/40 text-xs font-mono hidden md:inline"
+            data-testid="app-version"
+          >
+            {version}
+          </span>
 
           {/* Disclaimer */}
           <div className="text-white/60 text-xs md:flex-1 md:text-right">

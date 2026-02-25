@@ -25,7 +25,7 @@ env:
   GCS_BUCKET: 'toast-stats-data'
 
 permissions:
-  contents: read
+  contents: write # Required to push version tags
   id-token: write # Required for Workload Identity Federation
   packages: write # Required by CI workflow
   pull-requests: write # Required by CI workflow
@@ -38,6 +38,85 @@ jobs:
   ci:
     name: CI Quality Gates
     uses: ./.github/workflows/ci.yml
+
+  # ──────────────────────────────────────────────
+  # Compute Semantic Version from Conventional Commits
+  # ──────────────────────────────────────────────
+  version:
+    name: Compute Version
+    runs-on: ubuntu-latest
+    needs: ci
+    outputs:
+      version: ${{ steps.semver.outputs.version }}
+      tag: ${{ steps.semver.outputs.tag }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # Full history for tag lookup
+
+      - name: Compute semantic version
+        id: semver
+        run: |
+          # Find latest version tag (or default to v0.0.0)
+          LATEST_TAG=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1)
+          if [ -z "$LATEST_TAG" ]; then
+            LATEST_TAG="v0.0.0"
+            echo "No existing tags found, starting from v0.0.0"
+          else
+            echo "Latest tag: $LATEST_TAG"
+          fi
+
+          # Parse current version
+          CURRENT=${LATEST_TAG#v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+          # Scan commits since last tag for conventional commit prefixes
+          if [ "$LATEST_TAG" = "v0.0.0" ]; then
+            COMMITS=$(git log --pretty=format:'%s' HEAD)
+          else
+            COMMITS=$(git log --pretty=format:'%s' "${LATEST_TAG}..HEAD")
+          fi
+
+          # Determine bump type
+          BUMP="patch"
+          if echo "$COMMITS" | grep -qiE '^feat[!(:]'; then
+            BUMP="minor"
+          fi
+          if echo "$COMMITS" | grep -qiE 'BREAKING CHANGE'; then
+            BUMP="major"
+          fi
+
+          # Apply bump
+          case $BUMP in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          NEW_TAG="v${NEW_VERSION}"
+
+          echo "Bump type: $BUMP"
+          echo "New version: $NEW_VERSION (tag: $NEW_TAG)"
+          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${NEW_TAG}" >> "$GITHUB_OUTPUT"
+
+          echo "## Version" >> "$GITHUB_STEP_SUMMARY"
+          echo "📦 **${NEW_TAG}** (${BUMP} bump from ${LATEST_TAG})" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create and push tag
+        run: |
+          TAG="${{ steps.semver.outputs.tag }}"
+          # Only create tag if it doesn't already exist
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists, skipping"
+          else
+            git tag "$TAG"
+            git push origin "$TAG"
+            echo "Created and pushed tag: $TAG"
+          fi
 
   # ──────────────────────────────────────────────
   # Deploy Backend to Cloud Run
@@ -95,7 +174,7 @@ jobs:
   deploy-frontend:
     name: Deploy Frontend
     runs-on: ubuntu-latest
-    needs: ci
+    needs: [ci, version]
 
     steps:
       - name: Checkout code
@@ -117,6 +196,8 @@ jobs:
 
       - name: Build frontend
         run: npm run build:frontend
+        env:
+          VITE_APP_VERSION: v${{ needs.version.outputs.version }}
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v3
@@ -128,7 +209,6 @@ jobs:
         run: |
           npm install -g firebase-tools
           firebase deploy --only hosting --project ${{ secrets.GCP_PROJECT_ID }}
-
 
   # ──────────────────────────────────────────────
   # Deploy API Gateway (only when openapi.yaml changes)
