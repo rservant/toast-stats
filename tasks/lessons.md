@@ -408,3 +408,9 @@
 **The Resulting Rule**: When a façade delegates to sub-modules, any method that constructs paths directly (rather than delegating) must also call the shared validation utilities (`validateDistrictId`, `resolvePathUnderBase`).
 
 **Future Warning**: If a new method is added to `SnapshotStore` that accepts `districtId` or `snapshotId` and constructs paths inline, it must validate inputs. Audit all `path.join` calls using user-supplied values.
+
+## 2026-02-25: designTokens.ts split (#134)
+
+**Lesson**: When splitting pure data files, TypeScript's module resolution makes it zero-cost: renaming `foo.ts` → `foo/index.ts` preserves all `import from './foo'` paths without touching consumers. The barrel re-export pattern is the safest refactoring tool for file splitting.
+
+**Key Finding**: Three of four "duplication" issues (#127, #128, #131) turned out to be false positives — the modules either already delegated to shared code or served distinct purposes despite similar naming. Always verify actual overlap before planning a refactor.
