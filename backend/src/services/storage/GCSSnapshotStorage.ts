@@ -29,7 +29,7 @@ import type { DistrictStatistics } from '../../types/districts.js'
 import type {
   PerDistrictSnapshotMetadata,
   WriteSnapshotOptions,
-} from '../SnapshotStore.js'
+} from '../snapshot/types.js'
 import type {
   SnapshotManifest,
   AllDistrictsRankingsData,

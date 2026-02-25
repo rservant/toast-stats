@@ -22,7 +22,7 @@ import type {
   SnapshotManifest,
   PerDistrictSnapshotMetadata,
   WriteSnapshotOptions,
-} from '../services/SnapshotStore.js'
+} from '../services/snapshot/types.js'
 import type {
   CSVType,
   RawCSVCacheMetadata,

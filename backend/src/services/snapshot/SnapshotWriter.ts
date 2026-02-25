@@ -24,7 +24,7 @@ import type {
   PerDistrictSnapshotMetadata,
   WriteSnapshotOptions,
   SnapshotComparisonResult,
-} from '../SnapshotStore.js'
+} from './types.js'
 import { getSnapshotMetadata } from './SnapshotReader.js'
 
 // ============================================================================

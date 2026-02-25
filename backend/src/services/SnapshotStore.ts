@@ -57,125 +57,25 @@ import {
 import * as reader from './snapshot/SnapshotReader.js'
 import * as writer from './snapshot/SnapshotWriter.js'
 
-// Re-export types from shared-contracts for backward compatibility
+// Re-export all types from snapshot/types.ts for backward compatibility.
+// New consumers should import directly from './snapshot/types.js'.
 export type {
   DistrictManifestEntry,
   SnapshotManifest,
-} from '@toastmasters/shared-contracts'
-
-/**
- * Per-district snapshot metadata with enhanced error tracking
- */
-export interface PerDistrictSnapshotMetadata {
-  snapshotId: string
-  createdAt: string
-  schemaVersion: string
-  calculationVersion: string
-  /** Version of the ranking algorithm used for calculations */
-  rankingVersion?: string
-  status: 'success' | 'partial' | 'failed'
-  configuredDistricts: string[]
-  successfulDistricts: string[]
-  failedDistricts: string[]
-  errors: string[]
-  /** Detailed per-district error information for retry logic */
-  districtErrors?: Array<{
-    districtId: string
-    operation: string
-    error: string
-    timestamp: string
-    shouldRetry: boolean
-  }>
-  processingDuration: number
-  source: string
-  dataAsOfDate: string
-
-  // Closing period tracking fields
-  isClosingPeriodData?: boolean
-  collectionDate?: string
-  logicalDate?: string
-
-  // Chunked write tracking fields (added for Firestore timeout fix)
-  writeFailedDistricts?: string[]
-  writeComplete?: boolean
-}
-
-/**
- * Options for writing snapshots
- */
-export interface WriteSnapshotOptions {
-  overrideSnapshotDate?: string
-}
-
-/**
- * Result of comparing a new snapshot's collection date against an existing snapshot
- */
-export interface SnapshotComparisonResult {
-  shouldUpdate: boolean
-  reason:
-    | 'no_existing'
-    | 'newer_data'
-    | 'same_day_refresh'
-    | 'existing_is_newer'
-  existingCollectionDate?: string
-  newCollectionDate: string
-}
-
-// Re-export for backward compatibility
-export type { PerDistrictData } from '@toastmasters/shared-contracts'
-
-/**
- * Backend-specific per-district data structure
- */
-export interface BackendPerDistrictData {
-  districtId: string
-  districtName: string
-  collectedAt: string
-  status: 'success' | 'failed'
-  errorMessage?: string
-  data: DistrictStatistics
-}
-
-/**
- * Extended snapshot store interface for per-district operations
- */
-export interface PerDistrictSnapshotStoreInterface {
-  writeDistrictData(
-    snapshotId: string,
-    districtId: string,
-    data: DistrictStatistics
-  ): Promise<void>
-
-  readDistrictData(
-    snapshotId: string,
-    districtId: string
-  ): Promise<DistrictStatistics | null>
-
-  listDistrictsInSnapshot(snapshotId: string): Promise<string[]>
-
-  getSnapshotManifest(snapshotId: string): Promise<SnapshotManifest | null>
-
-  getSnapshotMetadata(
-    snapshotId: string
-  ): Promise<PerDistrictSnapshotMetadata | null>
-
-  getSnapshotMetadataBatch(
-    snapshotIds: string[]
-  ): Promise<Map<string, PerDistrictSnapshotMetadata | null>>
-
-  checkVersionCompatibility(snapshotId: string): Promise<{
-    isCompatible: boolean
-    schemaCompatible: boolean
-    calculationCompatible: boolean
-    rankingCompatible: boolean
-    warnings: string[]
-  }>
-
-  shouldUpdateClosingPeriodSnapshot(
-    snapshotDate: string,
-    newCollectionDate: string
-  ): Promise<SnapshotComparisonResult>
-}
+  PerDistrictData,
+  PerDistrictSnapshotMetadata,
+  WriteSnapshotOptions,
+  SnapshotComparisonResult,
+  BackendPerDistrictData,
+  PerDistrictSnapshotStoreInterface,
+  PerDistrictSnapshotStore,
+} from './snapshot/types.js'
+import type {
+  PerDistrictSnapshotMetadata,
+  WriteSnapshotOptions,
+  SnapshotComparisonResult,
+  PerDistrictSnapshotStoreInterface,
+} from './snapshot/types.js'
 
 /**
  * Unified file-based snapshot store implementation.
@@ -968,15 +868,6 @@ export class FileSnapshotStore
     })
   }
 }
-
-// ============================================================================
-// Aliases for backward compatibility
-// ============================================================================
-
-/**
- * @deprecated Use PerDistrictSnapshotStoreInterface instead
- */
-export type PerDistrictSnapshotStore = PerDistrictSnapshotStoreInterface
 
 /**
  * Factory function to create a FileSnapshotStore with default configuration

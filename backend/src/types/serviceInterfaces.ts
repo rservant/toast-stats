@@ -12,7 +12,7 @@ import type {
   SnapshotFilters,
   AllDistrictsRankingsData,
 } from './snapshots.js'
-import type { PerDistrictSnapshotMetadata } from '../services/SnapshotStore.js'
+import type { PerDistrictSnapshotMetadata } from '../services/snapshot/types.js'
 import type {
   CSVType,
   RawCSVCacheMetadata,

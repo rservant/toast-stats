@@ -20,7 +20,7 @@ import type {
   SnapshotManifest,
   PerDistrictSnapshotMetadata,
   WriteSnapshotOptions,
-} from '../SnapshotStore.js'
+} from '../snapshot/types.js'
 import type {
   ISnapshotStorage,
   LocalStorageConfig,

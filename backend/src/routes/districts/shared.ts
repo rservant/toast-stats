@@ -25,7 +25,7 @@ import {
   type DistrictSnapshotIndex,
 } from '../../services/DistrictSnapshotIndexService.js'
 import type { ISnapshotStorage } from '../../types/storageInterfaces.js'
-import type { PerDistrictSnapshotStoreInterface } from '../../services/SnapshotStore.js'
+import type { PerDistrictSnapshotStoreInterface } from '../../services/snapshot/types.js'
 import { transformErrorResponse } from '../../utils/transformers.js'
 import type { DistrictStatistics } from '../../types/districts.js'
 import type { Snapshot } from '../../types/snapshots.js'

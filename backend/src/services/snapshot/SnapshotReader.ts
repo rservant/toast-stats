@@ -36,7 +36,7 @@ import {
   validateSnapshotManifest,
 } from '@toastmasters/shared-contracts'
 import { adaptDistrictStatisticsFileToBackend } from '../../adapters/district-statistics-adapter.js'
-import type { PerDistrictSnapshotMetadata } from '../SnapshotStore.js'
+import type { PerDistrictSnapshotMetadata } from './types.js'
 
 // ============================================================================
 // Cache types
