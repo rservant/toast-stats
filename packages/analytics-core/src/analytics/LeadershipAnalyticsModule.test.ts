@@ -20,7 +20,8 @@ function createMockClub(
   divisionId: string,
   areaId: string,
   membershipCount: number,
-  dcpGoals: number
+  dcpGoals: number,
+  membershipBase?: number
 ): ClubStatistics {
   return {
     clubId,
@@ -36,7 +37,7 @@ function createMockClub(
     octoberRenewals: Math.floor(membershipCount * 0.4),
     aprilRenewals: Math.floor(membershipCount * 0.3),
     newMembers: Math.floor(membershipCount * 0.3),
-    membershipBase: membershipCount,
+    membershipBase: membershipBase ?? membershipCount,
   }
 }
 
@@ -167,14 +168,57 @@ describe('LeadershipAnalyticsModule', () => {
       expect(insights.leadershipScores[0]?.dcpScore).toBe(100)
     })
 
-    it('should calculate growth score as 50 for single snapshot (no trend data)', () => {
+    it('should calculate growth score as 50 for single snapshot when membershipBase equals membershipCount', () => {
       const module = new LeadershipAnalyticsModule()
+      // membershipBase defaults to membershipCount (no change)
       const clubs = [createMockClub('1', 'A', 'A1', 20, 5)]
       const snapshot = createMockSnapshot(clubs)
 
       const insights = module.generateLeadershipInsights([snapshot])
 
-      // With only one snapshot, growth score defaults to 50 (neutral)
+      // With equal membershipBase and membershipCount, growth rate is 0 → score = 50
+      expect(insights.leadershipScores[0]?.growthScore).toBe(50)
+    })
+
+    it('should calculate positive growth score for single snapshot when membership grew from base (#111)', () => {
+      const module = new LeadershipAnalyticsModule()
+      // membershipBase=15, membershipCount=20 → 33% growth
+      const clubs = [
+        createMockClub('1', 'A', 'A1', 20, 5, 15),
+        createMockClub('2', 'A', 'A2', 25, 5, 20),
+      ]
+      const snapshot = createMockSnapshot(clubs)
+
+      const insights = module.generateLeadershipInsights([snapshot])
+
+      // Growth from base should produce score > 50
+      expect(insights.leadershipScores[0]?.growthScore).toBeGreaterThan(50)
+    })
+
+    it('should calculate negative growth score for single snapshot when membership declined from base (#111)', () => {
+      const module = new LeadershipAnalyticsModule()
+      // membershipBase=25, membershipCount=20 → -20% decline
+      const clubs = [
+        createMockClub('1', 'A', 'A1', 20, 5, 25),
+        createMockClub('2', 'A', 'A2', 15, 5, 20),
+      ]
+      const snapshot = createMockSnapshot(clubs)
+
+      const insights = module.generateLeadershipInsights([snapshot])
+
+      // Decline from base should produce score < 50
+      expect(insights.leadershipScores[0]?.growthScore).toBeLessThan(50)
+    })
+
+    it('should return 50 for single snapshot when membershipBase is 0 (#111)', () => {
+      const module = new LeadershipAnalyticsModule()
+      // membershipBase=0 → can't calculate growth rate
+      const clubs = [createMockClub('1', 'A', 'A1', 20, 5, 0)]
+      const snapshot = createMockSnapshot(clubs)
+
+      const insights = module.generateLeadershipInsights([snapshot])
+
+      // Zero base = can't calculate growth → neutral 50
       expect(insights.leadershipScores[0]?.growthScore).toBe(50)
     })
 

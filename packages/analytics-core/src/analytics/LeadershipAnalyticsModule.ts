@@ -204,7 +204,11 @@ export class LeadershipAnalyticsModule {
   private calculateDivisionGrowthScore(
     historicalData: Array<{ date: string; clubs: ClubStatistics[] }>
   ): number {
-    if (historicalData.length < 2) return 50
+    if (historicalData.length < 2) {
+      // Fallback: use membershipBase vs membershipCount from the snapshot (#111)
+      const latestClubs = historicalData[0]?.clubs ?? []
+      return this.calculateGrowthFromBase(latestClubs)
+    }
 
     const membershipByDate = historicalData.map(entry => {
       const totalMembership = entry.clubs.reduce((sum, club) => {
@@ -223,6 +227,23 @@ export class LeadershipAnalyticsModule {
         : 0
 
     // +10% growth = 100, 0% growth = 50, -10% growth = 0
+    return Math.max(0, Math.min(100, 50 + growthRate * 5))
+  }
+
+  /**
+   * Calculate growth score from membershipBase vs membershipCount (#111)
+   *
+   * Used as fallback when fewer than 2 historical snapshots exist.
+   * membershipBase = member count at start of period (from Toastmasters data)
+   * membershipCount = current active members
+   */
+  private calculateGrowthFromBase(clubs: ClubStatistics[]): number {
+    if (clubs.length === 0) return 50
+    const totalBase = clubs.reduce((sum, c) => sum + c.membershipBase, 0)
+    const totalCurrent = clubs.reduce((sum, c) => sum + c.membershipCount, 0)
+    if (totalBase === 0) return 50
+    const growthRate = ((totalCurrent - totalBase) / totalBase) * 100
+    // Same scale: +10% growth = 100, 0% growth = 50, -10% growth = 0
     return Math.max(0, Math.min(100, 50 + growthRate * 5))
   }
 
