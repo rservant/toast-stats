@@ -15,6 +15,30 @@
 <!--                                                                                      -->
 <!-- **Future Warning**: [What to watch for — a tripwire for the agent]                    -->
 
+## 🗓️ 2026-02-24 — Lesson 27: Chart Y-Axis Labels Need Range Padding (#107)
+
+**The Discovery**: When all membership values in the club detail modal were identical (e.g., 11), `membershipRange` was clamped to `|| 1`, causing the midpoint label `Math.round(11 + 0.5) = 12` to exceed the max. The y-axis showed `11, 12, 11` — inverted.
+
+**The Scientific Proof**: Test `ClubDetailModal.yAxis.test.tsx` — "should show sequential y-axis labels when all membership values are equal" failed with `expected 11 to be >= 12`, confirming the bug.
+
+**The Farley Principle Applied**: Correctness over Speed — edge cases in visualization math must be tested explicitly, not assumed.
+
+**The Resulting Rule**: When charting with a `range = max - min`, always pad symmetrically if `range === 0` (e.g., ±2) so labels remain meaningful and sequential.
+
+**Future Warning**: Any chart with a `|| 1` fallback for range division should be audited for label inversion.
+
+## 🗓️ 2026-02-24 — Lesson 26: Dead Code Audit Requires Full Dependency Tree Walk (#133)
+
+**The Discovery**: `LoginPage`, `useAuth`, `AuthContext`, and `ProtectedRoute` existed with full implementations and test coverage, but were completely dead — never imported by `App.tsx`, never routed to, no backend auth endpoints.
+
+**The Scientific Proof**: `grep -r` for `AuthProvider`, `useAuth`, `LoginPage`, `ProtectedRoute` across all non-test `*.tsx`/`*.ts` files returned zero matches. Only test files referenced them.
+
+**The Farley Principle Applied**: Minimal Surface Area — dead code masquerades as "working" code, creating false confidence and maintenance burden.
+
+**The Resulting Rule**: Before declaring code "dead", check: (1) the router, (2) the app root provider tree, (3) backend API endpoints, and (4) all non-test imports. Tests alone don't prove code is alive.
+
+**Future Warning**: Test-only imports are a strong signal of dead production code — watch for components imported exclusively in `test-utils` or `.test.` files.
+
 ## 🗓️ 2026-02-24 — Lesson 25: Data Collection Components Must Share a Storage Contract (#125)
 
 **The Discovery**: The `backfill` CLI downloaded the correct CSVs from the same Toastmasters dashboard as the `scrape` CLI, but stored them in an incompatible directory structure (`{prefix}/{year}/{reportType}/{id}/{date}.csv` vs. `raw-csv/{date}/district-{id}/{type}.csv`). The downstream `TransformService` could never find them.
