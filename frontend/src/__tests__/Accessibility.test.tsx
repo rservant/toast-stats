@@ -1,15 +1,10 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect } from 'vitest'
 import { axe, toHaveNoViolations } from 'jest-axe'
 import React from 'react'
-import { renderWithProviders, testComponentVariants } from './utils'
-import LoginPage from '../pages/LoginPage'
-import { AuthProvider } from '../contexts/AuthContext'
-import { BrowserRouter } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { testComponentVariants } from './utils'
 import StatCard from '../components/StatCard'
 
 // Extend expect with jest-axe matchers
-// @ts-expect-error - jest-axe types are not perfectly compatible with vitest expect
 expect.extend(toHaveNoViolations)
 
 // Axe synchronization to prevent concurrent runs
@@ -47,31 +42,6 @@ const runAxeSynchronized = async (container: Element): Promise<unknown> => {
 }
 
 describe('Accessibility Tests', () => {
-  it('LoginPage should have no accessibility violations', async () => {
-    const { container } = renderWithProviders(<LoginPage />, {
-      skipRouter: true,
-      customProviders: [
-        ({ children }) => {
-          const queryClient = new QueryClient({
-            defaultOptions: {
-              queries: { retry: false },
-              mutations: { retry: false },
-            },
-          })
-          return (
-            <QueryClientProvider client={queryClient}>
-              <BrowserRouter>
-                <AuthProvider>{children}</AuthProvider>
-              </BrowserRouter>
-            </QueryClientProvider>
-          )
-        },
-      ],
-    })
-    const results = await runAxeSynchronized(container)
-    expect(results).toHaveNoViolations()
-  })
-
   // Migrate StatCard tests to use shared utilities with synchronized axe runs
   testComponentVariants(
     StatCard as unknown as React.ComponentType<Record<string, unknown>>,

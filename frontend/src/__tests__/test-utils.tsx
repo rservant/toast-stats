@@ -2,7 +2,7 @@ import React from 'react'
 import { render } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
-import { AuthProvider } from '../contexts/AuthContext'
+
 import { ProgramYearProvider } from '../contexts/ProgramYearContext'
 
 // Ensure a minimal localStorage is available in the test environment
@@ -65,20 +65,12 @@ if (
 
 interface RenderOptions {
   initialEntries?: string[]
-  isAuthenticated?: boolean
 }
 
 export const renderWithProviders = (
   ui: React.ReactElement,
-  { initialEntries = ['/'], isAuthenticated = true }: RenderOptions = {}
+  { initialEntries = ['/'] }: RenderOptions = {}
 ) => {
-  // Set up authentication state before rendering
-  if (isAuthenticated) {
-    sessionStorage.setItem('auth_token', 'test-token')
-  } else {
-    sessionStorage.removeItem('auth_token')
-  }
-
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -100,11 +92,9 @@ export const renderWithProviders = (
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ProgramYearProvider>
-          <RouterProvider router={router} />
-        </ProgramYearProvider>
-      </AuthProvider>
+      <ProgramYearProvider>
+        <RouterProvider router={router} />
+      </ProgramYearProvider>
     </QueryClientProvider>
   )
 }
