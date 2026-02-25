@@ -21,6 +21,12 @@ import {
   type ReportType,
 } from './HttpCsvDownloader.js'
 import { logger } from '../utils/logger.js'
+import {
+  toYYYYMMDD,
+  calculateProgramYear,
+  buildCsvPathFromReport,
+  buildMetadataPath,
+} from '../utils/CachePaths.js'
 
 // ── Storage Abstraction ──────────────────────────────────────────────
 
@@ -174,77 +180,6 @@ export interface TimeEstimate {
   humanReadable: string
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────
-
-/**
- * Map backfill report type names to the CSVType enum names used by
- * OrchestratorCacheAdapter / TransformService.
- */
-const REPORT_TYPE_MAP: Record<ReportType, string> = {
-  clubperformance: 'club-performance',
-  divisionperformance: 'division-performance',
-  districtperformance: 'district-performance',
-  districtsummary: 'all-districts',
-}
-
-/**
- * Format a Date as YYYY-MM-DD for storage paths.
- */
-function toYYYYMMDD(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
-
-/**
- * Build a storage path compatible with OrchestratorCacheAdapter.
- *
- * Produces paths that the downstream `transform` pipeline can read:
- *   - District CSVs: `{cacheDir}/raw-csv/{YYYY-MM-DD}/district-{id}/{type}.csv`
- *   - All-districts:  `{cacheDir}/raw-csv/{YYYY-MM-DD}/all-districts.csv`
- *
- * @param cacheDir  Root cache directory (e.g. `/data/cache` or GCS prefix)
- * @param date      Date of the snapshot
- * @param reportType Dashboard report type
- * @param districtId District ID (required for per-district reports)
- */
-export function buildCompatiblePath(
-  cacheDir: string,
-  date: Date,
-  reportType: ReportType,
-  districtId?: string
-): string {
-  const dateStr = toYYYYMMDD(date)
-  const csvType = REPORT_TYPE_MAP[reportType]
-
-  if (reportType === 'districtsummary') {
-    return `${cacheDir}/raw-csv/${dateStr}/${csvType}.csv`
-  }
-
-  if (!districtId) {
-    throw new Error(`districtId is required for report type: ${reportType}`)
-  }
-  return `${cacheDir}/raw-csv/${dateStr}/district-${districtId}/${csvType}.csv`
-}
-
-/**
- * Build the path for a date's metadata.json file.
- */
-export function buildMetadataPath(cacheDir: string, date: Date): string {
-  return `${cacheDir}/raw-csv/${toYYYYMMDD(date)}/metadata.json`
-}
-
-/**
- * Calculate program year from a Date.
- * Toastmasters program year runs July–June: July 2024 → "2024-2025".
- */
-function calculateProgramYearFromDate(date: Date): string {
-  const year = date.getFullYear()
-  const month = date.getMonth() + 1
-  return month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`
-}
-
 /**
  * Build a metadata.json object compatible with OrchestratorCacheAdapter.
  *
@@ -275,7 +210,7 @@ export function buildBackfillMetadata(
   return {
     date: dateStr,
     timestamp: Date.now(),
-    programYear: calculateProgramYearFromDate(date),
+    programYear: calculateProgramYear(date),
     isClosingPeriod: false,
     csvFiles: {
       allDistricts: true,
@@ -401,7 +336,7 @@ export class BackfillOrchestrator {
       for (const date of dates) {
         if (this.aborted) break
 
-        const key = buildCompatiblePath(
+        const key = buildCsvPathFromReport(
           this.config.outputDir,
           date,
           'districtsummary'
@@ -547,7 +482,7 @@ export class BackfillOrchestrator {
           for (const date of dates) {
             if (this.aborted) break
 
-            const key = buildCompatiblePath(
+            const key = buildCsvPathFromReport(
               this.config.outputDir,
               date,
               reportType,

@@ -11,6 +11,12 @@ import * as path from 'node:path'
 import * as crypto from 'node:crypto'
 import { logger } from './utils/logger.js'
 import { CSVType, ICollectorCache, CacheMetadata } from './types/collector.js'
+import {
+  buildCsvPath,
+  buildMetadataPath as sharedBuildMetadataPath,
+  buildChecksumKey,
+  calculateProgramYear,
+} from './utils/CachePaths.js'
 
 /**
  * Full metadata format matching backend's RawCSVCacheMetadata
@@ -66,37 +72,18 @@ export class OrchestratorCacheAdapter implements ICollectorCache {
     type: CSVType,
     districtId?: string
   ): string {
-    // Match backend's RawCSVCacheService file path convention:
-    // - ALL_DISTRICTS: raw-csv/{date}/all-districts.csv
-    // - District-specific: raw-csv/{date}/district-{districtId}/{type}.csv
-    if (type === CSVType.ALL_DISTRICTS) {
-      return path.join(this.cacheDir, 'raw-csv', date, `${type}.csv`)
-    } else {
-      if (!districtId) {
-        throw new Error(`District ID required for CSV type: ${type}`)
-      }
-      const districtPath = path.join(
-        this.cacheDir,
-        'raw-csv',
-        date,
-        `district-${districtId}`
-      )
-      return path.join(districtPath, `${type}.csv`)
-    }
+    return buildCsvPath(this.cacheDir, date, type, districtId)
   }
 
   private buildMetadataPath(date: string): string {
-    return path.join(this.cacheDir, 'raw-csv', date, 'metadata.json')
+    return sharedBuildMetadataPath(this.cacheDir, date)
   }
 
   /**
    * Get the filename key for checksums (matches backend convention)
    */
   private getChecksumFilename(type: CSVType, districtId?: string): string {
-    if (type === CSVType.ALL_DISTRICTS) {
-      return `${type}.csv`
-    }
-    return `district-${districtId}/${type}.csv`
+    return buildChecksumKey(type, districtId)
   }
 
   /**
@@ -104,16 +91,6 @@ export class OrchestratorCacheAdapter implements ICollectorCache {
    */
   private calculateChecksum(content: string): string {
     return crypto.createHash('sha256').update(content).digest('hex')
-  }
-
-  /**
-   * Calculate program year from date (July starts new year)
-   */
-  private calculateProgramYear(date: string): string {
-    const dateObj = new Date(date + 'T00:00:00')
-    const year = dateObj.getFullYear()
-    const month = dateObj.getMonth() + 1
-    return month >= 7 ? `${year}-${year + 1}` : `${year - 1}-${year}`
   }
 
   async getCachedCSV(
@@ -233,7 +210,7 @@ export class OrchestratorCacheAdapter implements ICollectorCache {
     const newMetadata: FullCacheMetadata = {
       date,
       timestamp: Date.now(),
-      programYear: this.calculateProgramYear(date),
+      programYear: calculateProgramYear(date),
       isClosingPeriod: false,
       csvFiles: {
         allDistricts: false,

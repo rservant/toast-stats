@@ -8,12 +8,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   BackfillOrchestrator,
-  buildCompatiblePath,
   buildBackfillMetadata,
-  buildMetadataPath,
   type BackfillConfig,
   type BackfillStorage,
 } from '../services/BackfillOrchestrator.js'
+import {
+  buildCsvPathFromReport,
+  buildMetadataPath,
+} from '../utils/CachePaths.js'
 import type { BackfillDateSpec } from '../services/HttpCsvDownloader.js'
 
 /** Spy storage that records all writes for path assertions. */
@@ -143,10 +145,10 @@ describe('BackfillOrchestrator (#123)', () => {
 })
 
 // #125: Storage path compatibility tests
-describe('buildCompatiblePath (#125)', () => {
+describe('buildCsvPathFromReport (#125)', () => {
   it('should produce OrchestratorCacheAdapter-compatible path for club CSV', () => {
     const date = new Date(2025, 0, 15) // Jan 15, 2025
-    const result = buildCompatiblePath(
+    const result = buildCsvPathFromReport(
       '/data/cache',
       date,
       'clubperformance',
@@ -159,7 +161,7 @@ describe('buildCompatiblePath (#125)', () => {
 
   it('should produce correct path for division CSV', () => {
     const date = new Date(2025, 6, 1) // Jul 1, 2025
-    const result = buildCompatiblePath(
+    const result = buildCsvPathFromReport(
       '/data/cache',
       date,
       'divisionperformance',
@@ -172,7 +174,7 @@ describe('buildCompatiblePath (#125)', () => {
 
   it('should produce correct path for district CSV', () => {
     const date = new Date(2025, 11, 31) // Dec 31, 2025
-    const result = buildCompatiblePath(
+    const result = buildCsvPathFromReport(
       '/data/cache',
       date,
       'districtperformance',
@@ -185,14 +187,18 @@ describe('buildCompatiblePath (#125)', () => {
 
   it('should produce correct path for all-districts summary', () => {
     const date = new Date(2025, 0, 15)
-    const result = buildCompatiblePath('/data/cache', date, 'districtsummary')
+    const result = buildCsvPathFromReport(
+      '/data/cache',
+      date,
+      'districtsummary'
+    )
     expect(result).toBe('/data/cache/raw-csv/2025-01-15/all-districts.csv')
   })
 
   it('should throw when districtId is missing for per-district report', () => {
     const date = new Date(2025, 0, 15)
     expect(() =>
-      buildCompatiblePath('/data/cache', date, 'clubperformance')
+      buildCsvPathFromReport('/data/cache', date, 'clubperformance')
     ).toThrow('districtId is required')
   })
 })
