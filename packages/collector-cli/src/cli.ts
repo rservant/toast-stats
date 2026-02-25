@@ -953,8 +953,7 @@ export function createCLI(): Command {
           )
           outputDir = options.gcsPrefix
         } else {
-          outputDir =
-            options.output ?? resolveConfiguration({}).cacheDir + '/backfill'
+          outputDir = options.output ?? resolveConfiguration({}).cacheDir
         }
 
         if (options.verbose) {
