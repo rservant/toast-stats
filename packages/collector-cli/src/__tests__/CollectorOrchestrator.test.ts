@@ -1,11 +1,10 @@
 /**
  * Unit Tests for CollectorOrchestrator Partial Failure Resilience
  *
- * Verifies that when scraping fails for some districts, the orchestrator
+ * Verifies that when downloading fails for some districts, the orchestrator
  * continues processing remaining districts and reports all failures.
  *
- * Converted from property-based tests — PBT generated random district
- * lists and failure subsets; replaced with representative fixed cases.
+ * Updated for #124: mocks HttpCsvDownloader instead of ToastmastersCollector.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -14,36 +13,51 @@ import * as path from 'node:path'
 import { CollectorOrchestrator } from '../CollectorOrchestrator.js'
 import type { CollectorOrchestratorConfig } from '../types/index.js'
 
-let mockCollectorInstance: {
-  getClubPerformance: ReturnType<typeof vi.fn>
-  getDivisionPerformance: ReturnType<typeof vi.fn>
-  getDistrictPerformance: ReturnType<typeof vi.fn>
-  getAllDistrictsWithMetadata: ReturnType<typeof vi.fn>
-  closeBrowser: ReturnType<typeof vi.fn>
-  getFallbackMetrics: ReturnType<typeof vi.fn>
-} | null = null
+// Track which districts should fail when downloadCsv is called
+let failingDistricts = new Set<string>()
 
-vi.mock('../services/ToastmastersCollector.js', () => {
+vi.mock('../services/HttpCsvDownloader.js', () => {
   return {
-    ToastmastersCollector: class MockToastmastersCollector {
+    HttpCsvDownloader: class MockHttpCsvDownloader {
+      private requestCount = 0
+
       constructor() {
-        if (mockCollectorInstance) Object.assign(this, mockCollectorInstance)
+        // Default config, not used in tests
       }
-      getClubPerformance = vi.fn()
-      getDivisionPerformance = vi.fn()
-      getDistrictPerformance = vi.fn()
-      getAllDistrictsWithMetadata = vi.fn()
-      closeBrowser = vi.fn().mockResolvedValue(undefined)
-      getFallbackMetrics = vi.fn().mockReturnValue({
-        cacheHits: 0,
-        cacheMisses: 0,
-        fallbackDatesDiscovered: 0,
-      })
+
+      async downloadCsv(spec: {
+        reportType: string
+        districtId?: string
+        date: Date
+        programYear: string
+      }) {
+        this.requestCount++
+
+        if (spec.districtId && failingDistricts.has(spec.districtId)) {
+          throw new Error(`Simulated failure for district ${spec.districtId}`)
+        }
+
+        // Return minimal CSV content
+        return {
+          url: `https://example.com/${spec.reportType}`,
+          content: `Header\nRow1`,
+          statusCode: 200,
+          byteSize: 12,
+        }
+      }
+
+      getRequestCount() {
+        return this.requestCount
+      }
+
+      resetRequestCount() {
+        this.requestCount = 0
+      }
     },
   }
 })
 
-describe('CollectorOrchestrator - Partial Failure Resilience', () => {
+describe('CollectorOrchestrator - Partial Failure Resilience (#124)', () => {
   let testCacheDir: string
   let testConfigPath: string
 
@@ -52,6 +66,7 @@ describe('CollectorOrchestrator - Partial Failure Resilience', () => {
     testCacheDir = path.join(process.cwd(), 'test-cache', testId)
     testConfigPath = path.join(testCacheDir, 'config', 'districts.json')
     await fs.mkdir(path.dirname(testConfigPath), { recursive: true })
+    failingDistricts = new Set()
   })
 
   afterEach(async () => {
@@ -82,57 +97,15 @@ describe('CollectorOrchestrator - Partial Failure Resilience', () => {
     }
   }
 
-  function setupMockCollector(failingDistricts: Set<string>) {
-    mockCollectorInstance = {
-      getClubPerformance: vi
-        .fn()
-        .mockImplementation(async (districtId: string) => {
-          if (failingDistricts.has(districtId))
-            throw new Error(`Simulated failure for district ${districtId}`)
-          return [{ 'Club Number': '123', 'Club Name': 'Test Club' }]
-        }),
-      getDivisionPerformance: vi
-        .fn()
-        .mockImplementation(async (districtId: string) => {
-          if (failingDistricts.has(districtId))
-            throw new Error(`Simulated failure for district ${districtId}`)
-          return [{ Division: 'A', 'Total Clubs': '10' }]
-        }),
-      getDistrictPerformance: vi
-        .fn()
-        .mockImplementation(async (districtId: string) => {
-          if (failingDistricts.has(districtId))
-            throw new Error(`Simulated failure for district ${districtId}`)
-          return [{ District: districtId, 'Total Clubs': '50' }]
-        }),
-      getAllDistrictsWithMetadata: vi
-        .fn()
-        .mockImplementation(async (date: string) => ({
-          records: [{ District: '1', 'Total Clubs': '100' }],
-          actualDate: date,
-        })),
-      closeBrowser: vi.fn().mockResolvedValue(undefined),
-      getFallbackMetrics: vi.fn().mockReturnValue({
-        cacheHits: 0,
-        cacheMisses: 0,
-        fallbackDatesDiscovered: 0,
-      }),
-    }
-  }
-
-  async function runScrapeTest(
-    districts: string[],
-    failingDistricts: Set<string>
-  ) {
+  async function runScrapeTest(districts: string[], failing: Set<string>) {
     await createDistrictConfig(districts)
-    setupMockCollector(failingDistricts)
+    failingDistricts = failing
     const orchestrator = new CollectorOrchestrator(createConfig())
     const result = await orchestrator.scrape({
       date: '2026-01-11',
       force: true,
     })
     await orchestrator.close()
-    mockCollectorInstance = null
     return result
   }
 
@@ -202,5 +175,49 @@ describe('CollectorOrchestrator - Partial Failure Resilience', () => {
     expect(result.districtsProcessed.length).toBe(3)
     expect(new Set(result.districtsSucceeded)).toEqual(new Set(['A', 'U']))
     expect(result.errors.length).toBe(1)
+  })
+
+  it('should write CSV files to correct cache paths', async () => {
+    const result = await runScrapeTest(['09'], new Set())
+
+    expect(result.success).toBe(true)
+    expect(result.cacheLocations.length).toBeGreaterThan(0)
+
+    // Verify CSV files exist on disk
+    for (const loc of result.cacheLocations) {
+      const stat = await fs.stat(loc)
+      expect(stat.isFile()).toBe(true)
+    }
+
+    // Verify paths follow the expected convention
+    const clubCsvPath = result.cacheLocations.find(p =>
+      p.includes('club-performance')
+    )
+    expect(clubCsvPath).toMatch(
+      /raw-csv\/2026-01-11\/district-09\/club-performance\.csv$/
+    )
+  })
+
+  it('should write metadata.json after successful scrape', async () => {
+    await runScrapeTest(['09'], new Set())
+
+    const metadataPath = path.join(
+      testCacheDir,
+      'raw-csv',
+      '2026-01-11',
+      'metadata.json'
+    )
+    const content = await fs.readFile(metadataPath, 'utf-8')
+    const metadata = JSON.parse(content) as Record<string, unknown>
+
+    expect(metadata['date']).toBe('2026-01-11')
+    expect(metadata['programYear']).toBe('2025-2026')
+    expect(metadata['source']).toBe('collector-http')
+    expect(metadata['cacheVersion']).toBe(1)
+
+    const csvFiles = metadata['csvFiles'] as Record<string, unknown>
+    expect(csvFiles['allDistricts']).toBe(true)
+    const districts = csvFiles['districts'] as Record<string, unknown>
+    expect(districts['09']).toBeDefined()
   })
 })

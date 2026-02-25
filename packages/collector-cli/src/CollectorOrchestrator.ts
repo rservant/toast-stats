@@ -20,7 +20,10 @@ import * as path from 'node:path'
 import { logger } from './utils/logger.js'
 import { CircuitBreaker, CircuitState } from './utils/CircuitBreaker.js'
 import { RetryManager } from './utils/RetryManager.js'
-import { ToastmastersCollector } from './services/ToastmastersCollector.js'
+import {
+  HttpCsvDownloader,
+  type ReportType as HttpReportType,
+} from './services/HttpCsvDownloader.js'
 import type {
   CollectorOrchestratorConfig,
   ScrapeOptions,
@@ -30,6 +33,11 @@ import type {
 } from './types/index.js'
 import { CSVType } from './types/collector.js'
 import { OrchestratorCacheAdapter } from './OrchestratorCacheAdapter.js'
+import {
+  buildCsvPath,
+  buildMetadataPath,
+  calculateProgramYear,
+} from './utils/CachePaths.js'
 
 /**
  * District configuration file structure
@@ -68,7 +76,7 @@ export class CollectorOrchestrator {
   private readonly config: CollectorOrchestratorConfig
   private readonly circuitBreaker: CircuitBreaker
   private readonly cacheAdapter: OrchestratorCacheAdapter
-  private collector: ToastmastersCollector | null = null
+  private downloader: HttpCsvDownloader | null = null
 
   constructor(config: CollectorOrchestratorConfig) {
     this.config = config
@@ -216,33 +224,55 @@ export class CollectorOrchestrator {
   }
 
   /**
-   * Initialize the collector instance
+   * Initialize the HTTP downloader instance
    */
-  private async initCollector(): Promise<ToastmastersCollector> {
-    if (!this.collector) {
-      this.collector = new ToastmastersCollector(this.cacheAdapter)
-      logger.debug('Collector instance created')
+  private initDownloader(): HttpCsvDownloader {
+    if (!this.downloader) {
+      this.downloader = new HttpCsvDownloader({
+        ratePerSecond: 5,
+        cooldownEvery: 50,
+        cooldownMs: 3000,
+        maxRetries: 3,
+      })
+      logger.debug('HttpCsvDownloader instance created')
     }
-    return this.collector
+    return this.downloader
   }
 
   /**
-   * Close the collector and release resources
+   * Close resources (no-op now that Playwright is removed).
+   * Kept for API compatibility with CLI callers.
    */
   async close(): Promise<void> {
-    if (this.collector) {
-      await this.collector.closeBrowser()
-      this.collector = null
-      logger.debug('Collector resources released')
-    }
+    this.downloader = null
+    logger.debug('Collector resources released')
   }
 
   /**
-   * Scrape all-districts summary data
-   * This provides the overview/rankings data for all districts
+   * Write CSV content to the cache directory.
+   */
+  private async writeCsvToCache(
+    date: string,
+    csvType: CSVType,
+    content: string,
+    districtId?: string
+  ): Promise<string> {
+    const filePath = buildCsvPath(
+      this.config.cacheDir,
+      date,
+      csvType,
+      districtId
+    )
+    await fs.mkdir(path.dirname(filePath), { recursive: true })
+    await fs.writeFile(filePath, content, 'utf-8')
+    return filePath
+  }
+
+  /**
+   * Scrape all-districts summary data via HTTP
    */
   private async scrapeAllDistricts(
-    collector: ToastmastersCollector,
+    downloader: HttpCsvDownloader,
     date: string,
     force: boolean
   ): Promise<DistrictScrapeResult> {
@@ -250,21 +280,16 @@ export class CollectorOrchestrator {
     const timestamp = new Date().toISOString()
     const cacheLocations: string[] = []
 
-    logger.info('Starting all-districts scrape', { date, force })
+    logger.info('Starting all-districts download', { date, force })
 
     try {
-      // Check if cache already exists (unless force is true)
       if (!force) {
         const hasCached = await this.cacheAdapter.hasCachedCSV(
           date,
           CSVType.ALL_DISTRICTS
         )
-
         if (hasCached) {
-          logger.info('All-districts cache already exists, skipping scrape', {
-            date,
-          })
-
+          logger.info('All-districts cache exists, skipping', { date })
           return {
             districtId: 'all-districts',
             success: true,
@@ -275,33 +300,23 @@ export class CollectorOrchestrator {
         }
       }
 
-      // Execute scraping with retry logic
       const retryResult = await RetryManager.executeWithRetry(
         async () => {
-          const { records, actualDate } =
-            await collector.getAllDistrictsWithMetadata(date)
+          const programYear = calculateProgramYear(date)
+          const result = await downloader.downloadCsv({
+            programYear,
+            reportType: 'districtsummary',
+            date: new Date(date + 'T00:00:00'),
+          })
 
-          // Log if actual date differs from requested
-          if (actualDate !== date) {
-            logger.info('All-districts: actual date differs from requested', {
-              requestedDate: date,
-              actualDate,
-            })
-          }
-
-          cacheLocations.push(
-            path.join(
-              this.config.cacheDir,
-              'raw-csv',
-              date,
-              `${CSVType.ALL_DISTRICTS}.csv`
-            )
+          const filePath = await this.writeCsvToCache(
+            date,
+            CSVType.ALL_DISTRICTS,
+            result.content
           )
+          cacheLocations.push(filePath)
 
-          return {
-            recordCount: records.length,
-            actualDate,
-          }
+          return { byteSize: result.byteSize }
         },
         RetryManager.getDashboardRetryOptions(),
         { date, operation: 'scrapeAllDistricts' }
@@ -310,17 +325,14 @@ export class CollectorOrchestrator {
       if (!retryResult.success) {
         throw (
           retryResult.error ??
-          new Error('All-districts scraping failed after retries')
+          new Error('All-districts download failed after retries')
         )
       }
 
-      const duration_ms = Date.now() - startTime
-
-      logger.info('All-districts scrape completed successfully', {
+      logger.info('All-districts download completed', {
         date,
-        duration_ms,
+        duration_ms: Date.now() - startTime,
         attempts: retryResult.attempts,
-        recordCount: retryResult.result?.recordCount,
       })
 
       return {
@@ -328,36 +340,32 @@ export class CollectorOrchestrator {
         success: true,
         cacheLocations,
         timestamp,
-        duration_ms,
+        duration_ms: Date.now() - startTime,
       }
     } catch (error) {
-      const duration_ms = Date.now() - startTime
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error'
-
-      logger.error('All-districts scrape failed', {
+      logger.error('All-districts download failed', {
         date,
-        duration_ms,
         error: errorMessage,
       })
-
       return {
         districtId: 'all-districts',
         success: false,
         cacheLocations: [],
         error: errorMessage,
         timestamp,
-        duration_ms,
+        duration_ms: Date.now() - startTime,
       }
     }
   }
 
   /**
-   * Scrape a single district with retry logic
+   * Download CSVs for a single district via HTTP
    * Requirement 6.1: Retry with exponential backoff before failing
    */
   private async scrapeDistrict(
-    collector: ToastmastersCollector,
+    downloader: HttpCsvDownloader,
     districtId: string,
     date: string,
     force: boolean
@@ -366,23 +374,17 @@ export class CollectorOrchestrator {
     const timestamp = new Date().toISOString()
     const cacheLocations: string[] = []
 
-    logger.info('Starting district scrape', { districtId, date, force })
+    logger.info('Starting district download', { districtId, date, force })
 
     try {
-      // Check if cache already exists (unless force is true)
       if (!force) {
         const hasCached = await this.cacheAdapter.hasCachedCSV(
           date,
           CSVType.CLUB_PERFORMANCE,
           districtId
         )
-
         if (hasCached) {
-          logger.info('Cache already exists, skipping scrape', {
-            districtId,
-            date,
-          })
-
+          logger.info('Cache exists, skipping download', { districtId, date })
           return {
             districtId,
             success: true,
@@ -393,73 +395,53 @@ export class CollectorOrchestrator {
         }
       }
 
-      // Execute scraping with retry logic
       const retryResult = await RetryManager.executeWithRetry(
         async () => {
-          // Scrape club performance data (primary data)
-          const clubData = await collector.getClubPerformance(districtId, date)
-          cacheLocations.push(
-            path.join(
-              this.config.cacheDir,
-              'raw-csv',
-              date,
-              `district-${districtId}`,
-              `${CSVType.CLUB_PERFORMANCE}.csv`
-            )
-          )
+          const programYear = calculateProgramYear(date)
+          const reportTypes: Array<{ report: HttpReportType; csv: CSVType }> = [
+            { report: 'clubperformance', csv: CSVType.CLUB_PERFORMANCE },
+            {
+              report: 'divisionperformance',
+              csv: CSVType.DIVISION_PERFORMANCE,
+            },
+            {
+              report: 'districtperformance',
+              csv: CSVType.DISTRICT_PERFORMANCE,
+            },
+          ]
 
-          // Scrape division performance data
-          const divisionData = await collector.getDivisionPerformance(
-            districtId,
-            date
-          )
-          cacheLocations.push(
-            path.join(
-              this.config.cacheDir,
-              'raw-csv',
-              date,
-              `district-${districtId}`,
-              `${CSVType.DIVISION_PERFORMANCE}.csv`
-            )
-          )
+          for (const { report, csv } of reportTypes) {
+            const result = await downloader.downloadCsv({
+              programYear,
+              reportType: report,
+              districtId,
+              date: new Date(date + 'T00:00:00'),
+            })
 
-          // Scrape district performance data
-          const districtData = await collector.getDistrictPerformance(
-            districtId,
-            date
-          )
-          cacheLocations.push(
-            path.join(
-              this.config.cacheDir,
-              'raw-csv',
+            const filePath = await this.writeCsvToCache(
               date,
-              `district-${districtId}`,
-              `${CSVType.DISTRICT_PERFORMANCE}.csv`
+              csv,
+              result.content,
+              districtId
             )
-          )
-
-          return {
-            clubRecords: clubData.length,
-            divisionRecords: divisionData.length,
-            districtRecords: districtData.length,
+            cacheLocations.push(filePath)
           }
+
+          return { csvCount: reportTypes.length }
         },
         RetryManager.getDashboardRetryOptions(),
         { districtId, date, operation: 'scrapeDistrict' }
       )
 
       if (!retryResult.success) {
-        throw retryResult.error ?? new Error('Scraping failed after retries')
+        throw retryResult.error ?? new Error('Download failed after retries')
       }
 
-      const duration_ms = Date.now() - startTime
-
-      logger.info('District scrape completed successfully', {
+      logger.info('District download completed', {
         districtId,
         date,
-        duration_ms,
+        duration_ms: Date.now() - startTime,
         attempts: retryResult.attempts,
-        records: retryResult.result,
       })
 
       return {
@@ -467,27 +449,23 @@ export class CollectorOrchestrator {
         success: true,
         cacheLocations,
         timestamp,
-        duration_ms,
+        duration_ms: Date.now() - startTime,
       }
     } catch (error) {
-      const duration_ms = Date.now() - startTime
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error'
-
-      logger.error('District scrape failed', {
+      logger.error('District download failed', {
         districtId,
         date,
-        duration_ms,
         error: errorMessage,
       })
-
       return {
         districtId,
         success: false,
         cacheLocations: [],
         error: errorMessage,
         timestamp,
-        duration_ms,
+        duration_ms: Date.now() - startTime,
       }
     }
   }
@@ -544,7 +522,6 @@ export class CollectorOrchestrator {
       const config = await this.loadDistrictConfiguration()
 
       if (options.districts && options.districts.length > 0) {
-        // Use specified districts, but validate they exist in configuration
         districtsToScrape = options.districts.filter(d =>
           config.configuredDistricts.includes(d)
         )
@@ -560,7 +537,6 @@ export class CollectorOrchestrator {
           })
         }
       } else {
-        // Use all configured districts
         districtsToScrape = config.configuredDistricts
       }
     } catch (error) {
@@ -609,8 +585,8 @@ export class CollectorOrchestrator {
       }
     }
 
-    // Initialize collector
-    const collector = await this.initCollector()
+    // Initialize HTTP downloader
+    const downloader = this.initDownloader()
 
     // Process districts sequentially with error isolation
     const results: DistrictScrapeResult[] = []
@@ -621,9 +597,9 @@ export class CollectorOrchestrator {
     }> = []
     const allCacheLocations: string[] = []
 
-    // Scrape all-districts summary first
+    // Download all-districts summary first
     const allDistrictsResult = await this.scrapeAllDistricts(
-      collector,
+      downloader,
       date,
       force
     )
@@ -647,7 +623,6 @@ export class CollectorOrchestrator {
           remainingCount: districtsToScrape.length - results.length,
         })
 
-        // Add remaining districts as failed
         const remainingDistricts = districtsToScrape.slice(results.length)
         for (const remaining of remainingDistricts) {
           errors.push({
@@ -661,7 +636,7 @@ export class CollectorOrchestrator {
 
       try {
         const result = await this.circuitBreaker.execute(
-          () => this.scrapeDistrict(collector, districtId, date, force),
+          () => this.scrapeDistrict(downloader, districtId, date, force),
           { districtId, date }
         )
 
@@ -677,7 +652,6 @@ export class CollectorOrchestrator {
           })
         }
       } catch (error) {
-        // Circuit breaker error or unexpected error
         const errorMessage =
           error instanceof Error ? error.message : 'Unknown error'
 
@@ -696,19 +670,53 @@ export class CollectorOrchestrator {
           timestamp: new Date().toISOString(),
         })
 
-        logger.error('Unexpected error during district scrape', {
+        logger.error('Unexpected error during district download', {
           districtId,
           error: errorMessage,
         })
       }
     }
 
-    // Get fallback metrics before closing collector
-    // Requirement 7.3: WHEN the scrape session completes, THE Orchestrator SHALL log
-    // a summary including cache hit/miss statistics
-    const fallbackMetrics = collector.getFallbackMetrics()
+    // Write metadata.json for this date
+    try {
+      const succeededDistricts = results
+        .filter(r => r.success)
+        .map(r => r.districtId)
+      if (succeededDistricts.length > 0) {
+        const metaPath = buildMetadataPath(this.config.cacheDir, date)
+        const metadata = {
+          date,
+          timestamp: Date.now(),
+          programYear: calculateProgramYear(date),
+          isClosingPeriod: false,
+          csvFiles: {
+            allDistricts: allDistrictsResult.success,
+            districts: Object.fromEntries(
+              succeededDistricts.map(id => [
+                id,
+                {
+                  districtPerformance: true,
+                  divisionPerformance: true,
+                  clubPerformance: true,
+                },
+              ])
+            ),
+          },
+          source: 'collector-http',
+          cacheVersion: 1,
+        }
+        await fs.mkdir(path.dirname(metaPath), { recursive: true })
+        await fs.writeFile(metaPath, JSON.stringify(metadata, null, 2), 'utf-8')
+        logger.info('Wrote metadata.json', {
+          date,
+          districts: succeededDistricts.length,
+        })
+      }
+    } catch (metaError) {
+      logger.error('Failed to write metadata.json', { date, error: metaError })
+    }
 
-    // Close collector resources
+    // Close resources
     await this.close()
 
     // Calculate results
@@ -721,27 +729,8 @@ export class CollectorOrchestrator {
       .map(r => r.districtId)
     const duration_ms = Date.now() - startTime
 
-    // Determine overall success
     const success =
       districtsFailed.length === 0 && districtsSucceeded.length > 0
-
-    // Log fallback metrics summary
-    // Requirement 7.3: Log cache hit/miss statistics at end of scrape session
-    if (fallbackMetrics.cacheHits > 0 || fallbackMetrics.cacheMisses > 0) {
-      logger.info('Fallback cache metrics for scrape session', {
-        cacheHits: fallbackMetrics.cacheHits,
-        cacheMisses: fallbackMetrics.cacheMisses,
-        fallbackDatesDiscovered: fallbackMetrics.fallbackDatesDiscovered,
-        hitRate:
-          fallbackMetrics.cacheHits + fallbackMetrics.cacheMisses > 0
-            ? (
-                (fallbackMetrics.cacheHits /
-                  (fallbackMetrics.cacheHits + fallbackMetrics.cacheMisses)) *
-                100
-              ).toFixed(1) + '%'
-            : 'N/A',
-      })
-    }
 
     logger.info('Scrape operation completed', {
       date,
@@ -750,6 +739,7 @@ export class CollectorOrchestrator {
       succeeded: districtsSucceeded.length,
       failed: districtsFailed.length,
       success,
+      requestCount: downloader.getRequestCount(),
     })
 
     return {
@@ -761,11 +751,6 @@ export class CollectorOrchestrator {
       cacheLocations: allCacheLocations,
       errors,
       duration_ms,
-      fallbackMetrics: {
-        cacheHits: fallbackMetrics.cacheHits,
-        cacheMisses: fallbackMetrics.cacheMisses,
-        fallbackDatesDiscovered: fallbackMetrics.fallbackDatesDiscovered,
-      },
     }
   }
 }
