@@ -270,6 +270,51 @@ jobs:
           echo "- **Snapshot/analytics files synced**: ${SNAPSHOT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Time-series index files synced**: ${TS_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
+      # ── Step 6: Update district-snapshot-index (#138) ──────
+      # The backend reads per-district cached dates from this
+      # pre-computed index. Without updating it, the district
+      # detail page date selector goes stale.
+      - name: Update district-snapshot-index
+        env:
+          GCS_BUCKET: 'toast-stats-data'
+        run: |
+          DATE="${{ steps.scrape.outputs.date }}"
+          DISTRICT_LIST="${{ inputs.districts || steps.config.outputs.districts }}"
+          INDEX_PATH="gs://${GCS_BUCKET}/config/district-snapshot-index.json"
+
+          echo "Updating district-snapshot-index for ${DATE}..."
+
+          # Download existing index (or start empty)
+          gsutil cp "${INDEX_PATH}" /tmp/district-snapshot-index.json 2>/dev/null || \
+            echo '{"generatedAt":"","districts":{}}' > /tmp/district-snapshot-index.json
+
+          # Update the index with today's date for each district
+          node -e "
+            const fs = require('fs');
+            const index = JSON.parse(fs.readFileSync('/tmp/district-snapshot-index.json', 'utf-8'));
+            const date = '${DATE}';
+            const districts = '${DISTRICT_LIST}'.split(',').map(d => d.trim());
+
+            for (const districtId of districts) {
+              const existing = index.districts[districtId] || [];
+              const dateSet = new Set(existing);
+              dateSet.add(date);
+              index.districts[districtId] = [...dateSet].sort();
+            }
+            index.generatedAt = new Date().toISOString();
+
+            fs.writeFileSync('/tmp/district-snapshot-index.json', JSON.stringify(index, null, 2));
+            console.log('Updated index for ' + districts.length + ' districts with date ' + date);
+          "
+
+          # Upload updated index
+          gsutil cp /tmp/district-snapshot-index.json "${INDEX_PATH}"
+
+          echo "## 📋 District Snapshot Index" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Updated for date**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
+          DISTRICT_COUNT=$(echo "${DISTRICT_LIST}" | tr ',' '\n' | wc -l | tr -d ' ')
+          echo "- **Districts updated**: ${DISTRICT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+
       # ── Summary ─────────────────────────────────────────────
       - name: Pipeline summary
         if: always()
