@@ -29,6 +29,7 @@ import type {
   DistinguishedClubSummary,
   DistinguishedProjection,
 } from '../types.js'
+import type { ScrapedRecord } from '@toastmasters/shared-contracts'
 import { ensureString } from './AnalyticsUtils.js'
 import {
   calculateNetGrowth,
@@ -131,7 +132,10 @@ export class DistinguishedClubAnalyticsModule {
     )
 
     // Identify most/least commonly achieved DCP goals (Requirement 7.5)
-    const dcpGoalAnalysis = this.analyzeDCPGoals(latestEntry)
+    // Pass raw CSV records when available for accurate per-goal counting (#135)
+    const latestSnapshot = districtSnapshots[districtSnapshots.length - 1]
+    const rawClubRecords = latestSnapshot?.clubPerformance
+    const dcpGoalAnalysis = this.analyzeDCPGoals(latestEntry, rawClubRecords)
 
     const analytics: DistinguishedClubAnalytics = {
       distinguishedClubs,
@@ -705,38 +709,119 @@ export class DistinguishedClubAnalyticsModule {
   }
 
   /**
-   * Analyze DCP goals to identify most/least commonly achieved (Requirement 7.5)
+   * CSV column names for each DCP goal (1-10).
+   * Maps goal number to the column(s) that indicate achievement.
+   *
+   * Goals 1-8: single column, value > 0 means achieved
+   * Goal 9: both "Off. Trained Round 1" AND "Off. Trained Round 2" must be >= 4
+   * Goal 10: all of "Mem. dues on time Oct", "Mem. dues on time Apr", "Off. List On Time" must be > 0
    */
-  private analyzeDCPGoals(entry: DistrictCacheEntry): {
+  private static readonly DCP_GOAL_COLUMNS: {
+    goal: number
+    columns: string[]
+    /** 'any' = any column > 0; 'all' = all columns must meet threshold */
+    mode: 'any' | 'all'
+    /** Minimum value for each column (default 1) */
+    threshold?: number
+  }[] = [
+    { goal: 1, columns: ['Level 1s'], mode: 'any' },
+    { goal: 2, columns: ['Level 2s'], mode: 'any' },
+    { goal: 3, columns: ['Add. Level 2s'], mode: 'any' },
+    { goal: 4, columns: ['Level 3s'], mode: 'any' },
+    {
+      goal: 5,
+      columns: ['Level 4s, Level 5s, or DTM award'],
+      mode: 'any',
+    },
+    {
+      goal: 6,
+      columns: ['Add. Level 4s, Level 5s, or DTM award'],
+      mode: 'any',
+    },
+    { goal: 7, columns: ['New Members'], mode: 'any' },
+    { goal: 8, columns: ['Add. New Members'], mode: 'any' },
+    {
+      goal: 9,
+      columns: ['Off. Trained Round 1', 'Off. Trained Round 2'],
+      mode: 'all',
+      threshold: 4,
+    },
+    {
+      goal: 10,
+      columns: [
+        'Mem. dues on time Oct',
+        'Mem. dues on time Apr',
+        'Off. List On Time',
+      ],
+      mode: 'all',
+    },
+  ]
+
+  /**
+   * Check if a raw CSV record has a particular DCP goal achieved.
+   */
+  private isGoalAchieved(
+    record: ScrapedRecord,
+    goalDef: (typeof DistinguishedClubAnalyticsModule.DCP_GOAL_COLUMNS)[number]
+  ): boolean {
+    const threshold = goalDef.threshold ?? 1
+
+    if (goalDef.mode === 'all') {
+      // All columns must meet threshold
+      return goalDef.columns.every(col => {
+        const val = parseInt(String(record[col] ?? '0'), 10)
+        return !isNaN(val) && val >= threshold
+      })
+    }
+
+    // 'any' mode: any column > 0
+    return goalDef.columns.some(col => {
+      const val = parseInt(String(record[col] ?? '0'), 10)
+      return !isNaN(val) && val >= threshold
+    })
+  }
+
+  /**
+   * Analyze DCP goals to identify most/least commonly achieved (Requirement 7.5)
+   *
+   * When rawClubRecords are available (#135), reads actual per-goal columns
+   * from the CSV data. Falls back to sequential approximation for legacy data.
+   */
+  private analyzeDCPGoals(
+    entry: DistrictCacheEntry,
+    rawClubRecords?: ScrapedRecord[]
+  ): {
     mostCommonlyAchieved: DCPGoalAnalysis[]
     leastCommonlyAchieved: DCPGoalAnalysis[]
   } {
     // DCP has 10 goals (numbered 1-10)
-    // Initialize with explicit values to avoid undefined access issues
-    const goalCounts: Record<number, number> = {
-      0: 0,
-      1: 0,
-      2: 0,
-      3: 0,
-      4: 0,
-      5: 0,
-      6: 0,
-      7: 0,
-      8: 0,
-      9: 0,
-    }
+    const goalCounts: number[] = Array(10).fill(0) as number[]
     const totalClubs = entry.clubPerformance.length
 
-    // Count how many clubs achieved each goal
-    // Note: In the adapted version, we use simplified goal counting based on dcpGoals
-    // The detailed goal breakdown requires raw CSV data which isn't available in ClubStatistics
-    for (const club of entry.clubPerformance) {
-      const dcpGoals = club.dcpGoals
+    // Check if raw CSV records have per-goal columns
+    const hasGoalColumns =
+      rawClubRecords &&
+      rawClubRecords.length > 0 &&
+      rawClubRecords[0] !== undefined &&
+      'Level 1s' in rawClubRecords[0]
 
-      // Simplified goal counting: assume goals are achieved sequentially
-      // This is a reasonable approximation when detailed goal data isn't available
-      for (let i = 0; i < Math.min(dcpGoals, 10); i++) {
-        goalCounts[i] = (goalCounts[i] ?? 0) + 1
+    if (hasGoalColumns && rawClubRecords) {
+      // #135 fix: Use actual per-goal columns from raw CSV data
+      for (const record of rawClubRecords) {
+        for (const goalDef of DistinguishedClubAnalyticsModule.DCP_GOAL_COLUMNS) {
+          if (this.isGoalAchieved(record, goalDef)) {
+            goalCounts[goalDef.goal - 1] =
+              (goalCounts[goalDef.goal - 1] ?? 0) + 1
+          }
+        }
+      }
+    } else {
+      // Fallback: sequential approximation for legacy data without per-goal columns
+      for (const club of entry.clubPerformance) {
+        const dcpGoals = club.dcpGoals
+        for (let i = 0; i < Math.min(dcpGoals, 10); i++) {
+          goalCounts[i] = (goalCounts[i] ?? 0) + 1
+        }
       }
     }
 

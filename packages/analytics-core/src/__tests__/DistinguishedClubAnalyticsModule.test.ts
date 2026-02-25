@@ -63,6 +63,9 @@ function createMockSnapshot(clubs: ClubStatistics[]): DistrictStatistics {
       selectDistinguishedClubs: clubs.filter(c => c.dcpGoals >= 7).length,
       presidentDistinguishedClubs: clubs.filter(c => c.dcpGoals >= 9).length,
     },
+    clubPerformance: [],
+    divisionPerformance: [],
+    districtPerformance: [],
   }
 }
 
@@ -643,6 +646,133 @@ describe('DistinguishedClubAnalyticsModule', () => {
           counts.select +
           counts.distinguished
       )
+    })
+  })
+
+  describe('DCP Goal Analysis (#135)', () => {
+    /**
+     * Bug #135: analyzeDCPGoals() assumed goals are achieved sequentially
+     * (Goal 1 first, then Goal 2, etc.) based on dcpGoals count.
+     * This produced a monotonic staircase — Goal 1 always highest, Goal 10 always lowest.
+     *
+     * Fix: Use actual per-goal columns from raw clubPerformance CSV records.
+     *
+     * The raw CSV has columns: Level 1s, Level 2s, Add. Level 2s, Level 3s,
+     * Level 4s/5s/DTM, Add. Level 4s/5s/DTM, New Members, Add. New Members,
+     * Off. Trained Round 1, Off. Trained Round 2, Mem. dues on time Oct/Apr, Off. List On Time
+     */
+    it('should count goals from actual CSV columns, not assume sequential achievement', () => {
+      const module = new DistinguishedClubAnalyticsModule()
+
+      // Club A: achieved only Goal 7 (new members) and Goal 10 (admin compliance)
+      // but NOT Goals 1-6 or 8-9
+      const clubA = createMockClub('A', 2, 20) // 2 DCP goals total
+
+      // Club B: achieved only Goal 1 (Level 1 awards) and Goal 9 (officer training)
+      const clubB = createMockClub('B', 2, 20) // 2 DCP goals total
+
+      // Create snapshot with raw clubPerformance records containing actual goal columns
+      const snapshot: DistrictStatistics = {
+        ...createMockSnapshot([clubA, clubB]),
+        clubPerformance: [
+          {
+            'Club Number': 'A',
+            'Club Name': 'Club A',
+            Division: 'A',
+            Area: '01',
+            'Active Members': '20',
+            'Goals Met': '2',
+            'Club Status': 'Active',
+            'Mem. Base': '20',
+            // Goal columns: Club A achieved Goal 7 and Goal 10 only
+            'Level 1s': '0',
+            'Level 2s': '0',
+            'Add. Level 2s': '0',
+            'Level 3s': '0',
+            'Level 4s, Level 5s, or DTM award': '0',
+            'Add. Level 4s, Level 5s, or DTM award': '0',
+            'New Members': '4', // Goal 7: achieved
+            'Add. New Members': '0',
+            'Off. Trained Round 1': '0',
+            'Off. Trained Round 2': '0',
+            'Mem. dues on time Oct': '1', // Goal 10a
+            'Mem. dues on time Apr': '1', // Goal 10b
+            'Off. List On Time': '1', // Goal 10c
+          },
+          {
+            'Club Number': 'B',
+            'Club Name': 'Club B',
+            Division: 'A',
+            Area: '01',
+            'Active Members': '20',
+            'Goals Met': '2',
+            'Club Status': 'Active',
+            'Mem. Base': '20',
+            // Goal columns: Club B achieved Goal 1 and Goal 9 only
+            'Level 1s': '4', // Goal 1: achieved
+            'Level 2s': '0',
+            'Add. Level 2s': '0',
+            'Level 3s': '0',
+            'Level 4s, Level 5s, or DTM award': '0',
+            'Add. Level 4s, Level 5s, or DTM award': '0',
+            'New Members': '0',
+            'Add. New Members': '0',
+            'Off. Trained Round 1': '4', // Goal 9a: achieved
+            'Off. Trained Round 2': '4', // Goal 9b: achieved
+            'Mem. dues on time Oct': '0',
+            'Mem. dues on time Apr': '0',
+            'Off. List On Time': '0',
+          },
+        ],
+      }
+
+      const analytics = module.generateDistinguishedClubAnalytics('D101', [
+        snapshot,
+      ])
+      const allGoals = analytics.dcpGoalAnalysis.mostCommonlyAchieved
+
+      // Find specific goals by goalNumber
+      const goal1 = allGoals.find(g => g.goalNumber === 1)
+      const goal7 = allGoals.find(g => g.goalNumber === 7)
+      const goal9 = allGoals.find(g => g.goalNumber === 9)
+      const goal10 = allGoals.find(g => g.goalNumber === 10)
+      const goal2 = allGoals.find(g => g.goalNumber === 2)
+
+      // Goal 1: only Club B achieved it → count = 1
+      expect(goal1?.achievementCount).toBe(1)
+
+      // Goal 7: only Club A achieved it → count = 1
+      expect(goal7?.achievementCount).toBe(1)
+
+      // Goal 9: only Club B achieved it → count = 1
+      expect(goal9?.achievementCount).toBe(1)
+
+      // Goal 10: only Club A achieved it → count = 1
+      expect(goal10?.achievementCount).toBe(1)
+
+      // Goal 2: neither club achieved it → count = 0
+      expect(goal2?.achievementCount).toBe(0)
+    })
+
+    it('should fall back to sequential approximation when raw CSV data is unavailable', () => {
+      const module = new DistinguishedClubAnalyticsModule()
+
+      // Snapshot without clubPerformance raw records (legacy data)
+      const club = createMockClub('1', 3, 20)
+      const snapshot = createMockSnapshot([club])
+      // No clubPerformance on snapshot — should fall back to sequential assumption
+
+      const analytics = module.generateDistinguishedClubAnalytics('D101', [
+        snapshot,
+      ])
+      const allGoals = [
+        ...analytics.dcpGoalAnalysis.mostCommonlyAchieved,
+        ...analytics.dcpGoalAnalysis.leastCommonlyAchieved,
+      ]
+
+      // Should still produce 10 goals with the fallback sequential logic
+      const uniqueGoals = new Set(allGoals.map(g => g.goalNumber))
+      expect(uniqueGoals.size).toBe(10)
     })
   })
 })

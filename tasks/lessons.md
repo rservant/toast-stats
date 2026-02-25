@@ -15,6 +15,18 @@
 <!--                                                                                      -->
 <!-- **Future Warning**: [What to watch for — a tripwire for the agent]                    -->
 
+## 🗓️ 2026-02-24 — Lesson 29: Never Assume Data is Sequential When It's Independent (#135)
+
+**The Discovery**: `analyzeDCPGoals()` assumed DCP goals are achieved in order (1→2→3...) based on the total `dcpGoals` count. In reality, DCP goals are independent — a club can achieve Goal 7 (new members) without achieving Goals 1-6 (education awards). The raw CSV already has individual goal columns (`Level 1s`, `Level 2s`, etc.) available in `DistrictStatistics.clubPerformance`.
+
+**The Scientific Proof**: Test with Club A (Goals 7+10 only) and Club B (Goals 1+9 only) — sequential logic counted Goal 1 as achieved by both clubs (expected 1, got 2).
+
+**The Farley Principle Applied**: Evidence over Intuition — "assume sequential" was a seemingly reasonable approximation, but the actual data was already flowing through the pipeline.
+
+**The Resulting Rule**: When individual data fields exist in the raw source, always prefer them over derived approximations. Check raw record types (`ScrapedRecord[]`) for available columns before building approximations from summary fields.
+
+**Future Warning**: Any analytics computation that says "simplified: assume X" should be audited for whether the raw data already provides the real values.
+
 ## 🗓️ 2026-02-24 — Lesson 28: Default Return Values Mask Data Availability Bugs (#111)
 
 **The Discovery**: `calculateDivisionGrowthScore` returned 50 (neutral) when `historicalData.length < 2`, but each `ClubStatistics` already carries `membershipBase` — a start-of-period reference. The data to compute meaningful growth existed all along; the early return masked it.
