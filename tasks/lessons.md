@@ -15,6 +15,18 @@
 <!--                                                                                      -->
 <!-- **Future Warning**: [What to watch for — a tripwire for the agent]                    -->
 
+## 🗓️ 2026-02-25 — Lesson 30: Replace External Process Dependencies With HTTP When No Auth Is Needed (#124)
+
+**The Discovery**: The daily pipeline used Playwright (headless Chrome) to navigate to each Toastmasters dashboard page and click "Export CSV". The backfill (#123) proved the same CSVs are available via unauthenticated `GET /export.aspx?type=CSV&report=...` — no login, no session, no cookies.
+
+**The Scientific Proof**: `HttpCsvDownloader` downloads identical CSV content to what Playwright exported, as verified by the backfill integration tests. Migrating `CollectorOrchestrator` to use `HttpCsvDownloader`: all 629 tests pass, zero regressions.
+
+**The Farley Principle Applied**: Minimal Surface Area — Playwright added a browser runtime, ~200MB dependency, flaky timeouts, and "fallback date" navigation heuristics. HTTP GET is a single `fetch()` call.
+
+**The Resulting Rule**: Before automating a UI workflow, check if the same data is available via direct HTTP. Public dashboards often expose export endpoints that don't require authentication.
+
+**Future Warning**: If Toastmasters adds authentication to `export.aspx`, this will break. Monitor for 401/403 responses and have a rollback path.
+
 ## 🗓️ 2026-02-24 — Lesson 29: Never Assume Data is Sequential When It's Independent (#135)
 
 **The Discovery**: `analyzeDCPGoals()` assumed DCP goals are achieved in order (1→2→3...) based on the total `dcpGoals` count. In reality, DCP goals are independent — a club can achieve Goal 7 (new members) without achieving Goals 1-6 (education awards). The raw CSV already has individual goal columns (`Level 1s`, `Level 2s`, etc.) available in `DistrictStatistics.clubPerformance`.
