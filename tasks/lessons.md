@@ -15,6 +15,18 @@
 <!--                                                                                      -->
 <!-- **Future Warning**: [What to watch for — a tripwire for the agent]                    -->
 
+## 🗓️ 2026-02-24 — Lesson 28: Default Return Values Mask Data Availability Bugs (#111)
+
+**The Discovery**: `calculateDivisionGrowthScore` returned 50 (neutral) when `historicalData.length < 2`, but each `ClubStatistics` already carries `membershipBase` — a start-of-period reference. The data to compute meaningful growth existed all along; the early return masked it.
+
+**The Scientific Proof**: Tests with `membershipBase=15, membershipCount=20` (33% growth) still returned 50 before the fix. After adding `calculateGrowthFromBase()`, tests correctly return >50/-<50.
+
+**The Farley Principle Applied**: Evidence over Intuition — a "sensible default" (50 = neutral) is still a bug if the system has the data to compute a real value.
+
+**The Resulting Rule**: Before returning a default/fallback value, verify that no alternative data source exists in the already-available input. Check all fields on input types, not just the primary expected ones.
+
+**Future Warning**: Any function with `if (data.length < N) return DEFAULT` should be audited for alternative data sources in the input.
+
 ## 🗓️ 2026-02-24 — Lesson 27: Chart Y-Axis Labels Need Range Padding (#107)
 
 **The Discovery**: When all membership values in the club detail modal were identical (e.g., 11), `membershipRange` was clamped to `|| 1`, causing the midpoint label `Math.round(11 + 0.5) = 12` to exceed the max. The y-axis showed `11, 12, 11` — inverted.
