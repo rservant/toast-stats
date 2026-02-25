@@ -15,6 +15,18 @@
 <!--                                                                                      -->
 <!-- **Future Warning**: [What to watch for — a tripwire for the agent]                    -->
 
+## 🗓️ 2026-02-25 — Lesson 31: Investigate Duplication Claims Before Refactoring (#127, #129)
+
+**The Discovery**: Issue #127 claimed `SnapshotBuilder` (1,170 lines) duplicated `DataTransformer`. Investigation revealed `SnapshotBuilder` delegates transformation to `DataNormalizer` — the real overlap is `DataNormalizer` (419 lines) vs `DataTransformer` (686 lines), with different type systems and consumers. Meanwhile, #129 (SnapshotStore façade) was a genuine, low-risk extraction.
+
+**The Scientific Proof**: Traced imports: `SnapshotBuilder` → `DataNormalizer.normalize()`. No direct CSV→struct transformation code exists in `SnapshotBuilder`. Its 1,170 lines are cache orchestration, checksums, and persistence.
+
+**The Farley Principle Applied**: Measure before optimizing. An issue description can overstate the problem.
+
+**The Resulting Rule**: Before starting a cross-package consolidation, trace the actual call graph. If the "duplicate" code operates at a different abstraction level with different input/output types, the consolidation risk likely outweighs the benefit.
+
+**Future Warning**: If `DataTransformer` and `DataNormalizer` diverge in extraction logic (column names, parsing heuristics), bugs will appear in one consumer but not the other. A future task could extract shared column-extraction helpers into `shared-contracts`.
+
 ## 🗓️ 2026-02-25 — Lesson 30: Replace External Process Dependencies With HTTP When No Auth Is Needed (#124)
 
 **The Discovery**: The daily pipeline used Playwright (headless Chrome) to navigate to each Toastmasters dashboard page and click "Export CSV". The backfill (#123) proved the same CSVs are available via unauthenticated `GET /export.aspx?type=CSV&report=...` — no login, no session, no cookies.
