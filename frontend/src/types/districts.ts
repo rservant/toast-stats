@@ -224,62 +224,20 @@ export interface AvailableDatesResponse {
   programYear: ProgramYearInfo
 }
 
-// District Rankings Types (for getAllDistrictsRankings API)
-export interface DistrictRanking {
-  districtId: string
-  districtName: string
-  region: string
-  paidClubs: number
-  paidClubBase: number
-  clubGrowthPercent: number
-  totalPayments: number
-  paymentBase: number
-  paymentGrowthPercent: number
-  activeClubs: number
-  distinguishedClubs: number
-  selectDistinguished: number
-  presidentsDistinguished: number
-  distinguishedPercent: number
-  clubsRank: number
-  paymentsRank: number
-  distinguishedRank: number
-  aggregateScore: number
-}
+// District Rankings Types (from shared-contracts)
+export type { DistrictRanking } from '@toastmasters/shared-contracts'
 
 export interface DistrictRankingsResponse {
-  rankings: DistrictRanking[]
+  rankings: import('@toastmasters/shared-contracts').DistrictRanking[]
   date: string
 }
 
-// ========== Available Program Years Types ==========
+// ========== Available Program Years Types (from shared-contracts) ==========
 
-/**
- * Information about a program year that has ranking data available
- */
-export interface ProgramYearWithData {
-  /** Program year identifier (e.g., "2023-2024") */
-  year: string
-  /** Start date of the program year (ISO date string) */
-  startDate: string
-  /** End date of the program year (ISO date string) */
-  endDate: string
-  /** Whether the program year has complete data (reached end date) */
-  hasCompleteData: boolean
-  /** Number of snapshots available for this program year */
-  snapshotCount: number
-  /** Date of the most recent snapshot (ISO date string) */
-  latestSnapshotDate: string
-}
-
-/**
- * Response from GET /api/districts/:districtId/available-ranking-years
- */
-export interface AvailableRankingYearsResponse {
-  /** District identifier */
-  districtId: string
-  /** List of program years with ranking data */
-  programYears: ProgramYearWithData[]
-}
+export type {
+  ProgramYearWithData,
+  AvailableRankingYearsResponse,
+} from '@toastmasters/shared-contracts'
 
 // ========== District Performance Targets Types ==========
 

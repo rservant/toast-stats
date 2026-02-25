@@ -49,6 +49,12 @@ export type {
 // Club health status types
 export type { ClubHealthStatus } from './types/club-health-status.js'
 
+// API response types (shared between frontend and backend)
+export type {
+  ProgramYearWithData,
+  AvailableRankingYearsResponse,
+} from './types/api-responses.js'
+
 // Zod schemas
 export { PerDistrictDataSchema } from './schemas/per-district-data.schema.js'
 
