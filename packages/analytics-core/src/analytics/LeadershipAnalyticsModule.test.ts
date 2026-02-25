@@ -317,6 +317,33 @@ describe('LeadershipAnalyticsModule', () => {
         expect(bp.isBestPractice).toBe(true)
       }
     })
+
+    it('should identify realistic high-performing division as best practice (#117)', () => {
+      const module = new LeadershipAnalyticsModule()
+      // Realistic high-performing division: membership 20, DCP goals 5
+      // This produces an overall score ~60-70 — should qualify as best practice
+      const clubs = [
+        // Division A: good performance (realistic, not extreme)
+        createMockClub('1', 'A', 'A1', 20, 5),
+        createMockClub('2', 'A', 'A2', 22, 6),
+        createMockClub('3', 'A', 'A3', 18, 4),
+        // Division B: poor performance
+        createMockClub('4', 'B', 'B1', 10, 1),
+        createMockClub('5', 'B', 'B2', 8, 0),
+        createMockClub('6', 'B', 'B3', 9, 1),
+      ]
+      const snapshot = createMockSnapshot(clubs)
+
+      const insights = module.generateLeadershipInsights([snapshot])
+
+      const divisionA = insights.leadershipScores.find(
+        s => s.divisionId === 'A'
+      )
+      // Division A should be identified as best practice
+      expect(divisionA?.isBestPractice).toBe(true)
+      expect(insights.bestPracticeDivisions.length).toBeGreaterThan(0)
+      expect(insights.summary.totalBestPracticeDivisions).toBeGreaterThan(0)
+    })
   })
 
   describe('Area Director Correlations (Req 8.4)', () => {

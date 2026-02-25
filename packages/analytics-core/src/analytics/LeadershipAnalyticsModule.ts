@@ -262,7 +262,7 @@ export class LeadershipAnalyticsModule {
     leadershipScores: LeadershipEffectivenessScore[],
     snapshots: DistrictStatistics[]
   ): LeadershipEffectivenessScore[] {
-    const threshold = 75
+    const threshold = 60
     const topPercentile = Math.ceil(leadershipScores.length * 0.2)
     const bestPractices: LeadershipEffectivenessScore[] = []
 
