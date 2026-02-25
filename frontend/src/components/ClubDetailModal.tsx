@@ -135,10 +135,12 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
 
   // Calculate chart dimensions based on filtered program year data
   const membershipValues = filteredMembershipTrend.map(d => d.count)
-  const minMembership =
-    membershipValues.length > 0 ? Math.min(...membershipValues) : 0
-  const maxMembership =
-    membershipValues.length > 0 ? Math.max(...membershipValues) : 0
+  const rawMin = membershipValues.length > 0 ? Math.min(...membershipValues) : 0
+  const rawMax = membershipValues.length > 0 ? Math.max(...membershipValues) : 0
+  // Pad the range symmetrically when all values are equal (#107)
+  const yPadding = rawMax === rawMin ? 2 : 0
+  const minMembership = Math.max(0, rawMin - yPadding)
+  const maxMembership = rawMax + yPadding
   const membershipRange = maxMembership - minMembership || 1
   const totalProgramDays = 365
 
