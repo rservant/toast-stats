@@ -516,51 +516,44 @@ export class CollectorOrchestrator {
       }
     }
 
-    // Load district configuration
+    // Resolve district list:
+    // - If --districts is explicitly provided (e.g. from the data pipeline after
+    //   auto-discovering from the ALL_DISTRICTS CSV), trust it directly.
+    // - If no districts are specified, fall back to the local config file (legacy
+    //   path used in local dev or manual targeted runs without an explicit list).
     let districtsToScrape: string[]
-    try {
-      const config = await this.loadDistrictConfiguration()
-
-      if (options.districts && options.districts.length > 0) {
-        districtsToScrape = options.districts.filter(d =>
-          config.configuredDistricts.includes(d)
-        )
-
-        const invalidDistricts = options.districts.filter(
-          d => !config.configuredDistricts.includes(d)
-        )
-
-        if (invalidDistricts.length > 0) {
-          logger.warn('Some requested districts are not in configuration', {
-            invalidDistricts,
-            configuredDistricts: config.configuredDistricts,
-          })
-        }
-      } else {
-        districtsToScrape = config.configuredDistricts
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      logger.error('Failed to load district configuration', {
-        error: errorMessage,
+    if (options.districts && options.districts.length > 0) {
+      districtsToScrape = options.districts
+      logger.info('Using explicitly provided district list', {
+        districtCount: districtsToScrape.length,
       })
+    } else {
+      try {
+        const config = await this.loadDistrictConfiguration()
+        districtsToScrape = config.configuredDistricts
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error'
+        logger.error('Failed to load district configuration', {
+          error: errorMessage,
+        })
 
-      return {
-        success: false,
-        date,
-        districtsProcessed: [],
-        districtsSucceeded: [],
-        districtsFailed: [],
-        cacheLocations: [],
-        errors: [
-          {
-            districtId: 'N/A',
-            error: `Failed to load district configuration: ${errorMessage}`,
-            timestamp: new Date().toISOString(),
-          },
-        ],
-        duration_ms: Date.now() - startTime,
+        return {
+          success: false,
+          date,
+          districtsProcessed: [],
+          districtsSucceeded: [],
+          districtsFailed: [],
+          cacheLocations: [],
+          errors: [
+            {
+              districtId: 'N/A',
+              error: `Failed to load district configuration: ${errorMessage}`,
+              timestamp: new Date().toISOString(),
+            },
+          ],
+          duration_ms: Date.now() - startTime,
+        }
       }
     }
 

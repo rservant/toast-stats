@@ -79,11 +79,13 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
 
-      # ── Step 1: Sync config + raw-csv cache from GCS ────────
-      # Pull district configuration and previously scraped CSVs
-      # so the collector knows which districts to process and can
-      # skip re-downloading cached dates.
-      - name: Sync config and raw-csv from GCS
+      # ── Step 1: Discover districts + sync raw-csv cache from GCS ────────
+      # Districts are auto-discovered by downloading the Toastmasters
+      # districtsummary CSV for the target date and parsing the DISTRICT column.
+      # Manual workflow_dispatch 'districts' input overrides auto-discovery.
+      # Previously used config/districts.json from GCS (now deprecated, kept in
+      # place but no longer read). Companion to backend change #139.
+      - name: Discover districts and sync raw-csv from GCS
         id: config
         env:
           GCS_BUCKET: 'toast-stats-data'
@@ -95,19 +97,38 @@ jobs:
           fi
           echo "Target date: ${TARGET_DATE}"
 
-          # Sync district configuration
-          mkdir -p ./cache/config
-          gsutil cp \
-            "gs://${GCS_BUCKET}/config/districts.json" \
-            "./cache/config/districts.json" \
-            2>&1 || echo "No config in GCS — will rely on workflow_dispatch input"
-
-          # Read districts from config (comma-separated)
-          if [ -f ./cache/config/districts.json ]; then
-            DISTRICTS=$(jq -r '.configuredDistricts | join(",")' ./cache/config/districts.json)
+          # If districts were manually specified via workflow_dispatch, use them directly
+          if [ -n "${{ inputs.districts }}" ]; then
+            DISTRICTS="${{ inputs.districts }}"
+            echo "Using manual district override: ${DISTRICTS}"
           else
-            DISTRICTS=""
+            # Auto-discover districts from the Toastmasters districtsummary CSV
+            PROGRAM_YEAR=$(node -e "
+              const d = new Date('${TARGET_DATE}');
+              const y = d.getFullYear(); const m = d.getMonth();
+              console.log(m >= 6 ? y+'-'+(y+1) : (y-1)+'-'+y);
+            ")
+            DATE_FORMATTED=$(date -d "${TARGET_DATE}" +'%-m/%-d/%Y')
+            DISTRICTS_CSV_URL="https://dashboards.toastmasters.org/${PROGRAM_YEAR}/export.aspx?type=CSV&report=districtsummary~${DATE_FORMATTED}~~${PROGRAM_YEAR}"
+
+            echo "Discovering districts from: ${DISTRICTS_CSV_URL}"
+            DISTRICTS=$(curl -sf --retry 3 --max-time 30 "${DISTRICTS_CSV_URL}" | node -e "
+              const data = require('fs').readFileSync('/dev/stdin','utf8');
+              const lines = data.trim().split('\n');
+              const headers = lines[0].split(',').map(h => h.replace(/\"/g,'').trim());
+              const col = headers.indexOf('DISTRICT');
+              const ids = [...new Set(lines.slice(1).map(l => l.split(',')[col].replace(/\"/g,'').trim()).filter(Boolean))];
+              ids.sort((a,b) => { const na=parseInt(a,10),nb=parseInt(b,10); return isNaN(na)||isNaN(nb)?a.localeCompare(b):na-nb; });
+              process.stdout.write(ids.join(','));
+            ")
+
+            if [ -z "${DISTRICTS}" ]; then
+              echo "::error::Failed to discover districts from Toastmasters CSV. The dashboard may be down or the CSV format changed."
+              exit 1
+            fi
+            echo "Discovered $(echo "${DISTRICTS}" | tr ',' '\n' | wc -l | tr -d ' ') districts"
           fi
+
           echo "districts=${DISTRICTS}" >> "$GITHUB_OUTPUT"
 
           # Sync raw-csv cache for target date
@@ -117,11 +138,12 @@ jobs:
             "./cache/raw-csv/${TARGET_DATE}/" \
             2>&1 || echo "No existing raw-csv for ${TARGET_DATE} in GCS (first run for this date)"
 
-          echo "## ⏬ Config & Raw CSV Sync" >> "$GITHUB_STEP_SUMMARY"
+          echo "## ⏬ District Discovery & Raw CSV Sync" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Districts**: ${DISTRICTS}" >> "$GITHUB_STEP_SUMMARY"
           FILE_COUNT=$(find "./cache/raw-csv/${TARGET_DATE}" -name '*.csv' 2>/dev/null | wc -l | tr -d ' ')
           echo "- **Date**: ${TARGET_DATE}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **CSV files restored**: ${FILE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+
 
       # ── Step 2: Scrape + Transform ──────────────────────────
       - name: Scrape & Transform
@@ -139,16 +161,11 @@ jobs:
             ARGS="$ARGS --date $(date -u -d '1 day ago' +%Y-%m-%d)"
           fi
 
-          # Use manual districts if provided, otherwise use config from GCS
-          DISTRICT_LIST="${{ inputs.districts || steps.config.outputs.districts }}"
-          if [ -z "${DISTRICT_LIST}" ]; then
-            MSG="No districts configured."
-            MSG="$MSG Upload config/districts.json"
-            MSG="$MSG or use workflow_dispatch."
-            echo "::error::$MSG"
-            exit 1
-          fi
+          # District list comes from Step 1: auto-discovered from Toastmasters CSV
+          # or overridden by the manual workflow_dispatch input
+          DISTRICT_LIST="${{ steps.config.outputs.districts }}"
           ARGS="$ARGS --districts ${DISTRICT_LIST}"
+
 
           # Force flag
           if [ "${{ inputs.force }}" = "true" ]; then
