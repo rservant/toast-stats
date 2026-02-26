@@ -440,3 +440,15 @@
 **The Resulting Rule**: When a property test's mock CSV triggers real validation failures in intermediate layers, mock the validator. Always separate "district discovery and tracking" tests from "data validation" tests. Also, fix both code paths (success AND validation-failure) when changing how district lists are computed — don't leave the failure path using old empty lists.
 
 **Future Warning**: `SnapshotBuilder.build()` has two district-tracking code paths: one for the success case and one for when `validationResult.isValid === false`. If the district discovery strategy changes again, update BOTH paths.
+
+## 🗓️ 2026-02-26 — Lesson 34: Backend Whitelist Removal Must Be Paired With Pipeline Whitelist Removal (#141)
+
+**The Discovery**: Removing `DistrictConfigurationService` from the backend (a read-time filter) did not automatically update the data pipeline's write-time source of truth. `data-pipeline.yml` still read `config/districts.json` from GCS to determine which districts to scrape. New Toastmasters districts appearing in the federation would have been silently ignored forever.
+
+**The Scientific Proof**: Tracing the delete-downstream: backend no longer reads config → but `data-pipeline.yml` Step 1 still does `gsutil cp gs://.../config/districts.json` → if districts.json were ever deleted or a new district appeared, the pipeline would fail or miss it.
+
+**The Farley Principle Applied**: Consistency — when configuration is removed from consumption, it must also be removed from production. The two sides of a config object are: "who writes it?" and "who reads it?" — removing one reader demands removing the writer.
+
+**The Resulting Rule**: Whenever a config file is deleted from a service's read path, immediately audit the write path. Run `grep -r "districts.json"` across all files (including `.github/workflows/`) to find all residual consumers.
+
+**Future Warning**: CollectorOrchestrator.ts had a second hidden bug: it _validated_ `--districts` input against `configuredDistricts`, silently dropping any district NOT in the config file. So even if the pipeline computed the right list, `CollectorOrchestrator` would have filtered it back down to the whitelist. Layer-by-layer audits are required when removing a gate.
