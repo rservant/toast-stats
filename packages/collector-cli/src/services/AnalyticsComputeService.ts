@@ -24,7 +24,6 @@ import {
   type AnalyticsManifestEntry,
   type PreComputedAnalyticsFile,
   type DistrictAnalytics,
-  type ClubTrendsIndex,
 } from '@toastmasters/analytics-core'
 import type {
   DistrictStatisticsInput,
@@ -775,10 +774,41 @@ export class AnalyticsComputeService {
         )
       }
 
-      // Build snapshots array: previous year first (if available), then current
+      // Load ALL program-year snapshot dates so AnalyticsComputer receives a
+      // dense set of snapshots for trend analysis (fixes #108, #113, #114).
+      // listProgramYearSnapshotDates returns dates in ascending order and
+      // already includes `date` itself, so `snapshot` will be part of the array.
+      const programYearDates = await this.listProgramYearSnapshotDates(
+        date,
+        districtId
+      )
+      const programYearSnapshots: DistrictStatistics[] = []
+      for (const pyDate of programYearDates) {
+        const pySnapshot = await this.loadDistrictSnapshot(pyDate, districtId)
+        if (pySnapshot) programYearSnapshots.push(pySnapshot)
+      }
+
+      // Ensure the current snapshot is included (handles edge case where
+      // listProgramYearSnapshotDates returns an empty array)
+      if (programYearSnapshots.length === 0) {
+        programYearSnapshots.push(snapshot)
+      }
+
+      // Build snapshots array: previous year first (if available), then all
+      // program-year snapshots. Previous year enables YoY comparisons.
       const snapshots = previousSnapshot
-        ? [previousSnapshot, snapshot]
-        : [snapshot]
+        ? [previousSnapshot, ...programYearSnapshots]
+        : programYearSnapshots
+
+      this.logger.info(
+        'Loaded program-year snapshots for dense trend analysis',
+        {
+          date,
+          districtId,
+          programYearDates,
+          totalSnapshots: snapshots.length,
+        }
+      )
 
       // Requirement 5.1: Calculate checksum of source snapshot
       const sourceSnapshotChecksum =
@@ -803,9 +833,9 @@ export class AnalyticsComputeService {
       }
 
       // Compute analytics using shared AnalyticsComputer
-      // Note: AnalyticsComputer expects an array of snapshots for trend analysis
-      // With two snapshots (previous + current), computeYearOverYear will use distinct data
-      // With one snapshot, it falls back to single-snapshot behavior (dataAvailable: false)
+      // The snapshots array now contains ALL program-year snapshots, so all
+      // trend computations (membershipTrend, clubTrendsIndex, etc.) will
+      // produce dense multi-point data for the full program year.
       // Requirement 5.2 (per-metric-rankings): Pass allDistrictsRankings via options
       const computationResult =
         await this.analyticsComputer.computeDistrictAnalytics(
@@ -892,18 +922,13 @@ export class AnalyticsComputeService {
           writeOptions
         )
 
-      // Enrich club-trends-index with data from all program-year snapshots (#79b)
-      const enrichedClubTrendsIndex = await this.enrichClubTrendsIndex(
-        date,
-        districtId,
-        computationResult.clubTrendsIndex
-      )
-
+      // Club trends are now natively dense because all program-year snapshots
+      // are passed to AnalyticsComputer above. No post-processing needed.
       const clubTrendsIndexPath =
         await this.analyticsWriter.writeClubTrendsIndex(
           date,
           districtId,
-          enrichedClubTrendsIndex,
+          computationResult.clubTrendsIndex,
           writeOptions
         )
 
@@ -1401,121 +1426,5 @@ export class AnalyticsComputeService {
     }
 
     return results.sort()
-  }
-
-  /**
-   * Enrich the club-trends-index with data from all available
-   * program-year snapshots. Replaces the sparse 2-point trends
-   * with dense multi-point trends covering the full program year.
-   *
-   * @param currentDate - The date of the current computation
-   * @param districtId - The district ID
-   * @param sparseIndex - The club-trends-index from the standard computation (2 points)
-   * @returns Enriched ClubTrendsIndex with dense trends
-   */
-  private async enrichClubTrendsIndex(
-    currentDate: string,
-    districtId: string,
-    sparseIndex: ClubTrendsIndex
-  ): Promise<ClubTrendsIndex> {
-    const programYearDates = await this.listProgramYearSnapshotDates(
-      currentDate,
-      districtId
-    )
-
-    // If we only have 0-2 dates, the sparse data is already sufficient
-    if (programYearDates.length <= 2) {
-      this.logger.info(
-        'Not enough snapshots for dense club trends enrichment',
-        {
-          currentDate,
-          districtId,
-          availableDates: programYearDates.length,
-        }
-      )
-      return sparseIndex
-    }
-
-    this.logger.info('Enriching club trends with dense historical data', {
-      currentDate,
-      districtId,
-      snapshotCount: programYearDates.length,
-    })
-
-    // Build per-club trend maps: clubId → { date → { membership, dcpGoals } }
-    const clubMembershipMap = new Map<string, Map<string, number>>()
-    const clubDcpGoalsMap = new Map<string, Map<string, number>>()
-
-    for (const snapshotDate of programYearDates) {
-      try {
-        const snapshot = await this.loadDistrictSnapshot(
-          snapshotDate,
-          districtId
-        )
-        if (!snapshot) continue
-
-        for (const club of snapshot.clubs) {
-          // Membership trend
-          if (!clubMembershipMap.has(club.clubId)) {
-            clubMembershipMap.set(club.clubId, new Map())
-          }
-          clubMembershipMap
-            .get(club.clubId)!
-            .set(snapshotDate, club.membershipCount)
-
-          // DCP goals trend
-          if (!clubDcpGoalsMap.has(club.clubId)) {
-            clubDcpGoalsMap.set(club.clubId, new Map())
-          }
-          clubDcpGoalsMap.get(club.clubId)!.set(snapshotDate, club.dcpGoals)
-        }
-      } catch (error) {
-        // Skip dates that fail to load — don't break the enrichment
-        const errorMessage =
-          error instanceof Error ? error.message : 'Unknown error'
-        this.logger.debug('Skipping snapshot date for dense trends', {
-          snapshotDate,
-          districtId,
-          error: errorMessage,
-        })
-      }
-    }
-
-    // Replace the sparse trends with dense data
-    const enrichedClubs: Record<string, (typeof sparseIndex.clubs)[string]> = {}
-    for (const [clubId, clubData] of Object.entries(sparseIndex.clubs)) {
-      const membershipMap = clubMembershipMap.get(clubId)
-      const dcpGoalsMap = clubDcpGoalsMap.get(clubId)
-
-      const enrichedMembershipTrend = membershipMap
-        ? Array.from(membershipMap.entries())
-            .map(([date, count]) => ({ date, count }))
-            .sort((a, b) => a.date.localeCompare(b.date))
-        : clubData.membershipTrend
-
-      const enrichedDcpGoalsTrend = dcpGoalsMap
-        ? Array.from(dcpGoalsMap.entries())
-            .map(([date, goalsAchieved]) => ({ date, goalsAchieved }))
-            .sort((a, b) => a.date.localeCompare(b.date))
-        : clubData.dcpGoalsTrend
-
-      enrichedClubs[clubId] = {
-        ...clubData,
-        membershipTrend: enrichedMembershipTrend,
-        dcpGoalsTrend: enrichedDcpGoalsTrend,
-      }
-    }
-
-    this.logger.info('Club trends enrichment complete', {
-      districtId,
-      clubCount: Object.keys(enrichedClubs).length,
-      sampleClubTrendPoints:
-        Object.values(enrichedClubs)[0]?.membershipTrend.length ?? 0,
-    })
-
-    return {
-      ...sparseIndex,
-      clubs: enrichedClubs,
-    }
   }
 }
