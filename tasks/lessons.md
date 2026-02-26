@@ -1,19 +1,22 @@
-# 📚 Lessons Learned
+# 📚 Lessons Learned — Full Archive
 
-<!-- TEMPLATE — Every lesson MUST use this exact structure. Newest entries go at the BOTTOM (append with cat >>). -->
-<!-- The agent reads the LAST 5 entries before starting any task.                         -->
-<!--                                                                                      -->
-<!-- ## 🗓️ [YYYY-MM-DD] — Lesson NN: [Title]                                             -->
-<!--                                                                                      -->
-<!-- **The Discovery**: [What unexpected behavior or coupling was found]                   -->
-<!--                                                                                      -->
-<!-- **The Scientific Proof**: [How the hypothesis was tested — link to experiment]        -->
-<!--                                                                                      -->
-<!-- **The Farley Principle Applied**: [Which engineering principle this reinforces]        -->
-<!--                                                                                      -->
-<!-- **The Resulting Rule**: [The new rule or constraint going forward]                    -->
-<!--                                                                                      -->
-<!-- **Future Warning**: [What to watch for — a tripwire for the agent]                    -->
+<!--
+  APPEND ONLY — newest entries go at the BOTTOM.
+  Write lessons with: cat >> tasks/lessons.md
+
+  COMPANION: tasks/rules.md is the curated, high-signal distillation.
+  Read rules.md COMPLETELY before every task via /before-task.
+  This file is for reference, retrospection, and KI generation — not daily reading.
+
+  FORMAT for each entry:
+  ## 🗓️ YYYY-MM-DD — slug-describing-the-lesson (#issue)
+  **Discovery**: one sentence — what unexpected behavior or coupling was found.
+  **Proof**: one sentence — how it was confirmed.
+  **Rule**: one sentence — what the constraint going forward is.
+  **Warning**: one sentence — the specific tripwire to watch for.
+
+  If an entry changes a rule that belongs in rules.md, update that file too.
+-->
 
 ## 🗓️ 2026-02-22 — Lesson 01: Validation Gaps in Façade Layers
 
