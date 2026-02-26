@@ -14,6 +14,7 @@
   **Proof**: one sentence — how it was confirmed.
   **Rule**: one sentence — what the constraint going forward is.
   **Warning**: one sentence — the specific tripwire to watch for.
+  **rules.md**: none | R{N} updated — {what changed} | new R{N} added — {rule title}
 
   If an entry changes a rule that belongs in rules.md, update that file too.
 -->
