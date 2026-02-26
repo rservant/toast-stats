@@ -67,7 +67,16 @@ export class ClubHealthAnalyticsModule {
    * @param snapshots - Array of district statistics snapshots (sorted by date ascending)
    * @returns ClubHealthData object with categorized clubs
    */
-  generateClubHealthData(snapshots: DistrictStatistics[]): ClubHealthData {
+  generateClubHealthData(
+    snapshots: DistrictStatistics[],
+    preloadedTrends?: Record<
+      string,
+      {
+        membershipTrend: Array<{ date: string; count: number }>
+        dcpGoalsTrend: Array<{ date: string; goalsAchieved: number }>
+      }
+    >
+  ): ClubHealthData {
     if (snapshots.length === 0) {
       return {
         allClubs: [],
@@ -77,7 +86,7 @@ export class ClubHealthAnalyticsModule {
       }
     }
 
-    const clubTrends = this.analyzeClubTrends(snapshots)
+    const clubTrends = this.analyzeClubTrends(snapshots, preloadedTrends)
 
     return {
       allClubs: clubTrends,
@@ -160,12 +169,21 @@ export class ClubHealthAnalyticsModule {
    * @param snapshots - Array of district statistics snapshots
    * @returns Array of ClubTrend objects
    */
-  analyzeClubTrends(snapshots: DistrictStatistics[]): ClubTrend[] {
+  analyzeClubTrends(
+    snapshots: DistrictStatistics[],
+    preloadedTrends?: Record<
+      string,
+      {
+        membershipTrend: Array<{ date: string; count: number }>
+        dcpGoalsTrend: Array<{ date: string; goalsAchieved: number }>
+      }
+    >
+  ): ClubTrend[] {
     if (snapshots.length === 0) {
       return []
     }
 
-    // Get latest snapshot for current club list
+    // Get latest snapshot for current club list and health assessment
     const latestSnapshot = snapshots[snapshots.length - 1]
     if (!latestSnapshot) {
       return []
@@ -175,6 +193,8 @@ export class ClubHealthAnalyticsModule {
 
     // Initialize club trends from latest data
     for (const club of latestSnapshot.clubs) {
+      const preloaded = preloadedTrends?.[club.clubId]
+
       clubMap.set(club.clubId, {
         clubId: club.clubId,
         clubName: club.clubName,
@@ -182,8 +202,10 @@ export class ClubHealthAnalyticsModule {
         divisionName: club.divisionName || 'Unknown Division',
         areaId: club.areaId || 'Unknown',
         areaName: club.areaName || 'Unknown Area',
-        membershipTrend: [],
-        dcpGoalsTrend: [],
+        // If a preloaded trend store is available, use its accumulated arrays.
+        // Otherwise fall back to deriving trends from the snapshots array.
+        membershipTrend: preloaded ? [...preloaded.membershipTrend] : [],
+        dcpGoalsTrend: preloaded ? [...preloaded.dcpGoalsTrend] : [],
         currentStatus: 'thriving',
         healthScore: 0, // Will be calculated in assessClubHealth
         membershipCount: club.membershipCount,
@@ -199,28 +221,31 @@ export class ClubHealthAnalyticsModule {
       })
     }
 
-    // Build trends for each club from all snapshots
-    for (const snapshot of snapshots) {
-      for (const club of snapshot.clubs) {
-        const clubTrend = clubMap.get(club.clubId)
-        if (!clubTrend) continue
+    // Only build trends from snapshots when no pre-loaded store was supplied.
+    // When the store is present the trend arrays were already populated above.
+    if (!preloadedTrends) {
+      for (const snapshot of snapshots) {
+        for (const club of snapshot.clubs) {
+          const clubTrend = clubMap.get(club.clubId)
+          if (!clubTrend) continue
 
-        clubTrend.membershipTrend.push({
-          date: snapshot.snapshotDate,
-          count: club.membershipCount,
-        })
+          clubTrend.membershipTrend.push({
+            date: snapshot.snapshotDate,
+            count: club.membershipCount,
+          })
 
-        clubTrend.dcpGoalsTrend.push({
-          date: snapshot.snapshotDate,
-          goalsAchieved: club.dcpGoals,
-        })
+          clubTrend.dcpGoalsTrend.push({
+            date: snapshot.snapshotDate,
+            goalsAchieved: club.dcpGoals,
+          })
+        }
       }
     }
 
     // Get the snapshot date from the latest entry for DCP checkpoint evaluation
     const snapshotDate = latestSnapshot.snapshotDate
 
-    // Analyze each club for risk factors and status
+    // Analyze each club for risk factors and status (always from latest snapshot)
     for (const club of latestSnapshot.clubs) {
       const clubTrend = clubMap.get(club.clubId)
       if (!clubTrend) continue

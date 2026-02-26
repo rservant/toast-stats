@@ -221,20 +221,19 @@ describe('AnalyticsComputeService - Dense Club Trends (#79b)', () => {
     await testCache.cleanup()
   })
 
-  it('should enrich club-trends-index with data from multiple program-year snapshots', async () => {
+  it('should accumulate club trends across sequential pipeline runs via ClubTrendsStore', async () => {
     const districtId = '1'
     // Use dates within the same program year (July 1 - June 30)
     // Program year 2024-2025: July 1 2024 to June 30 2025
     const dates = [
-      '2024-10-01', // earlier in program year
-      '2024-11-15', // middle
-      '2025-01-15', // current date for computation
+      '2024-10-01', // Run 1
+      '2024-11-15', // Run 2
+      '2025-01-15', // Run 3 (final)
     ]
 
-    // Previous year snapshot for YoY
+    // Previous year snapshot for YoY (used only in run 3)
     const previousYearDate = '2024-01-15'
 
-    // Create snapshots with different membership counts to show progression
     await writeDistrictSnapshot(
       testCache.path,
       previousYearDate,
@@ -246,62 +245,66 @@ describe('AnalyticsComputeService - Dense Club Trends (#79b)', () => {
       })
     )
 
-    await writeDistrictSnapshot(
-      testCache.path,
-      dates[0]!,
-      districtId,
-      createSampleDistrictStatistics(districtId, dates[0]!, {
-        clubOneMembership: 22,
-        clubTwoMembership: 14,
-        clubThreeMembership: 7,
-        clubOneGoals: 3,
-        clubTwoGoals: 2,
-        clubThreeGoals: 1,
+    // Snapshot data for each simulated pipeline run
+    const runData = [
+      {
+        date: dates[0]!,
+        overrides: {
+          clubOneMembership: 22,
+          clubTwoMembership: 14,
+          clubThreeMembership: 7,
+          clubOneGoals: 3,
+          clubTwoGoals: 2,
+          clubThreeGoals: 1,
+        },
+      },
+      {
+        date: dates[1]!,
+        overrides: {
+          clubOneMembership: 24,
+          clubTwoMembership: 15,
+          clubThreeMembership: 8,
+          clubOneGoals: 5,
+          clubTwoGoals: 3,
+          clubThreeGoals: 1,
+        },
+      },
+      {
+        date: dates[2]!,
+        overrides: {
+          clubOneMembership: 25,
+          clubTwoMembership: 15,
+          clubThreeMembership: 8,
+          clubOneGoals: 7,
+          clubTwoGoals: 4,
+          clubThreeGoals: 2,
+        },
+      },
+    ]
+
+    // Simulate 3 sequential pipeline runs
+    // Each run: write today's snapshot, compute analytics (updates ClubTrendsStore)
+    for (const run of runData) {
+      await writeDistrictSnapshot(
+        testCache.path,
+        run.date,
+        districtId,
+        createSampleDistrictStatistics(districtId, run.date, run.overrides)
+      )
+
+      const service = new AnalyticsComputeService({
+        cacheDir: testCache.path,
       })
-    )
 
-    await writeDistrictSnapshot(
-      testCache.path,
-      dates[1]!,
-      districtId,
-      createSampleDistrictStatistics(districtId, dates[1]!, {
-        clubOneMembership: 24,
-        clubTwoMembership: 15,
-        clubThreeMembership: 8,
-        clubOneGoals: 5,
-        clubTwoGoals: 3,
-        clubThreeGoals: 1,
-      })
-    )
+      const result = await service.computeDistrictAnalytics(
+        run.date,
+        districtId,
+        { force: true }
+      )
+      expect(result.success).toBe(true)
+    }
 
-    await writeDistrictSnapshot(
-      testCache.path,
-      dates[2]!,
-      districtId,
-      createSampleDistrictStatistics(districtId, dates[2]!, {
-        clubOneMembership: 25,
-        clubTwoMembership: 15,
-        clubThreeMembership: 8,
-        clubOneGoals: 7,
-        clubTwoGoals: 4,
-        clubThreeGoals: 2,
-      })
-    )
-
-    const service = new AnalyticsComputeService({
-      cacheDir: testCache.path,
-    })
-
-    const result = await service.computeDistrictAnalytics(
-      dates[2]!,
-      districtId,
-      { force: true }
-    )
-
-    expect(result.success).toBe(true)
-    expect(result.clubTrendsIndexPath).toBeDefined()
-
-    // Read the club-trends-index output
+    // After 3 runs, the club-trends-index for the final date should have 3 points
     const indexFile = await readClubTrendsIndex(
       testCache.path,
       dates[2]!,
@@ -309,12 +312,9 @@ describe('AnalyticsComputeService - Dense Club Trends (#79b)', () => {
     )
 
     const clubs = indexFile.data.clubs
-
-    // Club 1234 should have membershipTrend with more than 2 points
-    // (3 program-year dates + 1 previous year = 4 total, but enrichment
-    // focuses on program-year dates, so at minimum 3)
     const club1 = clubs['1234']
     expect(club1).toBeDefined()
+    // 3 pipeline runs = 3 accumulated data points
     expect(club1!.membershipTrend.length).toBeGreaterThanOrEqual(3)
 
     // Verify the trend data is sorted by date ascending
@@ -324,14 +324,14 @@ describe('AnalyticsComputeService - Dense Club Trends (#79b)', () => {
 
     // Verify membership values match what we set
     const club1Trend = club1!.membershipTrend
-    // Should see the progression 22 → 24 → 25 from program-year dates
+    // Should see the progression 22 → 24 → 25 from the 3 pipeline runs
     const programYearTrend = club1Trend.filter(p => p.date >= '2024-07-01')
     expect(programYearTrend.length).toBe(3)
     expect(programYearTrend[0]!.count).toBe(22) // 2024-10-01
     expect(programYearTrend[1]!.count).toBe(24) // 2024-11-15
     expect(programYearTrend[2]!.count).toBe(25) // 2025-01-15
 
-    // DCP goals should also be enriched
+    // DCP goals should also be accumulated
     const club1DcpTrend = club1!.dcpGoalsTrend
     const programYearDcp = club1DcpTrend.filter(p => p.date >= '2024-07-01')
     expect(programYearDcp.length).toBe(3)
@@ -339,14 +339,14 @@ describe('AnalyticsComputeService - Dense Club Trends (#79b)', () => {
     expect(programYearDcp[1]!.goalsAchieved).toBe(5)
     expect(programYearDcp[2]!.goalsAchieved).toBe(7)
 
-    // All 3 clubs should be enriched
+    // All 3 clubs should be present
     expect(Object.keys(clubs)).toHaveLength(3)
     const club2 = clubs['5678']
     expect(club2).toBeDefined()
     expect(club2!.membershipTrend.length).toBeGreaterThanOrEqual(3)
   })
 
-  it('should gracefully handle enrichment when no additional snapshots exist', async () => {
+  it('should work with a single pipeline run (first-ever run, no prior store)', async () => {
     const districtId = '1'
     const currentDate = '2025-01-15'
     const previousDate = '2024-01-15'
@@ -380,7 +380,7 @@ describe('AnalyticsComputeService - Dense Club Trends (#79b)', () => {
 
     expect(result.success).toBe(true)
 
-    // Should still work with 2-point trends (no crash)
+    // First ever run: ClubTrendsStore is empty, so only 1 data point is created
     const indexFile = await readClubTrendsIndex(
       testCache.path,
       currentDate,
@@ -388,7 +388,7 @@ describe('AnalyticsComputeService - Dense Club Trends (#79b)', () => {
     )
     const club1 = indexFile.data.clubs['1234']
     expect(club1).toBeDefined()
-    // With only current + previous, we get 2 points
-    expect(club1!.membershipTrend.length).toBeGreaterThanOrEqual(2)
+    // First run produces exactly 1 data point (the current date's membership)
+    expect(club1!.membershipTrend.length).toBeGreaterThanOrEqual(1)
   })
 })

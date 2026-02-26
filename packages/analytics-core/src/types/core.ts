@@ -319,6 +319,22 @@ export interface ComputeOptions {
    * Requirement 5.2: Pass all-districts rankings data to computePerformanceTargets
    */
   allDistrictsRankings?: AllDistrictsRankingsData
+  /**
+   * Pre-accumulated club trend history from the ClubTrendsStore (#144).
+   * When provided, ClubHealthAnalyticsModule uses these trend arrays instead
+   * of deriving them from the snapshots array. This allows dense trend data
+   * (spanning the full program year) without needing to load all historical
+   * snapshots on the ephemeral pipeline runner.
+   *
+   * Keys are clubIds. Values contain trend arrays sorted ascending by date.
+   */
+  preloadedClubTrends?: Record<
+    string,
+    {
+      membershipTrend: Array<{ date: string; count: number }>
+      dcpGoalsTrend: Array<{ date: string; goalsAchieved: number }>
+    }
+  >
 }
 
 /**

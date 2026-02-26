@@ -774,41 +774,32 @@ export class AnalyticsComputeService {
         )
       }
 
-      // Load ALL program-year snapshot dates so AnalyticsComputer receives a
-      // dense set of snapshots for trend analysis (fixes #108, #113, #114).
-      // listProgramYearSnapshotDates returns dates in ascending order and
-      // already includes `date` itself, so `snapshot` will be part of the array.
-      const programYearDates = await this.listProgramYearSnapshotDates(
+      // ── Dense club trend history via ClubTrendsStore (#144) ──────────────
+      // Instead of loading all program-year snapshots (which don't exist on the
+      // ephemeral runner), we maintain a persistent per-district store that
+      // accumulates one data point per pipeline run. The store is synced from
+      // GCS before analytics compute and pushed back after (see data-pipeline.yml
+      // Step 3c and Step 5).
+      const { updateClubTrendsStore } = await import('./ClubTrendsStore.js')
+      const clubTrendsStore = await updateClubTrendsStore(
+        this.cacheDir,
         date,
-        districtId
+        districtId,
+        snapshot
       )
-      const programYearSnapshots: DistrictStatistics[] = []
-      for (const pyDate of programYearDates) {
-        const pySnapshot = await this.loadDistrictSnapshot(pyDate, districtId)
-        if (pySnapshot) programYearSnapshots.push(pySnapshot)
-      }
 
-      // Ensure the current snapshot is included (handles edge case where
-      // listProgramYearSnapshotDates returns an empty array)
-      if (programYearSnapshots.length === 0) {
-        programYearSnapshots.push(snapshot)
-      }
+      this.logger.info('Updated club trends store', {
+        date,
+        districtId,
+        clubCount: Object.keys(clubTrendsStore.clubs).length,
+        programYear: clubTrendsStore.programYear,
+      })
 
-      // Build snapshots array: previous year first (if available), then all
-      // program-year snapshots. Previous year enables YoY comparisons.
+      // Build snapshots array: previous year (if available) + today
+      // (YoY comparison still uses the prev-year snapshot synced in Step 3b)
       const snapshots = previousSnapshot
-        ? [previousSnapshot, ...programYearSnapshots]
-        : programYearSnapshots
-
-      this.logger.info(
-        'Loaded program-year snapshots for dense trend analysis',
-        {
-          date,
-          districtId,
-          programYearDates,
-          totalSnapshots: snapshots.length,
-        }
-      )
+        ? [previousSnapshot, snapshot]
+        : [snapshot]
 
       // Requirement 5.1: Calculate checksum of source snapshot
       const sourceSnapshotChecksum =
@@ -832,10 +823,10 @@ export class AnalyticsComputeService {
         }
       }
 
-      // Compute analytics using shared AnalyticsComputer
-      // The snapshots array now contains ALL program-year snapshots, so all
-      // trend computations (membershipTrend, clubTrendsIndex, etc.) will
-      // produce dense multi-point data for the full program year.
+      // Compute analytics using shared AnalyticsComputer.
+      // preloadedClubTrends supplies the accumulated full-year trend arrays
+      // from the ClubTrendsStore, giving ClubHealthAnalyticsModule dense
+      // multi-point trend data without loading historical snapshots.
       // Requirement 5.2 (per-metric-rankings): Pass allDistrictsRankings via options
       const computationResult =
         await this.analyticsComputer.computeDistrictAnalytics(
@@ -843,6 +834,7 @@ export class AnalyticsComputeService {
           snapshots,
           {
             allDistrictsRankings: allDistrictsRankings ?? undefined,
+            preloadedClubTrends: clubTrendsStore.clubs,
           }
         )
 

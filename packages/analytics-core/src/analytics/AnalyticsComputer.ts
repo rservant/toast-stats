@@ -126,8 +126,12 @@ export class AnalyticsComputer implements IAnalyticsComputer {
       this.membershipModule.generateMembershipTrends(sortedSnapshots)
 
     // Compute club health data
-    const clubHealth =
-      this.clubHealthModule.generateClubHealthData(sortedSnapshots)
+    // If preloadedClubTrends is supplied (pipeline path via ClubTrendsStore),
+    // the trend arrays come from the persistent store rather than snapshot iteration.
+    const clubHealth = this.clubHealthModule.generateClubHealthData(
+      sortedSnapshots,
+      options?.preloadedClubTrends
+    )
 
     // Compute distinguished club data
     // distinguishedClubs: counts object for frontend display (Requirements 2.1)
