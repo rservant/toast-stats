@@ -18,7 +18,6 @@ import { logger } from '../../utils/logger.js'
 import type {
   ISnapshotStorage,
   IRawCSVStorage,
-  IDistrictConfigStorage,
   ITimeSeriesIndexStorage,
   StorageConfig,
   StorageProviderType,
@@ -26,9 +25,7 @@ import type {
 import { StorageConfigurationError } from '../../types/storageInterfaces.js'
 import { LocalSnapshotStorage } from './LocalSnapshotStorage.js'
 import { LocalRawCSVStorage } from './LocalRawCSVStorage.js'
-import { LocalDistrictConfigStorage } from './LocalDistrictConfigStorage.js'
 import { LocalTimeSeriesIndexStorage } from './LocalTimeSeriesIndexStorage.js'
-import { GCSDistrictConfigStorage } from './GCSDistrictConfigStorage.js'
 import { GCSTimeSeriesIndexStorage } from './GCSTimeSeriesIndexStorage.js'
 import { GCSRawCSVStorage } from './GCSRawCSVStorage.js'
 import { GCSSnapshotStorage } from './GCSSnapshotStorage.js'
@@ -58,7 +55,6 @@ const DEFAULT_CACHE_DIR = './data/cache'
 export interface StorageProviders {
   snapshotStorage: ISnapshotStorage
   rawCSVStorage: IRawCSVStorage
-  districtConfigStorage: IDistrictConfigStorage
   timeSeriesIndexStorage: ITimeSeriesIndexStorage
 }
 
@@ -230,9 +226,6 @@ export class StorageProviderFactory {
     // Create raw CSV storage
     const rawCSVStorage = new LocalRawCSVStorage(cacheConfigService, logger)
 
-    // Create district configuration storage
-    const districtConfigStorage = new LocalDistrictConfigStorage(cacheDir)
-
     // Create time-series index storage
     const timeSeriesIndexStorage = new LocalTimeSeriesIndexStorage({ cacheDir })
 
@@ -244,7 +237,6 @@ export class StorageProviderFactory {
     return {
       snapshotStorage,
       rawCSVStorage,
-      districtConfigStorage,
       timeSeriesIndexStorage,
     }
   }
@@ -346,13 +338,6 @@ export class StorageProviderFactory {
       bucketName: gcpConfig.bucketName,
     })
 
-    // Create GCS district configuration storage
-    const districtConfigStorage = new GCSDistrictConfigStorage({
-      projectId: gcpConfig.projectId,
-      bucketName: gcpConfig.bucketName,
-      prefix: 'config',
-    })
-
     // Create GCS time-series index storage
     const timeSeriesIndexStorage = new GCSTimeSeriesIndexStorage({
       projectId: gcpConfig.projectId,
@@ -369,7 +354,6 @@ export class StorageProviderFactory {
     return {
       snapshotStorage,
       rawCSVStorage,
-      districtConfigStorage,
       timeSeriesIndexStorage,
     }
   }

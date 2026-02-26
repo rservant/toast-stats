@@ -14,20 +14,18 @@
  * Storage Abstraction: Requirements 1.3, 1.4
  * Pre-Computed Analytics: Requirements 1.1, 1.4
  */
-
 import { logger } from '../utils/logger.js'
+import type { SnapshotStore } from '../types/snapshots.js'
+
 import { DataValidator } from './DataValidator.js'
-import { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import { ClosingPeriodDetector } from './ClosingPeriodDetector.js'
 import { DataNormalizer } from './DataNormalizer.js'
 import { SnapshotBuilder, type BuildResult } from './SnapshotBuilder.js'
 import type { PreComputedAnalyticsService } from './PreComputedAnalyticsService.js'
-import type { SnapshotStore } from '../types/snapshots.js'
 import type {
   ISnapshotStorage,
   IRawCSVStorage,
 } from '../types/storageInterfaces.js'
-import { StorageProviderFactory } from './storage/StorageProviderFactory.js'
 
 /**
  * Result of a complete refresh operation
@@ -79,7 +77,6 @@ export interface RefreshResult {
  */
 export class RefreshService {
   private readonly snapshotBuilder: SnapshotBuilder
-  private readonly districtConfigService: DistrictConfigurationService
   private readonly snapshotStorage: ISnapshotStorage
 
   /**
@@ -94,22 +91,22 @@ export class RefreshService {
    *                          Supports both local filesystem and cloud storage backends
    * @param rawCSVCache - Storage interface for raw CSV data (IRawCSVStorage)
    *                      Supports both local filesystem and cloud storage backends
-   * @param districtConfigService - Optional district configuration service
    * @param _rankingCalculator - DEPRECATED: Rankings are pre-computed by collector-cli (kept for backward compatibility)
    * @param closingPeriodDetector - Optional closing period detector
    * @param dataNormalizer - Optional data normalizer
    * @param validator - Optional data validator
    * @param _preComputedAnalyticsService - DEPRECATED: Analytics are now pre-computed by collector-cli
+   * @param cacheDir - Directory where raw CSV data is cached
    */
   constructor(
     snapshotStorage: ISnapshotStorage | SnapshotStore,
     rawCSVCache: IRawCSVStorage,
-    districtConfigService?: DistrictConfigurationService,
     _rankingCalculator?: unknown, // DEPRECATED: Rankings are pre-computed by collector-cli
     closingPeriodDetector?: ClosingPeriodDetector,
     dataNormalizer?: DataNormalizer,
     validator?: DataValidator,
-    _preComputedAnalyticsService?: PreComputedAnalyticsService
+    _preComputedAnalyticsService?: PreComputedAnalyticsService,
+    cacheDir?: string
   ) {
     // Store the snapshot storage - ISnapshotStorage is a superset of SnapshotStore
     // so we can safely cast SnapshotStore to ISnapshotStorage for backward compatibility
@@ -117,16 +114,6 @@ export class RefreshService {
 
     // NOTE: preComputedAnalyticsService parameter is kept for backward compatibility
     // but is no longer used. Analytics are now pre-computed by collector-cli.
-
-    // Create DistrictConfigurationService with storage from StorageProviderFactory if not provided
-    if (districtConfigService) {
-      this.districtConfigService = districtConfigService
-    } else {
-      const storageProviders = StorageProviderFactory.createFromEnvironment()
-      this.districtConfigService = new DistrictConfigurationService(
-        storageProviders.districtConfigStorage
-      )
-    }
 
     // Initialize ClosingPeriodDetector
     const detector =
@@ -145,11 +132,13 @@ export class RefreshService {
     // Note: Rankings are now pre-computed by collector-cli, so no RankingCalculator is needed
     this.snapshotBuilder = new SnapshotBuilder(
       rawCSVCache,
-      this.districtConfigService,
       this.snapshotStorage,
       validator ?? new DataValidator(),
       detector,
-      normalizer
+      normalizer,
+      undefined, // customLogger
+      undefined, // districtIdValidator
+      cacheDir
     )
 
     logger.debug('RefreshService initialized with SnapshotBuilder', {
@@ -232,7 +221,6 @@ export class RefreshService {
           operation: 'executeRefresh',
           phase: 'cache_check',
           targetDate,
-          configuredDistricts: cacheAvailability.configuredDistricts,
           missingDistricts: cacheAvailability.missingDistricts,
         })
 
@@ -282,37 +270,29 @@ export class RefreshService {
   /**
    * Validate district configuration before refresh operations
    */
-  async validateConfiguration(): Promise<
-    import('./DistrictConfigurationService.js').ConfigurationValidationResult
-  > {
-    logger.debug('Validating district configuration')
+  async validateConfiguration(): Promise<{
+    isValid: boolean
+    configuredDistricts: string[]
+    validDistricts: string[]
+    invalidDistricts: string[]
+    warnings: string[]
+    suggestions: string[]
+    lastCollectionInfo: Array<{ districtId: string; lastCollectedAt: string }>
+  }> {
+    logger.debug(
+      'Validating district configuration - no longer applicable, districts are dynamically discovered'
+    )
 
-    // Check if any districts are configured
-    const hasConfiguredDistricts =
-      await this.districtConfigService.hasConfiguredDistricts()
-    if (!hasConfiguredDistricts) {
-      return {
-        isValid: false,
-        configuredDistricts: [],
-        validDistricts: [],
-        invalidDistricts: [],
-        warnings: [
-          'No districts configured for data collection. Please configure at least one district before running refresh operations.',
-        ],
-        suggestions: [],
-        lastCollectionInfo: [],
-      }
+    // Always return valid, as we dynamically discover districts
+    return {
+      isValid: true,
+      configuredDistricts: [],
+      validDistricts: [],
+      invalidDistricts: [],
+      warnings: [],
+      suggestions: [],
+      lastCollectionInfo: [],
     }
-
-    // For basic validation, we don't have all-districts data yet
-    // This will be enhanced during the actual refresh process
-    const basicValidation =
-      await this.districtConfigService.validateConfiguration(
-        undefined, // No all-districts validation yet
-        this.snapshotStorage
-      )
-
-    return basicValidation
   }
 
   /**

@@ -20,8 +20,6 @@ import { RefreshService } from '../RefreshService.js'
 import { PreComputedAnalyticsService } from '../PreComputedAnalyticsService.js'
 import { FileSnapshotStore } from '../SnapshotStore.js'
 import { RawCSVCacheService } from '../RawCSVCacheService.js'
-import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
-import { LocalDistrictConfigStorage } from '../storage/LocalDistrictConfigStorage.js'
 import { CSVType } from '../../types/rawCSVCache.js'
 import type {
   ICacheConfigService,
@@ -93,7 +91,6 @@ describe('RefreshService - Read-Only Operation', () => {
   let snapshotsDir: string
   let snapshotStorage: FileSnapshotStore
   let rawCSVCache: RawCSVCacheService
-  let districtConfigService: DistrictConfigurationService
   let preComputedAnalyticsService: PreComputedAnalyticsService
   let refreshService: RefreshService
   let mockCacheConfig: MockCacheConfigService
@@ -127,15 +124,9 @@ describe('RefreshService - Read-Only Operation', () => {
     })
     rawCSVCache = new RawCSVCacheService(mockCacheConfig, mockLogger)
 
-    const configStorage = new LocalDistrictConfigStorage(testDir)
-    districtConfigService = new DistrictConfigurationService(configStorage)
-
     preComputedAnalyticsService = new PreComputedAnalyticsService({
       snapshotsDir,
     })
-
-    // Configure a test district
-    await districtConfigService.addDistrict(testDistrictId, 'test-admin')
   })
 
   afterEach(async () => {
@@ -196,7 +187,6 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
       refreshService = new RefreshService(
         snapshotStorage,
         rawCSVCache,
-        districtConfigService,
         undefined, // rankingCalculator
         undefined, // closingPeriodDetector
         undefined, // dataNormalizer
@@ -221,7 +211,6 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
       refreshService = new RefreshService(
         snapshotStorage,
         rawCSVCache,
-        districtConfigService,
         undefined, // rankingCalculator
         undefined, // closingPeriodDetector
         undefined, // dataNormalizer
@@ -246,11 +235,7 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
       await setupCacheData(testDate)
 
       // Create RefreshService with minimal dependencies
-      refreshService = new RefreshService(
-        snapshotStorage,
-        rawCSVCache,
-        districtConfigService
-      )
+      refreshService = new RefreshService(snapshotStorage, rawCSVCache)
 
       // Execute refresh
       const result = await refreshService.executeRefresh(testDate)
@@ -264,11 +249,7 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
       // Don't set up cache data - this will cause the build to fail
 
       // Create RefreshService
-      refreshService = new RefreshService(
-        snapshotStorage,
-        rawCSVCache,
-        districtConfigService
-      )
+      refreshService = new RefreshService(snapshotStorage, rawCSVCache)
 
       // Execute refresh - should fail due to missing cache
       const result = await refreshService.executeRefresh(testDate)
@@ -284,11 +265,7 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
       await setupCacheData(testDate)
 
       // Create RefreshService
-      refreshService = new RefreshService(
-        snapshotStorage,
-        rawCSVCache,
-        districtConfigService
-      )
+      refreshService = new RefreshService(snapshotStorage, rawCSVCache)
 
       // Execute refresh
       const result = await refreshService.executeRefresh(testDate)
@@ -313,7 +290,6 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
       refreshService = new RefreshService(
         snapshotStorage,
         rawCSVCache,
-        districtConfigService,
         undefined, // rankingCalculator
         undefined, // closingPeriodDetector
         undefined, // dataNormalizer

@@ -19,15 +19,14 @@
 
 export { LocalSnapshotStorage } from './LocalSnapshotStorage.js'
 export { LocalRawCSVStorage } from './LocalRawCSVStorage.js'
-export { LocalDistrictConfigStorage } from './LocalDistrictConfigStorage.js'
+
 export { LocalTimeSeriesIndexStorage } from './LocalTimeSeriesIndexStorage.js'
 export type { LocalTimeSeriesIndexStorageConfig } from './LocalTimeSeriesIndexStorage.js'
 export { GCSRawCSVStorage } from './GCSRawCSVStorage.js'
 export type { GCSRawCSVStorageConfig } from './GCSRawCSVStorage.js'
 export { GCSSnapshotStorage } from './GCSSnapshotStorage.js'
 export type { GCSSnapshotStorageConfig } from './GCSSnapshotStorage.js'
-export { GCSDistrictConfigStorage } from './GCSDistrictConfigStorage.js'
-export type { GCSDistrictConfigStorageConfig } from './GCSDistrictConfigStorage.js'
+
 export { GCSTimeSeriesIndexStorage } from './GCSTimeSeriesIndexStorage.js'
 export type { GCSTimeSeriesIndexStorageConfig } from './GCSTimeSeriesIndexStorage.js'
 export { StorageProviderFactory } from './StorageProviderFactory.js'
@@ -37,7 +36,6 @@ export type { StorageProviders } from './StorageProviderFactory.js'
 export type {
   ISnapshotStorage,
   IRawCSVStorage,
-  IDistrictConfigStorage,
   ITimeSeriesIndexStorage,
   StorageConfig,
   StorageProviderType,

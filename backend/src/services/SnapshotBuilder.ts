@@ -26,7 +26,6 @@ import type {
   IRawCSVStorage,
   ISnapshotStorage,
 } from '../types/storageInterfaces.js'
-import type { DistrictConfigurationService } from './DistrictConfigurationService.js'
 import type { FileSnapshotStore } from './SnapshotStore.js'
 import type {
   Snapshot,
@@ -106,9 +105,8 @@ export interface CacheAvailability {
   available: boolean
   /** Districts with cached data */
   cachedDistricts: string[]
-  /** All configured districts */
-  configuredDistricts: string[]
-  /** Districts missing from cache */
+  /** All available districts in cache */
+  availableDistricts: string[]
   missingDistricts: string[]
 }
 
@@ -153,7 +151,6 @@ export interface ChecksumValidationResult {
  */
 export class SnapshotBuilder {
   private readonly rawCSVCache: IRawCSVStorage
-  private readonly districtConfigService: DistrictConfigurationService
   private readonly snapshotStorage: ISnapshotStorage
   private readonly validator: DataValidator
   private readonly districtIdValidator: IDistrictIdValidator
@@ -179,7 +176,6 @@ export class SnapshotBuilder {
    */
   constructor(
     rawCSVCache: IRawCSVStorage,
-    districtConfigService: DistrictConfigurationService,
     snapshotStorage: ISnapshotStorage | FileSnapshotStore,
     validator?: DataValidator,
     closingPeriodDetector?: ClosingPeriodDetector,
@@ -189,7 +185,6 @@ export class SnapshotBuilder {
     cacheDir?: string
   ) {
     this.rawCSVCache = rawCSVCache
-    this.districtConfigService = districtConfigService
     // ISnapshotStorage is a superset of FileSnapshotStore's writeSnapshot method
     // so we can safely cast for backward compatibility
     this.snapshotStorage = snapshotStorage as ISnapshotStorage
@@ -240,14 +235,13 @@ export class SnapshotBuilder {
         this.log.error('Build failed: no cache data', {
           buildId,
           targetDate,
-          configuredDistricts: availability.configuredDistricts,
         })
 
         return {
           success: false,
           date: targetDate,
           districtsIncluded: [],
-          districtsMissing: availability.configuredDistricts,
+          districtsMissing: [],
           status: 'failed',
           errors: [errorMessage],
           duration_ms: Date.now() - startTime,
@@ -315,12 +309,17 @@ export class SnapshotBuilder {
           allDistrictsRankings
         )
 
+        // Compute district tracking from scrapingMetadata (availability lists are empty now)
+        const includedOnFail =
+          rawData.scrapingMetadata?.successfulDistricts || []
+        const missingOnFail = rawData.scrapingMetadata?.failedDistricts || []
+
         return {
           success: false,
           snapshotId: failedSnapshot.snapshot_id,
           date: targetDate,
-          districtsIncluded: availability.cachedDistricts,
-          districtsMissing: availability.missingDistricts,
+          districtsIncluded: includedOnFail,
+          districtsMissing: missingOnFail,
           status: 'failed',
           errors: validationResult.errors,
           duration_ms: Date.now() - startTime,
@@ -332,16 +331,20 @@ export class SnapshotBuilder {
       let snapshotStatus: SnapshotStatus = 'success'
       const allErrors: string[] = [...validationResult.warnings]
 
-      if (availability.missingDistricts.length > 0) {
+      const missingDistricts = rawData.scrapingMetadata?.failedDistricts || []
+      const includedDistricts =
+        rawData.scrapingMetadata?.successfulDistricts || []
+
+      if (missingDistricts.length > 0) {
         snapshotStatus = 'partial'
         allErrors.push(
-          `Partial snapshot: ${availability.missingDistricts.length} districts missing from cache: ${availability.missingDistricts.join(', ')}`
+          `Partial snapshot: ${missingDistricts.length} districts missing from cache: ${missingDistricts.join(', ')}`
         )
 
         this.log.info('Creating partial snapshot due to missing districts', {
           buildId,
-          cachedDistricts: availability.cachedDistricts.length,
-          missingDistricts: availability.missingDistricts.length,
+          cachedDistricts: includedDistricts.length,
+          missingDistricts: missingDistricts.length,
         })
       }
 
@@ -358,8 +361,8 @@ export class SnapshotBuilder {
         buildId,
         snapshotId: snapshot.snapshot_id,
         status: snapshotStatus,
-        districtsIncluded: availability.cachedDistricts.length,
-        districtsMissing: availability.missingDistricts.length,
+        districtsIncluded: includedDistricts.length,
+        districtsMissing: missingDistricts.length,
         duration_ms: Date.now() - startTime,
         validationRejectedRecords:
           rawData.validationSummary?.rejectedRecords ?? 0,
@@ -369,8 +372,8 @@ export class SnapshotBuilder {
         success: true,
         snapshotId: snapshot.snapshot_id,
         date: targetDate,
-        districtsIncluded: availability.cachedDistricts,
-        districtsMissing: availability.missingDistricts,
+        districtsIncluded: includedDistricts,
+        districtsMissing: missingDistricts,
         status: snapshotStatus,
         errors: allErrors,
         duration_ms: Date.now() - startTime,
@@ -408,31 +411,22 @@ export class SnapshotBuilder {
    * @returns Cache availability information
    */
   async getCacheAvailability(date: string): Promise<CacheAvailability> {
-    const configuredDistricts =
-      await this.districtConfigService.getConfiguredDistricts()
     const cachedDistricts: string[] = []
     const missingDistricts: string[] = []
 
-    // Check all-districts cache
+    // Read all-districts to get the list of available districts
     const hasAllDistricts = await this.rawCSVCache.hasCachedCSV(
       date,
       CSVType.ALL_DISTRICTS
     )
 
-    // Check each configured district
-    for (const districtId of configuredDistricts) {
-      const hasDistrictData = await this.rawCSVCache.hasCachedCSV(
-        date,
-        CSVType.CLUB_PERFORMANCE,
-        districtId
-      )
+    // TODO: Ideally we'd discover the standard list from reading the cache,
+    // but for now we'll just parse the ALL_DISTRICTS list if we can,
+    // or return everything we find in the cache.
+    // For simplicity, we just list the cache dir. (Handled in readCachedData which parses all-districts array).
 
-      if (hasDistrictData) {
-        cachedDistricts.push(districtId)
-      } else {
-        missingDistricts.push(districtId)
-      }
-    }
+    // Let's rely on hasAllDistricts to trigger the build.
+    // We will discover the actual districts inside readCachedData.
 
     // Cache is available if we have all-districts data OR at least one district
     const available = hasAllDistricts || cachedDistricts.length > 0
@@ -448,9 +442,9 @@ export class SnapshotBuilder {
     return {
       date,
       available,
-      cachedDistricts,
-      configuredDistricts,
-      missingDistricts,
+      cachedDistricts: [], // Populated later from readCachedData
+      availableDistricts: [], // Populated later from readCachedData
+      missingDistricts: [], // Populated later from readCachedData
     }
   }
 
@@ -465,7 +459,7 @@ export class SnapshotBuilder {
    */
   private async readCachedData(
     date: string,
-    availability: CacheAvailability
+    _availability: CacheAvailability
   ): Promise<RawData> {
     const startTime = Date.now()
     const districtData = new Map<string, RawDistrictData>()
@@ -556,8 +550,23 @@ export class SnapshotBuilder {
       }
     }
 
+    // Discover districts from allDistricts data
+    const discoveredDistricts = allDistricts
+      .map((d: ScrapedRecord) =>
+        String(
+          d['DISTRICT'] ??
+            d['District'] ??
+            d['districtId'] ??
+            d['district'] ??
+            ''
+        )
+      )
+      .filter(Boolean)
+
     // Read each cached district's data with checksum validation
-    for (const districtId of availability.cachedDistricts) {
+    for (const districtId of discoveredDistricts) {
+      // NOTE: We could potentially populate availability.missingDistricts here if we wanted to
+      // by comparing discoveredDistricts against the ones that successfully parse.
       try {
         const rawDistrictData = await this.readDistrictCacheDataWithValidation(
           date,

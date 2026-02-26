@@ -6,7 +6,6 @@
 import { type Request, type Response } from 'express'
 import { logger } from '../../utils/logger.js'
 import { RefreshService } from '../../services/RefreshService.js'
-import { DistrictConfigurationService } from '../../services/DistrictConfigurationService.js'
 import { getProductionServiceFactory } from '../../services/ProductionServiceFactory.js'
 import {
   DistrictDataAggregator,
@@ -24,6 +23,7 @@ import {
   type IndexStorageReader,
   type DistrictSnapshotIndex,
 } from '../../services/DistrictSnapshotIndexService.js'
+
 import type { ISnapshotStorage } from '../../types/storageInterfaces.js'
 import type { PerDistrictSnapshotStoreInterface } from '../../services/snapshot/types.js'
 import { transformErrorResponse } from '../../utils/transformers.js'
@@ -162,10 +162,6 @@ export const rawCSVCacheService = storageProviders.rawCSVStorage
 
 // Create DistrictConfigurationService with storage from StorageProviderFactory
 // This respects the STORAGE_PROVIDER environment variable for storage backend selection
-export const districtConfigService = new DistrictConfigurationService(
-  storageProviders.districtConfigStorage
-)
-
 // ─── District Snapshot Index Service ─────────────────────────────────────────
 // Reads pre-computed index mapping districts → available snapshot dates.
 // Uses GCS in production, local filesystem in development.
@@ -264,17 +260,17 @@ async function initializeServices(): Promise<void> {
     })
   }
 
-  // RefreshService no longer takes timeSeriesIndexService or rankingCalculator
+  // RefreshService no longer takes districtConfigService, timeSeriesIndexService or rankingCalculator
   // Time-series data and rankings are now pre-computed by collector-cli
   _refreshService = new RefreshService(
     snapshotStore,
     rawCSVCacheService,
-    districtConfigService,
-    undefined, // rankingCalculator - DEPRECATED: rankings are pre-computed by collector-cli
+    undefined, // _rankingCalculator
     undefined, // closingPeriodDetector
     undefined, // dataNormalizer
     undefined, // validator
-    _preComputedAnalyticsService
+    _preComputedAnalyticsService,
+    cacheDirectory
   )
 }
 

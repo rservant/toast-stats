@@ -318,13 +318,12 @@ describe('StorageProviderFactory', () => {
         expect(result).toHaveProperty('rawCSVStorage')
       })
 
-      it('should use custom firestoreCollection when provided in explicit config', () => {
+      it('should create GCP providers with minimal required config', () => {
         const config: StorageConfig = {
           provider: 'gcp',
           gcp: {
             projectId: 'explicit-project-id',
             bucketName: 'explicit-bucket-name',
-            firestoreCollection: 'custom-collection',
           },
         }
 
@@ -630,14 +629,13 @@ describe('StorageProviderFactory', () => {
   // ============================================================================
 
   describe('Return Type Verification', () => {
-    it('should return object with snapshotStorage, rawCSVStorage, districtConfigStorage, and timeSeriesIndexStorage properties', () => {
+    it('should return object with snapshotStorage, rawCSVStorage, and timeSeriesIndexStorage properties', () => {
       const result = StorageProviderFactory.createFromEnvironment()
 
       expect(result).toHaveProperty('snapshotStorage')
       expect(result).toHaveProperty('rawCSVStorage')
-      expect(result).toHaveProperty('districtConfigStorage')
       expect(result).toHaveProperty('timeSeriesIndexStorage')
-      expect(Object.keys(result)).toHaveLength(4)
+      expect(Object.keys(result)).toHaveLength(3)
     })
 
     it('should return ISnapshotStorage-compatible snapshotStorage for local provider', () => {

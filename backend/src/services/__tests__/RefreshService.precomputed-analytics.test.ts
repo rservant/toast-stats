@@ -20,8 +20,6 @@ import { RefreshService } from '../RefreshService.js'
 import { PreComputedAnalyticsService } from '../PreComputedAnalyticsService.js'
 import { FileSnapshotStore } from '../SnapshotStore.js'
 import { RawCSVCacheService } from '../RawCSVCacheService.js'
-import { DistrictConfigurationService } from '../DistrictConfigurationService.js'
-import { LocalDistrictConfigStorage } from '../storage/LocalDistrictConfigStorage.js'
 import { CSVType } from '../../types/rawCSVCache.js'
 import type {
   ICacheConfigService,
@@ -93,7 +91,6 @@ describe('RefreshService - Pre-Computed Analytics Integration', () => {
   let snapshotsDir: string
   let snapshotStorage: FileSnapshotStore
   let rawCSVCache: RawCSVCacheService
-  let districtConfigService: DistrictConfigurationService
   let preComputedAnalyticsService: PreComputedAnalyticsService
   let refreshService: RefreshService
   let mockCacheConfig: MockCacheConfigService
@@ -127,15 +124,9 @@ describe('RefreshService - Pre-Computed Analytics Integration', () => {
     })
     rawCSVCache = new RawCSVCacheService(mockCacheConfig, mockLogger)
 
-    const configStorage = new LocalDistrictConfigStorage(testDir)
-    districtConfigService = new DistrictConfigurationService(configStorage)
-
     preComputedAnalyticsService = new PreComputedAnalyticsService({
       snapshotsDir,
     })
-
-    // Configure a test district
-    await districtConfigService.addDistrict(testDistrictId, 'test-admin')
   })
 
   afterEach(async () => {
@@ -196,7 +187,6 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
       refreshService = new RefreshService(
         snapshotStorage,
         rawCSVCache,
-        districtConfigService,
         undefined, // rankingCalculator
         undefined, // closingPeriodDetector
         undefined, // dataNormalizer
@@ -217,11 +207,7 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
       await setupCacheData(testDate)
 
       // Create RefreshService WITHOUT PreComputedAnalyticsService
-      refreshService = new RefreshService(
-        snapshotStorage,
-        rawCSVCache,
-        districtConfigService
-      )
+      refreshService = new RefreshService(snapshotStorage, rawCSVCache)
 
       // Execute refresh
       const result = await refreshService.executeRefresh(testDate)
@@ -246,7 +232,6 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
       refreshService = new RefreshService(
         snapshotStorage,
         rawCSVCache,
-        districtConfigService,
         undefined, // rankingCalculator
         undefined, // closingPeriodDetector
         undefined, // dataNormalizer
@@ -261,9 +246,8 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
       expect(result.success).toBe(true)
       expect(result.snapshot_id).toBe(testDate)
 
-      // Verify computeAndStore was NOT called
       // Per data-computation-separation steering document, backend does not compute analytics
-      expect(mockAnalyticsService.computeAndStore).not.toHaveBeenCalled()
+      // computeAndStore no longer exists on PreComputedAnalyticsService (read-only backend)
     })
 
     it('should not trigger analytics for failed builds', async () => {
@@ -280,7 +264,6 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
       refreshService = new RefreshService(
         snapshotStorage,
         rawCSVCache,
-        districtConfigService,
         undefined, // rankingCalculator
         undefined, // closingPeriodDetector
         undefined, // dataNormalizer
@@ -294,8 +277,8 @@ ${testDistrictId},North America,50,48,4.17,1200,1100,9.09,48,15,5,3,31.25`
       // Verify refresh failed
       expect(result.success).toBe(false)
 
-      // Verify analytics service was NOT called for failed build
-      expect(mockAnalyticsService.computeAndStore).not.toHaveBeenCalled()
+      // Per data-computation-separation, backend does not compute analytics
+      // computeAndStore no longer exists on PreComputedAnalyticsService (read-only backend)
     })
   })
 })

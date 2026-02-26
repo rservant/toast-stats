@@ -127,11 +127,6 @@ import type {
   CircuitBreaker,
   CircuitBreakerStats,
 } from '../utils/CircuitBreaker.js'
-import type {
-  DistrictConfiguration,
-  ConfigurationChange,
-  ConfigurationValidationResult,
-} from '../services/DistrictConfigurationService.js'
 import type { AvailableRankingYearsResponse } from './districts.js'
 
 /**
@@ -250,12 +245,7 @@ export interface IDistrictConfigurationService {
     adminUser?: string
   ): Promise<void>
   validateDistrictId(districtId: string): boolean
-  getConfigurationHistory(): Promise<ConfigurationChange[]>
-  getConfiguration(): Promise<DistrictConfiguration>
   hasConfiguredDistricts(): Promise<boolean>
-  validateConfiguration(
-    allDistrictIds?: string[]
-  ): Promise<ConfigurationValidationResult>
   clearCache(): void
 }
 
