@@ -210,39 +210,54 @@ jobs:
       # The AnalyticsComputer needs the previous program year's
       # snapshot to compute year-over-year comparisons. Without it,
       # the YoY file is written with dataAvailable: false.
-      # This syncs only the specific district files needed (~1 MB).
+      # Syncs all district_*.json files in parallel using gsutil -m cp (#142)
       - name: Sync previous year snapshots from GCS
         env:
           GCS_BUCKET: 'toast-stats-data'
         run: |
           DATE="${{ steps.scrape.outputs.date }}"
-          DISTRICT_LIST="${{ inputs.districts || steps.config.outputs.districts }}"
 
           # Calculate previous year date (GNU date on Ubuntu runners)
           PREV_YEAR=$(date -d "${DATE} - 1 year" +%Y-%m-%d)
 
           echo "Syncing previous year snapshots for YoY comparison (${PREV_YEAR})..."
-          SYNCED=0
 
-          for DISTRICT in ${DISTRICT_LIST//,/ }; do
-            DISTRICT_TRIMMED=$(echo "$DISTRICT" | tr -d ' ')
-            SRC="gs://${GCS_BUCKET}/snapshots/${PREV_YEAR}/district_${DISTRICT_TRIMMED}.json"
-            DEST="./cache/snapshots/${PREV_YEAR}/"
-            mkdir -p "$DEST"
-            if gsutil cp "$SRC" "$DEST" 2>/dev/null; then
-              SYNCED=$((SYNCED + 1))
-            fi
-          done
+          # Parallel batch copy — replaces sequential per-district loop (#142)
+          mkdir -p "./cache/snapshots/${PREV_YEAR}"
+          gsutil -m cp \
+            "gs://${GCS_BUCKET}/snapshots/${PREV_YEAR}/district_*.json" \
+            "./cache/snapshots/${PREV_YEAR}/" \
+            2>/dev/null || true
+          SYNCED=$(find "./cache/snapshots/${PREV_YEAR}" -name 'district_*.json' 2>/dev/null | wc -l | tr -d ' ')
 
           echo "## ⏬ Previous Year Snapshot Sync" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Previous year date**: ${PREV_YEAR}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Snapshots synced**: ${SYNCED}" >> "$GITHUB_STEP_SUMMARY"
 
+      # ── Step 3c: Sync club-trends store from GCS ─────────────────────
+      # The ClubTrendsStore accumulates per-club membership and DCP trend
+      # data across pipeline runs (#144). Without this sync, each run would
+      # start fresh with only today's data point.
+      - name: Sync club-trends store from GCS
+        env:
+          GCS_BUCKET: 'toast-stats-data'
+        run: |
+          echo "Syncing club-trends store from GCS..."
+          mkdir -p ./cache/club-trends
+          gsutil -m rsync -r \
+            "gs://${GCS_BUCKET}/club-trends/" \
+            "./cache/club-trends/" \
+            2>&1 || echo "No existing club-trends in GCS (first run)"
+
+          echo "## ⏬ Club-Trends Sync" >> "$GITHUB_STEP_SUMMARY"
+          CT_COUNT=$(find ./cache/club-trends -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
+          echo "- **Store files restored**: ${CT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+
       # ── Step 4: Compute Analytics ───────────────────────────
       - name: Compute Analytics
         run: |
           DATE="${{ steps.scrape.outputs.date }}"
-          DISTRICT_LIST="${{ inputs.districts || steps.config.outputs.districts }}"
+          DISTRICT_LIST="${{ steps.config.outputs.districts }}"
           ARGS="--date ${DATE} --districts ${DISTRICT_LIST} --verbose"
 
           echo "Running: npx collector-cli compute-analytics $ARGS"
@@ -278,6 +293,11 @@ jobs:
             "./cache/time-series/" \
             "gs://${GCS_BUCKET}/time-series/"
 
+          # Sync club-trends store (all program years — small, ~50 KB/district)
+          gsutil -m rsync -r \
+            "./cache/club-trends/" \
+            "gs://${GCS_BUCKET}/club-trends/"
+
           echo "## ☁️ GCS Sync Results" >> "$GITHUB_STEP_SUMMARY"
           CSV_COUNT=$(find "./cache/raw-csv/${DATE}" -name '*.csv' 2>/dev/null | wc -l | tr -d ' ')
           SNAPSHOT_COUNT=$(find "./cache/snapshots/${DATE}" -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
@@ -296,7 +316,7 @@ jobs:
           GCS_BUCKET: 'toast-stats-data'
         run: |
           DATE="${{ steps.scrape.outputs.date }}"
-          DISTRICT_LIST="${{ inputs.districts || steps.config.outputs.districts }}"
+          DISTRICT_LIST="${{ steps.config.outputs.districts }}"
           INDEX_PATH="gs://${GCS_BUCKET}/config/district-snapshot-index.json"
 
           echo "Updating district-snapshot-index for ${DATE}..."
