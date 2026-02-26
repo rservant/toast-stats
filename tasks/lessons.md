@@ -1,7 +1,7 @@
 # 📚 Lessons Learned
 
-<!-- TEMPLATE — Every lesson MUST use this exact structure. Newest entries go at the top. -->
-<!-- The agent reads the last 5 entries before starting any task.                         -->
+<!-- TEMPLATE — Every lesson MUST use this exact structure. Newest entries go at the BOTTOM (append with cat >>). -->
+<!-- The agent reads the LAST 5 entries before starting any task.                         -->
 <!--                                                                                      -->
 <!-- ## 🗓️ [YYYY-MM-DD] — Lesson NN: [Title]                                             -->
 <!--                                                                                      -->
@@ -14,56 +14,6 @@
 <!-- **The Resulting Rule**: [The new rule or constraint going forward]                    -->
 <!--                                                                                      -->
 <!-- **Future Warning**: [What to watch for — a tripwire for the agent]                    -->
-
-## 🗓️ 2026-02-26 — Lesson 35: Incremental Aggregation Needs a Persistent Store, Not Re-Loading (#144)
-
-**The Discovery**: Loading all program-year snapshots from cache to build dense trend data (fix for #108/#113) only works locally. On the ephemeral runner, only today's snapshot exists — so the "program-year scan" produces exactly 1 data point even after the fix. The solution is a persistent, GCS-backed store that accumulates one data point per pipeline run.
-
-**The Scientific Proof**: Test `AnalyticsComputeService.denseClubTrends.test.ts` verified: single `computeDistrictAnalytics` call → 1 trend point. Three sequential calls (shared `cacheDir`) → 3 accumulated points in the store. The `preloadedClubTrends` field on `ComputeOptions` threads the store through to `ClubHealthAnalyticsModule.analyzeClubTrends`.
-
-**The Farley Principle Applied**: Evolutionary Architecture — the ClubTrendsStore is a small, isolated file (~50 KB/district) that can be reasoned about independently. It mirrors the existing `TimeSeriesIndexWriter` pattern already proven in production.
-
-**The Resulting Rule**: Any pipeline step that requires multi-run aggregation must: (1) sync the store from GCS before compute, (2) upsert today's data, (3) save, (4) push back to GCS. "Load all history" approaches fail on ephemeral runners.
-
-**Future Warning**: If a new district appears mid-year, its store starts empty (1 point) and grows over daily runs. That's correct. If you ever see single-point trend lines after the fix landed, check that Step 3c (club-trends GCS rsync) ran before Step 4 (compute analytics).
-
-## 🗓️ 2026-02-26 — Lesson 34: Backend Whitelist Removal Must Be Paired With Pipeline Whitelist Removal (#141)
-
-**The Discovery**: Removing `DistrictConfigurationService` from the backend (a read-time filter) did not automatically update the data pipeline's write-time source of truth. `data-pipeline.yml` still read `config/districts.json` from GCS to determine which districts to scrape. New Toastmasters districts appearing in the federation would have been silently ignored forever.
-
-**The Scientific Proof**: Tracing the delete-downstream: backend no longer reads config → but `data-pipeline.yml` Step 1 still does `gsutil cp gs://.../config/districts.json` → if districts.json were ever deleted or a new district appeared, the pipeline would fail or miss it.
-
-**The Farley Principle Applied**: Consistency — when configuration is removed from consumption, it must also be removed from production. The two sides of a config object are: "who writes it?" and "who reads it?" — removing one reader demands removing the writer.
-
-**The Resulting Rule**: Whenever a config file is deleted from a service's read path, immediately audit the write path. Run `grep -r "districts.json"` across all files (including `.github/workflows/`) to find all residual consumers.
-
-**Future Warning**: CollectorOrchestrator.ts had a second hidden bug: it _validated_ `--districts` input against `configuredDistricts`, silently dropping any district NOT in the config file. So even if the pipeline computed the right list, `CollectorOrchestrator` would have filtered it back down to the whitelist. Layer-by-layer audits are required when removing a gate.
-
-## 🗓️ 2026-02-26 — Lesson 33: Property-Based Tests Break When Implementation Changes District Discovery Strategy (#139)
-
-**The Discovery**: `SnapshotBuilder.property.test.ts` Property 12 tests failed after `DistrictConfigurationService` was removed from `SnapshotBuilder`. The tests expected `result.districtsIncluded` to contain cached districts, but the new implementation relied on `rawData.scrapingMetadata.successfulDistricts`, which was empty because the `DataValidator` was rejecting the mock CSV data (membership validation: "byClub array must not be empty").
-
-**The Scientific Proof**: Running the canary test (`debug_property12_canary.test.ts`) with `console.log` showed `result.success: false` and error `'If total membership > 0, byClub array must not be empty'` — the validator was rejecting the minimal mock CSV. The fix: mock `DataValidator.validate()` to return `isValid: true` so the test focuses on district tracking, not data validity.
-
-**The Farley Principle Applied**: Test Isolation — property tests for district tracking should mock away data validation. These are orthogonal concerns.
-
-**The Resulting Rule**: When a property test's mock CSV triggers real validation failures in intermediate layers, mock the validator. Always separate "district discovery and tracking" tests from "data validation" tests. Also, fix both code paths (success AND validation-failure) when changing how district lists are computed — don't leave the failure path using old empty lists.
-
-**Future Warning**: `SnapshotBuilder.build()` has two district-tracking code paths: one for the success case and one for when `validationResult.isValid === false`. If the district discovery strategy changes again, update BOTH paths.
-
-## 🗓️ 2026-02-26 — Lesson 32: When Removing a Service, Its Entire Dependency Chain Must Fail Fast (#139)
-
-**The Discovery**: Removing `DistrictConfigurationService` left 4 test files compiling (TypeScript happy) but failing at runtime because the _constructor signatures_ changed — the 3rd argument shifted from `districtConfigService` to `rankingCalculator`. The tests didn't catch this because `districtConfigService` was passed as a real instance, not checked at runtime for type compatibility.
-
-**The Scientific Proof**: `npx vitest run` revealed `Cannot find module '..DistrictConfigurationService.js'` (deleted file still imported) and constructor argument count mismatches — both caught only at runtime, not build time.
-
-**The Farley Principle Applied**: Failing Fast — when a service is removed, its imports should cause immediate build failures. Instead, optional constructor args masked the problem until test run.
-
-**The Resulting Rule**: When removing a service from a constructor signature, search for ALL import sites (`grep -r "DistrictConfigurationService"`) and remove them before running tests. Don't rely on "the build passed" — TypeScript only catches type errors, not runtime argument mismatches when args are compatible types.
-
-**Future Warning**: If a constructor has `optional?: Type` parameters in sequence, removing one doesn't shift others at compile time if the types happen to be compatible. Always grep for the removed service's name after deletion.
-
----
 
 ## 🗓️ 2026-02-22 — Lesson 01: Validation Gaps in Façade Layers
 
@@ -464,3 +414,53 @@
 **The Resulting Rule**: Before starting a cross-package consolidation, trace the actual call graph. If the "duplicate" code operates at a different abstraction level with different input/output types, the consolidation risk likely outweighs the benefit.
 
 **Future Warning**: If `DataTransformer` and `DataNormalizer` diverge in extraction logic (column names, parsing heuristics), bugs will appear in one consumer but not the other. A future task could extract shared column-extraction helpers into `shared-contracts`.
+
+## 🗓️ 2026-02-26 — Lesson 32: When Removing a Service, Its Entire Dependency Chain Must Fail Fast (#139)
+
+**The Discovery**: Removing `DistrictConfigurationService` left 4 test files compiling (TypeScript happy) but failing at runtime because the _constructor signatures_ changed — the 3rd argument shifted from `districtConfigService` to `rankingCalculator`. The tests didn't catch this because `districtConfigService` was passed as a real instance, not checked at runtime for type compatibility.
+
+**The Scientific Proof**: `npx vitest run` revealed `Cannot find module '..DistrictConfigurationService.js'` (deleted file still imported) and constructor argument count mismatches — both caught only at runtime, not build time.
+
+**The Farley Principle Applied**: Failing Fast — when a service is removed, its imports should cause immediate build failures. Instead, optional constructor args masked the problem until test run.
+
+**The Resulting Rule**: When removing a service from a constructor signature, search for ALL import sites (`grep -r "DistrictConfigurationService"`) and remove them before running tests. Don't rely on "the build passed" — TypeScript only catches type errors, not runtime argument mismatches when args are compatible types.
+
+**Future Warning**: If a constructor has `optional?: Type` parameters in sequence, removing one doesn't shift others at compile time if the types happen to be compatible. Always grep for the removed service's name after deletion.
+
+---
+
+## 🗓️ 2026-02-26 — Lesson 33: Property-Based Tests Break When Implementation Changes District Discovery Strategy (#139)
+
+**The Discovery**: `SnapshotBuilder.property.test.ts` Property 12 tests failed after `DistrictConfigurationService` was removed from `SnapshotBuilder`. The tests expected `result.districtsIncluded` to contain cached districts, but the new implementation relied on `rawData.scrapingMetadata.successfulDistricts`, which was empty because the `DataValidator` was rejecting the mock CSV data (membership validation: "byClub array must not be empty").
+
+**The Scientific Proof**: Running the canary test (`debug_property12_canary.test.ts`) with `console.log` showed `result.success: false` and error `'If total membership > 0, byClub array must not be empty'` — the validator was rejecting the minimal mock CSV. The fix: mock `DataValidator.validate()` to return `isValid: true` so the test focuses on district tracking, not data validity.
+
+**The Farley Principle Applied**: Test Isolation — property tests for district tracking should mock away data validation. These are orthogonal concerns.
+
+**The Resulting Rule**: When a property test's mock CSV triggers real validation failures in intermediate layers, mock the validator. Always separate "district discovery and tracking" tests from "data validation" tests. Also, fix both code paths (success AND validation-failure) when changing how district lists are computed — don't leave the failure path using old empty lists.
+
+**Future Warning**: `SnapshotBuilder.build()` has two district-tracking code paths: one for the success case and one for when `validationResult.isValid === false`. If the district discovery strategy changes again, update BOTH paths.
+
+## 🗓️ 2026-02-26 — Lesson 34: Backend Whitelist Removal Must Be Paired With Pipeline Whitelist Removal (#141)
+
+**The Discovery**: Removing `DistrictConfigurationService` from the backend (a read-time filter) did not automatically update the data pipeline's write-time source of truth. `data-pipeline.yml` still read `config/districts.json` from GCS to determine which districts to scrape. New Toastmasters districts appearing in the federation would have been silently ignored forever.
+
+**The Scientific Proof**: Tracing the delete-downstream: backend no longer reads config → but `data-pipeline.yml` Step 1 still does `gsutil cp gs://.../config/districts.json` → if districts.json were ever deleted or a new district appeared, the pipeline would fail or miss it.
+
+**The Farley Principle Applied**: Consistency — when configuration is removed from consumption, it must also be removed from production. The two sides of a config object are: "who writes it?" and "who reads it?" — removing one reader demands removing the writer.
+
+**The Resulting Rule**: Whenever a config file is deleted from a service's read path, immediately audit the write path. Run `grep -r "districts.json"` across all files (including `.github/workflows/`) to find all residual consumers.
+
+**Future Warning**: CollectorOrchestrator.ts had a second hidden bug: it _validated_ `--districts` input against `configuredDistricts`, silently dropping any district NOT in the config file. So even if the pipeline computed the right list, `CollectorOrchestrator` would have filtered it back down to the whitelist. Layer-by-layer audits are required when removing a gate.
+
+## 🗓️ 2026-02-26 — Lesson 35: Incremental Aggregation Needs a Persistent Store, Not Re-Loading (#144)
+
+**The Discovery**: Loading all program-year snapshots from cache to build dense trend data (fix for #108/#113) only works locally. On the ephemeral runner, only today's snapshot exists — so the "program-year scan" produces exactly 1 data point even after the fix. The solution is a persistent, GCS-backed store that accumulates one data point per pipeline run.
+
+**The Scientific Proof**: Test `AnalyticsComputeService.denseClubTrends.test.ts` verified: single `computeDistrictAnalytics` call → 1 trend point. Three sequential calls (shared `cacheDir`) → 3 accumulated points in the store. The `preloadedClubTrends` field on `ComputeOptions` threads the store through to `ClubHealthAnalyticsModule.analyzeClubTrends`.
+
+**The Farley Principle Applied**: Evolutionary Architecture — the ClubTrendsStore is a small, isolated file (~50 KB/district) that can be reasoned about independently. It mirrors the existing `TimeSeriesIndexWriter` pattern already proven in production.
+
+**The Resulting Rule**: Any pipeline step that requires multi-run aggregation must: (1) sync the store from GCS before compute, (2) upsert today's data, (3) save, (4) push back to GCS. "Load all history" approaches fail on ephemeral runners.
+
+**Future Warning**: If a new district appears mid-year, its store starts empty (1 point) and grows over daily runs. That's correct. If you ever see single-point trend lines after the fix landed, check that Step 3c (club-trends GCS rsync) ran before Step 4 (compute analytics).
