@@ -414,3 +414,29 @@
 **Lesson**: When splitting pure data files, TypeScript's module resolution makes it zero-cost: renaming `foo.ts` → `foo/index.ts` preserves all `import from './foo'` paths without touching consumers. The barrel re-export pattern is the safest refactoring tool for file splitting.
 
 **Key Finding**: Three of four "duplication" issues (#127, #128, #131) turned out to be false positives — the modules either already delegated to shared code or served distinct purposes despite similar naming. Always verify actual overlap before planning a refactor.
+
+## 🗓️ 2026-02-26 — Lesson 32: When Removing a Service, Its Entire Dependency Chain Must Fail Fast (#139)
+
+**The Discovery**: Removing `DistrictConfigurationService` left 4 test files compiling (TypeScript happy) but failing at runtime because the _constructor signatures_ changed — the 3rd argument shifted from `districtConfigService` to `rankingCalculator`. The tests didn't catch this because `districtConfigService` was passed as a real instance, not checked at runtime for type compatibility.
+
+**The Scientific Proof**: `npx vitest run` revealed `Cannot find module '..DistrictConfigurationService.js'` (deleted file still imported) and constructor argument count mismatches — both caught only at runtime, not build time.
+
+**The Farley Principle Applied**: Failing Fast — when a service is removed, its imports should cause immediate build failures. Instead, optional constructor args masked the problem until test run.
+
+**The Resulting Rule**: When removing a service from a constructor signature, search for ALL import sites (`grep -r "DistrictConfigurationService"`) and remove them before running tests. Don't rely on "the build passed" — TypeScript only catches type errors, not runtime argument mismatches when args are compatible types.
+
+**Future Warning**: If a constructor has `optional?: Type` parameters in sequence, removing one doesn't shift others at compile time if the types happen to be compatible. Always grep for the removed service's name after deletion.
+
+---
+
+## 🗓️ 2026-02-26 — Lesson 33: Property-Based Tests Break When Implementation Changes District Discovery Strategy (#139)
+
+**The Discovery**: `SnapshotBuilder.property.test.ts` Property 12 tests failed after `DistrictConfigurationService` was removed from `SnapshotBuilder`. The tests expected `result.districtsIncluded` to contain cached districts, but the new implementation relied on `rawData.scrapingMetadata.successfulDistricts`, which was empty because the `DataValidator` was rejecting the mock CSV data (membership validation: "byClub array must not be empty").
+
+**The Scientific Proof**: Running the canary test (`debug_property12_canary.test.ts`) with `console.log` showed `result.success: false` and error `'If total membership > 0, byClub array must not be empty'` — the validator was rejecting the minimal mock CSV. The fix: mock `DataValidator.validate()` to return `isValid: true` so the test focuses on district tracking, not data validity.
+
+**The Farley Principle Applied**: Test Isolation — property tests for district tracking should mock away data validation. These are orthogonal concerns.
+
+**The Resulting Rule**: When a property test's mock CSV triggers real validation failures in intermediate layers, mock the validator. Always separate "district discovery and tracking" tests from "data validation" tests. Also, fix both code paths (success AND validation-failure) when changing how district lists are computed — don't leave the failure path using old empty lists.
+
+**Future Warning**: `SnapshotBuilder.build()` has two district-tracking code paths: one for the success case and one for when `validationResult.isValid === false`. If the district discovery strategy changes again, update BOTH paths.
