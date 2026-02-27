@@ -117,11 +117,12 @@ jobs:
               const lines = data.trim().split('\n');
               const headers = lines[0].split(',').map(h => h.replace(/\"/g,'').trim());
               const col = headers.indexOf('DISTRICT');
-              // Filter to valid district IDs only: numeric, optionally one trailing letter (e.g. 1, 61, 100A)
-              // Excludes CSV footer/metadata rows like 'As of 02/26/2026', 'F', 'U' (#145)
+              // Filter to valid district IDs only: alphanumeric with no spaces or slashes.
+              // Accepts: '01', '61', '130', 'F', 'U' (valid single-letter districts)
+              // Rejects: 'As of 02/26/2026' and other CSV footer/metadata rows (#145)
               const ids = [...new Set(lines.slice(1)
                 .map(l => l.split(',')[col].replace(/\"/g,'').trim())
-                .filter(id => /^\d+[A-Z]?$/.test(id)))];
+                .filter(id => /^[A-Z0-9]+$/i.test(id)))];
               ids.sort((a,b) => { const na=parseInt(a,10),nb=parseInt(b,10); return isNaN(na)||isNaN(nb)?a.localeCompare(b):na-nb; });
               process.stdout.write(ids.join(','));
             ")
