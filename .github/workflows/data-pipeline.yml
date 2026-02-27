@@ -117,7 +117,11 @@ jobs:
               const lines = data.trim().split('\n');
               const headers = lines[0].split(',').map(h => h.replace(/\"/g,'').trim());
               const col = headers.indexOf('DISTRICT');
-              const ids = [...new Set(lines.slice(1).map(l => l.split(',')[col].replace(/\"/g,'').trim()).filter(Boolean))];
+              // Filter to valid district IDs only: numeric, optionally one trailing letter (e.g. 1, 61, 100A)
+              // Excludes CSV footer/metadata rows like 'As of 02/26/2026', 'F', 'U' (#145)
+              const ids = [...new Set(lines.slice(1)
+                .map(l => l.split(',')[col].replace(/\"/g,'').trim())
+                .filter(id => /^\d+[A-Z]?$/.test(id)))];
               ids.sort((a,b) => { const na=parseInt(a,10),nb=parseInt(b,10); return isNaN(na)||isNaN(nb)?a.localeCompare(b):na-nb; });
               process.stdout.write(ids.join(','));
             ")
@@ -130,6 +134,7 @@ jobs:
           fi
 
           echo "districts=${DISTRICTS}" >> "$GITHUB_OUTPUT"
+          echo "date=${TARGET_DATE}" >> "$GITHUB_OUTPUT"
 
           # Sync raw-csv cache for target date
           mkdir -p "./cache/raw-csv/${TARGET_DATE}"
@@ -256,7 +261,12 @@ jobs:
       # ── Step 4: Compute Analytics ───────────────────────────
       - name: Compute Analytics
         run: |
+          # Prefer date from scrape output; fall back to config step date (#145)
           DATE="${{ steps.scrape.outputs.date }}"
+          if [ -z "${DATE}" ]; then
+            DATE="${{ steps.config.outputs.date }}"
+            echo "::warning::Scrape step did not output a date; using config step date: ${DATE}"
+          fi
           DISTRICT_LIST="${{ steps.config.outputs.districts }}"
           ARGS="--date ${DATE} --districts ${DISTRICT_LIST} --verbose"
 
