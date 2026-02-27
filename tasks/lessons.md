@@ -476,3 +476,11 @@
 **Rule**: Always filter discovered IDs with `/^[A-Z0-9]+$/i` (no spaces or slashes) — not just `filter(Boolean)` — and always have a defensive fallback for any value that a later step reads from a prior step's JSON output.
 **Warning**: If Toastmasters changes the CSV footer format, the new metadata rows will be included again if they happen to be alphanumeric-only (e.g., a code like "N/A" would be filtered, but "NA" would not). Log the final district list in Step 1 and add an assertion on min count (e.g., `< 50 districts → fail`).
 **rules.md**: R2 reinforced — ephemeral runner data dependency chains must be explicit and defensive.
+
+## 🗓️ 2026-02-27 — month-end-closing-period-raw-csv-source-of-truth (#140)
+
+**Discovery**: The authoritative source for month-end dates is raw-csv/metadata.json (isClosingPeriod + dataMonth), NOT the backdated snapshotId. Multiple consecutive collection dates can all be closing-period for the same dataMonth — the LAST one is the keeper.
+**Proof**: Tracing ClosingPeriodDetector and MonthEndDataMapper showed they operate on collection date vs. dashboard date, not on snapshot paths. The snapshot backdate is a side-effect of processing, not the source of truth.
+**Rule**: When identifying month-end data, always scan raw-csv/ metadata.json entries grouped by dataMonth. Never attempt to infer month-end status from snapshot folder names alone.
+**Warning**: If a month has no closing-period entries at all in raw-csv/ (rare edge case), find-month-end-dates.ts will report it as "missing" — do not silently use the last daily snapshot; instead surface it as a gap requiring investigation.
+**rules.md**: none
