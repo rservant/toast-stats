@@ -468,3 +468,11 @@
 **The Resulting Rule**: Any pipeline step that requires multi-run aggregation must: (1) sync the store from GCS before compute, (2) upsert today's data, (3) save, (4) push back to GCS. "Load all history" approaches fail on ephemeral runners.
 
 **Future Warning**: If a new district appears mid-year, its store starts empty (1 point) and grows over daily runs. That's correct. If you ever see single-point trend lines after the fix landed, check that Step 3c (club-trends GCS rsync) ran before Step 4 (compute analytics).
+
+## 🗓️ 2026-02-27 — csv-footer-rows-as-district-ids (#145)
+
+**Discovery**: The Toastmasters districtsummary CSV has footer/metadata rows (e.g., "As of 02/26/2026") in the DISTRICT column that `filter(Boolean)` includes as district IDs, causing the scrape CLI to receive invalid inputs and produce malformed JSON — breaking all downstream steps that consume `.date` from that JSON.
+**Proof**: Run 22488911198 log showed `--districts ...130,As of 02/26/2026,F,U` and `Error: Invalid date format "--districts"` in the Compute Analytics step; zero analytics written.
+**Rule**: Always filter discovered IDs with `/^[A-Z0-9]+$/i` (no spaces or slashes) — not just `filter(Boolean)` — and always have a defensive fallback for any value that a later step reads from a prior step's JSON output.
+**Warning**: If Toastmasters changes the CSV footer format, the new metadata rows will be included again if they happen to be alphanumeric-only (e.g., a code like "N/A" would be filtered, but "NA" would not). Log the final district list in Step 1 and add an assertion on min count (e.g., `< 50 districts → fail`).
+**rules.md**: R2 reinforced — ephemeral runner data dependency chains must be explicit and defensive.
