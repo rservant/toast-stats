@@ -19,8 +19,7 @@ import {
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
 import { DistrictOverview } from '../components/DistrictOverview'
-import { VulnerableClubsPanel } from '../components/VulnerableClubsPanel'
-import { InterventionRequiredClubsPanel } from '../components/InterventionRequiredClubsPanel'
+
 import { DistinguishedProgressChart } from '../components/DistinguishedProgressChart'
 import { ClubsTable } from '../components/ClubsTable'
 import { ClubDetailModal } from '../components/ClubDetailModal'
@@ -277,16 +276,6 @@ const DistrictDetailPage: React.FC = () => {
   // Get all clubs from analytics
   const allClubs = analytics?.allClubs || []
 
-  // Separate intervention-required and vulnerable clubs - now they come as separate arrays
-  const interventionRequiredClubs = React.useMemo(() => {
-    return analytics?.interventionRequiredClubs || []
-  }, [analytics?.interventionRequiredClubs])
-
-  const vulnerableClubs = React.useMemo(() => {
-    return analytics?.vulnerableClubs || []
-  }, [analytics?.vulnerableClubs])
-
-  // Derive overview data from aggregated analytics (for overview tab)
   // This uses pre-computed data for faster initial load
   // Requirements: 5.1, 5.2
   const overviewData = React.useMemo(() => {
@@ -632,22 +621,6 @@ const DistrictDetailPage: React.FC = () => {
                       if (!first || !last) return undefined
                       return last.count - first.count
                     })()}
-                  />
-                )}
-
-                {/* Intervention Required Clubs Panel - uses full analytics for club details */}
-                {analytics && (
-                  <InterventionRequiredClubsPanel
-                    clubs={interventionRequiredClubs}
-                    isLoading={isLoadingAnalytics}
-                  />
-                )}
-
-                {/* Vulnerable Clubs Panel - uses full analytics for club details */}
-                {analytics && (
-                  <VulnerableClubsPanel
-                    clubs={vulnerableClubs}
-                    isLoading={isLoadingAnalytics}
                   />
                 )}
 
