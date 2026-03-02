@@ -23,18 +23,18 @@
  */
 
 import { Storage } from '@google-cloud/storage'
+import { buildMonthEndSummary } from './lib/monthEndDates.js'
 import {
-  buildMonthEndSummary,
-  isProgramYearComplete,
-  getProgramYearForMonth,
-  type RawCSVEntry,
-} from './lib/monthEndDates.js'
+  listRawCSVDates,
+  listSnapshotDates,
+  readMetadataForDates,
+} from './lib/gcsHelpers.js'
+import { classifySnapshotDates } from './lib/pruneClassifier.js'
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const RAW_CSV_PREFIX = 'raw-csv'
 const SNAPSHOT_PREFIX = 'snapshots'
-const METADATA_FILENAME = 'metadata.json'
 
 interface Args {
   bucket: string
@@ -59,85 +59,6 @@ function parseArgs(): Args {
   }
 
   return { bucket, projectId, dryRun, programYear }
-}
-
-// ── GCS Helpers ───────────────────────────────────────────────────────────────
-
-async function listSnapshotDates(
-  storage: Storage,
-  bucketName: string
-): Promise<string[]> {
-  const bucket = storage.bucket(bucketName)
-  const prefix = `${SNAPSHOT_PREFIX}/`
-
-  const [, , apiResponse] = await bucket.getFiles({
-    prefix,
-    delimiter: '/',
-    autoPaginate: true,
-  })
-
-  const response = apiResponse as Record<string, unknown>
-  const prefixes: string[] =
-    (response?.['prefixes'] as string[] | undefined) ?? []
-
-  const dates: string[] = []
-  for (const p of prefixes) {
-    const date = p.replace(prefix, '').replace(/\/$/, '')
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) dates.push(date)
-  }
-  return dates.sort()
-}
-
-async function listRawCSVDates(
-  storage: Storage,
-  bucketName: string
-): Promise<string[]> {
-  const bucket = storage.bucket(bucketName)
-  const prefix = `${RAW_CSV_PREFIX}/`
-
-  const [, , apiResponse] = await bucket.getFiles({
-    prefix,
-    delimiter: '/',
-    autoPaginate: true,
-  })
-
-  const response = apiResponse as Record<string, unknown>
-  const prefixes: string[] =
-    (response?.['prefixes'] as string[] | undefined) ?? []
-
-  const dates: string[] = []
-  for (const p of prefixes) {
-    const date = p.replace(prefix, '').replace(/\/$/, '')
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) dates.push(date)
-  }
-  return dates.sort()
-}
-
-async function readMetadataForDate(
-  storage: Storage,
-  bucketName: string,
-  date: string
-): Promise<RawCSVEntry> {
-  try {
-    const objectPath = `${RAW_CSV_PREFIX}/${date}/${METADATA_FILENAME}`
-    const file = storage.bucket(bucketName).file(objectPath)
-    const [buffer] = await file.download()
-    const meta = JSON.parse(buffer.toString('utf-8')) as {
-      isClosingPeriod?: boolean
-      dataMonth?: string
-    }
-    return {
-      collectionDate: date,
-      isClosingPeriod: meta.isClosingPeriod === true,
-      dataMonth: meta.dataMonth,
-    }
-  } catch {
-    return {
-      collectionDate: date,
-      isClosingPeriod: false,
-      dataMonth: undefined,
-    }
-  }
 }
 
 /**
@@ -181,16 +102,7 @@ async function main(): Promise<void> {
   // Step 1: Discover month-end keeper dates from raw-csv metadata
   console.log('Step 1: Scanning raw-csv/ to identify month-end keeper dates...')
   const rawDates = await listRawCSVDates(storage, bucket)
-
-  const BATCH_SIZE = 20
-  const entries: RawCSVEntry[] = []
-  for (let i = 0; i < rawDates.length; i += BATCH_SIZE) {
-    const batch = rawDates.slice(i, i + BATCH_SIZE)
-    const results = await Promise.all(
-      batch.map(d => readMetadataForDate(storage, bucket, d))
-    )
-    entries.push(...results)
-  }
+  const entries = await readMetadataForDates(storage, bucket, rawDates)
 
   const summaries = buildMonthEndSummary(entries, today)
 
@@ -213,70 +125,19 @@ async function main(): Promise<void> {
   console.log(`  Found ${snapshotDates.length} snapshot folders.`)
   console.log()
 
-  // Step 3: Classify each snapshot date
-  const toDelete: string[] = []
-  const toKeep: string[] = []
-  const currentPYGuardViolations: string[] = []
-
-  for (const date of snapshotDates) {
-    // Skip if scoped to a specific program year and this date isn't in it
-    if (programYear) {
-      const [yearStr, monthStr] = date.split('-')
-      if (yearStr && monthStr) {
-        const year = parseInt(yearStr, 10)
-        const month = parseInt(monthStr, 10)
-        const pyStart = month >= 7 ? year : year - 1
-        const datePY = `${pyStart}-${pyStart + 1}`
-        if (datePY !== programYear) {
-          toKeep.push(date)
-          continue
-        }
-      }
-    }
-
-    // Hard guard: never delete current program year snapshots
-    // Derive the program year from the snapshot date
-    const [yearStr, monthStr] = date.split('-')
-    if (yearStr && monthStr) {
-      const year = parseInt(yearStr, 10)
-      const month = parseInt(monthStr, 10)
-      const pyStart = month >= 7 ? year : year - 1
-      const datePY = `${pyStart}-${pyStart + 1}`
-
-      if (!isProgramYearComplete(datePY, today)) {
-        toKeep.push(date)
-        continue
-      }
-    }
-
-    if (keeperDates.has(date)) {
-      toKeep.push(date)
-    } else {
-      // Verify this would-be deletion is not in the current program year
-      // (paranoid double-check using snapshot metadata if available)
-      const [yearStr, monthStr] = date.split('-')
-      if (yearStr && monthStr) {
-        const year = parseInt(yearStr, 10)
-        const month = parseInt(monthStr, 10)
-        const pyStart = month >= 7 ? year : year - 1
-        const datePY = `${pyStart}-${pyStart + 1}`
-
-        if (!isProgramYearComplete(datePY, today)) {
-          // SAFETY VIOLATION — this should never happen given the guard above
-          currentPYGuardViolations.push(date)
-          continue
-        }
-      }
-
-      toDelete.push(date)
-    }
-  }
+  // Step 3: Classify each snapshot date using pure classifier
+  const { toKeep, toDelete, guardViolations } = classifySnapshotDates(
+    snapshotDates,
+    keeperDates,
+    today,
+    programYear
+  )
 
   // Hard fail on safety violations
-  if (currentPYGuardViolations.length > 0) {
+  if (guardViolations.length > 0) {
     console.error('FATAL: Current program year guard violation!')
     console.error('The following dates would have been incorrectly deleted:')
-    for (const d of currentPYGuardViolations) {
+    for (const d of guardViolations) {
       console.error(`  ${d}`)
     }
     process.exit(1)

@@ -24,16 +24,14 @@ import * as fs from 'fs'
 import * as path from 'path'
 import {
   buildMonthEndSummary,
-  isProgramYearComplete,
-  getProgramYearForMonth,
-  type RawCSVEntry,
   type MonthEndResult,
 } from './lib/monthEndDates.js'
+import { listRawCSVDates, readMetadataForDates } from './lib/gcsHelpers.js'
+import { selectDatesToProcess } from './lib/generateMonthEndSnapshots.js'
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const RAW_CSV_PREFIX = 'raw-csv'
-const METADATA_FILENAME = 'metadata.json'
 
 interface Args {
   bucket: string
@@ -64,62 +62,6 @@ function parseArgs(): Args {
   }
 
   return { bucket, projectId, cacheDir, dryRun, programYear, jsonOutput }
-}
-
-// ── GCS Helpers ───────────────────────────────────────────────────────────────
-
-async function listRawCSVDates(
-  storage: Storage,
-  bucketName: string
-): Promise<string[]> {
-  const bucket = storage.bucket(bucketName)
-  const prefix = `${RAW_CSV_PREFIX}/`
-
-  const [, , apiResponse] = await bucket.getFiles({
-    prefix,
-    delimiter: '/',
-    autoPaginate: true,
-  })
-
-  const response = apiResponse as Record<string, unknown>
-  const prefixes: string[] =
-    (response?.['prefixes'] as string[] | undefined) ?? []
-
-  const dates: string[] = []
-  for (const p of prefixes) {
-    const date = p.replace(prefix, '').replace(/\/$/, '')
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      dates.push(date)
-    }
-  }
-  return dates.sort()
-}
-
-async function readMetadataForDate(
-  storage: Storage,
-  bucketName: string,
-  date: string
-): Promise<RawCSVEntry> {
-  try {
-    const objectPath = `${RAW_CSV_PREFIX}/${date}/${METADATA_FILENAME}`
-    const file = storage.bucket(bucketName).file(objectPath)
-    const [buffer] = await file.download()
-    const meta = JSON.parse(buffer.toString('utf-8')) as {
-      isClosingPeriod?: boolean
-      dataMonth?: string
-    }
-    return {
-      collectionDate: date,
-      isClosingPeriod: meta.isClosingPeriod === true,
-      dataMonth: meta.dataMonth,
-    }
-  } catch {
-    return {
-      collectionDate: date,
-      isClosingPeriod: false,
-      dataMonth: undefined,
-    }
-  }
 }
 
 /**
@@ -256,41 +198,16 @@ async function main(): Promise<void> {
   // Discover month-end dates
   if (!jsonOutput) console.log('Scanning raw-csv/ metadata...')
   const dates = await listRawCSVDates(storage, bucket)
-
-  const BATCH_SIZE = 20
-  const entries: RawCSVEntry[] = []
-  for (let i = 0; i < dates.length; i += BATCH_SIZE) {
-    const batch = dates.slice(i, i + BATCH_SIZE)
-    const results = await Promise.all(
-      batch.map(d => readMetadataForDate(storage, bucket, d))
-    )
-    entries.push(...results)
-  }
+  const entries = await readMetadataForDates(storage, bucket, dates)
 
   const summaries = buildMonthEndSummary(entries, today)
 
-  // Collect month-end results to process
-  let monthEndDates: MonthEndResult[] = summaries
-    .filter(s => s.isComplete)
-    .filter(s => !programYear || s.year === programYear)
-    .flatMap(s => s.monthResults)
-
-  if (monthEndDates.length === 0) {
-    console.log('No month-end dates found to process.')
-    return
-  }
-
-  // Safety: never process current program year dates
-  monthEndDates = monthEndDates.filter(r => {
-    const py = getProgramYearForMonth(r.dataMonth)
-    if (!isProgramYearComplete(py, today)) {
-      console.warn(
-        `⚠ Skipping ${r.lastClosingDate} — belongs to current program year ${py}`
-      )
-      return false
-    }
-    return true
-  })
+  // Collect month-end results to process (pure function, no side effects)
+  const monthEndDates: MonthEndResult[] = selectDatesToProcess(
+    summaries,
+    today,
+    programYear
+  )
 
   if (!jsonOutput) {
     console.log(`Found ${monthEndDates.length} month-end dates to process:`)

@@ -22,12 +22,12 @@
  */
 
 import { Storage } from '@google-cloud/storage'
-import { buildMonthEndSummary, type RawCSVEntry } from './lib/monthEndDates.js'
+import { buildMonthEndSummary } from './lib/monthEndDates.js'
+import { listRawCSVDates, readMetadataForDates } from './lib/gcsHelpers.js'
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
 const RAW_CSV_PREFIX = 'raw-csv'
-const METADATA_FILENAME = 'metadata.json'
 
 interface Args {
   bucket: string
@@ -51,68 +51,6 @@ function parseArgs(): Args {
   }
 
   return { bucket, projectId, jsonOutput }
-}
-
-// ── GCS Helpers ───────────────────────────────────────────────────────────────
-
-async function listRawCSVDates(
-  storage: Storage,
-  bucketName: string
-): Promise<string[]> {
-  const bucket = storage.bucket(bucketName)
-  const prefix = `${RAW_CSV_PREFIX}/`
-
-  const [, , apiResponse] = await bucket.getFiles({
-    prefix,
-    delimiter: '/',
-    autoPaginate: true,
-  })
-
-  const response = apiResponse as Record<string, unknown>
-  const prefixes: string[] =
-    (response?.['prefixes'] as string[] | undefined) ?? []
-
-  const dates: string[] = []
-  for (const p of prefixes) {
-    const date = p.replace(prefix, '').replace(/\/$/, '')
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      dates.push(date)
-    }
-  }
-
-  return dates.sort()
-}
-
-interface RawMetadata {
-  date?: string
-  isClosingPeriod?: boolean
-  dataMonth?: string
-}
-
-async function readMetadataForDate(
-  storage: Storage,
-  bucketName: string,
-  date: string
-): Promise<RawCSVEntry | null> {
-  try {
-    const objectPath = `${RAW_CSV_PREFIX}/${date}/${METADATA_FILENAME}`
-    const file = storage.bucket(bucketName).file(objectPath)
-    const [buffer] = await file.download()
-    const meta = JSON.parse(buffer.toString('utf-8')) as RawMetadata
-
-    return {
-      collectionDate: date,
-      isClosingPeriod: meta.isClosingPeriod === true,
-      dataMonth: meta.dataMonth,
-    }
-  } catch {
-    // Missing or malformed metadata — treat as non-closing-period entry
-    return {
-      collectionDate: date,
-      isClosingPeriod: false,
-      dataMonth: undefined,
-    }
-  }
 }
 
 // ── Formatting ────────────────────────────────────────────────────────────────
@@ -208,22 +146,7 @@ async function main(): Promise<void> {
   }
 
   // Step 2: Read metadata for each date (in parallel batches of 20)
-  const BATCH_SIZE = 20
-  const entries: RawCSVEntry[] = []
-
-  for (let i = 0; i < dates.length; i += BATCH_SIZE) {
-    const batch = dates.slice(i, i + BATCH_SIZE)
-    const results = await Promise.all(
-      batch.map(date => readMetadataForDate(storage, bucket, date))
-    )
-    for (const entry of results) {
-      if (entry) entries.push(entry)
-    }
-
-    if (!jsonOutput && i > 0 && i % 200 === 0) {
-      console.log(`  ... processed ${i}/${dates.length} dates`)
-    }
-  }
+  const entries = await readMetadataForDates(storage, bucket, dates)
 
   const closingPeriodCount = entries.filter(e => e.isClosingPeriod).length
   if (!jsonOutput) {
