@@ -20,6 +20,45 @@ interface RawMetadata {
 }
 
 /**
+ * List all YYYY-MM-DD date directories under a given GCS prefix.
+ *
+ * Uses manual pagination because autoPaginate + delimiter does not reliably
+ * collect all virtual-directory prefixes across page boundaries in the GCS
+ * Node.js SDK — subsequent pages omit the `prefixes` field entirely.
+ */
+async function listDateDirectories(
+  storage: Storage,
+  bucketName: string,
+  gcsPrefix: string
+): Promise<string[]> {
+  const bucket = storage.bucket(bucketName)
+  const allPrefixes: string[] = []
+  let pageToken: string | undefined
+
+  do {
+    const [, , apiResponse] = await bucket.getFiles({
+      prefix: gcsPrefix,
+      delimiter: '/',
+      maxResults: 1000,
+      pageToken,
+      autoPaginate: false,
+    })
+
+    const response = apiResponse as Record<string, unknown>
+    const pagePrefixes = (response?.['prefixes'] as string[] | undefined) ?? []
+    allPrefixes.push(...pagePrefixes)
+    pageToken = response?.['nextPageToken'] as string | undefined
+  } while (pageToken)
+
+  const dates: string[] = []
+  for (const p of allPrefixes) {
+    const date = p.replace(gcsPrefix, '').replace(/\/$/, '')
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) dates.push(date)
+  }
+  return dates.sort()
+}
+
+/**
  * List all YYYY-MM-DD date directories under raw-csv/ in GCS.
  * Returns dates sorted ascending.
  */
@@ -27,28 +66,7 @@ export async function listRawCSVDates(
   storage: Storage,
   bucketName: string
 ): Promise<string[]> {
-  const bucket = storage.bucket(bucketName)
-  const prefix = 'raw-csv/'
-
-  const [, , apiResponse] = await bucket.getFiles({
-    prefix,
-    delimiter: '/',
-    autoPaginate: true,
-  })
-
-  const response = apiResponse as Record<string, unknown>
-  const prefixes: string[] =
-    (response?.['prefixes'] as string[] | undefined) ?? []
-
-  const dates: string[] = []
-  for (const p of prefixes) {
-    const date = p.replace(prefix, '').replace(/\/$/, '')
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      dates.push(date)
-    }
-  }
-
-  return dates.sort()
+  return listDateDirectories(storage, bucketName, 'raw-csv/')
 }
 
 /**
@@ -59,25 +77,7 @@ export async function listSnapshotDates(
   storage: Storage,
   bucketName: string
 ): Promise<string[]> {
-  const bucket = storage.bucket(bucketName)
-  const prefix = 'snapshots/'
-
-  const [, , apiResponse] = await bucket.getFiles({
-    prefix,
-    delimiter: '/',
-    autoPaginate: true,
-  })
-
-  const response = apiResponse as Record<string, unknown>
-  const prefixes: string[] =
-    (response?.['prefixes'] as string[] | undefined) ?? []
-
-  const dates: string[] = []
-  for (const p of prefixes) {
-    const date = p.replace(prefix, '').replace(/\/$/, '')
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) dates.push(date)
-  }
-  return dates.sort()
+  return listDateDirectories(storage, bucketName, 'snapshots/')
 }
 
 /**
