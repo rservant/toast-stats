@@ -41,6 +41,8 @@ interface Args {
   projectId: string | undefined
   dryRun: boolean
   programYear: string | undefined
+  /** Which GCS prefix to prune: 'snapshots' (default) | 'raw-csv' | 'both' */
+  target: 'snapshots' | 'raw-csv' | 'both'
 }
 
 function parseArgs(): Args {
@@ -50,29 +52,40 @@ function parseArgs(): Args {
   let dryRun = true
   let programYear: string | undefined
 
+  let target: 'snapshots' | 'raw-csv' | 'both' = 'snapshots'
+
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]
     if (arg === '--execute') dryRun = false
     else if (arg === '--dry-run') dryRun = true
     else if (arg === '--bucket' && args[i + 1]) bucket = args[++i]!
     else if (arg === '--program-year' && args[i + 1]) programYear = args[++i]!
+    else if (arg === '--target' && args[i + 1]) {
+      const t = args[++i]!
+      if (t === 'raw-csv' || t === 'snapshots' || t === 'both') target = t
+      else {
+        console.error(`Unknown --target value: ${t}`)
+        process.exit(1)
+      }
+    }
   }
 
-  return { bucket, projectId, dryRun, programYear }
+  return { bucket, projectId, dryRun, programYear, target }
 }
 
 /**
- * Delete all objects under snapshots/{date}/ in GCS.
+ * Delete all objects under {prefix}/{date}/ in GCS.
  * Returns the number of objects deleted.
  */
-async function deleteSnapshotFolder(
+async function deleteFolderByPrefix(
   storage: Storage,
   bucketName: string,
+  prefix: string,
   date: string
 ): Promise<number> {
   const bucket = storage.bucket(bucketName)
-  const prefix = `${SNAPSHOT_PREFIX}/${date}/`
-  const [files] = await bucket.getFiles({ prefix })
+  const gcsPrefix = `${prefix}/${date}/`
+  const [files] = await bucket.getFiles({ prefix: gcsPrefix })
 
   if (files.length === 0) return 0
 
@@ -80,10 +93,20 @@ async function deleteSnapshotFolder(
   return files.length
 }
 
+// Backward-compat alias used if any code still calls deleteSnapshotFolder
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function deleteSnapshotFolder(
+  storage: Storage,
+  bucketName: string,
+  date: string
+): Promise<number> {
+  return deleteFolderByPrefix(storage, bucketName, 'snapshots', date)
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  const { bucket, projectId, dryRun, programYear } = parseArgs()
+  const { bucket, projectId, dryRun, programYear, target } = parseArgs()
   const today = new Date()
 
   console.log('='.repeat(80))
@@ -94,6 +117,7 @@ async function main(): Promise<void> {
   )
   console.log('='.repeat(80))
   console.log(`Bucket: gs://${bucket}/`)
+  console.log(`Target: ${target}`)
   if (programYear) console.log(`Filter: program year ${programYear} only`)
   console.log()
 
@@ -119,104 +143,131 @@ async function main(): Promise<void> {
   console.log(`  Found ${keeperDates.size} month-end keeper dates.`)
   console.log()
 
-  // Step 2: List all GCS snapshot dates
-  console.log('Step 2: Listing all GCS snapshot folders...')
-  const snapshotDates = await listSnapshotDates(storage, bucket)
-  console.log(`  Found ${snapshotDates.length} snapshot folders.`)
+  // Step 2: List all dates in targeted GCS prefix(es)
+  const targetsToProcess: Array<{
+    prefix: string
+    label: string
+    dates: string[]
+  }> = []
+
+  if (target === 'snapshots' || target === 'both') {
+    console.log('Step 2: Listing all GCS snapshot folders...')
+    const snapshotDates = await listSnapshotDates(storage, bucket)
+    console.log(`  Found ${snapshotDates.length} snapshot folders.`)
+    targetsToProcess.push({
+      prefix: SNAPSHOT_PREFIX,
+      label: 'snapshots/',
+      dates: snapshotDates,
+    })
+  }
+
+  if (target === 'raw-csv' || target === 'both') {
+    console.log('Step 2: Listing all GCS raw-csv folders...')
+    // raw-csv may overlap with rawDates already fetched — reuse if available
+    const rawCsvDates = rawDates
+    console.log(`  Found ${rawCsvDates.length} raw-csv folders.`)
+    targetsToProcess.push({
+      prefix: RAW_CSV_PREFIX,
+      label: 'raw-csv/',
+      dates: rawCsvDates,
+    })
+  }
   console.log()
 
-  // Step 3: Classify each snapshot date using pure classifier
-  const { toKeep, toDelete, guardViolations } = classifySnapshotDates(
-    snapshotDates,
-    keeperDates,
-    today,
-    programYear
-  )
+  for (const { prefix, label, dates } of targetsToProcess) {
+    // Step 3: Classify using pure classifier
+    const { toKeep, toDelete, guardViolations } = classifySnapshotDates(
+      dates,
+      keeperDates,
+      today,
+      programYear
+    )
 
-  // Hard fail on safety violations
-  if (guardViolations.length > 0) {
-    console.error('FATAL: Current program year guard violation!')
-    console.error('The following dates would have been incorrectly deleted:')
-    for (const d of guardViolations) {
-      console.error(`  ${d}`)
+    // Hard fail on safety violations
+    if (guardViolations.length > 0) {
+      console.error('FATAL: Current program year guard violation!')
+      console.error('The following dates would have been incorrectly deleted:')
+      for (const d of guardViolations) console.error(`  ${d}`)
+      process.exit(1)
     }
-    process.exit(1)
-  }
 
-  // Report
-  console.log('Step 3: Classification results')
-  console.log('-'.repeat(60))
-  console.log(`  To KEEP: ${toKeep.length} snapshot folders`)
-  console.log(`  To DELETE: ${toDelete.length} snapshot folders`)
-  console.log()
+    // Report
+    console.log(`Step 3 [${label}]: Classification results`)
+    console.log('-'.repeat(60))
+    console.log(`  To KEEP:   ${toKeep.length} folders`)
+    console.log(`  To DELETE: ${toDelete.length} folders`)
+    console.log()
 
-  console.log('Folders that will be DELETED:')
-  for (const date of toDelete) {
-    // Find which program year this date belongs to
-    const [yearStr, monthStr] = date.split('-')
-    let datePY = ''
-    if (yearStr && monthStr) {
-      const year = parseInt(yearStr, 10)
-      const month = parseInt(monthStr, 10)
-      const pyStart = month >= 7 ? year : year - 1
-      datePY = `${pyStart}-${pyStart + 1}`
+    console.log(`Folders that will be DELETED (${label}):`)
+    for (const date of toDelete) {
+      console.log(`  DELETE  gs://${bucket}/${prefix}/${date}/`)
     }
-    console.log(`  DELETE  gs://${bucket}/snapshots/${date}/  [${datePY}]`)
-  }
 
-  console.log()
-  console.log('Keeper dates (will NOT be deleted):')
-  for (const date of [...keeperDates].sort()) {
-    console.log(`  KEEP    gs://${bucket}/snapshots/${date}/`)
+    console.log()
+    console.log(`Keeper dates (will NOT be deleted):`)
+    for (const date of [...keeperDates].sort()) {
+      console.log(`  KEEP    gs://${bucket}/${prefix}/${date}/`)
+    }
+    console.log()
+
+    if (dryRun) {
+      console.log(`DRY RUN for ${label} complete.`)
+      continue
+    }
+
+    // Execute: delete in parallel batches
+    console.log(`=`.repeat(80))
+    console.log(
+      `EXECUTING DELETIONS for ${label} (${toDelete.length} folders)...`
+    )
+    console.log()
+
+    const DELETE_BATCH_SIZE = 10
+    let totalObjectsDeleted = 0
+    let foldersDeleted = 0
+    let foldersFailed = 0
+
+    for (let i = 0; i < toDelete.length; i += DELETE_BATCH_SIZE) {
+      const batch = toDelete.slice(i, i + DELETE_BATCH_SIZE)
+      const results = await Promise.allSettled(
+        batch.map(async date => {
+          const count = await deleteFolderByPrefix(
+            storage,
+            bucket,
+            prefix,
+            date
+          )
+          console.log(`  ✓ Deleted ${label}${date}/ (${count} objects)`)
+          return count
+        })
+      )
+
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          totalObjectsDeleted += result.value
+          foldersDeleted++
+        } else {
+          console.error(
+            `  ✗ Delete failed: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`
+          )
+          foldersFailed++
+        }
+      }
+    }
+
+    console.log()
+    console.log('='.repeat(80))
+    console.log(`Pruning complete for ${label}:`)
+    console.log(`  Folders deleted: ${foldersDeleted}`)
+    console.log(`  Objects deleted: ${totalObjectsDeleted}`)
+    console.log(`  Failures:        ${foldersFailed}`)
+
+    if (foldersFailed > 0) process.exit(1)
   }
-  console.log()
 
   if (dryRun) {
     console.log('DRY RUN complete. Re-run with --execute to perform deletions.')
-    return
   }
-
-  // Execute: delete in parallel batches
-  console.log(`=`.repeat(80))
-  console.log(`EXECUTING DELETIONS (${toDelete.length} folders)...`)
-  console.log()
-
-  const DELETE_BATCH_SIZE = 10
-  let totalObjectsDeleted = 0
-  let foldersDeleted = 0
-  let foldersFailed = 0
-
-  for (let i = 0; i < toDelete.length; i += DELETE_BATCH_SIZE) {
-    const batch = toDelete.slice(i, i + DELETE_BATCH_SIZE)
-    const results = await Promise.allSettled(
-      batch.map(async date => {
-        const count = await deleteSnapshotFolder(storage, bucket, date)
-        console.log(`  ✓ Deleted snapshots/${date}/ (${count} objects)`)
-        return count
-      })
-    )
-
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        totalObjectsDeleted += result.value
-        foldersDeleted++
-      } else {
-        console.error(
-          `  ✗ Delete failed: ${result.reason instanceof Error ? result.reason.message : String(result.reason)}`
-        )
-        foldersFailed++
-      }
-    }
-  }
-
-  console.log()
-  console.log('='.repeat(80))
-  console.log(`Pruning complete:`)
-  console.log(`  Folders deleted: ${foldersDeleted}`)
-  console.log(`  Objects deleted: ${totalObjectsDeleted}`)
-  console.log(`  Failures:        ${foldersFailed}`)
-
-  process.exit(foldersFailed > 0 ? 1 : 0)
 }
 
 main().catch(err => {
