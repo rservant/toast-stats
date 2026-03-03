@@ -496,3 +496,15 @@
 **Warning**: If a new GCS-based script is added, check `scripts/lib/gcsHelpers.ts` first — `listRawCSVDates`, `listSnapshotDates`, `readMetadataForDate`, and `readMetadataForDates` are already there. Never re-implement them inline.
 
 **rules.md**: none
+
+## 🗓️ 2026-03-03 — forward-scan-month-end-discovery (#152)
+
+**Discovery**: The original month-end discovery algorithm (`findLastClosingDate`) scanned ALL dates in raw-csv/ and read every metadata.json. For a 7-year dataset this means thousands of GCS reads. The key insight: closing-period CSVs for month X are collected in the first 2 weeks of month X+1. You don't need to scan month X at all.
+
+**Rule**: To find the month-end keeper for month X: list all raw-csv dates once (O(1) GCS LIST), then for each month X, scan only `raw-csv/{first_day_of_X+1}` through `{first_day_of_X+1 + 14 days}` and read only those metadata files. This reduces reads from ~365/year to ~14/month.
+
+**Rule**: `BackfillOrchestrator` is designed for year-range backfills (startYear → endYear). For targeted single-date backfills (specific keeper dates), use `HttpCsvDownloader` + `GcsBackfillStorage` directly. The orchestrator's year-based `generateDateGrid` is the wrong primitive.
+
+**Warning**: When adding a `--target` flag to an existing script, always test the default path still works — the existing integration tests rely on `--target snapshots` (the default). The `deleteFolderByPrefix(prefix, date)` generalisation was backward-compatible because the default `target = 'snapshots'` preserves the original behavior exactly.
+
+**rules.md**: none
