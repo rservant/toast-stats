@@ -14,7 +14,7 @@
 
 import { describe, it, expect, beforeAll } from 'vitest'
 
-const API_BASE = 'https://toast-stats-gw-9e9mo5c1.ue.gateway.dev/api'
+const API_BASE = 'https://api.taverns.red/api'
 const SITE_URL = 'https://ts.taverns.red'
 
 // Performance budget thresholds (in milliseconds)

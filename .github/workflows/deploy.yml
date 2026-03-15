@@ -210,78 +210,6 @@ jobs:
           npm install -g firebase-tools
           firebase deploy --only hosting --project ${{ secrets.GCP_PROJECT_ID }}
 
-  # ──────────────────────────────────────────────
-  # Deploy API Gateway (only when openapi.yaml changes)
-  # ──────────────────────────────────────────────
-  deploy-api-gateway:
-    name: Deploy API Gateway
-    runs-on: ubuntu-latest
-    needs: [deploy-backend]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0 # Full history to diff across all pushed commits
-
-      - name: Check if openapi.yaml changed
-        id: check-changes
-        run: |
-          # Use the before SHA from the push event to diff all commits in this push.
-          # For workflow_dispatch (no before SHA), fall back to HEAD~1.
-          BEFORE_SHA="${{ github.event.before }}"
-          if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
-            BEFORE_SHA="HEAD~1"
-          fi
-
-          echo "Diffing ${BEFORE_SHA}..HEAD for openapi.yaml changes"
-          if git diff --name-only "${BEFORE_SHA}" HEAD | grep -q 'backend/openapi.yaml'; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "openapi.yaml has changed — will deploy API Gateway config"
-          else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "openapi.yaml unchanged — skipping API Gateway deployment"
-          fi
-
-      - name: Authenticate to GCP
-        if: steps.check-changes.outputs.changed == 'true'
-        uses: google-github-actions/auth@v3
-        with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-
-      - name: Set up Cloud SDK
-        if: steps.check-changes.outputs.changed == 'true'
-        uses: google-github-actions/setup-gcloud@v3
-
-      - name: Deploy API Gateway config
-        if: steps.check-changes.outputs.changed == 'true'
-        run: |
-          CONFIG_NAME="toast-stats-config-$(date +%Y%m%d%H%M%S)"
-
-          echo "Creating API config: ${CONFIG_NAME}..."
-          gcloud api-gateway api-configs create "${CONFIG_NAME}" \
-            --api=toast-stats \
-            --openapi-spec=backend/openapi.yaml \
-            --project=${{ secrets.GCP_PROJECT_ID }} \
-            --quiet
-
-          echo "Updating gateway to use ${CONFIG_NAME}..."
-          gcloud api-gateway gateways update toast-stats-gw \
-            --api=toast-stats \
-            --api-config="${CONFIG_NAME}" \
-            --location=${{ env.REGION }} \
-            --project=${{ secrets.GCP_PROJECT_ID }} \
-            --quiet
-
-          echo "## API Gateway Deployment" >> "$GITHUB_STEP_SUMMARY"
-          echo "✅ Deployed config: \`${CONFIG_NAME}\`" >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Skip summary
-        if: steps.check-changes.outputs.changed != 'true'
-        run: |
-          echo "## API Gateway Deployment" >> "$GITHUB_STEP_SUMMARY"
-          echo "⏭️ Skipped — no changes to openapi.yaml" >> "$GITHUB_STEP_SUMMARY"
 
   # ──────────────────────────────────────────────
   # Post-Deployment Verification
@@ -289,7 +217,7 @@ jobs:
   post-deploy-verify:
     name: Post-Deploy Verification
     runs-on: ubuntu-latest
-    needs: [deploy-backend, deploy-frontend, deploy-api-gateway]
+    needs: [deploy-backend, deploy-frontend]
 
     steps:
       - name: Wait for services to stabilize
@@ -299,11 +227,11 @@ jobs:
         run: |
           echo "## Post-Deployment Verification" >> "$GITHUB_STEP_SUMMARY"
 
-          # Check backend health via API Gateway
-          GW_URL="https://toast-stats-gw-9e9mo5c1.ue.gateway.dev"
+          # Check backend health via Cloud HTTPS LB
+          API_URL="https://api.taverns.red"
 
-          echo "Checking health at ${GW_URL}/api/health..."
-          RESPONSE=$(curl -sf --max-time 30 "${GW_URL}/api/health" || true)
+          echo "Checking health at ${API_URL}/api/health..."
+          RESPONSE=$(curl -sf --max-time 30 "${API_URL}/api/health" || true)
 
           if echo "${RESPONSE}" | grep -q '"status":"ok"'; then
             echo "✅ Health check passed" >> "$GITHUB_STEP_SUMMARY"
