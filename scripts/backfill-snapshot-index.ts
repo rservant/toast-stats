@@ -7,7 +7,7 @@
  * and aggregates into the index structure.
  *
  * Usage:
- *   GCS_BUCKET_NAME=toast-stats-data npx tsx scripts/backfill-snapshot-index.ts
+ *   GCS_BUCKET_NAME=toast-stats-data-ca npx tsx scripts/backfill-snapshot-index.ts
  *
  * Options:
  *   --dry-run   Print the index without uploading

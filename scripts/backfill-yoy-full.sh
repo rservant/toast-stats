@@ -20,7 +20,7 @@
 
 set -euo pipefail
 
-GCS_BUCKET="toast-stats-data"
+GCS_BUCKET="toast-stats-data-ca"
 CACHE_DIR="./cache"
 LOG_FILE="/tmp/backfill-yoy-full.log"
 

@@ -2,7 +2,7 @@
 /**
  * Find Month-End Dates from raw-csv GCS Metadata (read-only)
  *
- * Scans gs://toast-stats-data/raw-csv/ for all collection dates,
+ * Scans gs://toast-stats-data-ca/raw-csv/ for all collection dates,
  * reads their metadata.json files, and identifies the last closing-period
  * collection date per calendar month for each completed program year.
  *
@@ -37,7 +37,7 @@ interface Args {
 
 function parseArgs(): Args {
   const args = process.argv.slice(2)
-  let bucket = process.env['GCS_BUCKET'] ?? 'toast-stats-data'
+  let bucket = process.env['GCS_BUCKET'] ?? 'toast-stats-data-ca'
   const projectId = process.env['GCP_PROJECT_ID']
   let jsonOutput = false
 

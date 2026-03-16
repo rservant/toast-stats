@@ -13,7 +13,7 @@
 
 set -euo pipefail
 
-GCS_BUCKET="toast-stats-data"
+GCS_BUCKET="toast-stats-data-ca"
 CACHE_DIR="./cache"
 DISTRICTS=(109 117 20 42 61 86)
 

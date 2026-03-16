@@ -700,7 +700,7 @@ export function createCLI(): Command {
       const { cacheDir } = resolvedConfig
 
       // Get bucket and prefix from environment variables
-      const bucket = process.env['GCS_BUCKET'] ?? 'toast-stats-data'
+      const bucket = process.env['GCS_BUCKET'] ?? 'toast-stats-data-ca'
       const prefix = process.env['GCS_PREFIX'] ?? 'snapshots'
       const projectId = process.env['GCP_PROJECT_ID']
 

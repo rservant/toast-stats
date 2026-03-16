@@ -42,7 +42,7 @@ interface Args {
 
 function parseArgs(): Args {
   const argv = process.argv.slice(2)
-  let bucket = process.env['GCS_BUCKET'] ?? 'toast-stats-data'
+  let bucket = process.env['GCS_BUCKET'] ?? 'toast-stats-data-ca'
   const projectId = process.env['GCP_PROJECT_ID']
   let cacheDir = process.env['CACHE_DIR'] ?? './cache'
   let dryRun = true

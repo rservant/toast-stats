@@ -88,7 +88,7 @@ jobs:
       - name: Discover districts and sync raw-csv from GCS
         id: config
         env:
-          GCS_BUCKET: 'toast-stats-data'
+          GCS_BUCKET: 'toast-stats-data-ca'
         run: |
           # Toastmasters dashboard is always one day behind — use yesterday
           TARGET_DATE="${{ inputs.date || '' }}"
@@ -199,7 +199,7 @@ jobs:
       # This syncs ~344 KB of index files — not the full 7+ GB cache.
       - name: Sync time-series from GCS
         env:
-          GCS_BUCKET: 'toast-stats-data'
+          GCS_BUCKET: 'toast-stats-data-ca'
         run: |
           echo "Syncing time-series index from GCS..."
           mkdir -p ./cache/time-series
@@ -219,7 +219,7 @@ jobs:
       # Syncs all district_*.json files in parallel using gsutil -m cp (#142)
       - name: Sync previous year snapshots from GCS
         env:
-          GCS_BUCKET: 'toast-stats-data'
+          GCS_BUCKET: 'toast-stats-data-ca'
         run: |
           DATE="${{ steps.scrape.outputs.date }}"
 
@@ -246,7 +246,7 @@ jobs:
       # start fresh with only today's data point.
       - name: Sync club-trends store from GCS
         env:
-          GCS_BUCKET: 'toast-stats-data'
+          GCS_BUCKET: 'toast-stats-data-ca'
         run: |
           echo "Syncing club-trends store from GCS..."
           mkdir -p ./cache/club-trends
@@ -284,7 +284,7 @@ jobs:
       # with no local manifest needed (which was useless on ephemeral runners).
       - name: Sync cache to GCS
         env:
-          GCS_BUCKET: 'toast-stats-data'
+          GCS_BUCKET: 'toast-stats-data-ca'
         run: |
           DATE="${{ steps.scrape.outputs.date }}"
           echo "Syncing cache to GCS..."
@@ -324,7 +324,7 @@ jobs:
       # detail page date selector goes stale.
       - name: Update district-snapshot-index
         env:
-          GCS_BUCKET: 'toast-stats-data'
+          GCS_BUCKET: 'toast-stats-data-ca'
         run: |
           DATE="${{ steps.scrape.outputs.date }}"
           DISTRICT_LIST="${{ steps.config.outputs.districts }}"
