@@ -1,8 +1,8 @@
 /**
  * Unit tests for scripts/lib/monthEndDates.ts
- * Run with: npx jest scripts/lib/__tests__/monthEndDates.test.ts
  */
 
+import { describe, it, expect } from 'vitest'
 import {
   getProgramYearForMonth,
   isProgramYearComplete,
