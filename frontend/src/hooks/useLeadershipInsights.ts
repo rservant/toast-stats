@@ -1,5 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../services/api'
+import {
+  fetchCdnManifest,
+  cdnAnalyticsUrl,
+  fetchFromCdn,
+} from '../services/cdn'
 
 interface LeadershipEffectivenessScore {
   divisionId: string
@@ -83,6 +88,24 @@ export const useLeadershipInsights = (
     queryFn: async () => {
       if (!districtId) {
         throw new Error('District ID is required')
+      }
+
+      // CDN-first: try pre-computed JSON when no date range is specified
+      if (!startDate && !endDate) {
+        try {
+          const manifest = await fetchCdnManifest()
+          const url = cdnAnalyticsUrl(
+            manifest.latestSnapshotDate,
+            districtId,
+            'leadership-insights'
+          )
+          const file = await fetchFromCdn<{
+            data: LeadershipInsightsApiResponse
+          }>(url)
+          return file.data.insights
+        } catch {
+          // CDN failed — fall through to Express
+        }
       }
 
       const params = new URLSearchParams()

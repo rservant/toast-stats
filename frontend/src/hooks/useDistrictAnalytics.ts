@@ -1,5 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../services/api'
+import {
+  fetchCdnManifest,
+  cdnAnalyticsUrl,
+  fetchFromCdn,
+} from '../services/cdn'
 import type { ClubHealthStatus } from '@toastmasters/shared-contracts'
 
 // Re-export for backward compatibility with existing imports
@@ -231,6 +236,22 @@ export const useDistrictAnalytics = (
     queryFn: async () => {
       if (!districtId) {
         throw new Error('District ID is required')
+      }
+
+      // CDN-first: try pre-computed JSON when no date range is specified
+      if (!startDate && !endDate) {
+        try {
+          const manifest = await fetchCdnManifest()
+          const url = cdnAnalyticsUrl(
+            manifest.latestSnapshotDate,
+            districtId,
+            'analytics'
+          )
+          const file = await fetchFromCdn<{ data: DistrictAnalytics }>(url)
+          return file.data
+        } catch {
+          // CDN failed — fall through to Express
+        }
       }
 
       const params = new URLSearchParams()
