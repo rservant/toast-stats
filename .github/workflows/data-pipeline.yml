@@ -328,6 +328,58 @@ jobs:
           echo "- **Snapshot/analytics files synced**: ${SNAPSHOT_COUNT} (gzip + immutable cache)" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Time-series index files synced**: ${TS_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
+      # ── Step 5b: Generate and upload CDN manifest files ────
+      # These files let the frontend discover data via CDN without the Express API.
+      - name: Generate CDN manifests
+        env:
+          GCS_BUCKET: 'toast-stats-data-ca'
+        run: |
+          DATE="${{ steps.scrape.outputs.date }}"
+          DISTRICT_LIST="${{ steps.config.outputs.districts }}"
+
+          # v1/latest.json — current snapshot date (short TTL, 5 min)
+          node -e "
+            const fs = require('fs');
+            const manifest = {
+              _format: { version: '1.0.0', type: 'manifest' },
+              latestSnapshotDate: '${DATE}',
+              generatedAt: new Date().toISOString()
+            };
+            fs.writeFileSync('/tmp/latest.json', JSON.stringify(manifest, null, 2));
+            console.log('Generated v1/latest.json for ' + '${DATE}');
+          "
+          gsutil \
+            -h "Content-Type:application/json" \
+            -h "Cache-Control:public, max-age=300" \
+            cp /tmp/latest.json "gs://${GCS_BUCKET}/v1/latest.json"
+
+          # v1/dates.json — all available snapshot dates (medium TTL, 15 min)
+          # Built from the district-snapshot-index or by listing GCS prefixes
+          gsutil ls "gs://${GCS_BUCKET}/snapshots/" | \
+            grep -oP '\d{4}-\d{2}-\d{2}' | sort -u > /tmp/all-dates.txt
+          node -e "
+            const fs = require('fs');
+            const dates = fs.readFileSync('/tmp/all-dates.txt', 'utf-8')
+              .trim().split('\n').filter(Boolean);
+            const data = {
+              _format: { version: '1.0.0', type: 'dates-index' },
+              dates: dates,
+              count: dates.length,
+              generatedAt: new Date().toISOString()
+            };
+            fs.writeFileSync('/tmp/dates.json', JSON.stringify(data, null, 2));
+            console.log('Generated v1/dates.json with ' + dates.length + ' dates');
+          "
+          gsutil \
+            -h "Content-Type:application/json" \
+            -h "Cache-Control:public, max-age=900" \
+            cp /tmp/dates.json "gs://${GCS_BUCKET}/v1/dates.json"
+
+          echo "## 📋 CDN Manifests" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **v1/latest.json**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
+          DATE_COUNT=$(wc -l < /tmp/all-dates.txt | tr -d ' ')
+          echo "- **v1/dates.json**: ${DATE_COUNT} dates" >> "$GITHUB_STEP_SUMMARY"
+
       # ── Step 6: Update district-snapshot-index (#138) ──────
       # The backend reads per-district cached dates from this
       # pre-computed index. Without updating it, the district
