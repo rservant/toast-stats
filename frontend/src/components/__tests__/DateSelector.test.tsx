@@ -5,10 +5,13 @@
  * Validates: Requirements 3.1, 3.2, 3.3, 3.4
  *
  * These tests verify that the DateSelector component correctly:
- * - Displays error state with user-friendly message on API failure (3.1)
+ * - Displays error state with user-friendly message on CDN failure (3.1)
  * - Displays empty state when no dates are available (3.2)
  * - Provides a retry button that triggers refetch (3.3)
- * - Does not display loading spinner indefinitely when API fails (3.4)
+ * - Does not display loading spinner indefinitely when CDN fails (3.4)
+ *
+ * Updated for CDN-only architecture (#173): DateSelector now fetches
+ * from CDN via fetchCdnDates() instead of Express apiClient.get().
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -17,41 +20,30 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactNode } from 'react'
 import { render } from '@testing-library/react'
 import DateSelector from '../DateSelector'
-import { apiClient } from '../../services/api'
-import type { AvailableDatesResponse } from '../../types/districts'
+import { fetchCdnDates } from '../../services/cdn'
 
-// Mock the API client
-vi.mock('../../services/api', () => ({
-  apiClient: {
-    get: vi.fn(),
-  },
+// Mock the CDN service (#173)
+vi.mock('../../services/cdn', () => ({
+  fetchCdnDates: vi.fn(),
+  fetchCdnManifest: vi.fn(),
+  cdnAnalyticsUrl: vi.fn(),
+  fetchFromCdn: vi.fn(),
 }))
 
-// Type the mocked apiClient
-const mockedApiClient = vi.mocked(apiClient)
+const mockedFetchCdnDates = vi.mocked(fetchCdnDates)
 
-// Create a mock AvailableDatesResponse with dates
-const createMockDatesResponse = (): AvailableDatesResponse => ({
-  dates: [
-    { date: '2024-01-15', month: 1, day: 15, monthName: 'January' },
-    { date: '2024-01-20', month: 1, day: 20, monthName: 'January' },
-    { date: '2024-02-10', month: 2, day: 10, monthName: 'February' },
-  ],
-  programYear: {
-    year: '2023-2024',
-    startDate: '2023-07-01',
-    endDate: '2024-06-30',
-  },
+// CDN dates response with dates (flat strings — component transforms them)
+const createMockCdnDatesResponse = () => ({
+  dates: ['2024-01-15', '2024-01-20', '2024-02-10'],
+  count: 3,
+  generatedAt: '2024-02-10T10:00:00Z',
 })
 
-// Create an empty dates response
-const createEmptyDatesResponse = (): AvailableDatesResponse => ({
-  dates: [],
-  programYear: {
-    year: '2023-2024',
-    startDate: '2023-07-01',
-    endDate: '2024-06-30',
-  },
+// Empty CDN dates response
+const createEmptyCdnDatesResponse = () => ({
+  dates: [] as string[],
+  count: 0,
+  generatedAt: '2024-02-10T10:00:00Z',
 })
 
 // Create a wrapper with QueryClientProvider for testing
@@ -99,15 +91,14 @@ describe('DateSelector Error Handling', () => {
 
   describe('Error State Rendering', () => {
     /**
-     * Test that error state renders on API failure
+     * Test that error state renders on CDN failure
      *
      * **Validates: Requirement 3.1**
-     * WHEN the available dates API returns an error
+     * WHEN the CDN dates fetch returns an error
      * THEN THE Date_Selector SHALL display an error state with a user-friendly message
      */
-    it('should display error state with user-friendly message on API failure', async () => {
-      const errorMessage = 'Network error'
-      mockedApiClient.get.mockRejectedValue(new Error(errorMessage))
+    it('should display error state with user-friendly message on CDN failure', async () => {
+      mockedFetchCdnDates.mockRejectedValue(new Error('CDN unavailable'))
 
       renderDateSelector()
 
@@ -129,7 +120,7 @@ describe('DateSelector Error Handling', () => {
      * **Validates: Requirement 3.1**
      */
     it('should display error icon in error state', async () => {
-      mockedApiClient.get.mockRejectedValue(new Error('API Error'))
+      mockedFetchCdnDates.mockRejectedValue(new Error('CDN Error'))
 
       const { container } = renderDateSelector()
 
@@ -150,13 +141,11 @@ describe('DateSelector Error Handling', () => {
      * Test that empty state renders when no dates are available
      *
      * **Validates: Requirement 3.2**
-     * WHEN the available dates API returns an empty array
+     * WHEN the CDN dates returns an empty array
      * THEN THE Date_Selector SHALL display a message indicating no dates are available
      */
     it('should display empty state message when no dates are available', async () => {
-      mockedApiClient.get.mockResolvedValue({
-        data: createEmptyDatesResponse(),
-      })
+      mockedFetchCdnDates.mockResolvedValue(createEmptyCdnDatesResponse())
 
       renderDateSelector()
 
@@ -179,9 +168,7 @@ describe('DateSelector Error Handling', () => {
      * **Validates: Requirement 3.2**
      */
     it('should display calendar icon in empty state', async () => {
-      mockedApiClient.get.mockResolvedValue({
-        data: createEmptyDatesResponse(),
-      })
+      mockedFetchCdnDates.mockResolvedValue(createEmptyCdnDatesResponse())
 
       const { container } = renderDateSelector()
 
@@ -208,7 +195,7 @@ describe('DateSelector Error Handling', () => {
      * THEN THE Date_Selector SHALL provide a retry button
      */
     it('should display retry button when in error state', async () => {
-      mockedApiClient.get.mockRejectedValue(new Error('API Error'))
+      mockedFetchCdnDates.mockRejectedValue(new Error('CDN Error'))
 
       renderDateSelector()
 
@@ -228,7 +215,7 @@ describe('DateSelector Error Handling', () => {
      */
     it('should trigger refetch when retry button is clicked', async () => {
       // First call fails
-      mockedApiClient.get.mockRejectedValueOnce(new Error('API Error'))
+      mockedFetchCdnDates.mockRejectedValueOnce(new Error('CDN Error'))
 
       renderDateSelector()
 
@@ -240,21 +227,17 @@ describe('DateSelector Error Handling', () => {
       }, ERROR_TIMEOUT)
 
       // Clear mock to track retry call
-      mockedApiClient.get.mockClear()
+      mockedFetchCdnDates.mockClear()
       // Second call succeeds
-      mockedApiClient.get.mockResolvedValue({
-        data: createMockDatesResponse(),
-      })
+      mockedFetchCdnDates.mockResolvedValue(createMockCdnDatesResponse())
 
       // Click retry button
       const retryButton = screen.getByRole('button', { name: /retry/i })
       fireEvent.click(retryButton)
 
-      // Verify API was called again
+      // Verify CDN was called again
       await waitFor(() => {
-        expect(mockedApiClient.get).toHaveBeenCalledWith(
-          '/districts/available-dates'
-        )
+        expect(mockedFetchCdnDates).toHaveBeenCalled()
       }, ERROR_TIMEOUT)
     })
 
@@ -264,7 +247,7 @@ describe('DateSelector Error Handling', () => {
      * **Validates: Requirement 3.3**
      */
     it('should have accessible retry button with aria-label', async () => {
-      mockedApiClient.get.mockRejectedValue(new Error('API Error'))
+      mockedFetchCdnDates.mockRejectedValue(new Error('CDN Error'))
 
       renderDateSelector()
 
@@ -284,7 +267,7 @@ describe('DateSelector Error Handling', () => {
      */
     it('should clear error state and show dates after successful retry', async () => {
       // First call fails
-      mockedApiClient.get.mockRejectedValueOnce(new Error('API Error'))
+      mockedFetchCdnDates.mockRejectedValueOnce(new Error('CDN Error'))
 
       renderDateSelector()
 
@@ -296,9 +279,7 @@ describe('DateSelector Error Handling', () => {
       }, ERROR_TIMEOUT)
 
       // Second call succeeds
-      mockedApiClient.get.mockResolvedValue({
-        data: createMockDatesResponse(),
-      })
+      mockedFetchCdnDates.mockResolvedValue(createMockCdnDatesResponse())
 
       // Click retry button
       const retryButton = screen.getByRole('button', { name: /retry/i })
@@ -324,10 +305,10 @@ describe('DateSelector Error Handling', () => {
      */
     it('should show loading state initially while fetching', async () => {
       // Create a delayed response
-      mockedApiClient.get.mockImplementation(
+      mockedFetchCdnDates.mockImplementation(
         () =>
           new Promise(resolve =>
-            setTimeout(() => resolve({ data: createMockDatesResponse() }), 100)
+            setTimeout(() => resolve(createMockCdnDatesResponse()), 100)
           )
       )
 
@@ -342,14 +323,13 @@ describe('DateSelector Error Handling', () => {
      * Test that loading state transitions to error state (not infinite loading)
      *
      * **Validates: Requirement 3.4**
-     * THE Date_Selector SHALL NOT display a loading spinner indefinitely when the API fails
+     * THE Date_Selector SHALL NOT display a loading spinner indefinitely when CDN fails
      */
-    it('should transition from loading to error state on API failure', async () => {
-      mockedApiClient.get.mockRejectedValue(new Error('API Error'))
+    it('should transition from loading to error state on CDN failure', async () => {
+      mockedFetchCdnDates.mockRejectedValue(new Error('CDN Error'))
 
       const { container } = renderDateSelector()
 
-      // Initially may show loading
       // Wait for error state to appear
       await waitFor(() => {
         expect(
@@ -368,9 +348,7 @@ describe('DateSelector Error Handling', () => {
      * **Validates: Requirement 3.4**
      */
     it('should transition from loading to empty state when no dates', async () => {
-      mockedApiClient.get.mockResolvedValue({
-        data: createEmptyDatesResponse(),
-      })
+      mockedFetchCdnDates.mockResolvedValue(createEmptyCdnDatesResponse())
 
       const { container } = renderDateSelector()
 
@@ -394,9 +372,7 @@ describe('DateSelector Error Handling', () => {
      * **Validates: Requirement 3.4**
      */
     it('should transition from loading to success state with dates', async () => {
-      mockedApiClient.get.mockResolvedValue({
-        data: createMockDatesResponse(),
-      })
+      mockedFetchCdnDates.mockResolvedValue(createMockCdnDatesResponse())
 
       const { container } = renderDateSelector()
 
@@ -419,10 +395,10 @@ describe('DateSelector Error Handling', () => {
      * WHEN the Date_Selector encounters an error
      * THEN THE Date_Selector SHALL log the error details for debugging purposes
      */
-    it('should log error details when API fails', async () => {
+    it('should log error details when CDN fails', async () => {
       const consoleSpy = vi.spyOn(console, 'error')
       const errorMessage = 'Network connection failed'
-      mockedApiClient.get.mockRejectedValue(new Error(errorMessage))
+      mockedFetchCdnDates.mockRejectedValue(new Error(errorMessage))
 
       renderDateSelector()
 
@@ -454,9 +430,9 @@ describe('DateSelector Error Handling', () => {
      * The query should have limited retries to prevent infinite retry loops
      */
     it('should have bounded retry count configured', async () => {
-      // Track how many times the API is called
+      // Track how many times fetchCdnDates is called
       let callCount = 0
-      mockedApiClient.get.mockImplementation(() => {
+      mockedFetchCdnDates.mockImplementation(() => {
         callCount++
         return Promise.reject(new Error('Persistent error'))
       })
@@ -472,7 +448,7 @@ describe('DateSelector Error Handling', () => {
             )
           ).toBeInTheDocument()
         },
-        { timeout: 5000 }
+        { timeout: 10000 }
       )
 
       // The component has retry: 2 configured, so we expect:

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { apiClient } from '../services/api'
+import { fetchCdnDates } from '../services/cdn'
 import type { AvailableDatesResponse } from '../types/districts'
 
 interface DateSelectorProps {
@@ -31,6 +31,22 @@ const MONTHS = [
   { value: 10, label: 'October' },
   { value: 11, label: 'November' },
   { value: 12, label: 'December' },
+]
+
+const MONTH_NAMES = [
+  '',
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ]
 
 const DateSelector: React.FC<DateSelectorProps> = ({
@@ -67,8 +83,8 @@ const DateSelector: React.FC<DateSelectorProps> = ({
     setSelectedDay(initialDay)
   }
 
-  // Fetch available dates from backend
-  // Extract isError, error, and refetch for error handling
+  // Fetch available dates from CDN (#173)
+  // CDN returns flat date strings; transform to structured objects for the UI
   // Validates: Requirements 3.1, 3.3, 3.4, 3.5
   const {
     data: availableDatesData,
@@ -79,10 +95,19 @@ const DateSelector: React.FC<DateSelectorProps> = ({
   } = useQuery<AvailableDatesResponse>({
     queryKey: ['available-dates'],
     queryFn: async () => {
-      const response = await apiClient.get<AvailableDatesResponse>(
-        '/districts/available-dates'
-      )
-      return response.data
+      const cdnDates = await fetchCdnDates()
+      // Transform flat "YYYY-MM-DD" strings to structured objects
+      const dates = cdnDates.dates.map(dateStr => {
+        const d = new Date(dateStr + 'T00:00:00')
+        const month = d.getMonth() + 1
+        return {
+          date: dateStr,
+          month,
+          day: d.getDate(),
+          monthName: MONTH_NAMES[month] ?? '',
+        }
+      })
+      return { dates } as AvailableDatesResponse
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2, // Limit retries to prevent infinite retry loops (Requirement 3.4)

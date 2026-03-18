@@ -4,12 +4,27 @@ import LandingPage from '../LandingPage'
 import * as apiModule from '../../services/api'
 import { renderWithProviders } from '../../__tests__/test-utils'
 
-// Mock the API client
+// Mock the API client (still used for rankings query)
 vi.mock('../../services/api', () => ({
   apiClient: {
     get: vi.fn(),
     delete: vi.fn(),
   },
+}))
+
+// Mock CDN service — dates now come from CDN (#173)
+vi.mock('../../services/cdn', () => ({
+  fetchCdnDates: vi.fn().mockResolvedValue({
+    dates: [],
+    count: 0,
+    generatedAt: '2025-01-01T00:00:00Z',
+  }),
+  fetchCdnManifest: vi.fn().mockResolvedValue({
+    latestSnapshotDate: '2025-11-22',
+    generatedAt: '2025-01-01T00:00:00Z',
+  }),
+  cdnAnalyticsUrl: vi.fn().mockReturnValue('https://cdn.taverns.red/test'),
+  fetchFromCdn: vi.fn(),
 }))
 
 // Mock useDistricts to prevent it from consuming apiClient.get mocks
@@ -37,12 +52,7 @@ describe('LandingPage - Percentage Formatting', () => {
     it('should return "+" prefix and green color for positive percentages', async () => {
       const apiClient = apiModule.apiClient as unknown as MockApiClient
 
-      apiClient.get.mockResolvedValueOnce({
-        data: {
-          dates: [],
-        },
-      })
-
+      // Rankings query (dates now come from CDN mock)
       apiClient.get.mockResolvedValueOnce({
         data: {
           rankings: [
@@ -81,12 +91,6 @@ describe('LandingPage - Percentage Formatting', () => {
 
     it('should return "-" prefix and red color for negative percentages', async () => {
       const apiClient = apiModule.apiClient as unknown as MockApiClient
-
-      apiClient.get.mockResolvedValueOnce({
-        data: {
-          dates: [],
-        },
-      })
 
       apiClient.get.mockResolvedValueOnce({
         data: {
@@ -129,12 +133,6 @@ describe('LandingPage - Percentage Formatting', () => {
 
       apiClient.get.mockResolvedValueOnce({
         data: {
-          dates: [],
-        },
-      })
-
-      apiClient.get.mockResolvedValueOnce({
-        data: {
           rankings: [
             {
               districtId: 'D1',
@@ -171,12 +169,6 @@ describe('LandingPage - Percentage Formatting', () => {
 
     it('should format percentages to 1 decimal place precision', async () => {
       const apiClient = apiModule.apiClient as unknown as MockApiClient
-
-      apiClient.get.mockResolvedValueOnce({
-        data: {
-          dates: [],
-        },
-      })
 
       apiClient.get.mockResolvedValueOnce({
         data: {
@@ -225,14 +217,7 @@ describe('LandingPage - Error Handling', () => {
   it('should display welcome message and backfill button when no snapshots are available', async () => {
     const apiClient = apiModule.apiClient as unknown as MockApiClient
 
-    // Mock cached dates call to succeed
-    apiClient.get.mockResolvedValueOnce({
-      data: {
-        dates: [],
-      },
-    })
-
-    // Mock rankings call to return NO_SNAPSHOT_AVAILABLE error
+    // Mock rankings call to return NO_SNAPSHOT_AVAILABLE error (dates come from CDN)
     apiClient.get.mockRejectedValueOnce({
       response: {
         status: 503,
@@ -272,14 +257,7 @@ describe('LandingPage - Error Handling', () => {
   it('should display generic error message for other types of errors', async () => {
     const apiClient = apiModule.apiClient as unknown as MockApiClient
 
-    // Mock cached dates call to succeed
-    apiClient.get.mockResolvedValueOnce({
-      data: {
-        dates: [],
-      },
-    })
-
-    // Mock rankings call to return a different error
+    // Mock rankings call to return a different error (dates come from CDN)
     const mockError = new Error('Something went wrong')
     apiClient.get.mockRejectedValueOnce(mockError)
 
@@ -309,12 +287,6 @@ describe('LandingPage - Table Cell Rendering', () => {
 
   it('should display rank number correctly', async () => {
     const apiClient = apiModule.apiClient as unknown as MockApiClient
-
-    apiClient.get.mockResolvedValueOnce({
-      data: {
-        dates: [],
-      },
-    })
 
     apiClient.get.mockResolvedValueOnce({
       data: {
@@ -360,12 +332,6 @@ describe('LandingPage - Table Cell Rendering', () => {
 
     apiClient.get.mockResolvedValueOnce({
       data: {
-        dates: [],
-      },
-    })
-
-    apiClient.get.mockResolvedValueOnce({
-      data: {
         rankings: [
           {
             districtId: 'D1',
@@ -405,12 +371,6 @@ describe('LandingPage - Table Cell Rendering', () => {
 
   it('should display bullet separator between rank and percentage', async () => {
     const apiClient = apiModule.apiClient as unknown as MockApiClient
-
-    apiClient.get.mockResolvedValueOnce({
-      data: {
-        dates: [],
-      },
-    })
 
     apiClient.get.mockResolvedValueOnce({
       data: {
@@ -454,12 +414,6 @@ describe('LandingPage - Table Cell Rendering', () => {
 
   it('should display both rank and percentage values visible and properly aligned', async () => {
     const apiClient = apiModule.apiClient as unknown as MockApiClient
-
-    apiClient.get.mockResolvedValueOnce({
-      data: {
-        dates: [],
-      },
-    })
 
     apiClient.get.mockResolvedValueOnce({
       data: {
@@ -523,10 +477,7 @@ describe('LandingPage - Layout Order (#83)', () => {
   const setupWithData = () => {
     const apiClient = apiModule.apiClient as unknown as MockApiClient
 
-    apiClient.get.mockResolvedValueOnce({
-      data: { dates: [] },
-    })
-
+    // Rankings query (dates come from CDN mock)
     apiClient.get.mockResolvedValueOnce({
       data: {
         rankings: [

@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../services/api'
+import { fetchCdnDates } from '../services/cdn'
 import { useDistricts } from '../hooks/useDistricts'
 import HistoricalRankChart from '../components/HistoricalRankChart'
 import { useProgramYear } from '../contexts/ProgramYearContext'
@@ -51,12 +52,12 @@ const LandingPage: React.FC = () => {
   // Mobile-friendly collapsible region filters
   const [isHistoryRegionExpanded, setIsHistoryRegionExpanded] = useState(false)
 
-  // Fetch cached dates
+  // Fetch cached dates from CDN (#173)
   const { data: cachedDatesData } = useQuery({
     queryKey: ['cached-dates'],
     queryFn: async () => {
-      const response = await apiClient.get('/districts/cache/dates')
-      return response.data
+      const cdnDates = await fetchCdnDates()
+      return { dates: cdnDates.dates }
     },
   })
 

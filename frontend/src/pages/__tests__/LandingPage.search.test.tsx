@@ -23,6 +23,21 @@ vi.mock('../../services/api', () => ({
   },
 }))
 
+// Mock CDN service — dates now come from CDN (#173)
+vi.mock('../../services/cdn', () => ({
+  fetchCdnDates: vi.fn().mockResolvedValue({
+    dates: [],
+    count: 0,
+    generatedAt: '2025-01-01T00:00:00Z',
+  }),
+  fetchCdnManifest: vi.fn().mockResolvedValue({
+    latestSnapshotDate: '2025-11-22',
+    generatedAt: '2025-01-01T00:00:00Z',
+  }),
+  cdnAnalyticsUrl: vi.fn().mockReturnValue('https://cdn.taverns.red/test'),
+  fetchFromCdn: vi.fn(),
+}))
+
 vi.mock('../../hooks/useDistricts', () => ({
   useDistricts: () => ({
     data: { districts: [] },
@@ -101,7 +116,7 @@ const MOCK_RANKINGS = [
 
 const setupWithData = () => {
   const apiClient = apiModule.apiClient as unknown as MockApiClient
-  apiClient.get.mockResolvedValueOnce({ data: { dates: [] } })
+  // Rankings query (dates come from CDN mock)
   apiClient.get.mockResolvedValueOnce({
     data: { rankings: MOCK_RANKINGS, date: '2025-11-22' },
   })
