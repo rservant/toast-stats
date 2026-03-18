@@ -542,3 +542,26 @@
 **Proof**: `gsutil ls gs://toast-stats-data-ca/snapshots/` confirmed 128 districts × 10 analytics files — complete CDN coverage. All 3,162 tests pass (backend 1,490 + frontend 1,851 + packages 127).
 **Rule**: When module-level `vi.mock()` sets mock return values AND `afterEach` uses `vi.resetAllMocks()`, the mock implementations are cleared between tests. Tests that depend on CDN mocks must re-apply them in a local `beforeEach`. Use `Object.assign(new Error('...'), { response: { status: 404 } })` for CDN errors in tests where the hook has its own retry function that checks `response.status`.
 **Warning**: git pre-push hooks run full coverage — test failures that pass in `vitest run` (no coverage) may fail in `vitest run --coverage` due to different execution order.
+
+## 🗓️ 2026-03-18 — cdn-only-hook-conversion (#173)
+
+**Discovery**: The `useAggregatedAnalytics` Express→CDN fallback pattern (try Express, catch → CDN) was unnecessary — the CDN data already contained all fields (`yearOverYear`, `performanceTargets`) that the Express endpoint was returning. The fallback hid this fact.
+**Proof**: After removing `fetchAggregatedAnalytics` and going CDN-only, the `convertToAggregatedFormat` function populated all fields correctly from the existing CDN analytics JSON. The Overview tab fully renders with CDN data alone.
+**Rule**: When data is pre-computed to CDN, verify that all required fields exist in the CDN JSON before adding Express endpoints. Don't add Express "enrichment" if the CDN data is already complete.
+**Warning**: When adding new data to the Overview tab, check whether the `AnalyticsWriter` already writes it to CDN before adding a new Express endpoint.
+**rules.md**: none
+
+## 🗓️ 2026-03-18 — cdn-dates-conversion (#173)
+
+**Discovery**: The CDN `v1/dates.json` already existed with 2395 dates (43KB) and was accessible via `fetchCdnDates()` — no pipeline work needed. The `DateSelector` expected structured `{ date, month, day, monthName }` objects but CDN returns flat `"YYYY-MM-DD"` strings. A lightweight transform in the queryFn bridges the gap.
+**Proof**: All 1846 tests pass with CDN-only dates. The `fetchCdnDates()` client was already implemented in `services/cdn.ts` but never used by component code.
+**Rule**: Before assuming pipeline work is needed, check `curl -s https://cdn.taverns.red/v1/<file>.json` to see if the data already exists. Several CDN client functions were pre-built but unused.
+**rules.md**: none
+
+## 🗓️ 2026-03-18 — cdn-rankings-conversion (#173)
+
+**Discovery**: The `all-districts-rankings.json` file is already written to `./cache/snapshots/{date}/` and synced to GCS by the pipeline. Adding a CDN-served `v1/rankings.json` required only a ~20-line `node -e` inline script in the pipeline's existing "Generate CDN manifests" step — same pattern as `v1/latest.json` and `v1/dates.json`.
+**Proof**: All 1846 tests pass after converting `apiClient.get('/districts/rankings')` → `fetchCdnRankings()`. The LandingPage no longer makes any Express API calls.
+**Rule**: When adding new CDN files, check if the source data already exists in the snapshot directory before building new pipeline stages. The "Generate CDN manifests" step can expand with inline `node -e` scripts for simple file extractions.
+**Warning**: The error handling for "no snapshots available" changed from Axios `{ response: { data: { error: { code } } } }` to CDN `Error('CDN rankings fetch failed: 404')`. Both paths are now checked via `isCdn404 || legacyResponse?.code === 'NO_SNAPSHOT_AVAILABLE'`. When the Express server is fully removed, the legacy check can be deleted.
+**rules.md**: none
