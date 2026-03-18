@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import type { ClubHealthStatus } from '@toastmasters/shared-contracts'
-import { apiClient } from '../services/api'
+import {
+  fetchCdnManifest,
+  cdnAnalyticsUrl,
+  fetchFromCdn,
+} from '../services/cdn'
 
 // Re-export for backward compatibility with existing imports
 export type { ClubHealthStatus }
@@ -46,20 +50,19 @@ export const useClubTrends = (
         throw new Error('District ID and club ID are required')
       }
 
-      const response = await apiClient.get<ClubTrend>(
-        `/districts/${districtId}/clubs/${clubId}/trends`
-      )
-      return response.data
+      // TODO: Club-level trends need a per-club CDN file or derive from district analytics
+      // For now this endpoint doesn't have a CDN equivalent at club-level granularity
+      throw new Error('Club-level trends not yet available via CDN — see #172')
     },
     enabled: enabled && !!districtId && !!clubId,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 2,
+    retry: false,
   })
 }
 
 /**
- * Hook to fetch vulnerable clubs for a district
- * Returns list of clubs that are vulnerable or intervention-required based on various factors
+ * Hook to fetch vulnerable clubs for a district.
+ * CDN-only: fetches from pre-computed vulnerable-clubs.json (#173).
  *
  * @param districtId - The district ID to fetch vulnerable clubs for
  * @param enabled - Whether the query should be enabled (default: true)
@@ -87,10 +90,23 @@ export const useVulnerableClubs = (
         throw new Error('District ID is required')
       }
 
-      const response = await apiClient.get(
-        `/districts/${districtId}/vulnerable-clubs`
+      // CDN-only: fetch pre-computed vulnerable-clubs.json (#173)
+      const manifest = await fetchCdnManifest()
+      const url = cdnAnalyticsUrl(
+        manifest.latestSnapshotDate,
+        districtId,
+        'vulnerable-clubs'
       )
-      return response.data
+      const file = await fetchFromCdn<{
+        data: {
+          districtId: string
+          totalVulnerableClubs: number
+          interventionRequiredClubs: number
+          vulnerableClubs: number
+          clubs: ClubTrend[]
+        }
+      }>(url)
+      return file.data
     },
     enabled: enabled && !!districtId,
     staleTime: 5 * 60 * 1000, // 5 minutes

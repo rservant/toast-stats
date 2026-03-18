@@ -213,18 +213,14 @@ const DistrictDetailPage: React.FC = () => {
   ])
 
   // Fetch aggregated analytics for overview tab (summary, trends, yearOverYear)
-  // This uses pre-computed data for faster response times
+  // CDN-only: fetches pre-computed analytics from Cloud CDN (#173)
   // Requirements: 5.1, 5.2
   const {
     data: aggregatedAnalytics,
     isLoading: isLoadingAggregated,
     error: aggregatedError,
     refetch: refetchAggregated,
-  } = useAggregatedAnalytics(
-    hasValidDates ? districtId || null : null,
-    effectiveProgramYear?.startDate,
-    effectiveEndDate ?? undefined
-  )
+  } = useAggregatedAnalytics(hasValidDates ? districtId || null : null)
 
   // Fetch full analytics for detailed views (clubs, divisions, analytics tabs)
   // This provides full club arrays needed for tables and detailed panels

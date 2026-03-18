@@ -2,10 +2,10 @@
  * Helper functions for aggregated analytics — fetch and data conversion.
  * No React dependencies — fully testable in isolation.
  *
- * CDN-only strategy: fetches pre-computed JSON from Cloud CDN (#168).
+ * CDN-only strategy: fetches pre-computed JSON from Cloud CDN (#168, #173).
+ * The Express `/analytics-summary` endpoint has been deleted.
  */
 
-import { apiClient } from '../../services/api'
 import {
   fetchCdnManifest,
   cdnAnalyticsUrl,
@@ -15,32 +15,11 @@ import type { DistrictAnalytics } from '../useDistrictAnalytics'
 import type { AggregatedAnalyticsResponse, TrendData } from './types'
 
 /**
- * Fetch aggregated analytics from the summary endpoint.
- * This endpoint provides time-series trend data scoped by date range,
- * which CDN cannot filter — so it still uses Express.
- */
-export async function fetchAggregatedAnalytics(
-  districtId: string,
-  startDate?: string,
-  endDate?: string
-): Promise<AggregatedAnalyticsResponse> {
-  const params = new URLSearchParams()
-  if (startDate) params.append('startDate', startDate)
-  if (endDate) params.append('endDate', endDate)
-
-  const queryString = params.toString()
-  const url = `/districts/${districtId}/analytics-summary${queryString ? `?${queryString}` : ''}`
-
-  const response = await apiClient.get<AggregatedAnalyticsResponse>(url)
-  return response.data
-}
-
-/**
- * Fetch individual analytics from Cloud CDN.
+ * Fetch district analytics from Cloud CDN.
  *
  * CDN path: cdn.taverns.red/snapshots/{date}/analytics/district_{id}_analytics.json
  *
- * CDN serves the latest snapshot only (no date filtering).
+ * This is the sole data source — no Express fallback (#173).
  */
 export async function fetchIndividualAnalytics(
   districtId: string
@@ -56,7 +35,11 @@ export async function fetchIndividualAnalytics(
 }
 
 /**
- * Convert individual analytics response to aggregated format
+ * Convert individual analytics response to aggregated format.
+ *
+ * Populates yearOverYear and performanceTargets from the CDN analytics
+ * data, fixing the Overview tab "— —" and "N/A" placeholders that appeared
+ * after the Express /analytics-summary route was deleted (#173).
  */
 export function convertToAggregatedFormat(
   analytics: DistrictAnalytics
@@ -69,8 +52,7 @@ export function convertToAggregatedFormat(
     trends.payments = analytics.paymentsTrend
   }
 
-  // Handle distinguishedProjection - it may be a number or an object from the backend
-  // The /analytics endpoint returns an object, while /analytics-summary returns a number
+  // Handle distinguishedProjection - it may be a number or an object from the CDN
   let projectionValue: number
   const projection = analytics.distinguishedProjection
   if (typeof projection === 'number') {
@@ -116,9 +98,22 @@ export function convertToAggregatedFormat(
     computedAt: new Date().toISOString(),
   }
 
-  // Add optional yearOverYear if present
+  // Populate yearOverYear from CDN analytics data (#173)
   if (analytics.yearOverYear) {
     response.yearOverYear = analytics.yearOverYear
+  }
+
+  // Populate performanceTargets from CDN analytics data (#173)
+  if (analytics.performanceTargets) {
+    const pt = analytics.performanceTargets
+    const targets: AggregatedAnalyticsResponse['performanceTargets'] = {}
+    if (pt.membershipPayments?.base != null) {
+      targets.membershipTarget = pt.membershipPayments.base
+    }
+    if (pt.distinguishedClubs?.base != null) {
+      targets.distinguishedTarget = pt.distinguishedClubs.base
+    }
+    response.performanceTargets = targets
   }
 
   return response
