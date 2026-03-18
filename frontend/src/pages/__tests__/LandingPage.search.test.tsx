@@ -13,23 +13,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, fireEvent } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import LandingPage from '../LandingPage'
-import * as apiModule from '../../services/api'
+import { fetchCdnRankings } from '../../services/cdn'
 import { renderWithProviders } from '../../__tests__/test-utils'
 
-vi.mock('../../services/api', () => ({
-  apiClient: {
-    get: vi.fn(),
-    delete: vi.fn(),
-  },
-}))
-
-// Mock CDN service — dates now come from CDN (#173)
+// Mock CDN service — all data now comes from CDN (#173)
 vi.mock('../../services/cdn', () => ({
   fetchCdnDates: vi.fn().mockResolvedValue({
     dates: [],
     count: 0,
     generatedAt: '2025-01-01T00:00:00Z',
   }),
+  fetchCdnRankings: vi.fn(),
   fetchCdnManifest: vi.fn().mockResolvedValue({
     latestSnapshotDate: '2025-11-22',
     generatedAt: '2025-01-01T00:00:00Z',
@@ -46,10 +40,7 @@ vi.mock('../../hooks/useDistricts', () => ({
   }),
 }))
 
-interface MockApiClient {
-  get: ReturnType<typeof vi.fn>
-  delete: ReturnType<typeof vi.fn>
-}
+const mockedFetchCdnRankings = vi.mocked(fetchCdnRankings)
 
 const MOCK_RANKINGS = [
   {
@@ -115,10 +106,11 @@ const MOCK_RANKINGS = [
 ]
 
 const setupWithData = () => {
-  const apiClient = apiModule.apiClient as unknown as MockApiClient
-  // Rankings query (dates come from CDN mock)
-  apiClient.get.mockResolvedValueOnce({
-    data: { rankings: MOCK_RANKINGS, date: '2025-11-22' },
+  // Rankings query from CDN (#173)
+  mockedFetchCdnRankings.mockResolvedValueOnce({
+    rankings: MOCK_RANKINGS,
+    date: '2025-11-22',
+    generatedAt: '2025-01-01T00:00:00Z',
   })
 }
 

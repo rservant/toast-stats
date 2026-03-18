@@ -75,6 +75,47 @@ export async function fetchCdnDates(): Promise<CdnDatesIndex> {
 }
 
 /**
+ * CDN rankings — returned by v1/rankings.json
+ * Generated from all-districts-rankings.json during the data pipeline (#173)
+ */
+export interface CdnRankingsData {
+  _format?: { version: string; type: string }
+  rankings: Array<{
+    districtId: string
+    districtName: string
+    region: string
+    paidClubs: number
+    paidClubBase: number
+    clubGrowthPercent: number
+    totalPayments: number
+    paymentBase: number
+    paymentGrowthPercent: number
+    activeClubs: number
+    distinguishedClubs: number
+    selectDistinguished: number
+    presidentsDistinguished: number
+    distinguishedPercent: number
+    clubsRank: number
+    paymentsRank: number
+    distinguishedRank: number
+    aggregateScore: number
+    overallRank: number
+  }>
+  date: string
+  generatedAt: string
+}
+
+/**
+ * Fetch district rankings from CDN.
+ * The pipeline writes v1/rankings.json from all-districts-rankings.json.
+ */
+export async function fetchCdnRankings(): Promise<CdnRankingsData> {
+  const res = await fetch(`${CDN_BASE_URL}/v1/rankings.json`)
+  if (!res.ok) throw new Error(`CDN rankings fetch failed: ${res.status}`)
+  return res.json() as Promise<CdnRankingsData>
+}
+
+/**
  * Construct a CDN URL for a pre-computed analytics file.
  *
  * @param date - Snapshot date (YYYY-MM-DD)

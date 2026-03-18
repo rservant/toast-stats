@@ -375,6 +375,30 @@ jobs:
             -h "Cache-Control:public, max-age=900" \
             cp /tmp/dates.json "gs://${GCS_BUCKET}/v1/dates.json"
 
+          # v1/rankings.json — district rankings for landing page (short TTL, 5 min) (#173)
+          # Reads from all-districts-rankings.json which is already computed by the pipeline
+          RANKINGS_SRC="./cache/snapshots/${DATE}/all-districts-rankings.json"
+          if [ -f "${RANKINGS_SRC}" ]; then
+            node -e "
+              const fs = require('fs');
+              const src = JSON.parse(fs.readFileSync('${RANKINGS_SRC}', 'utf-8'));
+              const data = {
+                _format: { version: '1.0.0', type: 'rankings' },
+                rankings: src.rankings,
+                date: src.metadata.sourceCsvDate || '${DATE}',
+                generatedAt: new Date().toISOString()
+              };
+              fs.writeFileSync('/tmp/rankings.json', JSON.stringify(data, null, 2));
+              console.log('Generated v1/rankings.json with ' + src.rankings.length + ' districts');
+            "
+            gsutil \
+              -h "Content-Type:application/json" \
+              -h "Cache-Control:public, max-age=300" \
+              cp /tmp/rankings.json "gs://${GCS_BUCKET}/v1/rankings.json"
+          else
+            echo "::warning::all-districts-rankings.json not found at ${RANKINGS_SRC}, skipping v1/rankings.json"
+          fi
+
           echo "## 📋 CDN Manifests" >> "$GITHUB_STEP_SUMMARY"
           echo "- **v1/latest.json**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
           DATE_COUNT=$(wc -l < /tmp/all-dates.txt | tr -d ' ')

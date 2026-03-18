@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { apiClient } from '../services/api'
-import { fetchCdnDates } from '../services/cdn'
+import { fetchCdnDates, fetchCdnRankings } from '../services/cdn'
 import { useDistricts } from '../hooks/useDistricts'
 import HistoricalRankChart from '../components/HistoricalRankChart'
 import { useProgramYear } from '../contexts/ProgramYearContext'
@@ -111,13 +110,12 @@ const LandingPage: React.FC = () => {
     setSelectedDate,
   ])
 
-  // Fetch rankings for selected date
+  // Fetch rankings from CDN (#173)
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['district-rankings', selectedDate],
+    queryKey: ['district-rankings'],
     queryFn: async () => {
-      const params = selectedDate ? { date: selectedDate } : {}
-      const response = await apiClient.get('/districts/rankings', { params })
-      return response.data
+      const cdnData = await fetchCdnRankings()
+      return { rankings: cdnData.rankings, date: cdnData.date }
     },
     staleTime: 15 * 60 * 1000, // 15 minutes
   })
@@ -290,7 +288,11 @@ const LandingPage: React.FC = () => {
 
   if (isError) {
     // Check if this is a "no snapshots available" error
-    const errorResponse = (
+    // CDN: fetchCdnRankings throws Error('CDN rankings fetch failed: 404') when v1/rankings.json doesn't exist
+    // Express (legacy): error.response.data.error.code === 'NO_SNAPSHOT_AVAILABLE'
+    const errorMessage = (error as Error)?.message || ''
+    const isCdn404 = errorMessage.includes('CDN rankings fetch failed: 404')
+    const legacyResponse = (
       error as Error & {
         response?: {
           data?: {
@@ -301,7 +303,8 @@ const LandingPage: React.FC = () => {
         }
       }
     )?.response?.data?.error
-    const isNoSnapshotError = errorResponse?.code === 'NO_SNAPSHOT_AVAILABLE'
+    const isNoSnapshotError =
+      isCdn404 || legacyResponse?.code === 'NO_SNAPSHOT_AVAILABLE'
 
     if (isNoSnapshotError) {
       return (

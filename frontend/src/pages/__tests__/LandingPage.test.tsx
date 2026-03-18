@@ -1,24 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
 import LandingPage from '../LandingPage'
-import * as apiModule from '../../services/api'
+import { fetchCdnRankings } from '../../services/cdn'
 import { renderWithProviders } from '../../__tests__/test-utils'
 
-// Mock the API client (still used for rankings query)
-vi.mock('../../services/api', () => ({
-  apiClient: {
-    get: vi.fn(),
-    delete: vi.fn(),
-  },
-}))
-
-// Mock CDN service — dates now come from CDN (#173)
+// Mock CDN service — all data now comes from CDN (#173)
 vi.mock('../../services/cdn', () => ({
   fetchCdnDates: vi.fn().mockResolvedValue({
     dates: [],
     count: 0,
     generatedAt: '2025-01-01T00:00:00Z',
   }),
+  fetchCdnRankings: vi.fn(),
   fetchCdnManifest: vi.fn().mockResolvedValue({
     latestSnapshotDate: '2025-11-22',
     generatedAt: '2025-01-01T00:00:00Z',
@@ -27,7 +20,7 @@ vi.mock('../../services/cdn', () => ({
   fetchFromCdn: vi.fn(),
 }))
 
-// Mock useDistricts to prevent it from consuming apiClient.get mocks
+// Mock useDistricts to prevent CDN consumption
 vi.mock('../../hooks/useDistricts', () => ({
   useDistricts: () => ({
     data: { districts: [] },
@@ -36,10 +29,7 @@ vi.mock('../../hooks/useDistricts', () => ({
   }),
 }))
 
-interface MockApiClient {
-  get: ReturnType<typeof vi.fn>
-  delete: ReturnType<typeof vi.fn>
-}
+const mockedFetchCdnRankings = vi.mocked(fetchCdnRankings)
 
 // renderWithProviders is provided by test-utils to include ProgramYearProvider and common wrappers
 
@@ -50,35 +40,31 @@ describe('LandingPage - Percentage Formatting', () => {
 
   describe('formatPercentage function', () => {
     it('should return "+" prefix and green color for positive percentages', async () => {
-      const apiClient = apiModule.apiClient as unknown as MockApiClient
-
       // Rankings query (dates now come from CDN mock)
-      apiClient.get.mockResolvedValueOnce({
-        data: {
-          rankings: [
-            {
-              districtId: 'D1',
-              districtName: 'District 1',
-              region: '1',
-              paidClubs: 100,
-              paidClubBase: 90,
-              clubGrowthPercent: 12.5,
-              totalPayments: 5000,
-              paymentBase: 4500,
-              paymentGrowthPercent: 11.1,
-              activeClubs: 100,
-              distinguishedClubs: 50,
-              selectDistinguished: 20,
-              presidentsDistinguished: 10,
-              distinguishedPercent: 50,
-              clubsRank: 1,
-              paymentsRank: 1,
-              distinguishedRank: 1,
-              aggregateScore: 300,
-            },
-          ],
-          date: '2025-11-22',
-        },
+      mockedFetchCdnRankings.mockResolvedValueOnce({
+        rankings: [
+          {
+            districtId: 'D1',
+            districtName: 'District 1',
+            region: '1',
+            paidClubs: 100,
+            paidClubBase: 90,
+            clubGrowthPercent: 12.5,
+            totalPayments: 5000,
+            paymentBase: 4500,
+            paymentGrowthPercent: 11.1,
+            activeClubs: 100,
+            distinguishedClubs: 50,
+            selectDistinguished: 20,
+            presidentsDistinguished: 10,
+            distinguishedPercent: 50,
+            clubsRank: 1,
+            paymentsRank: 1,
+            distinguishedRank: 1,
+            aggregateScore: 300,
+          },
+        ],
+        date: '2025-11-22',
       })
 
       renderWithProviders(<LandingPage />)
@@ -90,34 +76,30 @@ describe('LandingPage - Percentage Formatting', () => {
     })
 
     it('should return "-" prefix and red color for negative percentages', async () => {
-      const apiClient = apiModule.apiClient as unknown as MockApiClient
-
-      apiClient.get.mockResolvedValueOnce({
-        data: {
-          rankings: [
-            {
-              districtId: 'D1',
-              districtName: 'District 1',
-              region: '1',
-              paidClubs: 80,
-              paidClubBase: 90,
-              clubGrowthPercent: -11.1,
-              totalPayments: 4000,
-              paymentBase: 4500,
-              paymentGrowthPercent: -8.5,
-              activeClubs: 80,
-              distinguishedClubs: 40,
-              selectDistinguished: 15,
-              presidentsDistinguished: 5,
-              distinguishedPercent: 50,
-              clubsRank: 1,
-              paymentsRank: 1,
-              distinguishedRank: 1,
-              aggregateScore: 300,
-            },
-          ],
-          date: '2025-11-22',
-        },
+      mockedFetchCdnRankings.mockResolvedValueOnce({
+        rankings: [
+          {
+            districtId: 'D1',
+            districtName: 'District 1',
+            region: '1',
+            paidClubs: 80,
+            paidClubBase: 90,
+            clubGrowthPercent: -11.1,
+            totalPayments: 4000,
+            paymentBase: 4500,
+            paymentGrowthPercent: -8.5,
+            activeClubs: 80,
+            distinguishedClubs: 40,
+            selectDistinguished: 15,
+            presidentsDistinguished: 5,
+            distinguishedPercent: 50,
+            clubsRank: 1,
+            paymentsRank: 1,
+            distinguishedRank: 1,
+            aggregateScore: 300,
+          },
+        ],
+        date: '2025-11-22',
       })
 
       renderWithProviders(<LandingPage />)
@@ -129,34 +111,30 @@ describe('LandingPage - Percentage Formatting', () => {
     })
 
     it('should return "0.0%" with gray color for zero percentages', async () => {
-      const apiClient = apiModule.apiClient as unknown as MockApiClient
-
-      apiClient.get.mockResolvedValueOnce({
-        data: {
-          rankings: [
-            {
-              districtId: 'D1',
-              districtName: 'District 1',
-              region: '1',
-              paidClubs: 90,
-              paidClubBase: 90,
-              clubGrowthPercent: 0,
-              totalPayments: 4500,
-              paymentBase: 4500,
-              paymentGrowthPercent: 1.5,
-              activeClubs: 90,
-              distinguishedClubs: 45,
-              selectDistinguished: 15,
-              presidentsDistinguished: 5,
-              distinguishedPercent: 50,
-              clubsRank: 1,
-              paymentsRank: 1,
-              distinguishedRank: 1,
-              aggregateScore: 300,
-            },
-          ],
-          date: '2025-11-22',
-        },
+      mockedFetchCdnRankings.mockResolvedValueOnce({
+        rankings: [
+          {
+            districtId: 'D1',
+            districtName: 'District 1',
+            region: '1',
+            paidClubs: 90,
+            paidClubBase: 90,
+            clubGrowthPercent: 0,
+            totalPayments: 4500,
+            paymentBase: 4500,
+            paymentGrowthPercent: 1.5,
+            activeClubs: 90,
+            distinguishedClubs: 45,
+            selectDistinguished: 15,
+            presidentsDistinguished: 5,
+            distinguishedPercent: 50,
+            clubsRank: 1,
+            paymentsRank: 1,
+            distinguishedRank: 1,
+            aggregateScore: 300,
+          },
+        ],
+        date: '2025-11-22',
       })
 
       renderWithProviders(<LandingPage />)
@@ -168,34 +146,30 @@ describe('LandingPage - Percentage Formatting', () => {
     })
 
     it('should format percentages to 1 decimal place precision', async () => {
-      const apiClient = apiModule.apiClient as unknown as MockApiClient
-
-      apiClient.get.mockResolvedValueOnce({
-        data: {
-          rankings: [
-            {
-              districtId: 'D1',
-              districtName: 'District 1',
-              region: '1',
-              paidClubs: 100,
-              paidClubBase: 90,
-              clubGrowthPercent: 12.567,
-              totalPayments: 5000,
-              paymentBase: 4500,
-              paymentGrowthPercent: 8.333,
-              activeClubs: 100,
-              distinguishedClubs: 50,
-              selectDistinguished: 20,
-              presidentsDistinguished: 10,
-              distinguishedPercent: 50,
-              clubsRank: 1,
-              paymentsRank: 1,
-              distinguishedRank: 1,
-              aggregateScore: 300,
-            },
-          ],
-          date: '2025-11-22',
-        },
+      mockedFetchCdnRankings.mockResolvedValueOnce({
+        rankings: [
+          {
+            districtId: 'D1',
+            districtName: 'District 1',
+            region: '1',
+            paidClubs: 100,
+            paidClubBase: 90,
+            clubGrowthPercent: 12.567,
+            totalPayments: 5000,
+            paymentBase: 4500,
+            paymentGrowthPercent: 8.333,
+            activeClubs: 100,
+            distinguishedClubs: 50,
+            selectDistinguished: 20,
+            presidentsDistinguished: 10,
+            distinguishedPercent: 50,
+            clubsRank: 1,
+            paymentsRank: 1,
+            distinguishedRank: 1,
+            aggregateScore: 300,
+          },
+        ],
+        date: '2025-11-22',
       })
 
       renderWithProviders(<LandingPage />)
@@ -215,21 +189,10 @@ describe('LandingPage - Error Handling', () => {
   })
 
   it('should display welcome message and backfill button when no snapshots are available', async () => {
-    const apiClient = apiModule.apiClient as unknown as MockApiClient
-
-    // Mock rankings call to return NO_SNAPSHOT_AVAILABLE error (dates come from CDN)
-    apiClient.get.mockRejectedValueOnce({
-      response: {
-        status: 503,
-        data: {
-          error: {
-            code: 'NO_SNAPSHOT_AVAILABLE',
-            message: 'No data snapshot available yet',
-            details: 'Run a refresh operation to create the first snapshot',
-          },
-        },
-      },
-    })
+    // Mock CDN rankings fetch returning 404 (no v1/rankings.json yet)
+    mockedFetchCdnRankings.mockRejectedValueOnce(
+      new Error('CDN rankings fetch failed: 404')
+    )
 
     renderWithProviders(<LandingPage />)
 
@@ -255,11 +218,9 @@ describe('LandingPage - Error Handling', () => {
   })
 
   it('should display generic error message for other types of errors', async () => {
-    const apiClient = apiModule.apiClient as unknown as MockApiClient
-
     // Mock rankings call to return a different error (dates come from CDN)
     const mockError = new Error('Something went wrong')
-    apiClient.get.mockRejectedValueOnce(mockError)
+    mockedFetchCdnRankings.mockRejectedValueOnce(mockError)
 
     renderWithProviders(<LandingPage />)
 
@@ -286,34 +247,30 @@ describe('LandingPage - Table Cell Rendering', () => {
   })
 
   it('should display rank number correctly', async () => {
-    const apiClient = apiModule.apiClient as unknown as MockApiClient
-
-    apiClient.get.mockResolvedValueOnce({
-      data: {
-        rankings: [
-          {
-            districtId: 'D1',
-            districtName: 'District 1',
-            region: '1',
-            paidClubs: 100,
-            paidClubBase: 90,
-            clubGrowthPercent: 12.5,
-            totalPayments: 5000,
-            paymentBase: 4500,
-            paymentGrowthPercent: 11.1,
-            activeClubs: 100,
-            distinguishedClubs: 50,
-            selectDistinguished: 20,
-            presidentsDistinguished: 10,
-            distinguishedPercent: 50,
-            clubsRank: 5,
-            paymentsRank: 3,
-            distinguishedRank: 1,
-            aggregateScore: 300,
-          },
-        ],
-        date: '2025-11-22',
-      },
+    mockedFetchCdnRankings.mockResolvedValueOnce({
+      rankings: [
+        {
+          districtId: 'D1',
+          districtName: 'District 1',
+          region: '1',
+          paidClubs: 100,
+          paidClubBase: 90,
+          clubGrowthPercent: 12.5,
+          totalPayments: 5000,
+          paymentBase: 4500,
+          paymentGrowthPercent: 11.1,
+          activeClubs: 100,
+          distinguishedClubs: 50,
+          selectDistinguished: 20,
+          presidentsDistinguished: 10,
+          distinguishedPercent: 50,
+          clubsRank: 5,
+          paymentsRank: 3,
+          distinguishedRank: 1,
+          aggregateScore: 300,
+        },
+      ],
+      date: '2025-11-22',
     })
 
     renderWithProviders(<LandingPage />)
@@ -328,34 +285,30 @@ describe('LandingPage - Table Cell Rendering', () => {
   })
 
   it('should display percentage with correct color', async () => {
-    const apiClient = apiModule.apiClient as unknown as MockApiClient
-
-    apiClient.get.mockResolvedValueOnce({
-      data: {
-        rankings: [
-          {
-            districtId: 'D1',
-            districtName: 'District 1',
-            region: '1',
-            paidClubs: 100,
-            paidClubBase: 90,
-            clubGrowthPercent: 15.5,
-            totalPayments: 4000,
-            paymentBase: 4500,
-            paymentGrowthPercent: -11.1,
-            activeClubs: 100,
-            distinguishedClubs: 50,
-            selectDistinguished: 20,
-            presidentsDistinguished: 10,
-            distinguishedPercent: 50,
-            clubsRank: 1,
-            paymentsRank: 1,
-            distinguishedRank: 1,
-            aggregateScore: 300,
-          },
-        ],
-        date: '2025-11-22',
-      },
+    mockedFetchCdnRankings.mockResolvedValueOnce({
+      rankings: [
+        {
+          districtId: 'D1',
+          districtName: 'District 1',
+          region: '1',
+          paidClubs: 100,
+          paidClubBase: 90,
+          clubGrowthPercent: 15.5,
+          totalPayments: 4000,
+          paymentBase: 4500,
+          paymentGrowthPercent: -11.1,
+          activeClubs: 100,
+          distinguishedClubs: 50,
+          selectDistinguished: 20,
+          presidentsDistinguished: 10,
+          distinguishedPercent: 50,
+          clubsRank: 1,
+          paymentsRank: 1,
+          distinguishedRank: 1,
+          aggregateScore: 300,
+        },
+      ],
+      date: '2025-11-22',
     })
 
     renderWithProviders(<LandingPage />)
@@ -370,34 +323,30 @@ describe('LandingPage - Table Cell Rendering', () => {
   })
 
   it('should display bullet separator between rank and percentage', async () => {
-    const apiClient = apiModule.apiClient as unknown as MockApiClient
-
-    apiClient.get.mockResolvedValueOnce({
-      data: {
-        rankings: [
-          {
-            districtId: 'D1',
-            districtName: 'District 1',
-            region: '1',
-            paidClubs: 100,
-            paidClubBase: 90,
-            clubGrowthPercent: 12.5,
-            totalPayments: 5000,
-            paymentBase: 4500,
-            paymentGrowthPercent: 11.1,
-            activeClubs: 100,
-            distinguishedClubs: 50,
-            selectDistinguished: 20,
-            presidentsDistinguished: 10,
-            distinguishedPercent: 50,
-            clubsRank: 1,
-            paymentsRank: 1,
-            distinguishedRank: 1,
-            aggregateScore: 300,
-          },
-        ],
-        date: '2025-11-22',
-      },
+    mockedFetchCdnRankings.mockResolvedValueOnce({
+      rankings: [
+        {
+          districtId: 'D1',
+          districtName: 'District 1',
+          region: '1',
+          paidClubs: 100,
+          paidClubBase: 90,
+          clubGrowthPercent: 12.5,
+          totalPayments: 5000,
+          paymentBase: 4500,
+          paymentGrowthPercent: 11.1,
+          activeClubs: 100,
+          distinguishedClubs: 50,
+          selectDistinguished: 20,
+          presidentsDistinguished: 10,
+          distinguishedPercent: 50,
+          clubsRank: 1,
+          paymentsRank: 1,
+          distinguishedRank: 1,
+          aggregateScore: 300,
+        },
+      ],
+      date: '2025-11-22',
     })
 
     renderWithProviders(<LandingPage />)
@@ -413,34 +362,30 @@ describe('LandingPage - Table Cell Rendering', () => {
   })
 
   it('should display both rank and percentage values visible and properly aligned', async () => {
-    const apiClient = apiModule.apiClient as unknown as MockApiClient
-
-    apiClient.get.mockResolvedValueOnce({
-      data: {
-        rankings: [
-          {
-            districtId: 'D1',
-            districtName: 'District 1',
-            region: '1',
-            paidClubs: 100,
-            paidClubBase: 90,
-            clubGrowthPercent: 12.5,
-            totalPayments: 5000,
-            paymentBase: 4500,
-            paymentGrowthPercent: 11.1,
-            activeClubs: 100,
-            distinguishedClubs: 50,
-            selectDistinguished: 20,
-            presidentsDistinguished: 10,
-            distinguishedPercent: 50,
-            clubsRank: 5,
-            paymentsRank: 3,
-            distinguishedRank: 1,
-            aggregateScore: 300,
-          },
-        ],
-        date: '2025-11-22',
-      },
+    mockedFetchCdnRankings.mockResolvedValueOnce({
+      rankings: [
+        {
+          districtId: 'D1',
+          districtName: 'District 1',
+          region: '1',
+          paidClubs: 100,
+          paidClubBase: 90,
+          clubGrowthPercent: 12.5,
+          totalPayments: 5000,
+          paymentBase: 4500,
+          paymentGrowthPercent: 11.1,
+          activeClubs: 100,
+          distinguishedClubs: 50,
+          selectDistinguished: 20,
+          presidentsDistinguished: 10,
+          distinguishedPercent: 50,
+          clubsRank: 5,
+          paymentsRank: 3,
+          distinguishedRank: 1,
+          aggregateScore: 300,
+        },
+      ],
+      date: '2025-11-22',
     })
 
     renderWithProviders(<LandingPage />)
@@ -475,35 +420,31 @@ describe('LandingPage - Layout Order (#83)', () => {
 
   // Helper to set up a standard data render
   const setupWithData = () => {
-    const apiClient = apiModule.apiClient as unknown as MockApiClient
-
     // Rankings query (dates come from CDN mock)
-    apiClient.get.mockResolvedValueOnce({
-      data: {
-        rankings: [
-          {
-            districtId: 'D1',
-            districtName: 'District 1',
-            region: '1',
-            paidClubs: 100,
-            paidClubBase: 90,
-            clubGrowthPercent: 12.5,
-            totalPayments: 5000,
-            paymentBase: 4500,
-            paymentGrowthPercent: 11.1,
-            activeClubs: 100,
-            distinguishedClubs: 50,
-            selectDistinguished: 20,
-            presidentsDistinguished: 10,
-            distinguishedPercent: 50,
-            clubsRank: 1,
-            paymentsRank: 1,
-            distinguishedRank: 1,
-            aggregateScore: 300,
-          },
-        ],
-        date: '2025-11-22',
-      },
+    mockedFetchCdnRankings.mockResolvedValueOnce({
+      rankings: [
+        {
+          districtId: 'D1',
+          districtName: 'District 1',
+          region: '1',
+          paidClubs: 100,
+          paidClubBase: 90,
+          clubGrowthPercent: 12.5,
+          totalPayments: 5000,
+          paymentBase: 4500,
+          paymentGrowthPercent: 11.1,
+          activeClubs: 100,
+          distinguishedClubs: 50,
+          selectDistinguished: 20,
+          presidentsDistinguished: 10,
+          distinguishedPercent: 50,
+          clubsRank: 1,
+          paymentsRank: 1,
+          distinguishedRank: 1,
+          aggregateScore: 300,
+        },
+      ],
+      date: '2025-11-22',
     })
   }
 
