@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
-import { apiClient } from '../services/api'
+import { fetchCdnManifest, fetchCdnDistrictSnapshot } from '../services/cdn'
+import { arrayToCSV, downloadCSV, generateFilename } from '../utils/csvExport'
 
 interface ExportState {
   isExporting: boolean
@@ -12,7 +13,8 @@ interface UseDistrictExportResult extends ExportState {
 }
 
 /**
- * Hook to handle district data export to CSV
+ * Hook to handle district data export to CSV.
+ * Fetches snapshot data from CDN and generates CSV client-side.
  */
 export const useDistrictExport = (
   districtId: string | null
@@ -27,7 +29,7 @@ export const useDistrictExport = (
   }, [])
 
   const exportToCSV = useCallback(
-    async (startDate?: string, endDate?: string) => {
+    async (startDate?: string, _endDate?: string) => {
       if (!districtId) {
         setState(prev => ({
           ...prev,
@@ -39,41 +41,66 @@ export const useDistrictExport = (
       setState({ isExporting: true, error: null })
 
       try {
-        const params = new URLSearchParams({ format: 'csv' })
-        if (startDate) params.append('startDate', startDate)
-        if (endDate) params.append('endDate', endDate)
+        // Determine the date for snapshot lookup
+        const date = startDate || (await fetchCdnManifest()).latestSnapshotDate
 
-        const response = await apiClient.get(
-          `/districts/${districtId}/export?${params.toString()}`,
-          {
-            responseType: 'blob',
-          }
-        )
+        // Fetch snapshot data from CDN
+        const snapshot = await fetchCdnDistrictSnapshot<{
+          districtId: string
+          districtName: string
+          membershipPayments: { currentMonthPaid?: number }
+          clubPerformance: Array<{
+            clubId: string
+            clubName: string
+            divisionName?: string
+            areaName?: string
+            memberCount: number
+            activeMemberCount?: number
+            dcpGoals: number
+            status: string
+            distinguishedLevel?: string | null
+          }>
+          metadata?: { sourceCsvDate?: string }
+        }>(date, districtId)
 
-        // Extract filename from Content-Disposition header or generate one
-        const contentDisposition = response.headers['content-disposition']
-        let filename = `district_${districtId}_analytics.csv`
-        if (contentDisposition) {
-          const filenameMatch = contentDisposition.match(
-            /filename="?([^";\n]+)"?/
-          )
-          if (filenameMatch?.[1]) {
-            filename = filenameMatch[1]
-          }
-        }
+        // Generate CSV from snapshot data
+        const headers = [
+          'Club ID',
+          'Club Name',
+          'Division',
+          'Area',
+          'Members',
+          'Active Members',
+          'DCP Goals',
+          'Status',
+          'Distinguished Level',
+        ]
 
-        // Create blob and trigger download
-        const blob = new Blob([response.data], {
-          type: 'text/csv;charset=utf-8',
-        })
-        const url = window.URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = filename
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        window.URL.revokeObjectURL(url)
+        const rows = (snapshot.clubPerformance || []).map(club => [
+          club.clubId,
+          club.clubName,
+          club.divisionName || 'N/A',
+          club.areaName || 'N/A',
+          club.memberCount,
+          club.activeMemberCount ?? club.memberCount,
+          club.dcpGoals,
+          club.status,
+          club.distinguishedLevel || 'None',
+        ])
+
+        const csvData: (string | number)[][] = [
+          [`District ${districtId} - ${snapshot.districtName || 'Analytics'}`],
+          [`Export Date: ${new Date().toISOString()}`],
+          [`Data As Of: ${snapshot.metadata?.sourceCsvDate || date}`],
+          [`Total Clubs: ${rows.length}`],
+          [],
+          headers,
+          ...rows,
+        ]
+
+        const csvContent = arrayToCSV(csvData)
+        const filename = generateFilename('analytics', districtId)
+        downloadCSV(csvContent, filename)
 
         setState({ isExporting: false, error: null })
       } catch (err) {

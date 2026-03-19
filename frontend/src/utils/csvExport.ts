@@ -5,7 +5,7 @@
 /**
  * Converts a 2D array to CSV string
  */
-const arrayToCSV = (data: (string | number)[][]): string => {
+export const arrayToCSV = (data: (string | number)[][]): string => {
   return data
     .map(row =>
       row
@@ -30,7 +30,7 @@ const arrayToCSV = (data: (string | number)[][]): string => {
 /**
  * Triggers a browser download of CSV data
  */
-const downloadCSV = (csvContent: string, filename: string): void => {
+export const downloadCSV = (csvContent: string, filename: string): void => {
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   const link = document.createElement('a')
   const url = URL.createObjectURL(blob)
@@ -468,44 +468,76 @@ export const exportHistoricalRankData = (
 }
 
 /**
- * Export district analytics data via backend API endpoint
- * This triggers a server-side CSV generation with comprehensive analytics
+ * Export district analytics data using CDN snapshot data.
+ * Generates CSV client-side from CDN snapshot data.
  */
 export const exportDistrictAnalytics = async (
   districtId: string,
   startDate?: string,
-  endDate?: string
+  _endDate?: string
 ): Promise<void> => {
   try {
-    // Build query parameters
-    const params = new URLSearchParams({ format: 'csv' })
-    if (startDate) params.append('startDate', startDate)
-    if (endDate) params.append('endDate', endDate)
+    // Dynamically import CDN services to avoid circular dependencies
+    const { fetchCdnManifest, fetchCdnDistrictSnapshot } =
+      await import('../services/cdn')
 
-    // Fetch CSV from backend
-    const response = await fetch(
-      `/api/districts/${districtId}/export?${params.toString()}`
+    const date = startDate || (await fetchCdnManifest()).latestSnapshotDate
+
+    const snapshot = await fetchCdnDistrictSnapshot<{
+      districtId: string
+      districtName: string
+      clubPerformance: Array<{
+        clubId: string
+        clubName: string
+        divisionName?: string
+        areaName?: string
+        memberCount: number
+        activeMemberCount?: number
+        dcpGoals: number
+        status: string
+        distinguishedLevel?: string | null
+      }>
+      metadata?: { sourceCsvDate?: string }
+    }>(date, districtId)
+
+    const headers = [
+      'Club ID',
+      'Club Name',
+      'Division',
+      'Area',
+      'Members',
+      'Active Members',
+      'DCP Goals',
+      'Status',
+      'Distinguished Level',
+    ]
+
+    const rows: (string | number)[][] = (snapshot.clubPerformance || []).map(
+      club => [
+        club.clubId,
+        club.clubName,
+        club.divisionName || 'N/A',
+        club.areaName || 'N/A',
+        club.memberCount,
+        club.activeMemberCount ?? club.memberCount,
+        club.dcpGoals,
+        club.status,
+        club.distinguishedLevel || 'None',
+      ]
     )
 
-    if (!response.ok) {
-      throw new Error(`Export failed: ${response.statusText}`)
-    }
+    const csvData: (string | number)[][] = [
+      [`District ${districtId} - ${snapshot.districtName || 'Analytics'}`],
+      [`Export Date: ${new Date().toISOString()}`],
+      [`Data As Of: ${snapshot.metadata?.sourceCsvDate || date}`],
+      [`Total Clubs: ${rows.length}`],
+      [],
+      headers,
+      ...rows,
+    ]
 
-    // Get the filename from Content-Disposition header or generate one
-    const contentDisposition = response.headers.get('Content-Disposition')
-    let filename = `district_${districtId}_analytics.csv`
-
-    if (contentDisposition) {
-      const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/)
-      if (filenameMatch && filenameMatch[1]) {
-        filename = filenameMatch[1]
-      }
-    }
-
-    // Get the CSV content
-    const csvContent = await response.text()
-
-    // Trigger download
+    const csvContent = arrayToCSV(csvData)
+    const filename = generateFilename('analytics', districtId)
     downloadCSV(csvContent, filename)
   } catch (error) {
     console.error('Failed to export district analytics:', error)

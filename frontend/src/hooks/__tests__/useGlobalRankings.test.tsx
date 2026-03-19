@@ -25,28 +25,20 @@ import {
   buildYearlyRankingSummaries,
   type EndOfYearRankings,
 } from '../useGlobalRankings'
-import { apiClient } from '../../services/api'
-import { fetchCdnDates } from '../../services/cdn'
+import { fetchCdnDates, fetchCdnRankHistory } from '../../services/cdn'
 import type {
   RankHistoryResponse,
   ProgramYearWithData,
 } from '../../types/districts'
 
-// Mock the CDN service (used by useAvailableProgramYears)
+// Mock the CDN service (used by useAvailableProgramYears + useRankHistory)
 vi.mock('../../services/cdn', () => ({
   fetchCdnDates: vi.fn(),
-}))
-
-// Mock the API client (still used by useRankHistory)
-vi.mock('../../services/api', () => ({
-  apiClient: {
-    get: vi.fn(),
-    post: vi.fn(),
-  },
+  fetchCdnRankHistory: vi.fn(),
 }))
 
 const mockedFetchCdnDates = vi.mocked(fetchCdnDates)
-const mockedApiClient = vi.mocked(apiClient)
+const mockedFetchCdnRankHistory = vi.mocked(fetchCdnRankHistory)
 
 /**
  * Create simplified CDN dates with unique dates across 3 program years.
@@ -196,12 +188,11 @@ describe('useGlobalRankings', () => {
       // Mock CDN dates (used by useAvailableProgramYears)
       mockedFetchCdnDates.mockResolvedValue(createSimpleDatesForRankings())
 
-      // Mock Express POST for rank history batch
-      mockedApiClient.post.mockImplementation((url: string) => {
-        if (url.includes('rank-history-batch')) {
-          return Promise.resolve({ data: [mockRankHistory] })
-        }
-        return Promise.reject(new Error(`Unexpected POST URL: ${url}`))
+      // Mock CDN rank history (used by useRankHistory)
+      mockedFetchCdnRankHistory.mockResolvedValue({
+        districtId: mockRankHistory.districtId,
+        districtName: mockRankHistory.districtName,
+        history: mockRankHistory.history,
       })
 
       const { result } = renderHook(() => useGlobalRankings({ districtId }), {
@@ -225,11 +216,10 @@ describe('useGlobalRankings', () => {
       const mockRankHistory = createMockRankHistoryResponse(districtId)
 
       mockedFetchCdnDates.mockResolvedValue(createSimpleDatesForRankings())
-      mockedApiClient.post.mockImplementation((url: string) => {
-        if (url.includes('rank-history-batch')) {
-          return Promise.resolve({ data: [mockRankHistory] })
-        }
-        return Promise.reject(new Error(`Unexpected POST URL: ${url}`))
+      mockedFetchCdnRankHistory.mockResolvedValue({
+        districtId: mockRankHistory.districtId,
+        districtName: mockRankHistory.districtName,
+        history: mockRankHistory.history,
       })
 
       const { result } = renderHook(() => useGlobalRankings({ districtId }), {
@@ -254,11 +244,10 @@ describe('useGlobalRankings', () => {
       const mockRankHistory = createMockRankHistoryResponse(districtId)
 
       mockedFetchCdnDates.mockResolvedValue(createSimpleDatesForRankings())
-      mockedApiClient.post.mockImplementation((url: string) => {
-        if (url.includes('rank-history-batch')) {
-          return Promise.resolve({ data: [mockRankHistory] })
-        }
-        return Promise.reject(new Error(`Unexpected POST URL: ${url}`))
+      mockedFetchCdnRankHistory.mockResolvedValue({
+        districtId: mockRankHistory.districtId,
+        districtName: mockRankHistory.districtName,
+        history: mockRankHistory.history,
       })
 
       const { result } = renderHook(() => useGlobalRankings({ districtId }), {
@@ -290,14 +279,20 @@ describe('useGlobalRankings', () => {
             setTimeout(() => resolve(createSimpleDatesForRankings()), 50)
           )
       )
-      mockedApiClient.post.mockImplementation((url: string) => {
-        if (url.includes('rank-history-batch')) {
-          return new Promise(resolve =>
-            setTimeout(() => resolve({ data: [mockRankHistory] }), 50)
+      mockedFetchCdnRankHistory.mockImplementation(
+        () =>
+          new Promise(resolve =>
+            setTimeout(
+              () =>
+                resolve({
+                  districtId: mockRankHistory.districtId,
+                  districtName: mockRankHistory.districtName,
+                  history: mockRankHistory.history,
+                }),
+              50
+            )
           )
-        }
-        return Promise.reject(new Error(`Unexpected POST URL: ${url}`))
-      })
+      )
 
       const { result } = renderHook(() => useGlobalRankings({ districtId }), {
         wrapper: createWrapper(),
@@ -339,11 +334,10 @@ describe('useGlobalRankings', () => {
       const mockRankHistory = createMockRankHistoryResponse(districtId)
 
       mockedFetchCdnDates.mockResolvedValue(createSimpleDatesForRankings())
-      mockedApiClient.post.mockImplementation((url: string) => {
-        if (url.includes('rank-history-batch')) {
-          return Promise.resolve({ data: [mockRankHistory] })
-        }
-        return Promise.reject(new Error(`Unexpected POST URL: ${url}`))
+      mockedFetchCdnRankHistory.mockResolvedValue({
+        districtId: mockRankHistory.districtId,
+        districtName: mockRankHistory.districtName,
+        history: mockRankHistory.history,
       })
 
       const { result } = renderHook(() => useGlobalRankings({ districtId }), {
@@ -368,24 +362,10 @@ describe('useGlobalRankings', () => {
         generatedAt: '2025-11-15T00:00:00Z',
       })
 
-      mockedApiClient.post.mockImplementation((url: string) => {
-        if (url.includes('rank-history-batch')) {
-          return Promise.resolve({
-            data: [
-              {
-                districtId,
-                districtName: `District ${districtId}`,
-                history: [],
-                programYear: {
-                  startDate: '',
-                  endDate: '',
-                  year: '',
-                },
-              },
-            ],
-          })
-        }
-        return Promise.reject(new Error(`Unexpected POST URL: ${url}`))
+      mockedFetchCdnRankHistory.mockResolvedValue({
+        districtId,
+        districtName: `District ${districtId}`,
+        history: [],
       })
 
       const { result } = renderHook(() => useGlobalRankings({ districtId }), {
