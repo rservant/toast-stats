@@ -166,7 +166,10 @@ export class HttpCsvDownloader {
       const districtIds = new Set<string>()
       for (const record of records) {
         const districtId = record['DISTRICT']?.trim()
-        if (districtId) {
+        // Filter to valid district IDs only: alphanumeric with no spaces or slashes.
+        // Accepts: '01', '61', '130', 'F', 'U' (valid single-letter districts)
+        // Rejects: 'As of 02/26/2026' and other CSV footer/metadata rows (#145)
+        if (districtId && /^[A-Z0-9]+$/i.test(districtId)) {
           districtIds.add(districtId)
         }
       }

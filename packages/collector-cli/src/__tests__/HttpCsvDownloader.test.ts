@@ -172,5 +172,24 @@ describe('HttpCsvDownloader URL Construction (#123)', () => {
 
       expect(districts).toEqual([])
     })
+
+    it('should filter out "As of" date rows and non-alphanumeric district IDs (#145)', () => {
+      const csv = `"REGION","DISTRICT","DSP","Training"
+"01","02","Y","Y"
+"01","109","Y","Y"
+"02","F","Y","Y"
+"02","U","Y","Y"
+"As of 03/19/2026","","","",""
+"","As of 03/19/2026","","",""
+`
+      const downloader = new HttpCsvDownloader({ ratePerSecond: 1 })
+      const districts = downloader.parseDistrictsFromSummary(csv)
+
+      // Only valid alphanumeric district IDs should be kept
+      expect(districts).toEqual(['02', '109', 'F', 'U'])
+      // "As of 03/19/2026" should NOT appear
+      expect(districts).not.toContain('As of 03/19/2026')
+      expect(districts).not.toContain('As of 03')
+    })
   })
 })
