@@ -565,3 +565,10 @@
 **Rule**: When adding new CDN files, check if the source data already exists in the snapshot directory before building new pipeline stages. The "Generate CDN manifests" step can expand with inline `node -e` scripts for simple file extractions.
 **Warning**: The error handling for "no snapshots available" changed from Axios `{ response: { data: { error: { code } } } }` to CDN `Error('CDN rankings fetch failed: 404')`. Both paths are now checked via `isCdn404 || legacyResponse?.code === 'NO_SNAPSHOT_AVAILABLE'`. When the Express server is fully removed, the legacy check can be deleted.
 **rules.md**: none
+
+## 🗓️ 2026-03-19 — bulk-cdn-hook-conversion (#173)
+
+**Discovery**: Converting 7 hooks from Express to CDN required only 3 new CDN helper functions — most URL builders already existed. The real work was rewriting 3 test files (-419 lines net). When hooks derive data client-side (like grouping dates into program years), tests must validate the derived shape, not just assert CDN was called.
+**Proof**: All 1844 tests pass (100 files) after converting `useDistricts`, `useClubs`, `useEducationalAwards`, `useDistrictStatistics`, `useMembershipHistory`, `useDistrictCachedDates`, `useAvailableProgramYears`.
+**Rule**: Use `||` not `??` for fallback to manifest date — `??` treats empty string as truthy. Test dates for "incomplete" program years must use dates genuinely in the future when the real clock is involved.
+**rules.md**: none
