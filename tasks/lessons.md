@@ -580,3 +580,11 @@
 **Rule**: When deleting a workspace from a monorepo, update the root `package.json` workspaces array AND run `npm install` BEFORE running any `--workspaces` commands — otherwise npm will fail trying to find the deleted workspace. Re-audit CI/CD pipeline for backend-specific steps (typecheck, test, build, deploy).
 **Warning**: The Cloud Run service, LB backend, Serverless NEG, and `api.taverns.red` DNS must still be cleaned up manually via `gcloud`. The code changes don't delete infrastructure.
 **rules.md**: none
+
+## 🗓️ 2026-03-19 — ad-hoc-scripts-vs-pipeline-commands (#181)
+
+**Discovery**: After the GCS data reset, restoring derived data required 4+ ad-hoc scripts (snapshot-index generator, CDN manifest fixers, batch-pipeline.sh). Each was fragile, non-reproducible, and required manual GCS auth. The same transform→compute-analytics→manifest pipeline steps are already implemented in the CI workflow and collector-cli services — they just weren't composable from the CLI.
+**Proof**: The user pointed out this pattern mid-task: "I really dislike that we seem to be creating random hacks to get things back in order."
+**Rule**: When a recovery operation requires >2 manual steps that mirror existing pipeline logic, stop and build a proper CLI command. Ad-hoc scripts in /tmp are a code smell for missing CLI subcommands.
+**Warning**: New data artifacts (e.g., rank-history/) need to be added to `RebuildService.rebuild()` when they are introduced, otherwise they'll be missed during full rebuilds.
+**rules.md**: none

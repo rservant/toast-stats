@@ -60,6 +60,7 @@ export interface RebuildResult {
     datesJson?: string
     latestJson?: string
     rankingsJson?: string
+    rankHistoryDir?: string
   }
   duration_ms: number
 }
@@ -352,6 +353,123 @@ export class RebuildService {
   }
 
   /**
+   * Generate v1/rank-history/{districtId}.json from all snapshot rankings.
+   *
+   * Reads all-districts-rankings.json from every snapshot date directory,
+   * builds per-district rank history sorted by date, deduplicates, and
+   * writes one JSON file per district.
+   *
+   * Mirrors the logic in data-pipeline.yml Step 5b (lines 402-491).
+   */
+  async generateRankHistory(): Promise<string> {
+    const snapshotsDir = path.join(this.cacheDir, 'snapshots')
+    const outDir = path.join(this.cacheDir, 'v1', 'rank-history')
+    await fs.mkdir(outDir, { recursive: true })
+
+    // Build per-district index from all rankings files
+    const index = new Map<
+      string,
+      {
+        districtId: string
+        districtName: string
+        history: Array<{
+          date: string
+          aggregateScore: number
+          clubsRank: number
+          paymentsRank: number
+          distinguishedRank: number
+          totalDistricts: number
+          overallRank: number
+        }>
+      }
+    >()
+
+    try {
+      const dateDirs = await fs.readdir(snapshotsDir, { withFileTypes: true })
+      for (const dateDir of dateDirs) {
+        if (!dateDir.isDirectory() || !/^\d{4}-\d{2}-\d{2}$/.test(dateDir.name))
+          continue
+
+        const rankingsPath = path.join(
+          snapshotsDir,
+          dateDir.name,
+          'all-districts-rankings.json'
+        )
+
+        try {
+          const content = await fs.readFile(rankingsPath, 'utf-8')
+          const data = JSON.parse(content) as {
+            rankings: Array<{
+              districtId: string
+              districtName: string
+              aggregateScore: number
+              clubsRank: number
+              paymentsRank: number
+              distinguishedRank: number
+              overallRank?: number
+            }>
+            metadata: {
+              sourceCsvDate?: string
+              totalDistricts?: number
+            }
+          }
+
+          const date = data.metadata.sourceCsvDate ?? dateDir.name
+          const totalDistricts = data.metadata.totalDistricts ?? 0
+
+          for (const r of data.rankings) {
+            if (!index.has(r.districtId)) {
+              index.set(r.districtId, {
+                districtId: r.districtId,
+                districtName: r.districtName,
+                history: [],
+              })
+            }
+            const entry = index.get(r.districtId)!
+            // Update name if it was a default placeholder
+            if (entry.districtName === `District ${r.districtId}`) {
+              entry.districtName = r.districtName
+            }
+            entry.history.push({
+              date,
+              aggregateScore: r.aggregateScore,
+              clubsRank: r.clubsRank,
+              paymentsRank: r.paymentsRank,
+              distinguishedRank: r.distinguishedRank,
+              totalDistricts,
+              overallRank: r.overallRank ?? 0,
+            })
+          }
+        } catch {
+          // Skip dates without rankings (expected for older data)
+        }
+      }
+    } catch (error) {
+      const err = error as { code?: string }
+      if (err.code !== 'ENOENT') throw error
+    }
+
+    // Sort, deduplicate, and write each district
+    let totalPoints = 0
+    for (const [id, entry] of index) {
+      entry.history.sort((a, b) => a.date.localeCompare(b.date))
+      const seen = new Set<string>()
+      entry.history = entry.history.filter(p => {
+        if (seen.has(p.date)) return false
+        seen.add(p.date)
+        return true
+      })
+      totalPoints += entry.history.length
+      await fs.writeFile(path.join(outDir, `${id}.json`), JSON.stringify(entry))
+    }
+
+    this.logger.info(
+      `Generated rank history: ${index.size} districts, ${totalPoints} total points`
+    )
+    return outDir
+  }
+
+  /**
    * Full rebuild: process all dates, then generate manifests.
    */
   async rebuild(options?: RebuildOptions): Promise<RebuildResult> {
@@ -426,6 +544,13 @@ export class RebuildService {
       } catch (e) {
         this.logger.error(
           `Failed to generate rankings manifest: ${e instanceof Error ? e.message : e}`
+        )
+      }
+      try {
+        manifests.rankHistoryDir = await this.generateRankHistory()
+      } catch (e) {
+        this.logger.error(
+          `Failed to generate rank history: ${e instanceof Error ? e.message : e}`
         )
       }
     }
