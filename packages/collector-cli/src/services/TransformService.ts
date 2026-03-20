@@ -947,7 +947,16 @@ export class TransformService {
       for (const entry of entries) {
         if (entry.isDirectory() && entry.name.startsWith('district-')) {
           const districtId = entry.name.replace('district-', '')
-          districts.push(districtId)
+          // Validate district ID — legacy GCS data may contain stray directories
+          // like "district-As of 03" from before the scraper parsing fix (#145)
+          if (this.isValidDistrictId(districtId)) {
+            districts.push(districtId)
+          } else {
+            this.logger.debug('Skipping invalid district directory', {
+              name: entry.name,
+              reason: this.getDistrictIdRejectionReason(districtId),
+            })
+          }
         }
       }
 
