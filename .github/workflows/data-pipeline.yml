@@ -379,7 +379,7 @@ jobs:
 
             # 4. Compute analytics
             echo "Computing analytics for ${DATE}..."
-            if ! npx collector-cli compute-analytics --date "${DATE}" --verbose 2>&1; then
+            if ! npx collector-cli compute-analytics --date "${DATE}" --force-analytics --verbose 2>&1; then
               echo "::warning::Compute failed for ${DATE}"
               FAILED=$((FAILED + 1))
               # Still upload whatever snapshots were generated

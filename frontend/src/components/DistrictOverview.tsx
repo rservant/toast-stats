@@ -50,11 +50,22 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
 
   const isLoading = isLoadingAnalytics
 
-  // Use the prop value from aggregated analytics when available (correct program-year diff).
-  // Fall back to deriving from sparse /analytics trend (cross-year diff, less accurate).
+  // Merge performance targets: prefer prop (from usePerformanceTargets CDN hook),
+  // fall back to analytics.performanceTargets (inline in analytics JSON).
+  const pt = performanceTargets ?? analytics?.performanceTargets
+
+  // Use performance targets base for member change when available (correct program-year diff).
+  // Fall back to the prop value from aggregated analytics, then sparse trend diff.
   // Fix #76: the sparse membershipTrend only has 2 points spanning a full calendar year,
   // giving a cross-year diff (+61) instead of the program-year diff (-66).
   const actualMemberCountChange = React.useMemo(() => {
+    // Prefer performance targets: current payments - payment base = program-year change
+    if (
+      pt?.membershipPayments.current != null &&
+      pt?.membershipPayments.base != null
+    ) {
+      return pt.membershipPayments.current - pt.membershipPayments.base
+    }
     if (netMemberChange !== undefined) return netMemberChange
     const trend = analytics?.membershipTrend
     if (!trend || trend.length < 2) return 0
@@ -62,11 +73,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
     const last = trend[trend.length - 1]
     if (!first || !last) return 0
     return last.count - first.count
-  }, [netMemberChange, analytics?.membershipTrend])
-
-  // Merge performance targets: prefer prop (from usePerformanceTargets CDN hook),
-  // fall back to analytics.performanceTargets (inline in analytics JSON).
-  const pt = performanceTargets ?? analytics?.performanceTargets
+  }, [netMemberChange, analytics?.membershipTrend, pt])
 
   const nullRankings = {
     worldRank: null,
