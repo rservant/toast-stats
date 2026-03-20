@@ -198,10 +198,18 @@ export class AnalyticsComputer implements IAnalyticsComputer {
 
     // Compute top growth clubs from MembershipAnalyticsModule
     // Issue #84: topGrowthClubs must be included in the base districtAnalytics
-    const topGrowthClubs = this.membershipModule.generateMembershipAnalytics(
-      districtId,
-      sortedSnapshots
-    ).topGrowthClubs
+    // Issue #185: When preloadedClubTrends are available (pipeline path),
+    // use them for dense multi-point growth. The snapshots array only has
+    // 1-2 entries (today + optional prev year), yielding growth=0.
+    const topGrowthClubs = options?.preloadedClubTrends
+      ? this.calculateTopGrowthFromTrends(
+          options.preloadedClubTrends,
+          clubHealth.allClubs
+        )
+      : this.membershipModule.generateMembershipAnalytics(
+          districtId,
+          sortedSnapshots
+        ).topGrowthClubs
 
     // Build district analytics (base result)
     const districtAnalytics: DistrictAnalytics = {
@@ -404,6 +412,62 @@ export class AnalyticsComputer implements IAnalyticsComputer {
    */
   private normalizeDistrictId(id: string): string {
     return id.replace(/\D/g, '')
+  }
+
+  /**
+   * Calculate top growth clubs from preloaded club trends (ClubTrendsStore).
+   *
+   * Issue #185: The daily pipeline only passes 1-2 snapshots to AnalyticsComputer,
+   * so MembershipAnalyticsModule.generateMembershipAnalytics() sees ≤1 data point
+   * per club → growth is always 0 → topGrowthClubs is empty.
+   *
+   * The ClubTrendsStore accumulates one data point per pipeline run across the
+   * entire program year, giving dense multi-point membership data.
+   *
+   * @param preloadedClubTrends - Dense club trend data from ClubTrendsStore
+   * @param allClubs - All clubs from ClubHealthAnalyticsModule for name lookup
+   * @returns Top 10 clubs by membership growth
+   */
+  private calculateTopGrowthFromTrends(
+    preloadedClubTrends: Record<
+      string,
+      {
+        membershipTrend: Array<{ date: string; count: number }>
+        dcpGoalsTrend: Array<{ date: string; goalsAchieved: number }>
+      }
+    >,
+    allClubs: ClubTrend[]
+  ): Array<{ clubId: string; clubName: string; growth: number }> {
+    // Build a name lookup from allClubs
+    const nameMap = new Map<string, string>()
+    for (const club of allClubs) {
+      nameMap.set(club.clubId, club.clubName)
+    }
+
+    const growthClubs: Array<{
+      clubId: string
+      clubName: string
+      growth: number
+    }> = []
+
+    for (const [clubId, trends] of Object.entries(preloadedClubTrends)) {
+      const trend = trends.membershipTrend
+      if (trend.length < 2) continue
+
+      const first = trend[0]?.count ?? 0
+      const last = trend[trend.length - 1]?.count ?? 0
+      const growth = last - first
+
+      if (growth > 0) {
+        growthClubs.push({
+          clubId,
+          clubName: nameMap.get(clubId) ?? clubId,
+          growth,
+        })
+      }
+    }
+
+    return growthClubs.sort((a, b) => b.growth - a.growth).slice(0, 10)
   }
 
   /**

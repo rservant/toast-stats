@@ -47,6 +47,8 @@ interface CdnPerformanceTargetsData {
   paidClubsRankings: CdnRankings
   membershipPaymentsRankings: CdnRankings
   distinguishedClubsRankings: CdnRankings
+  paidClubBase?: number
+  paymentBase?: number
   paidClubsBase?: number
   membershipPaymentsBase?: number
   distinguishedClubsBase?: number
@@ -128,14 +130,14 @@ function convertToPerformanceTargets(
   return {
     paidClubs: buildMetric(
       cdn.paidClubsCount,
-      cdn.paidClubsBase,
+      cdn.paidClubBase ?? cdn.paidClubsBase,
       cdn.paidClubsTargets,
       cdn.paidClubsAchievedLevel,
       cdn.paidClubsRankings
     ),
     membershipPayments: buildMetric(
       cdn.currentProgress.membership,
-      cdn.membershipPaymentsBase,
+      cdn.paymentBase ?? cdn.membershipPaymentsBase,
       cdn.membershipPaymentsTargets,
       cdn.membershipPaymentsAchievedLevel,
       cdn.membershipPaymentsRankings
