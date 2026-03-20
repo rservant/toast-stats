@@ -237,13 +237,10 @@ export const useDistrictAnalytics = (
         throw new Error('District ID is required')
       }
 
-      // Fetch from CDN — pre-computed JSON
-      const manifest = await fetchCdnManifest()
-      const url = cdnAnalyticsUrl(
-        manifest.latestSnapshotDate,
-        districtId,
-        'analytics'
-      )
+      // Use the selected date for CDN URL; fall back to manifest latest
+      const snapshotDate =
+        endDate || (await fetchCdnManifest()).latestSnapshotDate
+      const url = cdnAnalyticsUrl(snapshotDate, districtId, 'analytics')
       const file = await fetchFromCdn<{ data: DistrictAnalytics }>(url)
       return file.data
     },

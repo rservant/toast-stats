@@ -4,8 +4,7 @@ import { useDistricts } from '../hooks/useDistricts'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
 import { useAggregatedAnalytics } from '../hooks/useAggregatedAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
-import { useLeadershipInsights } from '../hooks/useLeadershipInsights'
-import { useDistinguishedClubAnalytics } from '../hooks/useDistinguishedClubAnalytics'
+import { usePerformanceTargets } from '../hooks/usePerformanceTargets'
 import { usePaymentsTrend } from '../hooks/usePaymentsTrend'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useProgramYear } from '../contexts/ProgramYearContext'
@@ -26,9 +25,7 @@ import { ClubDetailModal } from '../components/ClubDetailModal'
 import { MembershipTrendChart } from '../components/MembershipTrendChart'
 import { MembershipPaymentsChart } from '../components/MembershipPaymentsChart'
 import { YearOverYearComparison } from '../components/YearOverYearComparison'
-import { LeadershipInsights } from '../components/LeadershipInsights'
 import { TopGrowthClubs } from '../components/TopGrowthClubs'
-import { DCPGoalAnalysis } from '../components/DCPGoalAnalysis'
 import { DivisionPerformanceCards } from '../components/DivisionPerformanceCards'
 import { DivisionAreaRecognitionPanel } from '../components/DivisionAreaRecognitionPanel'
 import { DCPProjectionsTable } from '../components/DCPProjectionsTable'
@@ -36,7 +33,7 @@ import { DCPProjectionsTable } from '../components/DCPProjectionsTable'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { ErrorDisplay, EmptyState } from '../components/ErrorDisplay'
 import { LoadingSkeleton } from '../components/LoadingSkeleton'
-import { DistrictExportButton } from '../components/DistrictExportButton'
+
 import { LazyChart } from '../components/LazyChart'
 import GlobalRankingsTab from '../components/GlobalRankingsTab'
 
@@ -220,7 +217,10 @@ const DistrictDetailPage: React.FC = () => {
     isLoading: isLoadingAggregated,
     error: aggregatedError,
     refetch: refetchAggregated,
-  } = useAggregatedAnalytics(hasValidDates ? districtId || null : null)
+  } = useAggregatedAnalytics(
+    hasValidDates ? districtId || null : null,
+    effectiveEndDate ?? undefined
+  )
 
   // Fetch full analytics for detailed views (clubs, divisions, analytics tabs)
   // This provides full club arrays needed for tables and detailed panels
@@ -243,21 +243,11 @@ const DistrictDetailPage: React.FC = () => {
       'divisions'
     )
 
-  // Fetch leadership insights for analytics tab - use program year boundaries
-  const { data: leadershipInsights, isLoading: isLoadingLeadership } =
-    useLeadershipInsights(
-      hasValidDates ? districtId || null : null,
-      effectiveProgramYear?.startDate,
-      effectiveEndDate ?? undefined
-    )
-
-  // Fetch distinguished club analytics for analytics tab - use program year boundaries
-  const { data: distinguishedAnalytics, isLoading: isLoadingDistinguished } =
-    useDistinguishedClubAnalytics(
-      hasValidDates ? districtId || null : null,
-      effectiveProgramYear?.startDate,
-      effectiveEndDate ?? undefined
-    )
+  // Fetch performance targets and rankings for overview cards (#183)
+  const { data: performanceTargets } = usePerformanceTargets(
+    hasValidDates ? districtId || null : null,
+    effectiveEndDate ?? undefined
+  )
 
   // Fetch payment trend data for trends tab - fetch 3 years for multi-year comparison
   const { data: paymentsTrendData, isLoading: isLoadingPaymentsTrend } =
@@ -500,27 +490,6 @@ const DistrictDetailPage: React.FC = () => {
                     </div>
                   </div>
                 )}
-
-                {/* Actions */}
-                {districtId && (
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs sm:text-sm font-tm-body font-medium text-gray-700 opacity-0 pointer-events-none hidden sm:block">
-                      Actions
-                    </label>
-                    <div className="flex gap-2">
-                      {hasOverviewData &&
-                        hasValidDates &&
-                        effectiveProgramYear &&
-                        effectiveEndDate && (
-                          <DistrictExportButton
-                            districtId={districtId}
-                            startDate={effectiveProgramYear.startDate}
-                            endDate={effectiveEndDate}
-                          />
-                        )}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -609,6 +578,7 @@ const DistrictDetailPage: React.FC = () => {
                       selectedDate: effectiveEndDate,
                     })}
                     programYearStartDate={effectiveProgramYear.startDate}
+                    performanceTargets={performanceTargets ?? undefined}
                     netMemberChange={(() => {
                       // Fix #76: compute from rich aggregated trend (program-year scoped, 134+ points)
                       const trend = aggregatedAnalytics?.trends?.membership
@@ -756,12 +726,6 @@ const DistrictDetailPage: React.FC = () => {
 
             {activeTab === 'analytics' && (
               <>
-                {/* Leadership Insights */}
-                <LeadershipInsights
-                  insights={leadershipInsights || null}
-                  isLoading={isLoadingLeadership}
-                />
-
                 {/* Top Growth Clubs */}
                 {analytics ? (
                   <TopGrowthClubs
@@ -794,20 +758,6 @@ const DistrictDetailPage: React.FC = () => {
                   />
                 ) : (
                   isLoadingAnalytics && <LoadingSkeleton variant="card" />
-                )}
-
-                {/* DCP Goal Analysis */}
-                {distinguishedAnalytics ? (
-                  <LazyChart height="400px">
-                    <DCPGoalAnalysis
-                      dcpGoalAnalysis={distinguishedAnalytics.dcpGoalAnalysis}
-                      isLoading={isLoadingDistinguished}
-                    />
-                  </LazyChart>
-                ) : (
-                  isLoadingDistinguished && (
-                    <LoadingSkeleton variant="chart" height="400px" />
-                  )
                 )}
 
                 {/* DCP Projections Table */}

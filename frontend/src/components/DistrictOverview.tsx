@@ -1,7 +1,6 @@
 import React from 'react'
 import { useDistrictAnalytics } from '../hooks/useDistrictAnalytics'
-import { ExportButton } from './ExportButton'
-import { exportDistrictAnalytics } from '../utils/csvExport'
+import type { DistrictPerformanceTargets } from '../hooks/useDistrictAnalytics'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { ErrorDisplay, EmptyState } from './ErrorDisplay'
 import { TargetProgressCard } from './TargetProgressCard'
@@ -10,6 +9,12 @@ interface DistrictOverviewProps {
   districtId: string
   selectedDate?: string
   programYearStartDate?: string
+  /**
+   * Pre-fetched performance targets from the usePerformanceTargets hook.
+   * Contains world rank, percentile, region rank, and target thresholds.
+   * Fixes #183 — rankings now populated from CDN performance-targets.json.
+   */
+  performanceTargets?: DistrictPerformanceTargets | undefined
   /**
    * Net member count change for the program year, computed from the rich
    * aggregated analytics trend (134+ data points). When provided, this
@@ -24,6 +29,7 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
   districtId,
   selectedDate,
   programYearStartDate,
+  performanceTargets,
   netMemberChange,
 }) => {
   // Fetch analytics with program year boundaries
@@ -58,29 +64,25 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
     return last.count - first.count
   }, [netMemberChange, analytics?.membershipTrend])
 
+  // Merge performance targets: prefer prop (from usePerformanceTargets CDN hook),
+  // fall back to analytics.performanceTargets (inline in analytics JSON).
+  const pt = performanceTargets ?? analytics?.performanceTargets
+
+  const nullRankings = {
+    worldRank: null,
+    worldPercentile: null,
+    regionRank: null,
+    totalDistricts: 0,
+    totalInRegion: 0,
+    region: null,
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Overview</h2>
         </div>
-
-        {/* Export Button */}
-        {analytics && (
-          <div className="flex flex-col gap-2">
-            <ExportButton
-              onExport={() =>
-                exportDistrictAnalytics(
-                  districtId,
-                  analytics.dateRange.start,
-                  analytics.dateRange.end
-                )
-              }
-              label="Export Analytics"
-              disabled={!analytics}
-            />
-          </div>
-        )}
       </div>
 
       {/* Loading State */}
@@ -133,25 +135,11 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
                 />
               </svg>
             }
-            current={
-              analytics.performanceTargets?.paidClubs.current ??
-              analytics.allClubs.length
-            }
-            base={analytics.performanceTargets?.paidClubs.base ?? null}
-            targets={analytics.performanceTargets?.paidClubs.targets ?? null}
-            achievedLevel={
-              analytics.performanceTargets?.paidClubs.achievedLevel ?? null
-            }
-            rankings={
-              analytics.performanceTargets?.paidClubs.rankings ?? {
-                worldRank: null,
-                worldPercentile: null,
-                regionRank: null,
-                totalDistricts: 0,
-                totalInRegion: 0,
-                region: null,
-              }
-            }
+            current={pt?.paidClubs.current ?? analytics.allClubs.length}
+            base={pt?.paidClubs.base ?? null}
+            targets={pt?.paidClubs.targets ?? null}
+            achievedLevel={pt?.paidClubs.achievedLevel ?? null}
+            rankings={pt?.paidClubs.rankings ?? nullRankings}
             colorScheme="blue"
             tooltipContent="Paid clubs count with targets for each recognition level. Thriving, Vulnerable, and Intervention Required badges show club health status."
             badges={
@@ -187,27 +175,12 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
               </svg>
             }
             current={
-              analytics.performanceTargets?.membershipPayments.current ??
-              analytics.totalMembership
+              pt?.membershipPayments.current ?? analytics.totalMembership
             }
-            base={analytics.performanceTargets?.membershipPayments.base ?? null}
-            targets={
-              analytics.performanceTargets?.membershipPayments.targets ?? null
-            }
-            achievedLevel={
-              analytics.performanceTargets?.membershipPayments.achievedLevel ??
-              null
-            }
-            rankings={
-              analytics.performanceTargets?.membershipPayments.rankings ?? {
-                worldRank: null,
-                worldPercentile: null,
-                regionRank: null,
-                totalDistricts: 0,
-                totalInRegion: 0,
-                region: null,
-              }
-            }
+            base={pt?.membershipPayments.base ?? null}
+            targets={pt?.membershipPayments.targets ?? null}
+            achievedLevel={pt?.membershipPayments.achievedLevel ?? null}
+            rankings={pt?.membershipPayments.rankings ?? nullRankings}
             colorScheme="green"
             tooltipContent="Total membership payments (New + April + October + Late + Charter) with targets for each recognition level."
             badges={
@@ -238,27 +211,13 @@ export const DistrictOverview: React.FC<DistrictOverviewProps> = ({
               </svg>
             }
             current={
-              analytics.performanceTargets?.distinguishedClubs.current ??
+              pt?.distinguishedClubs.current ??
               analytics.distinguishedClubs.total
             }
-            base={analytics.performanceTargets?.distinguishedClubs.base ?? null}
-            targets={
-              analytics.performanceTargets?.distinguishedClubs.targets ?? null
-            }
-            achievedLevel={
-              analytics.performanceTargets?.distinguishedClubs.achievedLevel ??
-              null
-            }
-            rankings={
-              analytics.performanceTargets?.distinguishedClubs.rankings ?? {
-                worldRank: null,
-                worldPercentile: null,
-                regionRank: null,
-                totalDistricts: 0,
-                totalInRegion: 0,
-                region: null,
-              }
-            }
+            base={pt?.distinguishedClubs.base ?? null}
+            targets={pt?.distinguishedClubs.targets ?? null}
+            achievedLevel={pt?.distinguishedClubs.achievedLevel ?? null}
+            rankings={pt?.distinguishedClubs.rankings ?? nullRankings}
             colorScheme="purple"
             tooltipContent="Clubs achieving DCP goals + membership requirements with targets for each recognition level. Distinguished (5 goals + 20 members), Select (7 goals + 20 members), President's (9 goals + 20 members), Smedley (10 goals + 25 members)."
             badges={

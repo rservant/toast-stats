@@ -90,15 +90,8 @@ vi.mock('../../hooks/useMembershipData', () => ({
   })),
 }))
 
-vi.mock('../../hooks/useLeadershipInsights', () => ({
-  useLeadershipInsights: vi.fn(() => ({
-    data: null,
-    isLoading: false,
-  })),
-}))
-
-vi.mock('../../hooks/useDistinguishedClubAnalytics', () => ({
-  useDistinguishedClubAnalytics: vi.fn(() => ({
+vi.mock('../../hooks/usePerformanceTargets', () => ({
+  usePerformanceTargets: vi.fn(() => ({
     data: null,
     isLoading: false,
   })),
@@ -215,11 +208,10 @@ describe('DistrictDetailPage - Analytics Tab (#78)', () => {
       const analyticsTab = getAnalyticsTab()
       fireEvent.click(analyticsTab)
 
-      // LeadershipInsights with null data shows fallback message
+      // After removing LeadershipInsights (#183), the first visible content
+      // on the analytics tab is TopGrowthClubs (which shows empty state)
       await waitFor(() => {
-        expect(
-          screen.getByText(/No leadership insights available/i)
-        ).toBeInTheDocument()
+        expect(analyticsTab).toHaveClass('text-tm-loyal-blue')
       })
     })
 

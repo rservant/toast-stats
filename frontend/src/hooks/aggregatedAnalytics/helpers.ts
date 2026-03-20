@@ -22,14 +22,11 @@ import type { AggregatedAnalyticsResponse, TrendData } from './types'
  * This is the sole data source — no Express fallback (#173).
  */
 export async function fetchIndividualAnalytics(
-  districtId: string
+  districtId: string,
+  snapshotDate?: string
 ): Promise<DistrictAnalytics> {
-  const manifest = await fetchCdnManifest()
-  const url = cdnAnalyticsUrl(
-    manifest.latestSnapshotDate,
-    districtId,
-    'analytics'
-  )
+  const date = snapshotDate || (await fetchCdnManifest()).latestSnapshotDate
+  const url = cdnAnalyticsUrl(date, districtId, 'analytics')
   const file = await fetchFromCdn<{ data: DistrictAnalytics }>(url)
   return file.data
 }

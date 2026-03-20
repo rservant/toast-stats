@@ -51,7 +51,10 @@ import {
  *
  * Requirements: 5.1
  */
-export function useAggregatedAnalytics(districtId: string | null): {
+export function useAggregatedAnalytics(
+  districtId: string | null,
+  snapshotDate?: string
+): {
   data: AggregatedAnalyticsResponse | null
   isLoading: boolean
   isError: boolean
@@ -61,14 +64,14 @@ export function useAggregatedAnalytics(districtId: string | null): {
   usedFallback: boolean
 } {
   const query = useQuery({
-    queryKey: ['aggregatedAnalytics', districtId],
+    queryKey: ['aggregatedAnalytics', districtId, snapshotDate],
     queryFn: async (): Promise<AggregatedAnalyticsResponse> => {
       if (!districtId) {
         throw new Error('District ID is required')
       }
 
       // Direct CDN fetch — no Express fallback (#173)
-      const analytics = await fetchIndividualAnalytics(districtId)
+      const analytics = await fetchIndividualAnalytics(districtId, snapshotDate)
       return convertToAggregatedFormat(analytics)
     },
     enabled: !!districtId,
