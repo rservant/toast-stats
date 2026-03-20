@@ -596,3 +596,10 @@
 **Rule**: When adding new pre-computed CDN data (like performance-targets.json), also create the corresponding frontend hook at the same time. A CDN file without a hook is invisible to the UI. Follow R7: always inventory existing CDN fields before assuming data is missing.
 **Warning**: The `topGrowthClubs` field in the CDN analytics.json is empty (`[]`). This is a pipeline/compute issue that needs separate investigation.
 **rules.md**: none
+
+## 🗓️ 2026-03-20 — CDN data key unwrapping (#184)
+
+**Discovery**: CDN `fetchCdnDistrictSnapshot` returns raw JSON with a `.data` wrapper (`{ districtId, data: { divisionPerformance, clubPerformance, ... } }`). The `extractDivisionPerformance` utility looked for `snapshot['divisionPerformance']` at the top level, never finding it.
+**Proof**: After adding data-key unwrapping, 1844 tests pass and Division & Area tab should render.
+**Rule**: When migrating from an Express backend (which unwraps `.data`) to CDN-direct fetching, audit ALL utilities that consume the raw JSON for nested `.data` key assumptions. The CDN format wraps the payload — Express may have unwrapped it before serving.
+**rules.md**: none
