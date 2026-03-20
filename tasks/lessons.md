@@ -603,3 +603,10 @@
 **Proof**: After adding data-key unwrapping, 1844 tests pass and Division & Area tab should render.
 **Rule**: When migrating from an Express backend (which unwraps `.data`) to CDN-direct fetching, audit ALL utilities that consume the raw JSON for nested `.data` key assumptions. The CDN format wraps the payload — Express may have unwrapped it before serving.
 **rules.md**: none
+
+## 🗓️ 2026-03-20 — Streaming rebuild for disk-bounded CI (#191)
+
+**Discovery**: GitHub Actions `ubuntu-latest` has ~14 GB free disk. A full rebuild of 110+ dates requires ~70 GB of raw-csv + snapshots, making it impossible to download everything at once.
+**Solution**: Stream one date at a time — download raw-csv, transform, compute, upload to GCS, delete local, repeat. Time-series and club-trends stores persist across iterations (they're small, ~344 KB + ~50 KB/district). Peak disk usage stays ~500 MB.
+**Rule**: When designing CI workflows for data-heavy pipelines, always check runner disk limits. Stream/batch processing beats monolithic downloads. Public repos get unlimited Actions minutes but NOT unlimited disk.
+**rules.md**: none
