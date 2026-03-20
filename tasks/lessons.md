@@ -588,3 +588,11 @@
 **Rule**: When a recovery operation requires >2 manual steps that mirror existing pipeline logic, stop and build a proper CLI command. Ad-hoc scripts in /tmp are a code smell for missing CLI subcommands.
 **Warning**: New data artifacts (e.g., rank-history/) need to be added to `RebuildService.rebuild()` when they are introduced, otherwise they'll be missed during full rebuilds.
 **rules.md**: none
+
+## 🗓️ 2026-03-19 — district-detail-page-fixes (#183)
+
+**Discovery**: The CDN `performance-targets.json` file per district already contained world rank, percentile, region rank, and target thresholds — all computed by `AnalyticsComputeService`. But no hook was fetching it. The `analytics.json` file didn't include `performanceTargets`, causing the Overview tab to show "— —" and "N/A". Similarly, `useDistrictAnalytics` always used `manifest.latestSnapshotDate` regardless of the `endDate` parameter, making the date selector purely cosmetic.
+**Proof**: All 1844 frontend tests pass after creating `usePerformanceTargets` hook and fixing 3 hooks to respect the selected date parameter.
+**Rule**: When adding new pre-computed CDN data (like performance-targets.json), also create the corresponding frontend hook at the same time. A CDN file without a hook is invisible to the UI. Follow R7: always inventory existing CDN fields before assuming data is missing.
+**Warning**: The `topGrowthClubs` field in the CDN analytics.json is empty (`[]`). This is a pipeline/compute issue that needs separate investigation.
+**rules.md**: none
