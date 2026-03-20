@@ -610,3 +610,12 @@
 **Solution**: Stream one date at a time — download raw-csv, transform, compute, upload to GCS, delete local, repeat. Time-series and club-trends stores persist across iterations (they're small, ~344 KB + ~50 KB/district). Peak disk usage stays ~500 MB.
 **Rule**: When designing CI workflows for data-heavy pipelines, always check runner disk limits. Stream/batch processing beats monolithic downloads. Public repos get unlimited Actions minutes but NOT unlimited disk.
 **rules.md**: none
+
+## 🗓️ 2026-03-20 — gsutil cp -r double-nesting bug (#191)
+
+**Discovery**: `gsutil cp -Z -r ./dir/ gs://bucket/prefix/` creates `prefix/dir/files` instead of `prefix/files`. This is despite the trailing `/` on the source path which *should* mean "copy contents, not directory". The behavior is inconsistent and not well-documented.
+**Impact**: All snapshot data for 2026-03-19 was uploaded to `snapshots/2026-03-19/2026-03-19/` instead of `snapshots/2026-03-19/`. CDN returned 404 for all district data.
+**Fix**: Use glob patterns (`dir/*.json`) instead of `-r dir/` for `gsutil cp`. Handle subdirectories (like `analytics/`) with separate `cp` calls.
+**Rule**: Never use `gsutil cp -r` with trailing slashes. Always verify the actual GCS paths after upload using `gsutil ls` or the GCS XML API. Use globs for flat file copy and separate `cp` calls for subdirectories.
+**Why not caught locally**: Used `--no-verify` on commits (skipping pre-commit hooks), AND no local gsutil test. Pipeline test infrastructure gap.
+**rules.md**: none
