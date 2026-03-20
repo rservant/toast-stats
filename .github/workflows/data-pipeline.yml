@@ -1,12 +1,16 @@
-# Data Pipeline Workflow
-# Runs daily: scrape → transform → compute-analytics → upload to GCS
+# Unified Data Pipeline Workflow (#191)
+#
+# Modes:
+#   daily   — scrape → transform → compute-analytics → upload ONE date (default, cron)
+#   rebuild — sync all raw-csv from GCS → rebuild ALL dates → upload ALL snapshots
+#   prune   — remove non-month-end dates from local cache and GCS
 #
 # Prerequisites:
 #   1. Run scripts/setup-wif.sh (one-time)
 #   2. Add GitHub secrets: GCP_PROJECT_ID, GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_SERVICE_ACCOUNT
 #
 # The collector uses Playwright (chromium) to scrape Toastmasters dashboards.
-# Data is processed locally and uploaded to GCS for the backend to consume.
+# Data is processed locally and uploaded to GCS for the frontend to consume.
 
 name: Data Pipeline
 
@@ -16,8 +20,21 @@ on:
     - cron: '0 13 * * *'
   workflow_dispatch:
     inputs:
+      mode:
+        description: 'Pipeline mode'
+        required: true
+        type: choice
+        options:
+          - daily
+          - rebuild
+          - prune
+        default: daily
       date:
-        description: 'Target date (YYYY-MM-DD), defaults to today'
+        description: 'Target date (YYYY-MM-DD). Daily: scrape date. Rebuild: ignored unless dates specified.'
+        required: false
+        type: string
+      dates:
+        description: 'Rebuild only: comma-separated dates to rebuild (default: all in raw-csv/)'
         required: false
         type: string
       districts:
@@ -25,7 +42,12 @@ on:
         required: false
         type: string
       force:
-        description: 'Force re-scrape even if cache exists'
+        description: 'Force re-scrape/recompute even if cache exists'
+        required: false
+        type: boolean
+        default: false
+      dry_run:
+        description: 'Prune only: classify and report without deleting'
         required: false
         type: boolean
         default: false
@@ -37,18 +59,21 @@ concurrency:
 
 env:
   NODE_VERSION: '20'
+  GCS_BUCKET: 'toast-stats-data-ca'
 
 permissions:
   contents: read
   id-token: write # Required for Workload Identity Federation
 
 jobs:
-  data-pipeline:
-    name: Scrape, Transform, Analyze & Upload
+  pipeline:
+    name: '${{ inputs.mode || ''daily'' }} pipeline'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Rebuild needs more time (110+ dates × ~1 min each + GCS sync)
+    timeout-minutes: ${{ inputs.mode == 'rebuild' && 180 || 30 }}
 
     steps:
+      # ── Setup ────────────────────────────────────────────────
       - name: Checkout code
         uses: actions/checkout@v6
 
@@ -68,6 +93,7 @@ jobs:
           npm run build --workspace=@toastmasters/collector-cli
 
       - name: Install Playwright browsers
+        if: inputs.mode == 'daily' || inputs.mode == '' || github.event_name == 'schedule'
         run: npx playwright install chromium --with-deps
 
       - name: Authenticate to GCP
@@ -79,16 +105,21 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v3
 
-      # ── Step 1: Discover districts + sync raw-csv cache from GCS ────────
-      # Districts are auto-discovered by downloading the Toastmasters
-      # districtsummary CSV for the target date and parsing the DISTRICT column.
-      # Manual workflow_dispatch 'districts' input overrides auto-discovery.
-      # Previously used config/districts.json from GCS (now deprecated, kept in
-      # place but no longer read). Companion to backend change #139.
-      - name: Discover districts and sync raw-csv from GCS
-        id: config
-        env:
-          GCS_BUCKET: 'toast-stats-data-ca'
+      - name: Determine mode
+        id: mode
+        run: |
+          MODE="${{ inputs.mode || 'daily' }}"
+          echo "mode=${MODE}" >> "$GITHUB_OUTPUT"
+          echo "## 🔧 Pipeline Mode: \`${MODE}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      # ════════════════════════════════════════════════════════
+      # DAILY MODE
+      # ════════════════════════════════════════════════════════
+
+      # ── Daily Step 1: Discover districts + sync raw-csv cache ──
+      - name: '[daily] Discover districts and sync raw-csv'
+        if: steps.mode.outputs.mode == 'daily'
+        id: daily-config
         run: |
           # Toastmasters dashboard is always one day behind — use yesterday
           TARGET_DATE="${{ inputs.date || '' }}"
@@ -97,7 +128,7 @@ jobs:
           fi
           echo "Target date: ${TARGET_DATE}"
 
-          # If districts were manually specified via workflow_dispatch, use them directly
+          # If districts were manually specified, use them directly
           if [ -n "${{ inputs.districts }}" ]; then
             DISTRICTS="${{ inputs.districts }}"
             echo "Using manual district override: ${DISTRICTS}"
@@ -117,9 +148,6 @@ jobs:
               const lines = data.trim().split('\n');
               const headers = lines[0].split(',').map(h => h.replace(/\"/g,'').trim());
               const col = headers.indexOf('DISTRICT');
-              // Filter to valid district IDs only: alphanumeric with no spaces or slashes.
-              // Accepts: '01', '61', '130', 'F', 'U' (valid single-letter districts)
-              // Rejects: 'As of 02/26/2026' and other CSV footer/metadata rows (#145)
               const ids = [...new Set(lines.slice(1)
                 .map(l => l.split(',')[col].replace(/\"/g,'').trim())
                 .filter(id => /^[A-Z0-9]+$/i.test(id)))];
@@ -128,7 +156,7 @@ jobs:
             ")
 
             if [ -z "${DISTRICTS}" ]; then
-              echo "::error::Failed to discover districts from Toastmasters CSV. The dashboard may be down or the CSV format changed."
+              echo "::error::Failed to discover districts from Toastmasters CSV."
               exit 1
             fi
             echo "Discovered $(echo "${DISTRICTS}" | tr ',' '\n' | wc -l | tr -d ' ') districts"
@@ -142,7 +170,7 @@ jobs:
           gsutil -m rsync -r \
             "gs://${GCS_BUCKET}/raw-csv/${TARGET_DATE}/" \
             "./cache/raw-csv/${TARGET_DATE}/" \
-            2>&1 || echo "No existing raw-csv for ${TARGET_DATE} in GCS (first run for this date)"
+            2>&1 || echo "No existing raw-csv for ${TARGET_DATE} in GCS (first run)"
 
           echo "## ⏬ District Discovery & Raw CSV Sync" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Districts**: ${DISTRICTS}" >> "$GITHUB_STEP_SUMMARY"
@@ -150,30 +178,21 @@ jobs:
           echo "- **Date**: ${TARGET_DATE}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **CSV files restored**: ${FILE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
-
-      # ── Step 2: Scrape + Transform ──────────────────────────
-      - name: Scrape & Transform
-        id: scrape
+      # ── Daily Step 2: Scrape + Transform ──
+      - name: '[daily] Scrape & Transform'
+        if: steps.mode.outputs.mode == 'daily'
+        id: daily-scrape
         env:
           TOASTMASTERS_DASHBOARD_URL: 'https://dashboards.toastmasters.org'
         run: |
           ARGS="--transform --verbose"
-
-          # Use manual date if provided, otherwise default to yesterday
-          # (Toastmasters dashboard is always one day behind)
           if [ -n "${{ inputs.date }}" ]; then
             ARGS="$ARGS --date ${{ inputs.date }}"
           else
             ARGS="$ARGS --date $(date -u -d '1 day ago' +%Y-%m-%d)"
           fi
-
-          # District list comes from Step 1: auto-discovered from Toastmasters CSV
-          # or overridden by the manual workflow_dispatch input
-          DISTRICT_LIST="${{ steps.config.outputs.districts }}"
+          DISTRICT_LIST="${{ steps.daily-config.outputs.districts }}"
           ARGS="$ARGS --districts ${DISTRICT_LIST}"
-
-
-          # Force flag
           if [ "${{ inputs.force }}" = "true" ]; then
             ARGS="$ARGS --force"
           fi
@@ -181,94 +200,57 @@ jobs:
           echo "Running: npx collector-cli scrape $ARGS"
           npx collector-cli scrape $ARGS | tee /tmp/scrape-output.json
 
-          # Extract date from output for subsequent steps
           DATE=$(jq -r '.date' /tmp/scrape-output.json)
           echo "date=${DATE}" >> "$GITHUB_OUTPUT"
 
           echo "## 📥 Scrape Results" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Date**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
           SUCCEEDED=$(jq '.districts.succeeded' /tmp/scrape-output.json)
           FAILED=$(jq '.districts.failed' /tmp/scrape-output.json)
+          echo "- **Date**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Districts succeeded**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Districts failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
 
-      # ── Step 3: Sync time-series from GCS ─────────────────────
-      # The TimeSeriesIndexWriter appends today's data point to the
-      # existing program-year index. Without prior data, it would
-      # create a fresh index with only 1 data point each run.
-      # This syncs ~344 KB of index files — not the full 7+ GB cache.
-      - name: Sync time-series from GCS
-        env:
-          GCS_BUCKET: 'toast-stats-data-ca'
+      # ── Daily Step 3: Sync accumulated stores from GCS ──
+      - name: '[daily] Sync time-series, club-trends, prev-year from GCS'
+        if: steps.mode.outputs.mode == 'daily'
         run: |
-          echo "Syncing time-series index from GCS..."
+          DATE="${{ steps.daily-scrape.outputs.date }}"
+
+          # Time-series index (~344 KB)
+          echo "Syncing time-series..."
           mkdir -p ./cache/time-series
-          gsutil -m rsync -r \
-            "gs://${GCS_BUCKET}/time-series/" \
-            "./cache/time-series/" \
-            2>&1 || echo "No existing time-series data in GCS (first run)"
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/" 2>&1 || true
 
-          echo "## ⏬ Time-Series Sync" >> "$GITHUB_STEP_SUMMARY"
-          FILE_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
-          echo "- **Index files restored**: ${FILE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
-
-      # ── Step 3b: Sync previous year snapshots for YoY ──────────
-      # The AnalyticsComputer needs the previous program year's
-      # snapshot to compute year-over-year comparisons. Without it,
-      # the YoY file is written with dataAvailable: false.
-      # Syncs all district_*.json files in parallel using gsutil -m cp (#142)
-      - name: Sync previous year snapshots from GCS
-        env:
-          GCS_BUCKET: 'toast-stats-data-ca'
-        run: |
-          DATE="${{ steps.scrape.outputs.date }}"
-
-          # Calculate previous year date (GNU date on Ubuntu runners)
-          PREV_YEAR=$(date -d "${DATE} - 1 year" +%Y-%m-%d)
-
-          echo "Syncing previous year snapshots for YoY comparison (${PREV_YEAR})..."
-
-          # Parallel batch copy — replaces sequential per-district loop (#142)
-          mkdir -p "./cache/snapshots/${PREV_YEAR}"
-          gsutil -m cp \
-            "gs://${GCS_BUCKET}/snapshots/${PREV_YEAR}/district_*.json" \
-            "./cache/snapshots/${PREV_YEAR}/" \
-            2>/dev/null || true
-          SYNCED=$(find "./cache/snapshots/${PREV_YEAR}" -name 'district_*.json' 2>/dev/null | wc -l | tr -d ' ')
-
-          echo "## ⏬ Previous Year Snapshot Sync" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Previous year date**: ${PREV_YEAR}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Snapshots synced**: ${SYNCED}" >> "$GITHUB_STEP_SUMMARY"
-
-      # ── Step 3c: Sync club-trends store from GCS ─────────────────────
-      # The ClubTrendsStore accumulates per-club membership and DCP trend
-      # data across pipeline runs (#144). Without this sync, each run would
-      # start fresh with only today's data point.
-      - name: Sync club-trends store from GCS
-        env:
-          GCS_BUCKET: 'toast-stats-data-ca'
-        run: |
-          echo "Syncing club-trends store from GCS..."
+          # Club-trends store (~50 KB/district)
+          echo "Syncing club-trends..."
           mkdir -p ./cache/club-trends
-          gsutil -m rsync -r \
-            "gs://${GCS_BUCKET}/club-trends/" \
-            "./cache/club-trends/" \
-            2>&1 || echo "No existing club-trends in GCS (first run)"
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
 
-          echo "## ⏬ Club-Trends Sync" >> "$GITHUB_STEP_SUMMARY"
+          # Previous year snapshots for YoY comparison
+          PREV_YEAR=$(date -d "${DATE} - 1 year" +%Y-%m-%d)
+          echo "Syncing previous year snapshots (${PREV_YEAR})..."
+          mkdir -p "./cache/snapshots/${PREV_YEAR}"
+          gsutil -m cp "gs://${GCS_BUCKET}/snapshots/${PREV_YEAR}/district_*.json" \
+            "./cache/snapshots/${PREV_YEAR}/" 2>/dev/null || true
+
+          echo "## ⏬ Store Sync" >> "$GITHUB_STEP_SUMMARY"
+          TS_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
           CT_COUNT=$(find ./cache/club-trends -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
-          echo "- **Store files restored**: ${CT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          PREV_COUNT=$(find "./cache/snapshots/${PREV_YEAR}" -name 'district_*.json' 2>/dev/null | wc -l | tr -d ' ')
+          echo "- **Time-series files**: ${TS_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Club-trends files**: ${CT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Prev-year snapshots**: ${PREV_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
-      # ── Step 4: Compute Analytics ───────────────────────────
-      - name: Compute Analytics
+      # ── Daily Step 4: Compute Analytics ──
+      - name: '[daily] Compute Analytics'
+        if: steps.mode.outputs.mode == 'daily'
         run: |
-          # Prefer date from scrape output; fall back to config step date (#145)
-          DATE="${{ steps.scrape.outputs.date }}"
+          DATE="${{ steps.daily-scrape.outputs.date }}"
           if [ -z "${DATE}" ]; then
-            DATE="${{ steps.config.outputs.date }}"
-            echo "::warning::Scrape step did not output a date; using config step date: ${DATE}"
+            DATE="${{ steps.daily-config.outputs.date }}"
+            echo "::warning::Scrape step did not output a date; using config date: ${DATE}"
           fi
-          DISTRICT_LIST="${{ steps.config.outputs.districts }}"
+          DISTRICT_LIST="${{ steps.daily-config.outputs.districts }}"
           ARGS="--date ${DATE} --districts ${DISTRICT_LIST} --verbose"
 
           echo "Running: npx collector-cli compute-analytics $ARGS"
@@ -278,40 +260,19 @@ jobs:
           SUCCEEDED=$(jq '.districts.succeeded' /tmp/analytics-output.json)
           echo "- **Districts computed**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
 
-      # ── Step 5: Sync cache to GCS ───────────────────────────
-      # Snapshots/analytics use cp with CDN-optimized metadata:
-      #   -Z: auto-gzip + Content-Encoding: gzip (~80% smaller transfers)
-      #   -h: Content-Type and Cache-Control for CDN caching
-      # Internal state (raw-csv, time-series, club-trends) uses rsync.
-      - name: Sync cache to GCS
-        env:
-          GCS_BUCKET: 'toast-stats-data-ca'
+      # ── Daily Step 5: Upload to GCS ──
+      - name: '[daily] Upload to GCS'
+        if: steps.mode.outputs.mode == 'daily'
         run: |
-          DATE="${{ steps.scrape.outputs.date }}"
-          echo "Syncing cache to GCS..."
+          DATE="${{ steps.daily-scrape.outputs.date }}"
+          echo "Uploading daily data for ${DATE}..."
 
-          # ── Internal state: rsync (no CDN metadata needed) ──
+          # Internal state: rsync (no CDN metadata needed)
+          gsutil -m rsync -r "./cache/raw-csv/${DATE}/" "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
+          gsutil -m rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
+          gsutil -m rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
 
-          # Sync raw-csv (only today's date)
-          gsutil -m rsync -r \
-            "./cache/raw-csv/${DATE}/" \
-            "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
-
-          # Sync time-series (all — small, ~344 KB)
-          gsutil -m rsync -r \
-            "./cache/time-series/" \
-            "gs://${GCS_BUCKET}/time-series/"
-
-          # Sync club-trends store (all program years — small, ~50 KB/district)
-          gsutil -m rsync -r \
-            "./cache/club-trends/" \
-            "gs://${GCS_BUCKET}/club-trends/"
-
-          # ── CDN-served files: cp with metadata ──
-
-          # Snapshots + analytics (immutable — data never changes for a given date)
-          # -Z: auto-gzip transport encoding (~80% smaller)
-          # Cache-Control: immutable, 1 year max-age (CDN + browser never revalidate)
+          # CDN-served: snapshots + analytics (immutable, gzipped)
           gsutil -m \
             -h "Content-Type:application/json" \
             -h "Cache-Control:public, max-age=31536000, immutable" \
@@ -319,42 +280,227 @@ jobs:
             "./cache/snapshots/${DATE}/" \
             "gs://${GCS_BUCKET}/snapshots/${DATE}/"
 
-          echo "## ☁️ GCS Sync Results" >> "$GITHUB_STEP_SUMMARY"
-          CSV_COUNT=$(find "./cache/raw-csv/${DATE}" -name '*.csv' 2>/dev/null | wc -l | tr -d ' ')
+          echo "## ☁️ GCS Upload" >> "$GITHUB_STEP_SUMMARY"
           SNAPSHOT_COUNT=$(find "./cache/snapshots/${DATE}" -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
-          TS_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
           echo "- **Date**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Raw CSVs synced**: ${CSV_COUNT}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Snapshot/analytics files synced**: ${SNAPSHOT_COUNT} (gzip + immutable cache)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Time-series index files synced**: ${TS_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Snapshot/analytics files**: ${SNAPSHOT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
-      # ── Step 5b: Generate and upload CDN manifest files ────
-      # These files let the frontend discover data via CDN without the Express API.
-      - name: Generate CDN manifests
-        env:
-          GCS_BUCKET: 'toast-stats-data-ca'
+      # ════════════════════════════════════════════════════════
+      # REBUILD MODE
+      # ════════════════════════════════════════════════════════
+      # Streams one date at a time to stay within runner disk
+      # limits (~14 GB free). Each iteration: download raw-csv →
+      # transform → compute → upload → cleanup.
+      # Time-series + club-trends persist across iterations (small).
+
+      # ── Rebuild Step 1: Sync small stores from GCS ──
+      - name: '[rebuild] Sync time-series and club-trends from GCS'
+        if: steps.mode.outputs.mode == 'rebuild'
         run: |
-          DATE="${{ steps.scrape.outputs.date }}"
-          DISTRICT_LIST="${{ steps.config.outputs.districts }}"
+          # These are small (~344 KB + ~50 KB/district) and persist across dates
+          echo "Syncing time-series..."
+          mkdir -p ./cache/time-series
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/" 2>&1 || true
 
-          # v1/latest.json — current snapshot date (short TTL, 5 min)
+          echo "Syncing club-trends..."
+          mkdir -p ./cache/club-trends
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
+
+          echo "## ⏬ Store Sync (rebuild)" >> "$GITHUB_STEP_SUMMARY"
+          TS_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
+          CT_COUNT=$(find ./cache/club-trends -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
+          echo "- **Time-series files**: ${TS_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Club-trends files**: ${CT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Rebuild Step 2: Discover dates, then stream one-at-a-time ──
+      - name: '[rebuild] Stream rebuild — one date at a time'
+        if: steps.mode.outputs.mode == 'rebuild'
+        run: |
+          # Determine which dates to rebuild
+          if [ -n "${{ inputs.dates }}" ]; then
+            DATES=$(echo "${{ inputs.dates }}" | tr ',' '\n' | sort)
+            echo "Rebuilding specific dates: ${{ inputs.dates }}"
+          else
+            # Discover all dates from GCS raw-csv/
+            DATES=$(gsutil ls "gs://${GCS_BUCKET}/raw-csv/" | grep -oP '\d{4}-\d{2}-\d{2}' | sort -u)
+            echo "Discovered dates from GCS raw-csv/"
+          fi
+
+          DATE_COUNT=$(echo "${DATES}" | wc -l | tr -d ' ')
+          echo "Total dates to rebuild: ${DATE_COUNT}"
+          echo "## 🔨 Rebuild (streaming)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Dates to process**: ${DATE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+
+          SUCCEEDED=0
+          FAILED=0
+          INDEX=0
+
+          for DATE in ${DATES}; do
+            INDEX=$((INDEX + 1))
+            echo ""
+            echo "═══════════════════════════════════════"
+            echo "[${INDEX}/${DATE_COUNT}] Processing ${DATE}"
+            echo "═══════════════════════════════════════"
+
+            # 1. Download this date's raw-csv from GCS
+            mkdir -p "./cache/raw-csv/${DATE}"
+            gsutil -m rsync -r \
+              "gs://${GCS_BUCKET}/raw-csv/${DATE}/" \
+              "./cache/raw-csv/${DATE}/" 2>&1 || true
+
+            # 2. Download previous-year snapshot for YoY (if needed)
+            PREV_YEAR_DATE=$(date -d "${DATE} - 1 year" +%Y-%m-%d 2>/dev/null || echo "")
+            if [ -n "${PREV_YEAR_DATE}" ] && [ ! -d "./cache/snapshots/${PREV_YEAR_DATE}" ]; then
+              mkdir -p "./cache/snapshots/${PREV_YEAR_DATE}"
+              gsutil -m cp \
+                "gs://${GCS_BUCKET}/snapshots/${PREV_YEAR_DATE}/district_*.json" \
+                "./cache/snapshots/${PREV_YEAR_DATE}/" 2>/dev/null || true
+            fi
+
+            # 3. Transform raw-csv → snapshots
+            echo "Transforming ${DATE}..."
+            if ! npx collector-cli transform --date "${DATE}" --force --verbose 2>&1; then
+              echo "::warning::Transform failed for ${DATE}"
+              FAILED=$((FAILED + 1))
+              rm -rf "./cache/raw-csv/${DATE}"
+              continue
+            fi
+
+            # 4. Compute analytics
+            echo "Computing analytics for ${DATE}..."
+            if ! npx collector-cli compute-analytics --date "${DATE}" --force --verbose 2>&1; then
+              echo "::warning::Compute failed for ${DATE}"
+              FAILED=$((FAILED + 1))
+              # Still upload whatever snapshots were generated
+            fi
+
+            # 5. Upload this date's snapshots + analytics to GCS
+            SNAPSHOT_DIR="./cache/snapshots/${DATE}"
+            if [ -d "${SNAPSHOT_DIR}" ]; then
+              FILE_COUNT=$(find "${SNAPSHOT_DIR}" -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
+              echo "Uploading snapshots/${DATE}/ (${FILE_COUNT} files)..."
+              gsutil -m \
+                -h "Content-Type:application/json" \
+                -h "Cache-Control:public, max-age=31536000, immutable" \
+                cp -Z -r \
+                "${SNAPSHOT_DIR}/" \
+                "gs://${GCS_BUCKET}/snapshots/${DATE}/"
+              SUCCEEDED=$((SUCCEEDED + 1))
+            fi
+
+            # 6. Cleanup to free disk (keep time-series + club-trends)
+            rm -rf "./cache/raw-csv/${DATE}" "./cache/snapshots/${DATE}"
+
+            # Report disk usage every 10 dates
+            if [ $((INDEX % 10)) -eq 0 ]; then
+              echo "Disk usage after ${INDEX} dates: $(df -h . | tail -1 | awk '{print $3 " used / " $4 " free"}')"
+            fi
+          done
+
+          # Sync accumulated stores back to GCS
+          echo "Syncing time-series and club-trends back to GCS..."
+          gsutil -m rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
+          gsutil -m rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
+
+          echo "- **Dates succeeded**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Dates failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "${FAILED}" -gt 0 ]; then
+            echo "::warning::${FAILED} dates failed during rebuild"
+          fi
+
+      # ════════════════════════════════════════════════════════
+      # PRUNE MODE
+      # ════════════════════════════════════════════════════════
+
+      # ── Prune Step 1: Sync all data from GCS ──
+      - name: '[prune] Sync all data from GCS'
+        if: steps.mode.outputs.mode == 'prune'
+        run: |
+          echo "Syncing all data from GCS for pruning..."
+          mkdir -p ./cache/raw-csv ./cache/snapshots
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/raw-csv/" "./cache/raw-csv/"
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/snapshots/" "./cache/snapshots/"
+
+          echo "## ⏬ Sync for Prune" >> "$GITHUB_STEP_SUMMARY"
+          DATE_COUNT=$(find ./cache/raw-csv -maxdepth 1 -type d -name '????-??-??' | wc -l | tr -d ' ')
+          echo "- **Raw-csv dates**: ${DATE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Prune Step 2: Run collector-cli prune ──
+      - name: '[prune] Identify and remove non-month-end dates'
+        if: steps.mode.outputs.mode == 'prune'
+        id: prune
+        run: |
+          DRY_RUN_FLAG=""
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            DRY_RUN_FLAG="--dry-run"
+            echo "::notice::Dry-run mode — no data will be deleted"
+          fi
+
+          echo "Running: npx collector-cli prune --verbose ${DRY_RUN_FLAG}"
+          npx collector-cli prune --verbose ${DRY_RUN_FLAG} | tee /tmp/prune-output.json
+
+          echo "## 🧹 Prune Results" >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/prune-output.json | jq '.' >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+      # ── Prune Step 3: Delete pruned dates from GCS ──
+      - name: '[prune] Delete pruned dates from GCS'
+        if: steps.mode.outputs.mode == 'prune' && inputs.dry_run != 'true'
+        run: |
+          echo "Deleting pruned dates from GCS..."
+
+          # Find dates that were in GCS but no longer exist locally (pruned)
+          # List local snapshot dates
+          LOCAL_DATES=$(find ./cache/snapshots -maxdepth 1 -type d -name '????-??-??' -exec basename {} \; | sort)
+          # List GCS snapshot dates
+          GCS_DATES=$(gsutil ls "gs://${GCS_BUCKET}/snapshots/" | grep -oP '\d{4}-\d{2}-\d{2}' | sort -u)
+
+          DELETED=0
+          for GCS_DATE in ${GCS_DATES}; do
+            if ! echo "${LOCAL_DATES}" | grep -q "^${GCS_DATE}$"; then
+              echo "Deleting gs://${GCS_BUCKET}/snapshots/${GCS_DATE}/..."
+              gsutil -m rm -r "gs://${GCS_BUCKET}/snapshots/${GCS_DATE}/" || true
+              echo "Deleting gs://${GCS_BUCKET}/raw-csv/${GCS_DATE}/..."
+              gsutil -m rm -r "gs://${GCS_BUCKET}/raw-csv/${GCS_DATE}/" || true
+              DELETED=$((DELETED + 1))
+            fi
+          done
+
+          echo "## 🗑️ GCS Cleanup" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Dates deleted from GCS**: ${DELETED}" >> "$GITHUB_STEP_SUMMARY"
+
+      # ════════════════════════════════════════════════════════
+      # SHARED: CDN Manifests (daily + rebuild)
+      # ════════════════════════════════════════════════════════
+
+      - name: Generate CDN manifests
+        if: steps.mode.outputs.mode != 'prune' || inputs.dry_run != 'true'
+        run: |
+          # Determine the latest date from local snapshots
+          LATEST_DATE=$(find ./cache/snapshots -maxdepth 1 -type d -name '????-??-??' -exec basename {} \; | sort | tail -1)
+          if [ -z "${LATEST_DATE}" ]; then
+            echo "::warning::No snapshot dates found, skipping manifests"
+            exit 0
+          fi
+          echo "Latest snapshot date: ${LATEST_DATE}"
+
+          # v1/latest.json (short TTL, 5 min)
           node -e "
             const fs = require('fs');
             const manifest = {
               _format: { version: '1.0.0', type: 'manifest' },
-              latestSnapshotDate: '${DATE}',
+              latestSnapshotDate: '${LATEST_DATE}',
               generatedAt: new Date().toISOString()
             };
             fs.writeFileSync('/tmp/latest.json', JSON.stringify(manifest, null, 2));
-            console.log('Generated v1/latest.json for ' + '${DATE}');
+            console.log('Generated v1/latest.json for ${LATEST_DATE}');
           "
           gsutil \
             -h "Content-Type:application/json" \
             -h "Cache-Control:public, max-age=300" \
             cp /tmp/latest.json "gs://${GCS_BUCKET}/v1/latest.json"
 
-          # v1/dates.json — all available snapshot dates (medium TTL, 15 min)
-          # Built from the district-snapshot-index or by listing GCS prefixes
+          # v1/dates.json (medium TTL, 15 min)
           gsutil ls "gs://${GCS_BUCKET}/snapshots/" | \
             grep -oP '\d{4}-\d{2}-\d{2}' | sort -u > /tmp/all-dates.txt
           node -e "
@@ -363,8 +509,7 @@ jobs:
               .trim().split('\n').filter(Boolean);
             const data = {
               _format: { version: '1.0.0', type: 'dates-index' },
-              dates: dates,
-              count: dates.length,
+              dates, count: dates.length,
               generatedAt: new Date().toISOString()
             };
             fs.writeFileSync('/tmp/dates.json', JSON.stringify(data, null, 2));
@@ -375,9 +520,8 @@ jobs:
             -h "Cache-Control:public, max-age=900" \
             cp /tmp/dates.json "gs://${GCS_BUCKET}/v1/dates.json"
 
-          # v1/rankings.json — district rankings for landing page (short TTL, 5 min) (#173)
-          # Reads from all-districts-rankings.json which is already computed by the pipeline
-          RANKINGS_SRC="./cache/snapshots/${DATE}/all-districts-rankings.json"
+          # v1/rankings.json (short TTL, 5 min)
+          RANKINGS_SRC="./cache/snapshots/${LATEST_DATE}/all-districts-rankings.json"
           if [ -f "${RANKINGS_SRC}" ]; then
             node -e "
               const fs = require('fs');
@@ -385,7 +529,7 @@ jobs:
               const data = {
                 _format: { version: '1.0.0', type: 'rankings' },
                 rankings: src.rankings,
-                date: src.metadata.sourceCsvDate || '${DATE}',
+                date: src.metadata.sourceCsvDate || '${LATEST_DATE}',
                 generatedAt: new Date().toISOString()
               };
               fs.writeFileSync('/tmp/rankings.json', JSON.stringify(data, null, 2));
@@ -396,23 +540,16 @@ jobs:
               -h "Cache-Control:public, max-age=300" \
               cp /tmp/rankings.json "gs://${GCS_BUCKET}/v1/rankings.json"
           else
-            echo "::warning::all-districts-rankings.json not found at ${RANKINGS_SRC}, skipping v1/rankings.json"
+            echo "::warning::all-districts-rankings.json not found, skipping v1/rankings.json"
           fi
 
-          # v1/rank-history/{districtId}.json — per-district rank history (#173)
-          # Downloads all historical all-districts-rankings.json from GCS,
-          # builds per-district history, writes one JSON per district.
-          # Replaces the runtime RankHistoryIndex from the Express backend.
+          # v1/rank-history/{districtId}.json
           echo "Building per-district rank history..."
           mkdir -p /tmp/rank-history-src /tmp/rank-history-out
-
-          # Download all rankings files from all snapshot dates
           gsutil -m cp \
             "gs://${GCS_BUCKET}/snapshots/*/all-districts-rankings.json" \
             /tmp/rank-history-src/ 2>/dev/null || true
 
-          # gsutil flattens paths — files are named like
-          # snapshots_2024-01-15_all-districts-rankings.json
           RANK_FILE_COUNT=$(ls /tmp/rank-history-src/*.json 2>/dev/null | wc -l | tr -d ' ')
           echo "Downloaded ${RANK_FILE_COUNT} historical rankings files"
 
@@ -422,136 +559,121 @@ jobs:
               const path = require('path');
               const srcDir = '/tmp/rank-history-src';
               const outDir = '/tmp/rank-history-out';
-
-              // Build per-district index from all rankings files
               const index = new Map();
               const files = fs.readdirSync(srcDir).filter(f => f.endsWith('.json'));
-
               for (const file of files) {
                 try {
                   const data = JSON.parse(fs.readFileSync(path.join(srcDir, file), 'utf-8'));
                   const date = data.metadata?.sourceCsvDate;
                   if (!date || !data.rankings) continue;
-
                   for (const r of data.rankings) {
                     if (!index.has(r.districtId)) {
-                      index.set(r.districtId, {
-                        districtId: r.districtId,
-                        districtName: r.districtName,
-                        history: []
-                      });
+                      index.set(r.districtId, { districtId: r.districtId, districtName: r.districtName, history: [] });
                     }
                     const entry = index.get(r.districtId);
-                    if (entry.districtName === 'District ' + r.districtId) {
-                      entry.districtName = r.districtName;
-                    }
+                    if (entry.districtName === 'District ' + r.districtId) entry.districtName = r.districtName;
                     entry.history.push({
-                      date,
-                      aggregateScore: r.aggregateScore,
-                      clubsRank: r.clubsRank,
-                      paymentsRank: r.paymentsRank,
+                      date, aggregateScore: r.aggregateScore,
+                      clubsRank: r.clubsRank, paymentsRank: r.paymentsRank,
                       distinguishedRank: r.distinguishedRank,
                       totalDistricts: data.metadata.totalDistricts,
                       overallRank: r.overallRank ?? 0
                     });
                   }
-                } catch (e) {
-                  console.error('Skipping ' + file + ': ' + e.message);
-                }
+                } catch (e) { console.error('Skipping ' + file + ': ' + e.message); }
               }
-
-              // Sort, deduplicate, and write each district
               let totalPoints = 0;
               for (const [id, entry] of index) {
                 entry.history.sort((a, b) => a.date.localeCompare(b.date));
                 const seen = new Set();
-                entry.history = entry.history.filter(p => {
-                  if (seen.has(p.date)) return false;
-                  seen.add(p.date);
-                  return true;
-                });
+                entry.history = entry.history.filter(p => { if (seen.has(p.date)) return false; seen.add(p.date); return true; });
                 totalPoints += entry.history.length;
-                fs.writeFileSync(
-                  path.join(outDir, id + '.json'),
-                  JSON.stringify(entry)
-                );
+                fs.writeFileSync(path.join(outDir, id + '.json'), JSON.stringify(entry));
               }
-              console.log('Generated rank history for ' + index.size +
-                ' districts (' + totalPoints + ' total points)');
+              console.log('Generated rank history for ' + index.size + ' districts (' + totalPoints + ' total points)');
             "
-
-            # Upload all rank history files with 5-min TTL
             gsutil -m \
               -h "Content-Type:application/json" \
               -h "Cache-Control:public, max-age=300" \
               cp -r "/tmp/rank-history-out/*.json" \
               "gs://${GCS_BUCKET}/v1/rank-history/"
-          else
-            echo "::warning::No historical rankings found, skipping rank history generation"
           fi
 
           echo "## 📋 CDN Manifests" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **v1/latest.json**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **v1/latest.json**: ${LATEST_DATE}" >> "$GITHUB_STEP_SUMMARY"
           DATE_COUNT=$(wc -l < /tmp/all-dates.txt | tr -d ' ')
           echo "- **v1/dates.json**: ${DATE_COUNT} dates" >> "$GITHUB_STEP_SUMMARY"
 
-      # ── Step 6: Update district-snapshot-index (#138) ──────
-      # The backend reads per-district cached dates from this
-      # pre-computed index. Without updating it, the district
-      # detail page date selector goes stale.
+      # ── Shared: Update district-snapshot-index ──
       - name: Update district-snapshot-index
-        env:
-          GCS_BUCKET: 'toast-stats-data-ca'
+        if: steps.mode.outputs.mode != 'prune' || inputs.dry_run != 'true'
         run: |
-          DATE="${{ steps.scrape.outputs.date }}"
-          DISTRICT_LIST="${{ steps.config.outputs.districts }}"
+          MODE="${{ steps.mode.outputs.mode }}"
           INDEX_PATH="gs://${GCS_BUCKET}/config/district-snapshot-index.json"
 
-          echo "Updating district-snapshot-index for ${DATE}..."
+          if [ "${MODE}" = "rebuild" ]; then
+            # Rebuild: generate from GCS listing (local snapshots are cleaned per-date)
+            echo "Generating snapshot index from GCS..."
+            gsutil ls "gs://${GCS_BUCKET}/snapshots/*/district_*.json" > /tmp/snapshot-files.txt 2>/dev/null || true
+            node -e "
+              const fs = require('fs');
+              const lines = fs.readFileSync('/tmp/snapshot-files.txt', 'utf-8').trim().split('\n').filter(Boolean);
+              const index = {};
+              // Parse GCS paths: gs://bucket/snapshots/YYYY-MM-DD/district_XX.json
+              for (const line of lines) {
+                const match = line.match(/snapshots\/(\d{4}-\d{2}-\d{2})\/district_(\w+)\.json$/);
+                if (match && match[1] && match[2] && /^[A-Z0-9]+$/i.test(match[2])) {
+                  const [, date, id] = match;
+                  if (!index[id]) index[id] = [];
+                  if (!index[id].includes(date)) index[id].push(date);
+                }
+              }
+              for (const id of Object.keys(index)) index[id].sort();
+              const dates = [...new Set(lines.map(l => l.match(/snapshots\/(\d{4}-\d{2}-\d{2})\//)?.[1]).filter(Boolean))];
+              const out = { generatedAt: new Date().toISOString(), districts: index };
+              fs.writeFileSync('/tmp/district-snapshot-index.json', JSON.stringify(out, null, 2));
+              console.log('Generated snapshot index: ' + Object.keys(index).length + ' districts, ' + dates.length + ' dates');
+            "
+          else
+            # Daily: merge today's date into existing index
+            DATE="${{ steps.daily-scrape.outputs.date || steps.daily-config.outputs.date }}"
+            DISTRICT_LIST="${{ steps.daily-config.outputs.districts }}"
 
-          # Download existing index (or start empty)
-          gsutil cp "${INDEX_PATH}" /tmp/district-snapshot-index.json 2>/dev/null || \
-            echo '{"generatedAt":"","districts":{}}' > /tmp/district-snapshot-index.json
+            gsutil cp "${INDEX_PATH}" /tmp/district-snapshot-index.json 2>/dev/null || \
+              echo '{"generatedAt":"","districts":{}}' > /tmp/district-snapshot-index.json
 
-          # Update the index with today's date for each district
-          node -e "
-            const fs = require('fs');
-            const index = JSON.parse(fs.readFileSync('/tmp/district-snapshot-index.json', 'utf-8'));
-            const date = '${DATE}';
-            const districts = '${DISTRICT_LIST}'.split(',').map(d => d.trim());
+            node -e "
+              const fs = require('fs');
+              const index = JSON.parse(fs.readFileSync('/tmp/district-snapshot-index.json', 'utf-8'));
+              const date = '${DATE}';
+              const districts = '${DISTRICT_LIST}'.split(',').map(d => d.trim());
+              for (const id of districts) {
+                const existing = index.districts[id] || [];
+                const dateSet = new Set(existing);
+                dateSet.add(date);
+                index.districts[id] = [...dateSet].sort();
+              }
+              index.generatedAt = new Date().toISOString();
+              fs.writeFileSync('/tmp/district-snapshot-index.json', JSON.stringify(index, null, 2));
+              console.log('Updated index for ' + districts.length + ' districts with date ' + date);
+            "
+          fi
 
-            for (const districtId of districts) {
-              const existing = index.districts[districtId] || [];
-              const dateSet = new Set(existing);
-              dateSet.add(date);
-              index.districts[districtId] = [...dateSet].sort();
-            }
-            index.generatedAt = new Date().toISOString();
-
-            fs.writeFileSync('/tmp/district-snapshot-index.json', JSON.stringify(index, null, 2));
-            console.log('Updated index for ' + districts.length + ' districts with date ' + date);
-          "
-
-          # Upload updated index with CDN-aware metadata (changes daily, short TTL)
           gsutil \
             -h "Content-Type:application/json" \
             -h "Cache-Control:public, max-age=300" \
             cp /tmp/district-snapshot-index.json "${INDEX_PATH}"
 
           echo "## 📋 District Snapshot Index" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Updated for date**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
-          DISTRICT_COUNT=$(echo "${DISTRICT_LIST}" | tr ',' '\n' | wc -l | tr -d ' ')
-          echo "- **Districts updated**: ${DISTRICT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          DISTRICT_COUNT=$(jq '.districts | keys | length' /tmp/district-snapshot-index.json)
+          echo "- **Districts in index**: ${DISTRICT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
-      # ── Summary ─────────────────────────────────────────────
+      # ── Summary ──
       - name: Pipeline summary
         if: always()
         run: |
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "---" >> "$GITHUB_STEP_SUMMARY"
-          SCRAPE_DATE="${{ steps.scrape.outputs.date }}"
+          MODE="${{ steps.mode.outputs.mode }}"
           TIMESTAMP=$(date -u +%H:%M' UTC')
-          LINE="🏁 Pipeline completed for"
-          LINE="$LINE \`${SCRAPE_DATE}\`"
-          LINE="$LINE at ${TIMESTAMP}"
-          echo "$LINE" >> "$GITHUB_STEP_SUMMARY"
+          echo "🏁 **${MODE}** pipeline completed at ${TIMESTAMP}" >> "$GITHUB_STEP_SUMMARY"
