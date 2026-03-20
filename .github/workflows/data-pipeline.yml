@@ -273,12 +273,23 @@ jobs:
           gsutil -m rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
 
           # CDN-served: snapshots + analytics (immutable, gzipped)
+          # Note: cp -r dir/ dest/ creates double-nested paths. Use globs instead.
           gsutil -m \
             -h "Content-Type:application/json" \
             -h "Cache-Control:public, max-age=31536000, immutable" \
-            cp -Z -r \
-            "./cache/snapshots/${DATE}/" \
+            cp -Z \
+            "./cache/snapshots/${DATE}"/*.json \
             "gs://${GCS_BUCKET}/snapshots/${DATE}/"
+
+          # Analytics subdirectory
+          if [ -d "./cache/snapshots/${DATE}/analytics" ]; then
+            gsutil -m \
+              -h "Content-Type:application/json" \
+              -h "Cache-Control:public, max-age=31536000, immutable" \
+              cp -Z \
+              "./cache/snapshots/${DATE}/analytics"/*.json \
+              "gs://${GCS_BUCKET}/snapshots/${DATE}/analytics/"
+          fi
 
           echo "## ☁️ GCS Upload" >> "$GITHUB_STEP_SUMMARY"
           SNAPSHOT_COUNT=$(find "./cache/snapshots/${DATE}" -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
@@ -379,12 +390,22 @@ jobs:
             if [ -d "${SNAPSHOT_DIR}" ]; then
               FILE_COUNT=$(find "${SNAPSHOT_DIR}" -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
               echo "Uploading snapshots/${DATE}/ (${FILE_COUNT} files)..."
+              # Note: cp -r dir/ dest/ creates double-nested paths. Use globs instead.
               gsutil -m \
                 -h "Content-Type:application/json" \
                 -h "Cache-Control:public, max-age=31536000, immutable" \
-                cp -Z -r \
-                "${SNAPSHOT_DIR}/" \
+                cp -Z \
+                "${SNAPSHOT_DIR}"/*.json \
                 "gs://${GCS_BUCKET}/snapshots/${DATE}/"
+
+              if [ -d "${SNAPSHOT_DIR}/analytics" ]; then
+                gsutil -m \
+                  -h "Content-Type:application/json" \
+                  -h "Cache-Control:public, max-age=31536000, immutable" \
+                  cp -Z \
+                  "${SNAPSHOT_DIR}/analytics"/*.json \
+                  "gs://${GCS_BUCKET}/snapshots/${DATE}/analytics/"
+              fi
               SUCCEEDED=$((SUCCEEDED + 1))
             fi
 
