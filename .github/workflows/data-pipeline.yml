@@ -29,6 +29,7 @@ on:
           - daily
           - rebuild
           - rescrape
+          - rescrape-historical
           - prune
         default: daily
       date:
@@ -76,7 +77,7 @@ jobs:
     name: '${{ inputs.mode || ''daily'' }} pipeline'
     runs-on: ubuntu-latest
     # Rebuild needs more time (110+ dates × ~1 min each + GCS sync)
-    timeout-minutes: ${{ (inputs.mode == 'rebuild' || inputs.mode == 'rescrape') && 240 || 30 }}
+    timeout-minutes: ${{ (inputs.mode == 'rebuild' || inputs.mode == 'rescrape' || inputs.mode == 'rescrape-historical') && 240 || 30 }}
 
     steps:
       # ── Setup ────────────────────────────────────────────────
@@ -649,6 +650,86 @@ jobs:
           if [ "${FAILED}" -gt 0 ]; then
             echo "::warning::${FAILED} dates failed during rescrape"
           fi
+
+      # ════════════════════════════════════════════════════════
+      # RESCRAPE-HISTORICAL MODE (#205)
+      # One-time: re-download ALL historical CSVs from the dashboard
+      # using the 4-segment URL format, then rebuild everything.
+      # ════════════════════════════════════════════════════════
+
+      - name: '[rescrape-historical] Download historical CSVs'
+        if: steps.mode.outputs.mode == 'rescrape-historical'
+        run: |
+          echo "## 📥 Historical Rescrape (#205)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Downloading month-specific CSVs using 4-segment URL format..."
+
+          YEAR_FLAG=""
+          if [ -n "${{ inputs.program_year }}" ]; then
+            YEAR_FLAG="--year ${{ inputs.program_year }}"
+            echo "- **Program year filter**: ${{ inputs.program_year }}" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          npx tsx scripts/rescrape-historical.ts \
+            --execute \
+            --cache-dir ./cache \
+            --rate 2 \
+            ${YEAR_FLAG}
+
+          DATE_COUNT=$(find ./cache/raw-csv -maxdepth 1 -type d -name '????-??-??' | wc -l | tr -d ' ')
+          echo "- **Raw-csv dates downloaded**: ${DATE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: '[rescrape-historical] Rebuild from fresh CSVs'
+        if: steps.mode.outputs.mode == 'rescrape-historical'
+        run: |
+          echo "Rebuilding all derived data from fresh CSVs..."
+          npx collector-cli rebuild --cache-dir ./cache --clean-snapshots --verbose
+
+      - name: '[rescrape-historical] Nuke stale GCS data'
+        if: steps.mode.outputs.mode == 'rescrape-historical'
+        run: |
+          echo "## 🗑️ GCS Cleanup (pre-upload)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Deleting stale time-series from GCS..."
+          gsutil -m rm -r "gs://${GCS_BUCKET}/time-series/" 2>&1 || echo "(no time-series to delete)"
+          echo "Deleting stale snapshots from GCS..."
+          gsutil -m rm -r "gs://${GCS_BUCKET}/snapshots/" 2>&1 || echo "(no snapshots to delete)"
+          echo "Deleting stale club-trends from GCS..."
+          gsutil -m rm -r "gs://${GCS_BUCKET}/club-trends/" 2>&1 || echo "(no club-trends to delete)"
+          echo "- **Stale GCS data deleted** ✓" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: '[rescrape-historical] Upload rebuilt data to GCS'
+        if: steps.mode.outputs.mode == 'rescrape-historical'
+        run: |
+          echo "## ⬆️ Upload Fresh Data" >> "$GITHUB_STEP_SUMMARY"
+
+          # Upload snapshots with immutable CDN headers
+          echo "Uploading snapshots..."
+          gsutil -m \
+            -h "Content-Type:application/json" \
+            -h "Cache-Control:public, max-age=31536000, immutable" \
+            cp -rZ ./cache/snapshots/* "gs://${GCS_BUCKET}/snapshots/"
+
+          # Upload time-series with short cache
+          echo "Uploading time-series..."
+          gsutil -m \
+            -h "Content-Type:application/json" \
+            -h "Cache-Control:public, max-age=3600" \
+            cp -rZ ./cache/time-series/* "gs://${GCS_BUCKET}/time-series/"
+
+          # Upload club-trends
+          echo "Uploading club-trends..."
+          gsutil -m \
+            -h "Content-Type:application/json" \
+            -h "Cache-Control:public, max-age=3600" \
+            cp -rZ ./cache/club-trends/* "gs://${GCS_BUCKET}/club-trends/"
+
+          # Upload raw-csv
+          echo "Uploading raw-csv..."
+          gsutil -m rsync -r "./cache/raw-csv/" "gs://${GCS_BUCKET}/raw-csv/"
+
+          SNAP_COUNT=$(find ./cache/snapshots -maxdepth 1 -type d -name '????-??-??' | wc -l | tr -d ' ')
+          TS_COUNT=$(find ./cache/time-series -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
+          echo "- **Snapshots uploaded**: ${SNAP_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Time-series files**: ${TS_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
       # ════════════════════════════════════════════════════════
       # PRUNE MODE
