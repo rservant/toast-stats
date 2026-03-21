@@ -583,7 +583,7 @@ const LandingPage: React.FC = () => {
                         className="w-4 h-4 text-tm-loyal-blue border-gray-300 rounded-sm focus:ring-tm-loyal-blue"
                       />
                       <span className="ml-2 text-sm text-gray-700">
-                        Region {region} ({count})
+                        Region {region} ({count.toString().trim()})
                       </span>
                     </label>
                   )
@@ -924,7 +924,7 @@ const LandingPage: React.FC = () => {
                             : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                         }`}
                       >
-                        {region} ({districtCount})
+                        {region.trim()} ({districtCount})
                       </button>
                     )
                   })}
