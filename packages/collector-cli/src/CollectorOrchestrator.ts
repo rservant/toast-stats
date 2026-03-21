@@ -22,7 +22,6 @@ import { CircuitBreaker, CircuitState } from './utils/CircuitBreaker.js'
 import { RetryManager } from './utils/RetryManager.js'
 import {
   HttpCsvDownloader,
-  computeMonthEndDate,
   type ReportType as HttpReportType,
 } from './services/HttpCsvDownloader.js'
 import type {
@@ -304,12 +303,10 @@ export class CollectorOrchestrator {
       const retryResult = await RetryManager.executeWithRetry(
         async () => {
           const programYear = calculateProgramYear(date)
-          const collectionDate = new Date(date + 'T00:00:00')
           const result = await downloader.downloadCsv({
             programYear,
             reportType: 'districtsummary',
-            date: collectionDate,
-            monthEndDate: computeMonthEndDate(collectionDate),
+            date: new Date(date + 'T00:00:00'),
           })
 
           const filePath = await this.writeCsvToCache(
@@ -414,13 +411,11 @@ export class CollectorOrchestrator {
           ]
 
           for (const { report, csv } of reportTypes) {
-            const collectionDate = new Date(date + 'T00:00:00')
             const result = await downloader.downloadCsv({
               programYear,
               reportType: report,
               districtId,
-              date: collectionDate,
-              monthEndDate: computeMonthEndDate(collectionDate),
+              date: new Date(date + 'T00:00:00'),
             })
 
             const filePath = await this.writeCsvToCache(
