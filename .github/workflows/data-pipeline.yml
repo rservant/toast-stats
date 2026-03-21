@@ -661,6 +661,12 @@ jobs:
         if: steps.mode.outputs.mode == 'rescrape-historical'
         run: |
           echo "## 📥 Historical Rescrape (#205)" >> "$GITHUB_STEP_SUMMARY"
+
+          # Clean slate — remove any old raw-csv data so rebuild has no stale dirs
+          echo "Cleaning cache/raw-csv for a fresh start..."
+          rm -rf ./cache/raw-csv
+          mkdir -p ./cache/raw-csv
+
           echo "Downloading month-specific CSVs using 4-segment URL format..."
 
           YEAR_FLAG=""
@@ -682,19 +688,7 @@ jobs:
         if: steps.mode.outputs.mode == 'rescrape-historical'
         run: |
           echo "Rebuilding all derived data from fresh CSVs..."
-
-          # Only rebuild freshly downloaded dates (skip stale dirs from old runs)
-          DATES=$(find ./cache/raw-csv -maxdepth 1 -type d -name '????-??-??' \
-            -exec sh -c 'test -f "$1/metadata.json" && grep -q rescrape-historical "$1/metadata.json" && basename "$1"' _ {} \; \
-            | sort | tr '\n' ',')
-
-          if [ -z "${DATES}" ]; then
-            echo "::error::No rescrape-historical dates found in cache"
-            exit 1
-          fi
-
-          echo "Dates to rebuild: ${DATES}"
-          npx collector-cli rebuild --dates "${DATES}" --clean-snapshots --verbose
+          npx collector-cli rebuild --clean-snapshots --verbose
 
       - name: '[rescrape-historical] Nuke stale GCS data'
         if: steps.mode.outputs.mode == 'rescrape-historical'
