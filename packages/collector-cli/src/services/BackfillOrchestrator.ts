@@ -17,6 +17,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import {
   HttpCsvDownloader,
+  computeMonthEndDate,
   type DateFrequency,
   type ReportType,
 } from './HttpCsvDownloader.js'
@@ -364,6 +365,7 @@ export class BackfillOrchestrator {
             programYear: year,
             reportType: 'districtsummary',
             date,
+            monthEndDate: computeMonthEndDate(date),
           })
 
           requestsMade++
@@ -504,6 +506,7 @@ export class BackfillOrchestrator {
                 reportType,
                 districtId,
                 date,
+                monthEndDate: computeMonthEndDate(date),
               })
 
               requestsMade++

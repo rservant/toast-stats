@@ -38,6 +38,14 @@ export interface BackfillDateSpec {
   reportType: ReportType
   districtId?: string
   date: Date
+  /**
+   * The month-end date for the reporting period (e.g., 8/31/2025 for August).
+   * When provided, the export URL uses the 4-segment format:
+   *   reportType~districtId~monthEndDate~collectionDate~programYear
+   * This is REQUIRED for the dashboard to return month-specific data.
+   * Without it, the dashboard returns only the latest closing period.
+   */
+  monthEndDate?: Date
 }
 
 export interface HttpCsvDownloaderConfig {
@@ -65,21 +73,49 @@ function formatDateForUrl(date: Date): string {
 }
 
 /**
+ * Compute the month-end date for a given collection date.
+ *
+ * The Toastmasters dashboard's closing period works as follows:
+ * data collected on date D belongs to the PREVIOUS month's closing period.
+ * e.g., data collected on 9/8/2025 is the August 2025 closing → month-end = 8/31/2025.
+ *
+ * Special case: if the collection date is in the same month as the program year start
+ * (July), the month-end is 7/31 of the start year.
+ *
+ * @param collectionDate - The date data was collected/scraped
+ * @returns The last day of the previous month
+ */
+export function computeMonthEndDate(collectionDate: Date): Date {
+  // Last day of previous month = day 0 of current month
+  return new Date(collectionDate.getFullYear(), collectionDate.getMonth(), 0)
+}
+
+/**
  * Build the full export URL for a given report specification.
+ *
+ * Uses the 4-segment report format when monthEndDate is provided:
+ *   reportType~districtId~monthEndDate~collectionDate~programYear
+ *
+ * This format is REQUIRED for the dashboard to return month-specific data.
+ * Without monthEndDate, the dashboard returns the latest closing period data
+ * regardless of the collection date.
  */
 export function buildExportUrl(spec: BackfillDateSpec): string {
   const dateStr = formatDateForUrl(spec.date)
+  const monthEndStr = spec.monthEndDate
+    ? formatDateForUrl(spec.monthEndDate)
+    : ''
   let reportName: string
 
   if (spec.reportType === 'districtsummary') {
-    reportName = `districtsummary~${dateStr}~~${spec.programYear}`
+    reportName = `districtsummary~${monthEndStr}~${dateStr}~${spec.programYear}`
   } else {
     if (!spec.districtId) {
       throw new Error(
         `districtId is required for report type: ${spec.reportType}`
       )
     }
-    reportName = `${spec.reportType}~${spec.districtId}~${dateStr}~~${spec.programYear}`
+    reportName = `${spec.reportType}~${spec.districtId}~${monthEndStr}~${dateStr}~${spec.programYear}`
   }
 
   return `${BASE_URL}/${spec.programYear}/export.aspx?type=CSV&report=${reportName}`
