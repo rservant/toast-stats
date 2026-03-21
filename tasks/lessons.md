@@ -631,3 +631,27 @@
 3. **gsutil download filename collisions (#186)**: `gsutil -m cp gs://bucket/snapshots/*/all-districts-rankings.json /tmp/dir/` downloads all identically-named files to a flat directory — they overwrite each other. Only the last file survives. Fix: list GCS files first, download each with a date-prefixed filename. **This is the same class of gsutil-pitfall as the double-nesting bug from earlier today.**
 
 **Takeaway**: When gsutil is involved, always verify the _exact_ file paths and names on disk after download. gsutil has several non-obvious behaviors: `-r` double-nesting, wildcard destination collisions, and Content-Encoding interactions.
+
+## 🗓️ 2026-03-20 — payments-not-members (#170)
+
+**Discovery**: `paymentBase` (5,764) ≠ member count (2,810). Members pay twice/year, so payment count ≈ 2× membership.
+**Proof**: CDN shows `totalMembership: 2810` vs `paymentBase: 5764`.
+**Rule**: Never use payment fields for member count calculations. They are fundamentally different metrics.
+**Warning**: Any badge showing "+N members" must use actual membership data, not payment data.
+**rules.md**: none
+
+## 🗓️ 2026-03-20 — time-series-architecture-gap (#170)
+
+**Discovery**: `TimeSeriesDataPointBuilder` generates dense monthly data at `time-series/district_{id}/{year}.json`, but these files are GCS-internal and not served via CDN. The frontend reads inline `analytics.membershipTrend` (1-2 points) instead.
+**Proof**: CDN returns 404 for `/time-series/`, but GCS has the files. `convertToAggregatedFormat()` directly uses inline `analytics.membershipTrend`.
+**Rule**: Always check whether generated data is actually served to consumers before assuming it's visible.
+**Warning**: The snapshot-based pipeline architecture (1-2 snapshots → analytics) structurally limits trend data. Multi-point trends require the time-series store.
+**rules.md**: none
+
+## 🗓️ 2026-03-20 — force-analytics-flag-name (#170)
+
+**Discovery**: The compute-analytics CLI flag is `--force-analytics`, not `--force`. The pipeline used `--force` which caused all 110 compute steps in rebuild #1 to fail silently.
+**Proof**: CLI help shows `--force-analytics` option. Rebuild #1 logs: "unknown option '--force'" for all dates.
+**Rule**: Always run `--help` on CLI commands before adding flags to pipeline YAML.
+**Warning**: The `scrape` and `transform` commands use `-f, --force` but `compute-analytics` uses `--force-analytics` — flag names are not consistent across commands.
+**rules.md**: none
