@@ -674,3 +674,10 @@
 **Discovery**: The time-series CDN overlay upload used `find | while read | gsutil cp` — a serial loop that uploaded ~1,300 JSON files one-at-a-time. Each `gsutil cp` call has HTTP handshake overhead (~1s), so the total upload took ~20 minutes.
 **Fix**: Replaced with `gsutil -m cp -rZ ./cache/time-series/* gs://bucket/time-series/` — a single parallel batch operation. Use `dir/*` glob instead of `dir/` to avoid `cp -r`'s double-nesting behavior.
 **Rule**: Never use `find | while | gsutil cp` for bulk uploads. Always use `gsutil -m cp -rZ` with glob patterns for parallel bulk operations. The `-m` flag enables multi-threaded uploads; `-r` handles subdirectories; `-Z` applies gzip encoding.
+
+## 🗓️ 2026-03-21 — export-aspx-4-segment-report-format (#204)
+
+**Discovery**: The Toastmasters dashboard `export.aspx?type=CSV&report=...` endpoint requires a **4-segment report parameter** to return month-specific data: `reportType~districtId~monthEndDate~collectionDate~programYear`. The HTTP migration (#123) used a 3-segment format with an empty month-end field (`reportType~districtId~collectionDate~~programYear`), causing the endpoint to always return the latest closing period data. MD5 checksums proved all historical CSVs were byte-for-byte identical.
+**Root cause**: The old Playwright collector navigated to `Club.aspx?month=N&day=M/D/YYYY`, which set the page's month context. The export CSV was then triggered from that session. The HTTP migration bypassed the navigation and called `export.aspx` directly without the month-end date, losing the month context.
+**Fix**: Added `computeMonthEndDate()` (last day of previous month) and updated `buildExportUrl()` to produce the 4-segment `reportType~districtId~monthEndDate~collectionDate~programYear` format.
+**Rule**: When migrating from browser-based to HTTP-based scraping, ALWAYS verify the exported data varies as expected by comparing MD5 checksums across dates. The session context that a browser builds may encode critical parameters that a stateless HTTP request must replicate explicitly.
