@@ -668,3 +668,9 @@
 **Proof**: CDN shows `latestSnapshotDate: "2025-03-19"` when the actual latest date is `2026-03-19`. The rebuild logs show the warning `No snapshot dates found, skipping manifests`.
 **Rule**: Multi-step pipelines that delete intermediate data must not rely on local filesystem state for downstream steps. Use GCS listing as fallback or pass state via environment variables between steps.
 **Warning**: Any future pipeline step that depends on local snapshot directories will also be affected by the rebuild cleanup. Consider tracking processed dates in a file or env var rather than relying on directory existence.
+
+## 🗓️ 2026-03-21 — serial-gsutil-cp-bottleneck
+
+**Discovery**: The time-series CDN overlay upload used `find | while read | gsutil cp` — a serial loop that uploaded ~1,300 JSON files one-at-a-time. Each `gsutil cp` call has HTTP handshake overhead (~1s), so the total upload took ~20 minutes.
+**Fix**: Replaced with `gsutil -m cp -rZ ./cache/time-series/* gs://bucket/time-series/` — a single parallel batch operation. Use `dir/*` glob instead of `dir/` to avoid `cp -r`'s double-nesting behavior.
+**Rule**: Never use `find | while | gsutil cp` for bulk uploads. Always use `gsutil -m cp -rZ` with glob patterns for parallel bulk operations. The `-m` flag enables multi-threaded uploads; `-r` handles subdirectories; `-Z` applies gzip encoding.
