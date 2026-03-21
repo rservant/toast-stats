@@ -6,6 +6,7 @@ import { useAggregatedAnalytics } from '../hooks/useAggregatedAnalytics'
 import { useDistrictStatistics } from '../hooks/useMembershipData'
 import { usePerformanceTargets } from '../hooks/usePerformanceTargets'
 import { usePaymentsTrend } from '../hooks/usePaymentsTrend'
+import { useTimeSeries } from '../hooks/useTimeSeries'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useProgramYear } from '../contexts/ProgramYearContext'
 import { ProgramYearSelector } from '../components/ProgramYearSelector'
@@ -220,6 +221,11 @@ const DistrictDetailPage: React.FC = () => {
   } = useAggregatedAnalytics(
     hasValidDates ? districtId || null : null,
     effectiveEndDate ?? undefined
+  )
+
+  // Fetch time-series data for multi-point trends + base membership (#170)
+  const { data: timeSeries } = useTimeSeries(
+    hasValidDates ? districtId || null : null
   )
 
   // Fetch full analytics for detailed views (clubs, divisions, analytics tabs)
@@ -581,15 +587,10 @@ const DistrictDetailPage: React.FC = () => {
                     })}
                     programYearStartDate={effectiveProgramYear.startDate}
                     performanceTargets={performanceTargets ?? undefined}
-                    netMemberChange={(() => {
-                      // Fix #76: compute from rich aggregated trend (program-year scoped, 134+ points)
-                      const trend = aggregatedAnalytics?.trends?.membership
-                      if (!trend || trend.length < 2) return undefined
-                      const first = trend[0]
-                      const last = trend[trend.length - 1]
-                      if (!first || !last) return undefined
-                      return last.count - first.count
-                    })()}
+                    netMemberChange={
+                      // #170: prefer time-series member change (base membership based)
+                      timeSeries?.memberChange
+                    }
                   />
                 )}
 
@@ -672,7 +673,15 @@ const DistrictDetailPage: React.FC = () => {
                 {aggregatedAnalytics ? (
                   <LazyChart height="400px">
                     <MembershipTrendChart
-                      membershipTrend={aggregatedAnalytics.trends.membership}
+                      membershipTrend={
+                        // #170: prefer time-series monthly data over inline 1-point trend
+                        timeSeries?.years[
+                          timeSeries.currentProgramYear
+                        ]?.dataPoints.map(dp => ({
+                          date: dp.date,
+                          count: dp.membership,
+                        })) ?? aggregatedAnalytics.trends.membership
+                      }
                       isLoading={isLoadingAggregated}
                     />
                   </LazyChart>
