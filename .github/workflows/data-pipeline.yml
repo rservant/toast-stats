@@ -1,9 +1,10 @@
 # Unified Data Pipeline Workflow (#191)
 #
 # Modes:
-#   daily   — scrape → transform → compute-analytics → upload ONE date (default, cron)
-#   rebuild — sync all raw-csv from GCS → rebuild ALL dates → upload ALL snapshots
-#   prune   — remove non-month-end dates from local cache and GCS
+#   daily    — scrape → transform → compute-analytics → upload ONE date (default, cron)
+#   rebuild  — sync all raw-csv from GCS → rebuild ALL dates → upload ALL snapshots
+#   rescrape — re-collect CSVs from the dashboard for specific dates or a program year
+#   prune    — remove non-month-end dates from local cache and GCS
 #
 # Prerequisites:
 #   1. Run scripts/setup-wif.sh (one-time)
@@ -27,6 +28,7 @@ on:
         options:
           - daily
           - rebuild
+          - rescrape
           - prune
         default: daily
       date:
@@ -34,7 +36,11 @@ on:
         required: false
         type: string
       dates:
-        description: 'Rebuild only: comma-separated dates to rebuild (default: all in raw-csv/)'
+        description: 'Rebuild/rescrape: comma-separated dates (default: all in raw-csv/ for rebuild)'
+        required: false
+        type: string
+      program_year:
+        description: 'Rescrape only: program year (e.g. 2025-2026). Generates monthly dates automatically.'
         required: false
         type: string
       districts:
@@ -70,7 +76,7 @@ jobs:
     name: '${{ inputs.mode || ''daily'' }} pipeline'
     runs-on: ubuntu-latest
     # Rebuild needs more time (110+ dates × ~1 min each + GCS sync)
-    timeout-minutes: ${{ inputs.mode == 'rebuild' && 240 || 30 }}
+    timeout-minutes: ${{ (inputs.mode == 'rebuild' || inputs.mode == 'rescrape') && 240 || 30 }}
 
     steps:
       # ── Setup ────────────────────────────────────────────────
@@ -463,6 +469,161 @@ jobs:
 
           if [ "${FAILED}" -gt 0 ]; then
             echo "::warning::${FAILED} dates failed during rebuild"
+          fi
+
+      # ════════════════════════════════════════════════════════
+      # RESCRAPE MODE
+      # ════════════════════════════════════════════════════════
+      # Re-collects CSVs from the Toastmasters dashboard for
+      # specified dates (or generates monthly dates from a
+      # program year). Then transforms, computes, and uploads.
+
+      # ── Rescrape Step 1: Sync small stores from GCS ──
+      - name: '[rescrape] Sync time-series and club-trends from GCS'
+        if: steps.mode.outputs.mode == 'rescrape'
+        run: |
+          mkdir -p ./cache/time-series ./cache/club-trends
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/time-series/" "./cache/time-series/" 2>&1 || true
+          gsutil -m rsync -r "gs://${GCS_BUCKET}/club-trends/" "./cache/club-trends/" 2>&1 || true
+          echo "## ⏬ Store Sync (rescrape)" >> "$GITHUB_STEP_SUMMARY"
+
+      # ── Rescrape Step 2: Scrape → transform → compute → upload ──
+      - name: '[rescrape] Re-collect and process dates'
+        if: steps.mode.outputs.mode == 'rescrape'
+        run: |
+          # Determine dates to rescrape
+          if [ -n "${{ inputs.dates }}" ]; then
+            DATES=$(echo "${{ inputs.dates }}" | tr ',' ' ')
+          elif [ -n "${{ inputs.program_year }}" ]; then
+            # Generate monthly dates for the program year
+            PY="${{ inputs.program_year }}"
+            START_YEAR=$(echo "$PY" | cut -d'-' -f1)
+            DATES=$(node -e "
+              const sy = parseInt('${START_YEAR}', 10);
+              const dates = [];
+              // Jul through Dec of start year, Jan through Jun of end year
+              for (let m = 6; m < 18; m++) {
+                const year = sy + Math.floor(m / 12);
+                const month = m % 12;
+                // Use the 15th of each month as a representative date
+                const d = new Date(year, month, 15);
+                dates.push(d.toISOString().split('T')[0]);
+              }
+              process.stdout.write(dates.join(' '));
+            ")
+            echo "Generated dates from program year ${PY}: ${DATES}"
+          else
+            echo "::error::rescrape mode requires either 'dates' or 'program_year' input"
+            exit 1
+          fi
+
+          DATE_COUNT=$(echo "$DATES" | wc -w | tr -d ' ')
+          echo "## 🔄 Rescrape" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Dates to rescrape**: ${DATE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Rescraping ${DATE_COUNT} dates..."
+
+          SUCCEEDED=0
+          FAILED=0
+          INDEX=0
+
+          for DATE in ${DATES}; do
+            INDEX=$((INDEX + 1))
+            echo ""
+            echo "═══════════════════════════════════════"
+            echo "[${INDEX}/${DATE_COUNT}] Rescraping ${DATE}"
+            echo "═══════════════════════════════════════"
+
+            # 1. Snapshot existing dirs before scrape+transform
+            BEFORE_DIRS=$(ls -d ./cache/snapshots/????-??-?? 2>/dev/null | sort || true)
+
+            # 2. Scrape from dashboard + transform in one step
+            echo "Scraping and transforming ${DATE}..."
+            SCRAPE_ARGS="--date ${DATE} --transform --force --verbose"
+            if [ -n "${{ inputs.districts }}" ]; then
+              SCRAPE_ARGS="${SCRAPE_ARGS} --districts ${{ inputs.districts }}"
+            fi
+            if ! npx collector-cli scrape ${SCRAPE_ARGS} 2>&1; then
+              echo "::warning::Scrape/transform failed for ${DATE}"
+              FAILED=$((FAILED + 1))
+              continue
+            fi
+
+            # 3. Detect actual snapshot date (same as rebuild #193)
+            AFTER_DIRS=$(ls -d ./cache/snapshots/????-??-?? 2>/dev/null | sort || true)
+            ACTUAL_DATE=$(comm -13 <(echo "$BEFORE_DIRS") <(echo "$AFTER_DIRS") \
+                          | head -1 | grep -oP '\d{4}-\d{2}-\d{2}' || true)
+            ACTUAL_DATE="${ACTUAL_DATE:-$DATE}"
+            if [ "$ACTUAL_DATE" != "$DATE" ]; then
+              echo "Date remapped: ${DATE} → ${ACTUAL_DATE}"
+            fi
+
+            # 4. Compute analytics
+            echo "Computing analytics for ${ACTUAL_DATE}..."
+            if ! npx collector-cli compute-analytics --date "${ACTUAL_DATE}" --force-analytics --verbose 2>&1; then
+              echo "::warning::Compute failed for ${ACTUAL_DATE}"
+              FAILED=$((FAILED + 1))
+            fi
+
+            # 5. Upload snapshots + analytics to GCS
+            SNAPSHOT_DIR="./cache/snapshots/${ACTUAL_DATE}"
+            if [ -d "${SNAPSHOT_DIR}" ]; then
+              FILE_COUNT=$(find "${SNAPSHOT_DIR}" -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
+              echo "Uploading snapshots/${ACTUAL_DATE}/ (${FILE_COUNT} files)..."
+              gsutil -m \
+                -h "Content-Type:application/json" \
+                -h "Cache-Control:public, max-age=31536000, immutable" \
+                cp -Z \
+                "${SNAPSHOT_DIR}"/*.json \
+                "gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/"
+
+              if [ -d "${SNAPSHOT_DIR}/analytics" ]; then
+                gsutil -m \
+                  -h "Content-Type:application/json" \
+                  -h "Cache-Control:public, max-age=31536000, immutable" \
+                  cp -Z \
+                  "${SNAPSHOT_DIR}/analytics"/*.json \
+                  "gs://${GCS_BUCKET}/snapshots/${ACTUAL_DATE}/analytics/"
+              fi
+              SUCCEEDED=$((SUCCEEDED + 1))
+            else
+              echo "::warning::No snapshot directory found for ${DATE} (expected ${ACTUAL_DATE})"
+            fi
+
+            # 6. Upload raw-csv to GCS (replace old corrupt data)
+            RAW_CSV_DIR="./cache/raw-csv/${DATE}"
+            if [ -d "${RAW_CSV_DIR}" ]; then
+              echo "Uploading raw-csv/${DATE}/..."
+              gsutil -m rsync -r "${RAW_CSV_DIR}/" "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
+            fi
+
+            # 7. Cleanup to free disk
+            rm -rf "./cache/raw-csv/${DATE}" "./cache/snapshots/${ACTUAL_DATE}"
+
+            if [ $((INDEX % 5)) -eq 0 ]; then
+              echo "Disk usage after ${INDEX} dates: $(df -h . | tail -1 | awk '{print $3 " used / " $4 " free"}')"
+            fi
+          done
+
+          # Sync accumulated stores back to GCS
+          echo "Syncing time-series and club-trends back to GCS..."
+          gsutil -m rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
+          gsutil -m rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
+
+          # Time-series: CDN-served overlay
+          echo "Uploading time-series with CDN headers..."
+          find ./cache/time-series -name '*.json' -print0 | while IFS= read -r -d '' FILE; do
+            REL_PATH="${FILE#./cache/}"
+            gsutil \
+              -h "Content-Type:application/json" \
+              -h "Cache-Control:public, max-age=3600" \
+              cp -Z "${FILE}" "gs://${GCS_BUCKET}/${REL_PATH}"
+          done
+
+          echo "- **Dates succeeded**: ${SUCCEEDED}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Dates failed**: ${FAILED}" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "${FAILED}" -gt 0 ]; then
+            echo "::warning::${FAILED} dates failed during rescrape"
           fi
 
       # ════════════════════════════════════════════════════════
