@@ -63,6 +63,7 @@ A data visualization platform for **Toastmasters district leaders** to track clu
 | Time-series CDN serving | Time-series files served with 1-hour cache               | ✅ Shipped |
 | Club trends index       | Per-district club trend data for modal lookup            | ✅ Shipped |
 | Rebuild mode            | Re-process all historical dates from raw CSV             | ✅ Shipped |
+| Rescrape mode           | Re-collect CSVs from dashboard for specific dates/year   | ✅ Shipped |
 | Prune mode              | Reduce to one snapshot per month per program year        | ✅ Shipped |
 
 ---
@@ -95,12 +96,14 @@ All Toastmasters-specific rules are documented in [toastmasters-rules-reference.
 
 ## Known Issues
 
-| Issue | Description                                                       | Priority |
-| ----- | ----------------------------------------------------------------- | -------- |
-| #193  | Rebuild date mismatch — fixed in `1b09833`, awaiting verification | High     |
-| #180  | Date selector shows wrong "latest" for historical program years   | Medium   |
-| #167  | DCP goals timeline shows no change dates (backend accumulation)   | Medium   |
-| #170  | Time-series has ~2 data points; awaiting rebuild backfill         | High     |
+| Issue | Description                                                        | Priority |
+| ----- | ------------------------------------------------------------------ | -------- |
+| #199  | Detect and re-collect corrupt CSV files during rebuild             | Medium   |
+| #200  | Manifest latest.json not updated after rebuild — fixed in pipeline | High     |
+| #193  | Rebuild date mismatch — fixed in `1b09833`                         | High     |
+| #180  | Date selector shows wrong "latest" for historical program years    | Medium   |
+| #167  | DCP goals timeline shows no change dates (backend accumulation)    | Medium   |
+| #170  | Time-series has ~2 data points; rescrape triggered for 2025-2026   | High     |
 
 ---
 
