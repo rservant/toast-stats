@@ -516,6 +516,42 @@ jobs:
           echo "- **Dates to rescrape**: ${DATE_COUNT}" >> "$GITHUB_STEP_SUMMARY"
           echo "Rescraping ${DATE_COUNT} dates..."
 
+          # Discover districts (same approach as daily mode)
+          if [ -n "${{ inputs.districts }}" ]; then
+            DISTRICTS="${{ inputs.districts }}"
+            echo "Using manual district override: ${DISTRICTS}"
+          else
+            # Use the first date to determine program year for district discovery
+            FIRST_DATE=$(echo "$DATES" | awk '{print $1}')
+            PROGRAM_YEAR=$(node -e "
+              const d = new Date('${FIRST_DATE}');
+              const y = d.getFullYear(); const m = d.getMonth();
+              console.log(m >= 6 ? y+'-'+(y+1) : (y-1)+'-'+y);
+            ")
+            DATE_FORMATTED=$(date -d "${FIRST_DATE}" +'%-m/%-d/%Y')
+            DISTRICTS_CSV_URL="https://dashboards.toastmasters.org/${PROGRAM_YEAR}/export.aspx?type=CSV&report=districtsummary~${DATE_FORMATTED}~~${PROGRAM_YEAR}"
+
+            echo "Discovering districts from: ${DISTRICTS_CSV_URL}"
+            DISTRICTS=$(curl -sf --retry 3 --max-time 30 "${DISTRICTS_CSV_URL}" | node -e "
+              const data = require('fs').readFileSync('/dev/stdin','utf8');
+              const lines = data.trim().split('\n');
+              const headers = lines[0].split(',').map(h => h.replace(/\\\"/g,'').trim());
+              const col = headers.indexOf('DISTRICT');
+              const ids = [...new Set(lines.slice(1)
+                .map(l => l.split(',')[col].replace(/\\\"/g,'').trim())
+                .filter(id => /^[A-Z0-9]+$/i.test(id)))];
+              ids.sort((a,b) => { const na=parseInt(a,10),nb=parseInt(b,10); return isNaN(na)||isNaN(nb)?a.localeCompare(b):na-nb; });
+              process.stdout.write(ids.join(','));
+            ")
+
+            if [ -z "${DISTRICTS}" ]; then
+              echo "::error::Failed to discover districts from Toastmasters CSV."
+              exit 1
+            fi
+            echo "Discovered $(echo "${DISTRICTS}" | tr ',' '\n' | wc -l | tr -d ' ') districts"
+          fi
+          echo "- **Districts**: $(echo "${DISTRICTS}" | tr ',' '\n' | wc -l | tr -d ' ')" >> "$GITHUB_STEP_SUMMARY"
+
           SUCCEEDED=0
           FAILED=0
           INDEX=0
@@ -532,10 +568,7 @@ jobs:
 
             # 2. Scrape from dashboard + transform in one step
             echo "Scraping and transforming ${DATE}..."
-            SCRAPE_ARGS="--date ${DATE} --transform --force --verbose"
-            if [ -n "${{ inputs.districts }}" ]; then
-              SCRAPE_ARGS="${SCRAPE_ARGS} --districts ${{ inputs.districts }}"
-            fi
+            SCRAPE_ARGS="--date ${DATE} --transform --force --verbose --districts ${DISTRICTS}"
             if ! npx collector-cli scrape ${SCRAPE_ARGS} 2>&1; then
               echo "::warning::Scrape/transform failed for ${DATE}"
               FAILED=$((FAILED + 1))
