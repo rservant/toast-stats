@@ -691,9 +691,9 @@ jobs:
           npx collector-cli rebuild --verbose
 
       - name: '[rescrape-historical] Nuke stale GCS data'
-        if: steps.mode.outputs.mode == 'rescrape-historical'
+        if: steps.mode.outputs.mode == 'rescrape-historical' && inputs.program_year == ''
         run: |
-          echo "## 🗑️ GCS Cleanup (pre-upload)" >> "$GITHUB_STEP_SUMMARY"
+          echo "## 🗑️ GCS Cleanup (pre-upload, full rescrape only)" >> "$GITHUB_STEP_SUMMARY"
           echo "Deleting stale time-series from GCS..."
           gsutil -m rm -r "gs://${GCS_BUCKET}/time-series/" 2>&1 || echo "(no time-series to delete)"
           echo "Deleting stale snapshots from GCS..."

@@ -681,3 +681,35 @@
 **Root cause**: The old Playwright collector navigated to `Club.aspx?month=N&day=M/D/YYYY`, which set the page's month context. The export CSV was then triggered from that session. The HTTP migration bypassed the navigation and called `export.aspx` directly without the month-end date, losing the month context.
 **Fix**: Added `computeMonthEndDate()` (last day of previous month) and updated `buildExportUrl()` to produce the 4-segment `reportType~districtId~monthEndDate~collectionDate~programYear` format.
 **Rule**: When migrating from browser-based to HTTP-based scraping, ALWAYS verify the exported data varies as expected by comparing MD5 checksums across dates. The session context that a browser builds may encode critical parameters that a stateless HTTP request must replicate explicitly.
+
+## 🗓️ 2026-03-21 — analytics-paymentsTrend-chicken-egg (#206)
+
+**Discovery**: AnalyticsComputeService writes analytics files (with `paymentsTrend` from 1-2 snapshots) BEFORE appending the time-series data point. The analytics `paymentsTrend` only ever has 1 data point.
+**Proof**: CDN analytics JSON for D61 had `paymentsTrend.length === 1` while `time-series/district_61/2025-2026.json` had 7 correct data points.
+**Rule**: When analytics depend on accumulated time-series, always patch analytics AFTER the time-series write (read-back-and-patch pattern).
+**Warning**: Any new field that derives from accumulated time-series will also need a post-write patch — check the write ordering.
+**rules.md**: none
+
+## 🗓️ 2026-03-21 — program-year-from-dataMonth-not-closingDate (#205)
+
+**Discovery**: June's closing date (7/20) falls in July, mapping to program year 2025-2026 instead of 2024-2025. `calculateProgramYear(closingDate)` returns the wrong year for June data.
+**Proof**: District summary for June 2025 returned 0 districts because the URL used program year 2025-2026.
+**Rule**: Always derive program year from `dataMonth` (which IS the data's fiscal month) rather than `closingDate` (which can cross fiscal year boundaries).
+**Warning**: Any new code that maps closing dates to program years must account for June → July boundary.
+**rules.md**: none
+
+## 🗓️ 2026-03-21 — clean-snapshots-deletes-before-upload (#205)
+
+**Discovery**: `--clean-snapshots` flag deletes snapshot dirs during rebuild to save disk. But the `rescrape-historical` pipeline uploads AFTER rebuild completes — by which time all snapshots are deleted.
+**Proof**: GCS `snapshots/` had only `latest-successful.json` after pipeline run. `gsutil cp ./cache/snapshots/*` found nothing.
+**Rule**: Never use `--clean-snapshots` in pipeline modes where snapshots are batch-uploaded after rebuild.
+**Warning**: The `--clean-snapshots` flag is safe for daily pipeline (uploads per-date inline) but fatal for batch modes.
+**rules.md**: none
+
+## 🗓️ 2026-03-21 — immutable-cache-for-mutable-data (#207)
+
+**Discovery**: Snapshot and analytics files used `cache-control: max-age=31536000, immutable` (1-year, never-recheck). But these files are overwritten at the SAME URL on each pipeline run, so `immutable` is semantically wrong.
+**Proof**: After fixing the data pipeline, the corrected analytics JSON was in GCS but the browser still served the old version. `curl -I` confirmed the 1-year immutable header.
+**Rule**: Use `immutable` ONLY for content-addressed assets (where the URL changes when content changes). For mutable data files, use `max-age=3600, must-revalidate`.
+**Warning**: GCS object metadata must also be explicitly updated — changing the pipeline YAML only affects future uploads, not existing objects.
+**rules.md**: none
