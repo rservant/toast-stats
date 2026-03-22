@@ -52,6 +52,8 @@
     "*.{ts,tsx,js,jsx,json,md}": "prettier --write"
   },
   "overrides": {
-    "minimatch": "^10.2.3"
+    "minimatch": "^10.2.3",
+    "fast-xml-parser": "^5.5.8",
+    "flatted": "^3.3.3"
   }
 }
