@@ -720,3 +720,16 @@
 **Fix**: When all values in a category are identical (`Set.size === 1`), award 0 Borda points instead of `N - rank + 1`. This neutralizes tied categories from the aggregate score.
 **Warning**: Property tests assumed min aggregate score was 3 (worst rank in 3 categories). With tie-neutralization, min is 0 (all 3 categories tied). A single district also gets 0 points (not 3) since each of its 3 categories has only 1 value.
 **rules.md**: none
+
+## 🗓️ 2026-03-25 — csv-validation-data-rows-not-size (#199)
+
+**Discovery**: Corrupt CSVs from failed scrapes have ~478 bytes but contain only headers + footer (zero data rows). They produce snapshots with `membership: 0`, polluting time-series.
+**Fix**: Added `validateCSVContent()` to TransformService that parses and counts data rows. CSVs with 0 data rows are skipped with a warning.
+**Warning**: A file-size threshold (< 1KB) was tried first but caused 29 test regressions — legitimate small-district CSVs can be under 1KB. The data-row check is the correct discriminator.
+**rules.md**: none
+
+## 🗓️ 2026-03-25 — penultimate-retention-doubles-data (#203)
+
+**Discovery**: The PruneService only retained month-end snapshots (1 per month). Adding penultimate-day retention (day before month-end) doubles retained data points per month.
+**Fix**: Added `isPenultimateDayOfMonth()` to PruneService. The `classifyDate()` method now keeps both month-end AND penultimate dates.
+**rules.md**: none
