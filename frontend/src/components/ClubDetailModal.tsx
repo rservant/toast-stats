@@ -88,12 +88,8 @@ export const ClubDetailModal: React.FC<ClubDetailModalProps> = ({
         0)
       : 0
 
-  // Get membership change (from filtered data)
-  const membershipChange =
-    filteredMembershipTrend.length > 1
-      ? (filteredMembershipTrend[filteredMembershipTrend.length - 1]?.count ??
-          0) - (filteredMembershipTrend[0]?.count ?? 0)
-      : 0
+  // Get membership change: current vs base (#194)
+  const membershipChange = latestMembership - baseMembership
 
   // Get latest DCP goals (from filtered data)
   const latestDcpGoals =
