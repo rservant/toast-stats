@@ -637,6 +637,7 @@ const LandingPage: React.FC = () => {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search by district number or name…"
+              aria-label="Search districts by number or name"
               className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white hover:border-tm-loyal-blue-50 focus:outline-hidden focus:ring-2 focus:ring-tm-loyal-blue transition-colors font-tm-body"
             />
             {searchQuery && (

@@ -10,6 +10,7 @@ import { Pagination } from './Pagination'
 import { useColumnFilters } from '../hooks/useColumnFilters'
 import { ColumnHeader } from './ColumnHeader'
 import { SortField, SortDirection, COLUMN_CONFIGS } from './filters/types'
+import ClubCard from './ClubCard'
 
 /**
  * Props for the ClubsTable component
@@ -324,9 +325,78 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
         </div>
       )}
 
-      {/* Table */}
+      {/* Mobile Card View (#217) */}
       {!isLoading && sortedClubs.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="md:hidden p-4">
+          {/* Mobile sort dropdown */}
+          <div className="flex items-center gap-2 mb-3">
+            <label
+              htmlFor="mobile-sort"
+              className="text-xs text-gray-500 font-medium"
+            >
+              Sort by:
+            </label>
+            <select
+              id="mobile-sort"
+              value={sortField}
+              onChange={e => {
+                const field = e.target.value as SortField
+                if (field === sortField) {
+                  setSortDirection(d => (d === 'asc' ? 'desc' : 'asc'))
+                } else {
+                  setSortField(field)
+                  setSortDirection('asc')
+                }
+              }}
+              className="text-xs border border-gray-300 rounded-md px-2 py-1 text-gray-700 bg-white"
+              aria-label="Sort clubs"
+            >
+              {COLUMN_CONFIGS.filter(c => c.sortable).map(config => (
+                <option key={config.field} value={config.field}>
+                  {config.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() =>
+                setSortDirection(d => (d === 'asc' ? 'desc' : 'asc'))
+              }
+              className="text-xs text-gray-500 hover:text-gray-700 px-1"
+              aria-label={`Sort direction: ${sortDirection === 'asc' ? 'ascending' : 'descending'}`}
+            >
+              {sortDirection === 'asc' ? '↑' : '↓'}
+            </button>
+          </div>
+          {/* Card list */}
+          <div className="space-y-3">
+            {pagination.paginatedItems.map(club => (
+              <ClubCard
+                key={club.clubId}
+                club={club}
+                onClick={onClubClick ? () => onClubClick(club) : undefined}
+              />
+            ))}
+          </div>
+          {/* Mobile pagination */}
+          <div className="mt-4">
+            <Pagination
+              currentPage={pagination.currentPage}
+              totalPages={pagination.totalPages}
+              onPageChange={pagination.goToPage}
+              startIndex={pagination.startIndex}
+              endIndex={pagination.endIndex}
+              totalItems={pagination.totalItems}
+              canGoNext={pagination.canGoNext}
+              canGoPrevious={pagination.canGoPrevious}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Desktop Table */}
+      {!isLoading && sortedClubs.length > 0 && (
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full table-auto">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>

@@ -507,12 +507,18 @@ const DistrictDetailPage: React.FC = () => {
                 <nav
                   className="flex -mb-px overflow-x-auto scrollbar-hide"
                   ref={tabNavRef}
+                  role="tablist"
+                  aria-label="District analysis tabs"
                 >
                   {tabs.map(tab => (
                     <button
                       key={tab.id}
                       onClick={() => !tab.disabled && setActiveTab(tab.id)}
                       disabled={tab.disabled}
+                      role="tab"
+                      aria-selected={activeTab === tab.id}
+                      aria-controls={`tabpanel-${tab.id}`}
+                      id={`tab-${tab.id}`}
                       className={`
                         px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-tm-headline font-medium whitespace-nowrap transition-colors
                         ${
