@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { PruneService, isLastDayOfMonth } from '../services/PruneService.js'
+import {
+  PruneService,
+  isLastDayOfMonth,
+  isPenultimateDayOfMonth,
+} from '../services/PruneService.js'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import { tmpdir } from 'node:os'
@@ -144,6 +148,18 @@ describe('PruneService', () => {
       expect(result.isClosingPeriod).toBe(true)
       expect(result.snapshotDate).toBe('2025-12-31')
     })
+
+    it('classifies a penultimate day as keeper (#203)', async () => {
+      // Jan 30 is penultimate (day before Jan 31)
+      await createRawCsvDate('2026-01-30')
+      const service = new PruneService({ cacheDir: testDir })
+
+      const result = await service.classifyDate('2026-01-30')
+
+      expect(result.keep).toBe(true)
+      expect(result.isMonthEnd).toBe(false)
+      expect(result.reason).toContain('Penultimate')
+    })
   })
 
   describe('prune', () => {
@@ -206,5 +222,66 @@ describe('PruneService', () => {
       expect(result.deletedRawCsv).toContain('2026-02-05')
       expect(result.deletedSnapshots).toContain('2026-02-05')
     })
+
+    it('retains both month-end AND penultimate dates (#203)', async () => {
+      // Month-end: Jan 31
+      await createRawCsvDate('2026-01-31')
+      await createSnapshotDate('2026-01-31')
+      // Penultimate: Jan 30
+      await createRawCsvDate('2026-01-30')
+      await createSnapshotDate('2026-01-30')
+      // Mid-month: Jan 15 (should be pruned)
+      await createRawCsvDate('2026-01-15')
+      await createSnapshotDate('2026-01-15')
+
+      const service = new PruneService({ cacheDir: testDir })
+      const result = await service.prune(false)
+
+      expect(result.keptDates).toBe(2) // Jan 31 + Jan 30
+      expect(result.prunedDates).toBe(1) // Jan 15
+
+      const rawCsvEntries = await fs.readdir(path.join(testDir, 'raw-csv'))
+      expect(rawCsvEntries).toContain('2026-01-30')
+      expect(rawCsvEntries).toContain('2026-01-31')
+      expect(rawCsvEntries).not.toContain('2026-01-15')
+    })
+  })
+})
+
+describe('isPenultimateDayOfMonth', () => {
+  it('returns true for January 30 (31-day month)', () => {
+    expect(isPenultimateDayOfMonth('2026-01-30')).toBe(true)
+  })
+
+  it('returns true for February 27 (non-leap year)', () => {
+    expect(isPenultimateDayOfMonth('2025-02-27')).toBe(true)
+  })
+
+  it('returns true for February 28 (leap year)', () => {
+    expect(isPenultimateDayOfMonth('2024-02-28')).toBe(true)
+  })
+
+  it('returns false for February 28 (non-leap year — that is the last day)', () => {
+    expect(isPenultimateDayOfMonth('2025-02-28')).toBe(false)
+  })
+
+  it('returns true for April 29 (30-day month)', () => {
+    expect(isPenultimateDayOfMonth('2026-04-29')).toBe(true)
+  })
+
+  it('returns true for March 30', () => {
+    expect(isPenultimateDayOfMonth('2026-03-30')).toBe(true)
+  })
+
+  it('returns false for mid-month day', () => {
+    expect(isPenultimateDayOfMonth('2026-01-15')).toBe(false)
+  })
+
+  it('returns false for last day of month', () => {
+    expect(isPenultimateDayOfMonth('2026-01-31')).toBe(false)
+  })
+
+  it('returns false for invalid date string', () => {
+    expect(isPenultimateDayOfMonth('invalid')).toBe(false)
   })
 })

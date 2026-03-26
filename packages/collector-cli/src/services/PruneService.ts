@@ -85,6 +85,25 @@ export function isLastDayOfMonth(dateStr: string): boolean {
   return day === lastDay
 }
 
+/**
+ * Check if a date string (YYYY-MM-DD) is the penultimate (second-to-last) day of its month.
+ *
+ * Examples: Jan 30, Feb 27 (non-leap), Feb 28 (leap), Mar 30, Apr 29
+ */
+export function isPenultimateDayOfMonth(dateStr: string): boolean {
+  const [yearStr, monthStr, dayStr] = dateStr.split('-')
+  if (!yearStr || !monthStr || !dayStr) return false
+
+  const year = parseInt(yearStr, 10)
+  const month = parseInt(monthStr, 10)
+  const day = parseInt(dayStr, 10)
+
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return false
+
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  return day === lastDay - 1
+}
+
 export class PruneService {
   private readonly cacheDir: string
   private readonly logger: Logger
@@ -116,6 +135,8 @@ export class PruneService {
 
   /**
    * Classify a single raw-csv date for pruning.
+   *
+   * Keeps both month-end AND penultimate dates (#203).
    */
   async classifyDate(rawCsvDate: string): Promise<DateClassification> {
     const metadata = await this.readMetadata(rawCsvDate)
@@ -126,16 +147,20 @@ export class PruneService {
 
     const snapshotDate = closingInfo.snapshotDate
     const isMonthEnd = isLastDayOfMonth(snapshotDate)
+    const isPenultimate = isPenultimateDayOfMonth(snapshotDate)
+    const keep = isMonthEnd || isPenultimate
 
     return {
       rawCsvDate,
       snapshotDate,
       isClosingPeriod: closingInfo.isClosingPeriod,
       isMonthEnd,
-      keep: isMonthEnd,
+      keep,
       reason: isMonthEnd
         ? `Month-end snapshot (${snapshotDate})`
-        : `Non-month-end snapshot (${snapshotDate})`,
+        : isPenultimate
+          ? `Penultimate snapshot (${snapshotDate})`
+          : `Non-month-end snapshot (${snapshotDate})`,
     }
   }
 
