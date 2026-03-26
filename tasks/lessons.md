@@ -733,3 +733,15 @@
 **Discovery**: The PruneService only retained month-end snapshots (1 per month). Adding penultimate-day retention (day before month-end) doubles retained data points per month.
 **Fix**: Added `isPenultimateDayOfMonth()` to PruneService. The `classifyDate()` method now keeps both month-end AND penultimate dates.
 **rules.md**: none
+
+## 🗓️ 2026-03-26 — yoy-comparison-data-source (#170)
+
+**Discovery**: The YearOverYearComparison component showed "No Historical Data" because it relied on `aggregatedAnalytics.yearOverYear` which was never populated in the CDN analytics-summary file. Meanwhile, the CDN time-series index already had 9 program years of data.
+**Fix**: Created `computeYearOverYear()` utility that computes YoY percentage changes from the `useTimeSeries` hook data. It finds the closest-month match in the prior year and computes membership/distinguished/clubHealth percentage changes.
+**rules.md**: When data is available in one CDN source, check if consumers are reading from the right source before assuming a pipeline bug.
+
+## 🗓️ 2026-03-26 — club-net-change-zero-bug (#194)
+
+**Discovery**: ClubDetailModal computed `membershipChange` as `latest - first trend point`, which yields 0 when only 1 data point exists in the filtered trend array. The correct calculation is `latestMembership - baseMembership`.
+**Fix**: Changed to `latestMembership - baseMembership` which correctly shows the base-to-current difference regardless of trend array length.
+**rules.md**: Check for off-by-one and boundary conditions in array-based calculations. When only 1 element exists, `arr[length-1] - arr[0]` is always 0.
