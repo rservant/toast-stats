@@ -348,16 +348,8 @@ class PerformanceMonitoringService {
     }
   }
 
-  private sendAlertToMonitoringService(alert: PerformanceAlert): void {
-    fetch('/api/monitoring/performance-alerts', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(alert),
-    }).catch(error => {
-      console.warn('Failed to send performance alert:', error)
-    })
+  private sendAlertToMonitoringService(_alert: PerformanceAlert): void {
+    // No-op: Express backend was removed (#173). Alerts are logged to console only.
   }
 
   public measureValidationPerformance<T>(validationFn: () => T): T {

@@ -105,7 +105,7 @@ export interface PerformanceTargets {
 }
 
 /**
- * Response from GET /api/districts/:districtId/analytics-summary
+ * Aggregated analytics response from CDN analytics-summary JSON
  */
 export interface AggregatedAnalyticsResponse {
   /** District identifier */

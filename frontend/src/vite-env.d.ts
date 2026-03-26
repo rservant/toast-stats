@@ -2,7 +2,6 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 
 interface ImportMetaEnv {
-  readonly VITE_API_BASE_URL: string
   readonly VITE_ENV: string
 }
 
