@@ -1,0 +1,42 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "node",
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "component": "toast-stats",
+      "changelog-path": "CHANGELOG.md"
+    },
+    "frontend": {
+      "release-type": "node",
+      "component": "frontend"
+    },
+    "packages/shared-contracts": {
+      "release-type": "node",
+      "component": "shared-contracts"
+    },
+    "packages/collector-cli": {
+      "release-type": "node",
+      "component": "collector-cli"
+    },
+    "packages/analytics-core": {
+      "release-type": "node",
+      "component": "analytics-core"
+    }
+  },
+  "bump-minor-pre-major": true,
+  "bump-patch-for-minor-pre-major": true,
+  "include-component-in-tag": true,
+  "include-v-in-tag": true,
+  "separate-pull-requests": false,
+  "group-pull-request-title-pattern": "chore: release ${version}",
+  "changelog-sections": [
+    { "type": "feat", "section": "Features" },
+    { "type": "fix", "section": "Bug Fixes" },
+    { "type": "refactor", "section": "Refactors" },
+    { "type": "perf", "section": "Performance" },
+    { "type": "docs", "section": "Documentation" },
+    { "type": "test", "section": "Tests" },
+    { "type": "chore", "section": "Miscellaneous", "hidden": true }
+  ]
+}
