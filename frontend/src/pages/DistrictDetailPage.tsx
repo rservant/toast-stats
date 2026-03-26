@@ -20,6 +20,7 @@ import {
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
 import { DistrictOverview } from '../components/DistrictOverview'
+import DataAsOfBanner from '../components/DataAsOfBanner'
 
 import { DistinguishedProgressChart } from '../components/DistinguishedProgressChart'
 import { ClubsTable } from '../components/ClubsTable'
@@ -535,6 +536,13 @@ const DistrictDetailPage: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Data freshness banner (#214) */}
+          <DataAsOfBanner
+            key={selectedDate ?? 'none'}
+            selectedDate={selectedDate}
+            className="mb-4"
+          />
 
           {/* Global Error State */}
           {overviewError && activeTab === 'overview' && (

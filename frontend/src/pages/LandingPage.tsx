@@ -8,6 +8,7 @@ import { useProgramYear } from '../contexts/ProgramYearContext'
 import { ProgramYearSelector } from '../components/ProgramYearSelector'
 import { useRankHistory } from '../hooks/useRankHistory'
 import InfoTooltip from '../components/InfoTooltip'
+import DataFreshnessBadge from '../components/DataFreshnessBadge'
 import ComparisonPanel from '../components/ComparisonPanel'
 import {
   getAvailableProgramYears,
@@ -424,6 +425,7 @@ const LandingPage: React.FC = () => {
                 Compare district performance across paid clubs, payments, and
                 distinguished clubs
               </p>
+              <DataFreshnessBadge className="mt-2" />
             </div>
           </div>
 
