@@ -17,6 +17,12 @@ interface HistoricalRankChartProps {
   isLoading: boolean
   isError: boolean
   error?: Error | null
+  /** Override program year label (prevents stale label from cached data) */
+  selectedProgramYear?: {
+    year: string | number
+    startDate: string
+    endDate: string
+  }
 }
 
 type RankMetric = 'aggregate' | 'clubs' | 'payments' | 'distinguished'
@@ -84,6 +90,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
   isLoading,
   isError,
   error,
+  selectedProgramYear,
 }) => {
   const [selectedMetric, setSelectedMetric] = useState<RankMetric>('aggregate')
 
@@ -151,8 +158,8 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
     )
   }
 
-  // Get program year info from first district
-  const programYear = data[0]?.programYear
+  // Use selectedProgramYear prop if provided, fall back to data (#232)
+  const programYear = selectedProgramYear ?? data[0]?.programYear
 
   // Combine all dates from all districts
   const allDates = new Set<string>()

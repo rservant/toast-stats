@@ -958,6 +958,7 @@ const LandingPage: React.FC = () => {
               isLoading={isLoadingRankHistory}
               isError={isErrorRankHistory}
               error={rankHistoryError}
+              selectedProgramYear={selectedProgramYear}
             />
           </div>
         </details>
