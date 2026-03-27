@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import React, { useState, useCallback } from 'react'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useDistricts } from '../hooks/useDistricts'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
 import { useAggregatedAnalytics } from '../hooks/useAggregatedAnalytics'
@@ -67,7 +67,66 @@ function getDistinguishedProjectionValue(
 const DistrictDetailPage: React.FC = () => {
   const { districtId } = useParams<{ districtId: string }>()
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<TabType>('overview')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Read active tab from URL params (defaults to 'overview') (#230)
+  const VALID_TABS: TabType[] = [
+    'overview',
+    'clubs',
+    'divisions',
+    'trends',
+    'analytics',
+    'globalRankings',
+  ]
+  const tabParam = searchParams.get('tab') as TabType | null
+  const activeTab: TabType =
+    tabParam && VALID_TABS.includes(tabParam) ? tabParam : 'overview'
+
+  const setActiveTab = useCallback(
+    (tab: TabType) => {
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev)
+          if (tab === 'overview') {
+            next.delete('tab')
+          } else {
+            next.set('tab', tab)
+          }
+          return next
+        },
+        { replace: true }
+      )
+    },
+    [setSearchParams]
+  )
+
+  // Read sort state from URL params (#230)
+  const initialSortField = (searchParams.get('sort') ?? undefined) as
+    | import('../components/filters/types').SortField
+    | undefined
+  const initialSortDir =
+    (searchParams.get('dir') as 'asc' | 'desc') || undefined
+
+  const handleSortChange = useCallback(
+    (field: string, direction: string) => {
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev)
+          if (field === 'name' && direction === 'asc') {
+            // Default sort — remove params to keep URL clean
+            next.delete('sort')
+            next.delete('dir')
+          } else {
+            next.set('sort', field)
+            next.set('dir', direction)
+          }
+          return next
+        },
+        { replace: true }
+      )
+    },
+    [setSearchParams]
+  )
 
   // Tab scroll-fade detection refs (#86)
   const tabScrollRef = React.useRef<HTMLDivElement>(null)
@@ -636,6 +695,9 @@ const DistrictDetailPage: React.FC = () => {
                 districtId={districtId}
                 isLoading={isLoadingAnalytics}
                 onClubClick={handleClubClick}
+                initialSortField={initialSortField}
+                initialSortDirection={initialSortDir}
+                onSortChange={handleSortChange}
               />
             )}
 

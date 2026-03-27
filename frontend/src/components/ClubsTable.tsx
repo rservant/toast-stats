@@ -25,6 +25,14 @@ interface ClubsTableProps {
   isLoading?: boolean
   /** Optional callback when a club row is clicked */
   onClubClick?: (club: ClubTrend) => void
+  /** Initial sort field from URL params (#230) */
+  initialSortField?: SortField | undefined
+  /** Initial sort direction from URL params (#230) */
+  initialSortDirection?: SortDirection | undefined
+  /** Callback when sort changes — for URL param sync (#230) */
+  onSortChange?:
+    | ((field: SortField, direction: SortDirection) => void)
+    | undefined
 }
 
 /**
@@ -64,9 +72,16 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
   districtId,
   isLoading = false,
   onClubClick,
+  initialSortField,
+  initialSortDirection,
+  onSortChange,
 }) => {
-  const [sortField, setSortField] = useState<SortField>('name')
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [sortField, setSortField] = useState<SortField>(
+    initialSortField ?? 'name'
+  )
+  const [sortDirection, setSortDirection] = useState<SortDirection>(
+    initialSortDirection ?? 'asc'
+  )
   const isMobile = useIsMobile(768)
 
   // Use column filters hook
@@ -229,12 +244,18 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
 
   // Handle sort
   const handleSort = (field: SortField) => {
+    let newField = sortField
+    let newDirection = sortDirection
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+      newDirection = sortDirection === 'asc' ? 'desc' : 'asc'
+      setSortDirection(newDirection)
     } else {
-      setSortField(field)
-      setSortDirection('asc')
+      newField = field
+      newDirection = 'asc'
+      setSortField(newField)
+      setSortDirection(newDirection)
     }
+    onSortChange?.(newField, newDirection)
   }
 
   return (
