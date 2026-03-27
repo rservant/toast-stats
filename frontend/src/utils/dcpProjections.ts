@@ -132,11 +132,13 @@ export function calculateClubProjection(club: ClubTrend): ClubDCPProjection {
       ? club.aprilRenewals
       : null
 
-  // Estimate membership base from earliest trend point or current
+  // Use the canonical membership base (program year start), falling back to
+  // the earliest trend point or current membership.
   const membershipBase =
-    club.membershipTrend.length > 0
+    club.membershipBase ??
+    (club.membershipTrend.length > 0
       ? club.membershipTrend[0]!.count
-      : currentMembers
+      : currentMembers)
 
   // Project year-end membership:
   // If April renewals available, assume renewals represent re-committed members

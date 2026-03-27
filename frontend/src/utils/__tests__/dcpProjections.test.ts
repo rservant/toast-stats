@@ -244,6 +244,30 @@ describe('DCP Projections Utility (#6)', () => {
       // Smedley requires 25 members — no alternatives
       expect(projection.gapToSmedley.members).toBe(8) // 25 - 17
     })
+
+    it('should prefer club.membershipBase over membershipTrend[0] for net growth (#241)', () => {
+      // Quackmasters scenario: membershipBase=14, but trend starts at 15
+      // Net growth should be 16-14=+2, not 16-15=+1
+      const club = makeClub({
+        clubId: 'ng5',
+        membershipBase: 14,
+        membershipTrend: [
+          { date: '2025-07-31', count: 15 },
+          { date: '2025-10-31', count: 16 },
+        ],
+        dcpGoalsTrend: [{ date: '2025-10-31', goalsAchieved: 4 }],
+      })
+
+      const projection = calculateClubProjection(club)
+
+      // Net growth = 16 - 14 = +2
+      // Distinguished needs +3 growth → gap = 1 member (not 2)
+      expect(projection.gapToDistinguished.members).toBe(1)
+      expect(projection.gapToDistinguished.goals).toBe(1) // 5 - 4
+
+      // Select needs +5 growth → gap = 3 members (not 4)
+      expect(projection.gapToSelect.members).toBe(3)
+    })
   })
 
   describe('getClosestTierLabel', () => {
