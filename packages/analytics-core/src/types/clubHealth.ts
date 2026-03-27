@@ -17,6 +17,8 @@ export interface ClubRiskFactors {
   lowPayments: boolean
   inactiveOfficers: boolean
   noRecentMeetings: boolean
+  /** Decline is within expected seasonal norms (#221) */
+  seasonallyNormal: boolean
 }
 
 /**
@@ -87,6 +89,9 @@ export interface ClubTrend {
 
   // Club operational status (Requirement 1.8)
   clubStatus?: string
+
+  /** Whether health status was softened by seasonal adjustment (#221) */
+  isSeasonallyAdjusted?: boolean
 }
 
 /**

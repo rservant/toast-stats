@@ -40,6 +40,7 @@ const clubRiskFactorsArb: fc.Arbitrary<ClubRiskFactors> = fc.record({
   lowPayments: fc.boolean(),
   inactiveOfficers: fc.boolean(),
   noRecentMeetings: fc.boolean(),
+  seasonallyNormal: fc.boolean(),
 })
 
 // ========== Property Tests ==========
@@ -82,6 +83,9 @@ describe('Risk Factors Conversion Property Tests', () => {
           expect(roundTrippedFactors.noRecentMeetings).toBe(
             originalFactors.noRecentMeetings
           )
+          expect(roundTrippedFactors.seasonallyNormal).toBe(
+            originalFactors.seasonallyNormal
+          )
         }),
         { numRuns: 100 }
       )
@@ -100,6 +104,7 @@ describe('Risk Factors Conversion Property Tests', () => {
             factors.lowPayments,
             factors.inactiveOfficers,
             factors.noRecentMeetings,
+            factors.seasonallyNormal,
           ].filter(Boolean).length
 
           // String array length should match count of true flags
@@ -184,6 +189,14 @@ describe('Risk Factors Conversion Property Tests', () => {
               RISK_FACTOR_LABELS.noRecentMeetings
             )
           }
+
+          if (factors.seasonallyNormal) {
+            expect(stringArray).toContain(RISK_FACTOR_LABELS.seasonallyNormal)
+          } else {
+            expect(stringArray).not.toContain(
+              RISK_FACTOR_LABELS.seasonallyNormal
+            )
+          }
         }),
         { numRuns: 100 }
       )
@@ -197,6 +210,7 @@ describe('Risk Factors Conversion Property Tests', () => {
         lowPayments: false,
         inactiveOfficers: false,
         noRecentMeetings: false,
+        seasonallyNormal: false,
       }
 
       const stringArray = riskFactorsToStringArray(allFalse)
@@ -214,15 +228,17 @@ describe('Risk Factors Conversion Property Tests', () => {
         lowPayments: true,
         inactiveOfficers: true,
         noRecentMeetings: true,
+        seasonallyNormal: true,
       }
 
       const stringArray = riskFactorsToStringArray(allTrue)
-      expect(stringArray).toHaveLength(5)
+      expect(stringArray).toHaveLength(6)
       expect(stringArray).toContain(RISK_FACTOR_LABELS.lowMembership)
       expect(stringArray).toContain(RISK_FACTOR_LABELS.decliningMembership)
       expect(stringArray).toContain(RISK_FACTOR_LABELS.lowPayments)
       expect(stringArray).toContain(RISK_FACTOR_LABELS.inactiveOfficers)
       expect(stringArray).toContain(RISK_FACTOR_LABELS.noRecentMeetings)
+      expect(stringArray).toContain(RISK_FACTOR_LABELS.seasonallyNormal)
 
       const roundTripped = stringArrayToRiskFactors(stringArray)
       expect(roundTripped).toEqual(allTrue)

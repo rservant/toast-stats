@@ -26,6 +26,7 @@ import type {
   MembershipAnalytics,
   SeasonalPattern,
   MembershipYearOverYearComparison,
+  GrowthVelocity,
 } from '../types.js'
 
 /**
@@ -118,6 +119,9 @@ export class MembershipAnalyticsModule {
       membershipTrend
     )
 
+    // Calculate growth velocity (#219)
+    const growthVelocity = this.calculateGrowthVelocity(membershipTrend)
+
     return {
       totalMembership,
       membershipChange,
@@ -127,6 +131,7 @@ export class MembershipAnalyticsModule {
       topDecliningClubs,
       seasonalPatterns,
       yearOverYearComparison,
+      growthVelocity,
     }
   }
 
@@ -259,6 +264,77 @@ export class MembershipAnalyticsModule {
       .filter(club => club.decline > 0)
       .sort((a, b) => b.decline - a.decline)
       .slice(0, limit)
+  }
+
+  // ========== Growth Velocity (#219) ==========
+
+  /**
+   * Calculate growth velocity from membership trend data.
+   *
+   * Velocity = average change per interval (members/month).
+   * Acceleration = change in velocity between first half and second half.
+   * Trend = 'accelerating' if acceleration > threshold, 'decelerating' if < -threshold.
+   *
+   * @param membershipTrend - Array of {date, count} data points (sorted by date)
+   * @returns GrowthVelocity with velocity, acceleration, and trend
+   */
+  calculateGrowthVelocity(
+    membershipTrend: Array<{ date: string; count: number }>
+  ): GrowthVelocity {
+    const stable: GrowthVelocity = {
+      velocity: 0,
+      acceleration: 0,
+      trend: 'stable',
+    }
+
+    if (membershipTrend.length < 2) {
+      return stable
+    }
+
+    // Calculate per-interval deltas
+    const deltas: number[] = []
+    for (let i = 1; i < membershipTrend.length; i++) {
+      const prev = membershipTrend[i - 1]
+      const curr = membershipTrend[i]
+      if (prev && curr) {
+        deltas.push(curr.count - prev.count)
+      }
+    }
+
+    if (deltas.length === 0) {
+      return stable
+    }
+
+    // Velocity = average delta per interval
+    const velocity =
+      Math.round((deltas.reduce((sum, d) => sum + d, 0) / deltas.length) * 10) /
+      10
+
+    // Acceleration: compare first-half avg velocity to second-half avg velocity
+    let acceleration = 0
+    let trend: GrowthVelocity['trend'] = 'stable'
+
+    if (deltas.length >= 2) {
+      const mid = Math.floor(deltas.length / 2)
+      const firstHalf = deltas.slice(0, mid)
+      const secondHalf = deltas.slice(mid)
+
+      const firstAvg =
+        firstHalf.reduce((sum, d) => sum + d, 0) / firstHalf.length
+      const secondAvg =
+        secondHalf.reduce((sum, d) => sum + d, 0) / secondHalf.length
+
+      acceleration = Math.round((secondAvg - firstAvg) * 10) / 10
+
+      // Threshold: acceleration must exceed 1 member/month change to be significant
+      if (acceleration > 1) {
+        trend = 'accelerating'
+      } else if (acceleration < -1) {
+        trend = 'decelerating'
+      }
+    }
+
+    return { velocity, acceleration, trend }
   }
 
   // ========== MembershipAnalytics-specific Private Methods ==========

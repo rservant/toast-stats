@@ -86,6 +86,20 @@ export interface MembershipAnalytics {
   }>
   seasonalPatterns: SeasonalPattern[]
   yearOverYearComparison?: MembershipYearOverYearComparison
+  growthVelocity?: GrowthVelocity
+}
+
+/**
+ * Growth velocity metric — rate-of-change analysis for membership.
+ * Measures members/month and whether the rate is accelerating or decelerating.
+ */
+export interface GrowthVelocity {
+  /** Average members gained/lost per month */
+  velocity: number
+  /** Change in velocity over the period (positive = accelerating growth) */
+  acceleration: number
+  /** Qualitative trend label */
+  trend: 'accelerating' | 'decelerating' | 'stable'
 }
 
 // ========== Membership Analytics Data Types (for pre-computed files) ==========

@@ -19,6 +19,7 @@ export const RISK_FACTOR_LABELS = {
   lowPayments: 'Low payments',
   inactiveOfficers: 'Inactive officers',
   noRecentMeetings: 'No recent meetings',
+  seasonallyNormal: 'Seasonal decline (expected)',
 } as const
 
 /**
@@ -50,6 +51,9 @@ export function riskFactorsToStringArray(factors: ClubRiskFactors): string[] {
   if (factors.noRecentMeetings) {
     result.push(RISK_FACTOR_LABELS.noRecentMeetings)
   }
+  if (factors.seasonallyNormal) {
+    result.push(RISK_FACTOR_LABELS.seasonallyNormal)
+  }
 
   return result
 }
@@ -79,6 +83,9 @@ export function stringArrayToRiskFactors(
     ),
     noRecentMeetings: riskFactorStrings.includes(
       RISK_FACTOR_LABELS.noRecentMeetings
+    ),
+    seasonallyNormal: riskFactorStrings.includes(
+      RISK_FACTOR_LABELS.seasonallyNormal
     ),
   }
 }

@@ -70,3 +70,29 @@ export interface AreaAnalytics {
   totalDcpGoals: number
   normalizedScore: number
 }
+
+// ========== Division Health Heatmap Types (#220) ==========
+
+/**
+ * Individual cell in the division health heatmap.
+ * Score is normalized 0–1 (0 = worst, 1 = best).
+ */
+export interface HeatmapCell {
+  /** Metric identifier */
+  metric: string
+  /** Display label for the metric */
+  label: string
+  /** Raw value before normalization */
+  rawValue: number
+  /** Normalized score (0–1) */
+  score: number
+}
+
+/**
+ * One row in the division health heatmap — represents a single division.
+ */
+export interface DivisionHeatmapData {
+  divisionId: string
+  divisionName: string
+  cells: HeatmapCell[]
+}

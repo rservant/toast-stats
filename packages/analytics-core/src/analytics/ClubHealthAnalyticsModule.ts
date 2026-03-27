@@ -574,4 +574,65 @@ export class ClubHealthAnalyticsModule {
       netGrowth
     )
   }
+
+  // ========== Seasonal Risk Scoring (#221) ==========
+
+  /**
+   * Seasonal membership decline allowances by calendar month (1-indexed).
+   * Months where membership drops are historically expected.
+   * Map key = calendar month, value = max allowed decline that is "normal".
+   */
+  static readonly SEASONAL_THRESHOLDS: ReadonlyMap<number, number> = new Map([
+    [1, 3], // January — post-holiday drop
+    [6, 2], // June — end-of-year attrition
+    [7, 4], // July — program year rollover, largest drop
+    [8, 3], // August — summer lag
+  ])
+
+  /**
+   * Apply seasonal adjustments to club health data.
+   *
+   * For clubs classified as "vulnerable" with a membership decline within
+   * the expected seasonal range, annotates them with isSeasonallyAdjusted=true
+   * and replaces the generic threshold message with "Seasonal decline (expected)".
+   *
+   * This is a post-processing step — call after generateClubHealthData().
+   *
+   * @param healthData - ClubHealthData from generateClubHealthData
+   * @param calendarMonth - Current calendar month (1–12)
+   * @returns Modified ClubHealthData with seasonal adjustments applied
+   */
+  applySeasonalAdjustments(
+    healthData: ClubHealthData,
+    calendarMonth: number
+  ): ClubHealthData {
+    const threshold =
+      ClubHealthAnalyticsModule.SEASONAL_THRESHOLDS.get(calendarMonth)
+    if (threshold === undefined) {
+      return healthData
+    }
+
+    for (const club of healthData.allClubs) {
+      if (club.currentStatus !== 'vulnerable') continue
+
+      const trend = club.membershipTrend
+      if (trend.length < 2) continue
+
+      const prev = trend[trend.length - 2]
+      const curr = trend[trend.length - 1]
+      if (!prev || !curr) continue
+
+      const decline = prev.count - curr.count
+      if (decline > 0 && decline <= threshold) {
+        club.isSeasonallyAdjusted = true
+        club.riskFactors = club.riskFactors.map(rf =>
+          rf.startsWith('Membership below threshold')
+            ? 'Seasonal decline (expected)'
+            : rf
+        )
+      }
+    }
+
+    return healthData
+  }
 }

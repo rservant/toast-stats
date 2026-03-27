@@ -14,6 +14,8 @@ import type {
   AreaPerformance,
   DivisionAnalytics,
   AreaAnalytics,
+  DivisionHeatmapData,
+  HeatmapCell,
 } from '../types.js'
 
 /**
@@ -574,5 +576,97 @@ export class DivisionAreaAnalyticsModule {
     areas.sort((a, b) => b.score - a.score)
 
     return areas.slice(0, limit)
+  }
+
+  // ========== Division Health Heatmap (#220) ==========
+
+  /**
+   * Generate heatmap data for division health visualization.
+   *
+   * Produces one row per division, each with normalized 0–1 scores for:
+   * - Club Health: average club health score (0=critical, 0.5=at-risk, 1=healthy)
+   * - DCP Progress: average DCP goals per club, normalized to max 10
+   * - Membership Density: average members per club, normalized to max 30
+   *
+   * @param snapshot - Latest district statistics snapshot
+   * @returns Array of DivisionHeatmapData rows, sorted by divisionId
+   */
+  generateHeatmapData(snapshot: DistrictStatistics): DivisionHeatmapData[] {
+    const divisionMap = new Map<
+      string,
+      {
+        divisionId: string
+        divisionName: string
+        clubCount: number
+        healthScoreSum: number
+        totalDcpGoals: number
+        totalMembership: number
+      }
+    >()
+
+    for (const club of snapshot.clubs) {
+      const divisionId = club.divisionId
+      if (!divisionId) continue
+
+      if (!divisionMap.has(divisionId)) {
+        divisionMap.set(divisionId, {
+          divisionId,
+          divisionName: club.divisionName || divisionId,
+          clubCount: 0,
+          healthScoreSum: 0,
+          totalDcpGoals: 0,
+          totalMembership: 0,
+        })
+      }
+
+      const division = divisionMap.get(divisionId)!
+      division.clubCount++
+      division.healthScoreSum += this.calculateClubHealthScore(
+        club.membershipCount,
+        club.dcpGoals
+      )
+      division.totalDcpGoals += isNaN(club.dcpGoals) ? 0 : club.dcpGoals
+      division.totalMembership += club.membershipCount
+    }
+
+    const rows: DivisionHeatmapData[] = Array.from(divisionMap.values()).map(
+      div => {
+        const avgHealth =
+          div.clubCount > 0 ? div.healthScoreSum / div.clubCount : 0
+        const avgDcp = div.clubCount > 0 ? div.totalDcpGoals / div.clubCount : 0
+        const avgMembers =
+          div.clubCount > 0 ? div.totalMembership / div.clubCount : 0
+
+        const cells: HeatmapCell[] = [
+          {
+            metric: 'clubHealth',
+            label: 'Club Health',
+            rawValue: Math.round(avgHealth * 100) / 100,
+            score: Math.round(avgHealth * 100) / 100,
+          },
+          {
+            metric: 'dcpProgress',
+            label: 'DCP Progress',
+            rawValue: Math.round(avgDcp * 10) / 10,
+            score: Math.round(Math.min(avgDcp / 10, 1) * 100) / 100,
+          },
+          {
+            metric: 'membershipDensity',
+            label: 'Membership Density',
+            rawValue: Math.round(avgMembers * 10) / 10,
+            score: Math.round(Math.min(avgMembers / 30, 1) * 100) / 100,
+          },
+        ]
+
+        return {
+          divisionId: div.divisionId,
+          divisionName: div.divisionName,
+          cells,
+        }
+      }
+    )
+
+    rows.sort((a, b) => a.divisionId.localeCompare(b.divisionId))
+    return rows
   }
 }
