@@ -16,7 +16,9 @@ import {
   filterDatesByProgramYear,
   getMostRecentDateInProgramYear,
   isDateInProgramYear,
+  calculateProgramYearDay,
 } from '../utils/programYear'
+import type { MultiYearPaymentData } from '../hooks/usePaymentsTrend'
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
 import { DistrictOverview } from '../components/DistrictOverview'
@@ -768,12 +770,51 @@ const DistrictDetailPage: React.FC = () => {
                   )
                 )}
 
-                {/* Membership Payments Chart */}
+                {/* Membership Payments Chart (#243) */}
                 {paymentsTrendData ? (
                   <LazyChart height="450px">
                     <MembershipPaymentsChart
                       paymentsTrend={paymentsTrendData.currentYearTrend}
-                      multiYearData={paymentsTrendData.multiYearData}
+                      multiYearData={
+                        // #243: Build multi-year payment data from time-series CDN
+                        // (analytics CDN only has current year payments)
+                        timeSeries
+                          ? ((): MultiYearPaymentData => {
+                              const currentPY = timeSeries.currentProgramYear
+                              const currentData =
+                                timeSeries.years[currentPY]?.dataPoints.map(
+                                  dp => ({
+                                    date: dp.date,
+                                    payments: dp.payments,
+                                    programYearDay: calculateProgramYearDay(
+                                      dp.date
+                                    ),
+                                  })
+                                ) ?? []
+                              const previousYears = timeSeries.availableYears
+                                .filter(y => y !== currentPY)
+                                .map(y => ({
+                                  label: y,
+                                  data:
+                                    timeSeries.years[y]?.dataPoints.map(dp => ({
+                                      date: dp.date,
+                                      payments: dp.payments,
+                                      programYearDay: calculateProgramYearDay(
+                                        dp.date
+                                      ),
+                                    })) ?? [],
+                                }))
+                                .filter(yt => yt.data.length > 0)
+                              return {
+                                currentYear: {
+                                  label: currentPY,
+                                  data: currentData,
+                                },
+                                previousYears,
+                              }
+                            })()
+                          : paymentsTrendData.multiYearData
+                      }
                       statistics={paymentsTrendData.statistics}
                       isLoading={isLoadingPaymentsTrend}
                     />
