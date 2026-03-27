@@ -1,4 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react'
+import { recordError } from '../utils/errorTelemetry'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -29,6 +30,9 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
   override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     console.error('ErrorBoundary caught an error:', error, errorInfo)
+
+    // Persist to localStorage telemetry (#225)
+    recordError(error, errorInfo.componentStack ?? undefined)
 
     if (this.props.onError) {
       this.props.onError(error, errorInfo)

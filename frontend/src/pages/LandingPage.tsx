@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchCdnDates, fetchCdnRankings } from '../services/cdn'
 import { useDistricts } from '../hooks/useDistricts'
-import HistoricalRankChart from '../components/HistoricalRankChart'
+import { LazyHistoricalRankChart as HistoricalRankChart } from '../components/LazyCharts'
 import { useProgramYear } from '../contexts/ProgramYearContext'
 import { ProgramYearSelector } from '../components/ProgramYearSelector'
 import { useRankHistory } from '../hooks/useRankHistory'
 import InfoTooltip from '../components/InfoTooltip'
 import DataFreshnessBadge from '../components/DataFreshnessBadge'
-import ComparisonPanel from '../components/ComparisonPanel'
+import { LazyComparisonPanel as ComparisonPanel } from '../components/LazyCharts'
 import {
   getAvailableProgramYears,
   filterDatesByProgramYear,

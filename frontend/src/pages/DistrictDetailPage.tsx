@@ -24,9 +24,11 @@ import DataAsOfBanner from '../components/DataAsOfBanner'
 
 import { DistinguishedProgressChart } from '../components/DistinguishedProgressChart'
 import { ClubsTable } from '../components/ClubsTable'
-import { MembershipTrendChart } from '../components/MembershipTrendChart'
-import { MembershipPaymentsChart } from '../components/MembershipPaymentsChart'
-import { YearOverYearComparison } from '../components/YearOverYearComparison'
+import {
+  LazyMembershipTrendChart as MembershipTrendChart,
+  LazyMembershipPaymentsChart as MembershipPaymentsChart,
+  LazyYearOverYearComparison as YearOverYearComparison,
+} from '../components/LazyCharts'
 import { TopGrowthClubs } from '../components/TopGrowthClubs'
 import { DivisionPerformanceCards } from '../components/DivisionPerformanceCards'
 import { DivisionAreaRecognitionPanel } from '../components/DivisionAreaRecognitionPanel'
