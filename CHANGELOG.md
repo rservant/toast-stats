@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.3.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.2.0...toast-stats-v2.3.0) (2026-03-27)
+
+
+### Features
+
+* performance & observability — Lighthouse CI, code-split Recharts, CDN monitoring, error telemetry ([#222](https://github.com/taverns-red/toast-stats/issues/222), [#223](https://github.com/taverns-red/toast-stats/issues/223), [#224](https://github.com/taverns-red/toast-stats/issues/224), [#225](https://github.com/taverns-red/toast-stats/issues/225)) ([1edc44a](https://github.com/taverns-red/toast-stats/commit/1edc44a28cd6dde583dbcbe790c92d4793694464))
+
+
+### Documentation
+
+* add code-split Recharts lazy barrel lesson ([#223](https://github.com/taverns-red/toast-stats/issues/223)) ([13c3795](https://github.com/taverns-red/toast-stats/commit/13c3795d5fe1bfae15036a8b1b5f3d9170890235))
+
 ## [2.2.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.1.0...toast-stats-v2.2.0) (2026-03-27)
 
 
