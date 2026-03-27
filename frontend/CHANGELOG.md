@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/taverns-red/toast-stats/compare/frontend-v2.1.0...frontend-v2.2.0) (2026-03-27)
+
+
+### Features
+
+* **frontend:** growth velocity card and division heatmap ([#219](https://github.com/taverns-red/toast-stats/issues/219), [#220](https://github.com/taverns-red/toast-stats/issues/220)) ([d812125](https://github.com/taverns-red/toast-stats/commit/d8121259fa7eb218f5be8899d7a1efaaf75a302c))
+
 ## [2.1.0](https://github.com/taverns-red/toast-stats/compare/frontend-v2.0.0...frontend-v2.1.0) (2026-03-26)
 
 

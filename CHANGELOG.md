@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.2.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.1.0...toast-stats-v2.2.0) (2026-03-27)
+
+
+### Features
+
+* **analytics-core:** growth velocity, division heatmap, seasonal risk scoring ([#219](https://github.com/taverns-red/toast-stats/issues/219), [#220](https://github.com/taverns-red/toast-stats/issues/220), [#221](https://github.com/taverns-red/toast-stats/issues/221)) ([7eda0ee](https://github.com/taverns-red/toast-stats/commit/7eda0eef0aa563f609608fee53725edc86c3d6fe))
+* **frontend:** growth velocity card and division heatmap ([#219](https://github.com/taverns-red/toast-stats/issues/219), [#220](https://github.com/taverns-red/toast-stats/issues/220)) ([d812125](https://github.com/taverns-red/toast-stats/commit/d8121259fa7eb218f5be8899d7a1efaaf75a302c))
+
+
+### Documentation
+
+* add analytics-core barrel rebuild lesson ([#219](https://github.com/taverns-red/toast-stats/issues/219), [#220](https://github.com/taverns-red/toast-stats/issues/220), [#221](https://github.com/taverns-red/toast-stats/issues/221)) ([1a8d5b6](https://github.com/taverns-red/toast-stats/commit/1a8d5b6e8bb2213172a34d6a9e0bfc2a392af349))
+
 ## [2.1.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.0.0...toast-stats-v2.1.0) (2026-03-26)
 
 
