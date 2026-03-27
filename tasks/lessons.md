@@ -789,3 +789,11 @@
 **Rule**: When adding new types to analytics-core that will be consumed by frontend, always run `npm run build` in the analytics-core package before committing the frontend code.
 **Warning**: Package.json `"types": "./dist/types/index.d.ts"` means the compiled output, not source, governs what consumers see.
 **rules.md**: none
+
+## 🗓️ 2026-03-27 — code-split-recharts-lazy-barrel (#223)
+
+**Discovery**: Code-splitting individual Recharts imports within components is impractical because Recharts re-exports from a single bundle. The effective approach is to `React.lazy` wrap each chart _component_ (not the library), creating a barrel of lazy-wrapped components that consuming pages import instead of the originals.
+**Proof**: `LazyCharts.tsx` barrel provides drop-in lazy replacements (e.g. `LazyMembershipTrendChart as MembershipTrendChart`), requiring only import path changes in consuming pages — no JSX modifications needed.
+**Rule**: When code-splitting a heavy library, wrap the consuming components with `React.lazy`, not the library's individual exports. Create a barrel file (`LazyCharts.tsx`) so consumers swap imports without changing JSX.
+**Warning**: `React.lazy` only works with default exports. For named exports, use `.then(m => ({ default: m.NamedExport }))`.
+**rules.md**: none
