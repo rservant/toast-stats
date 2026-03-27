@@ -806,3 +806,10 @@
 **Warning**: When renaming UI component text (e.g., "DCP Projection" → "DCP Status"), always grep for test files that assert on the old text. This caused a pre-push coverage failure.
 **Discovery**: `useSearchParams` + `{ replace: true }` is the correct pattern for syncing UI state to URL without cluttering browser history. Default values should be omitted from the URL to keep it clean.
 **rules.md**: none
+
+## 🗓️ 2026-03-27 — per-club-dcp-goals (#242)
+
+**Discovery**: The raw CSV data in `districtStatistics.clubPerformance` contains per-goal columns (e.g., `Level 1s`, `Off. Trained Round 1`) not surfaced through the typed `ClubStatisticsFile` or `ClubTrend` interfaces. For per-goal detail, access the `ScrapedRecord` directly via `useDistrictStatistics` and match by `Club Number`.
+**Proof**: `extractDcpGoalProgress` utility correctly parses all 10 goals from CSV, including multi-column goals (Goal 9: two training rounds, Goal 10: three admin items).
+**Rule**: When the typed interfaces lack a field, check whether the raw CSV (`ScrapedRecord`) contains it — the loose `Record<string, string | number | null>` type preserves all original columns from the Toastmasters dashboard.
+**rules.md**: none
