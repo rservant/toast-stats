@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.1.0](https://github.com/taverns-red/toast-stats/compare/frontend-v2.0.0...frontend-v2.1.0) (2026-03-26)
+
+
+### Features
+
+* accessibility & mobile responsiveness ([#216](https://github.com/taverns-red/toast-stats/issues/216), [#217](https://github.com/taverns-red/toast-stats/issues/217), [#218](https://github.com/taverns-red/toast-stats/issues/218)) ([9a63787](https://github.com/taverns-red/toast-stats/commit/9a63787939405240f2048d8ecc9f8c4f88502e62))
+* accessibility & mobile responsiveness ([#216](https://github.com/taverns-red/toast-stats/issues/216), [#217](https://github.com/taverns-red/toast-stats/issues/217), [#218](https://github.com/taverns-red/toast-stats/issues/218)) ([7931882](https://github.com/taverns-red/toast-stats/commit/793188218581381f7d5355d51dc3b6675d9e05a6))
+* add data freshness indicators ([#213](https://github.com/taverns-red/toast-stats/issues/213), [#214](https://github.com/taverns-red/toast-stats/issues/214), [#215](https://github.com/taverns-red/toast-stats/issues/215)) ([881b4e2](https://github.com/taverns-red/toast-stats/commit/881b4e2e6d4016acf8237cde6b9cf11e85ae4b4e))
+
 ## [2.0.0](https://github.com/taverns-red/toast-stats/compare/frontend-v1.0.0...frontend-v2.0.0) (2026-03-26)
 
 ### ⚠ BREAKING CHANGES
