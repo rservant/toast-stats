@@ -491,13 +491,13 @@ const LandingPage: React.FC = () => {
 
         {/* Sort Controls + Region Filter Toolbar — compact (#83) */}
         <div className="bg-white rounded-lg shadow-md p-3 mb-3">
-          <div className="flex flex-wrap items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 sm:pb-0 scrollbar-hide">
             <span className="text-sm font-medium text-gray-700 mr-1">
               Sort by:
             </span>
             <button
               onClick={() => setSortBy('aggregate')}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
+              className={`whitespace-nowrap flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
                 sortBy === 'aggregate'
                   ? 'bg-tm-loyal-blue text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -507,7 +507,7 @@ const LandingPage: React.FC = () => {
             </button>
             <button
               onClick={() => setSortBy('clubs')}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
+              className={`whitespace-nowrap flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
                 sortBy === 'clubs'
                   ? 'bg-tm-loyal-blue text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -517,7 +517,7 @@ const LandingPage: React.FC = () => {
             </button>
             <button
               onClick={() => setSortBy('payments')}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
+              className={`whitespace-nowrap flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
                 sortBy === 'payments'
                   ? 'bg-tm-loyal-blue text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -527,7 +527,7 @@ const LandingPage: React.FC = () => {
             </button>
             <button
               onClick={() => setSortBy('distinguished')}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
+              className={`whitespace-nowrap flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors font-tm-body ${
                 sortBy === 'distinguished'
                   ? 'bg-tm-loyal-blue text-white'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
