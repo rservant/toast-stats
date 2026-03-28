@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 
 interface TopGrowthClub {
   clubId: string
@@ -19,6 +19,35 @@ interface TopGrowthClubsProps {
   isLoading: boolean
 }
 
+/**
+ * Compute competition-style ranks with tie detection (#236).
+ * Items with equal scores share the same rank (e.g., 1, 1, 3, 4).
+ */
+function computeTiedRanks<T>(
+  items: T[],
+  getScore: (item: T) => number
+): { rank: number; isTied: boolean }[] {
+  if (items.length === 0) return []
+
+  // Count occurrences of each score
+  const scoreCounts = new Map<number, number>()
+  items.forEach(item => {
+    const score = getScore(item)
+    scoreCounts.set(score, (scoreCounts.get(score) ?? 0) + 1)
+  })
+
+  // Assign ranks — competition ranking (1, 1, 3, not 1, 1, 2)
+  let currentRank = 1
+  return items.map((item, index) => {
+    if (index > 0 && getScore(item) !== getScore(items[index - 1]!)) {
+      currentRank = index + 1
+    }
+    const score = getScore(item)
+    const isTied = (scoreCounts.get(score) ?? 0) > 1
+    return { rank: currentRank, isTied }
+  })
+}
+
 export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
   topGrowthClubs,
   topDCPClubs,
@@ -26,6 +55,16 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
 }) => {
   // Defensive null check - treat undefined/null as empty array
   const safeTopGrowthClubs = topGrowthClubs ?? []
+
+  // Compute tie-aware ranks (#236)
+  const growthRanks = useMemo(
+    () => computeTiedRanks(safeTopGrowthClubs, c => c.growth),
+    [safeTopGrowthClubs]
+  )
+  const dcpRanks = useMemo(
+    () => computeTiedRanks(topDCPClubs ?? [], c => c.goalsAchieved),
+    [topDCPClubs]
+  )
 
   if (isLoading) {
     return (
@@ -142,43 +181,53 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
           </p>
         ) : (
           <div className="space-y-3">
-            {safeTopGrowthClubs.map((club, index) => (
-              <div
-                key={club.clubId}
-                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="flex-shrink-0">
-                    {index < 3 ? (
-                      getTrophyIcon(index + 1)
-                    ) : (
-                      <div className="w-6 h-6 flex items-center justify-center text-gray-400 font-semibold">
-                        {index + 1}
+            {safeTopGrowthClubs.map((club, index) => {
+              const { rank, isTied } = growthRanks[index]!
+              return (
+                <div
+                  key={club.clubId}
+                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="flex-shrink-0">
+                      {rank <= 3 ? (
+                        getTrophyIcon(rank)
+                      ) : (
+                        <div className="w-6 h-6 flex items-center justify-center text-gray-400 font-semibold">
+                          {rank}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-gray-900 truncate font-tm-headline">
+                          {club.clubName}
+                        </h4>
+                        {isTied && (
+                          <span className="text-xs text-gray-400 font-tm-body">
+                            (tied)
+                          </span>
+                        )}
                       </div>
-                    )}
+                      <p className="text-sm text-gray-600 font-tm-body">
+                        Club #{club.clubId}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-gray-900 truncate font-tm-headline">
-                      {club.clubName}
-                    </h4>
-                    <p className="text-sm text-gray-600 font-tm-body">
-                      Club #{club.clubId}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 ml-4">
-                  {getGrowthIcon(club.growth)}
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-green-600 font-tm-headline">
-                      +{club.growth}
-                    </p>
-                    <p className="text-xs text-gray-600 font-tm-body">
-                      members
-                    </p>
+                  <div className="flex items-center gap-2 ml-4">
+                    {getGrowthIcon(club.growth)}
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-green-600 font-tm-headline">
+                        +{club.growth}
+                      </p>
+                      <p className="text-xs text-gray-600 font-tm-body">
+                        members
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
@@ -209,51 +258,61 @@ export const TopGrowthClubs: React.FC<TopGrowthClubsProps> = ({
           </p>
 
           <div className="space-y-3">
-            {topDCPClubs.map((club, index) => (
-              <div
-                key={club.clubId}
-                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="flex-shrink-0">
-                    {index < 3 ? (
-                      getTrophyIcon(index + 1)
-                    ) : (
-                      <div className="w-6 h-6 flex items-center justify-center text-gray-400 font-semibold">
-                        {index + 1}
+            {topDCPClubs.map((club, index) => {
+              const { rank, isTied } = dcpRanks[index]!
+              return (
+                <div
+                  key={club.clubId}
+                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="flex-shrink-0">
+                      {rank <= 3 ? (
+                        getTrophyIcon(rank)
+                      ) : (
+                        <div className="w-6 h-6 flex items-center justify-center text-gray-400 font-semibold">
+                          {rank}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className="font-semibold text-gray-900 truncate font-tm-headline">
+                          {club.clubName}
+                        </h4>
+                        {getDistinguishedBadge(club.distinguishedLevel)}
+                        {isTied && (
+                          <span className="text-xs text-gray-400 font-tm-body">
+                            (tied)
+                          </span>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold text-gray-900 truncate font-tm-headline">
-                        {club.clubName}
-                      </h4>
-                      {getDistinguishedBadge(club.distinguishedLevel)}
+                      <p className="text-sm text-gray-600 font-tm-body">
+                        Club #{club.clubId}
+                      </p>
                     </div>
-                    <p className="text-sm text-gray-600 font-tm-body">
-                      Club #{club.clubId}
+                  </div>
+                  <div className="text-right ml-4">
+                    <p className="text-2xl font-bold text-tm-loyal-blue font-tm-headline">
+                      {club.goalsAchieved}
                     </p>
-                  </div>
-                </div>
-                <div className="text-right ml-4">
-                  <p className="text-2xl font-bold text-tm-loyal-blue font-tm-headline">
-                    {club.goalsAchieved}
-                  </p>
-                  <p className="text-xs text-gray-600 font-tm-body">
-                    of 10 goals
-                  </p>
-                  <div className="mt-1">
-                    <div className="w-24 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-tm-loyal-blue h-2 rounded-full"
-                        style={{ width: `${(club.goalsAchieved / 10) * 100}%` }}
-                      ></div>
+                    <p className="text-xs text-gray-600 font-tm-body">
+                      of 10 goals
+                    </p>
+                    <div className="mt-1">
+                      <div className="w-24 bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-tm-loyal-blue h-2 rounded-full"
+                          style={{
+                            width: `${(club.goalsAchieved / 10) * 100}%`,
+                          }}
+                        ></div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
