@@ -13,6 +13,7 @@ import {
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { EmptyState } from './ErrorDisplay'
 import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
+import { useResponsiveTickInterval } from '../hooks/useResponsiveChartTicks'
 
 /** A named set of data points for one program year */
 export interface YearTrendData {
@@ -89,6 +90,9 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
   isLoading,
   priorYearTrends,
 }) => {
+  // Responsive tick interval for mobile (#237) — must be called before early returns
+  const tickInterval = useResponsiveTickInterval(membershipTrend?.length ?? 0)
+
   if (isLoading) {
     return <LoadingSkeleton variant="chart" />
   }
@@ -372,6 +376,7 @@ export const MembershipTrendChart: React.FC<MembershipTrendChartProps> = ({
                 angle={-45}
                 textAnchor="end"
                 height={80}
+                interval={tickInterval}
                 tickFormatter={formatXAxis}
               />
               <YAxis

@@ -20,6 +20,7 @@ import {
 } from 'recharts'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { EmptyState } from './ErrorDisplay'
+import { useResponsiveTickInterval } from '../hooks/useResponsiveChartTicks'
 import type { PaymentTrendDataPoint } from '../utils/paymentTrend'
 import type {
   MultiYearPaymentData,
@@ -272,6 +273,9 @@ function getYearLabels(
 export const MembershipPaymentsChart: React.FC<
   MembershipPaymentsChartProps
 > = ({ paymentsTrend, multiYearData, statistics, isLoading = false }) => {
+  // Responsive tick interval for mobile (#237) — must be called before early returns
+  const tickInterval = useResponsiveTickInterval(paymentsTrend?.length ?? 0)
+
   // Loading state - Requirement 4.1
   if (isLoading) {
     return <LoadingSkeleton variant="chart" />
@@ -428,6 +432,7 @@ export const MembershipPaymentsChart: React.FC<
                 textAnchor="end"
                 height={80}
                 tickFormatter={formatXAxis}
+                interval={tickInterval}
                 label={{
                   value: 'Program Year Month',
                   position: 'insideBottom',

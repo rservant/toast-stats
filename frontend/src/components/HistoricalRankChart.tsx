@@ -11,6 +11,7 @@ import {
 } from 'recharts'
 import type { RankHistoryResponse } from '../types/districts'
 import { formatLongDate, parseLocalDate } from '../utils/dateFormatting'
+import { useResponsiveTickInterval } from '../hooks/useResponsiveChartTicks'
 
 interface HistoricalRankChartProps {
   data: RankHistoryResponse[]
@@ -93,6 +94,10 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
   selectedProgramYear,
 }) => {
   const [selectedMetric, setSelectedMetric] = useState<RankMetric>('aggregate')
+  // Responsive tick interval for mobile (#237) — must be called before early returns
+  const tickInterval = useResponsiveTickInterval(
+    data?.reduce((count, d) => count + d.history.length, 0) ?? 0
+  )
 
   if (isLoading) {
     return (
@@ -304,7 +309,7 @@ const HistoricalRankChart: React.FC<HistoricalRankChartProps> = ({
                 angle={-45}
                 textAnchor="end"
                 height={80}
-                interval="preserveStartEnd"
+                interval={tickInterval || 'preserveStartEnd'}
                 tickFormatter={value => {
                   const date = parseLocalDate(value)
                   return date.toLocaleDateString('en-US', {
