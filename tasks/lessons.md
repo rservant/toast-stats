@@ -821,3 +821,11 @@
 **Discovery**: The CDN analytics file (`district_{id}_analytics.json`) only contains current program year's `paymentsTrend`. The `useDistrictAnalytics` hook ignores the `startDate` parameter — it fetches a single pre-computed CDN file keyed only by `endDate`. The `usePaymentsTrend` hook's 3-year date range is therefore ineffective for multi-year comparison.
 **Fix**: Source multi-year payment data from `timeSeries` CDN files (which store `payments` per `TimeSeriesDataPoint` across all program years), matching the same pattern used for the membership trend chart.
 **Rule**: Never use the per-`Line` `data` prop in Recharts for multi-series charts — always merge into the parent dataset. For multi-year data, use `timeSeries` CDN (per-program-year files), not the single-snapshot analytics CDN.
+
+## 🗓️ 2026-03-28 — sprint-14-ci-cd-hygiene (#245, #246, #247, #248, #249, #233)
+
+**Discovery**: The LandingPage's date count was inconsistent with DistrictDetailPage because they used different CDN data sources: `v1/dates.json` (global, stale pipeline artifact with 13 dates) vs `district-snapshot-index.json` (per-district, maintained separately with 16 dates). The `v1/dates.json` was not updated at the same cadence as the snapshot index.
+**Proof**: Curling both CDN endpoints showed 13 vs 16 dates for the 2025-2026 program year.
+**Rule**: When displaying date counts or date selectors across pages, always use the same underlying data source (`fetchCdnSnapshotIndex`). Avoid `v1/dates.json` for date counting — it's a pipeline artifact that can drift.
+**Warning**: `deploy.yml` had a custom semver script duplicating Release Please. When versioning appears to come from two sources, tags will drift apart silently. Always use a single source of truth for versions.
+**rules.md**: none
