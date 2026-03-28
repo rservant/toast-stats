@@ -41,7 +41,7 @@ describe('LoadingSkeleton', () => {
       props: { variant: 'chart' },
       customAssertion: () => {
         expect(screen.getByRole('status')).toBeInTheDocument()
-        expect(screen.getByText('Loading chart data...')).toBeInTheDocument()
+        expect(screen.getByText('Loading chart…')).toBeInTheDocument()
       },
     },
     {

@@ -3,9 +3,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  background: var(--surface-secondary, #1a1a2e);
-  border-radius: var(--radius-lg, 12px);
-  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  background: #f9fafb;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
   padding: 1rem;
   position: relative;
   overflow: hidden;
@@ -25,9 +25,9 @@
   border-radius: 4px 4px 0 0;
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.04) 25%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0.04) 75%
+    #e5e7eb 25%,
+    #d1d5db 50%,
+    #e5e7eb 75%
   );
   background-size: 200% 100%;
   animation: chart-skeleton-shimmer 1.5s ease-in-out infinite;
@@ -35,7 +35,7 @@
 
 .chart-skeleton__label {
   font-size: 0.75rem;
-  color: var(--text-tertiary, #6b6b80);
+  color: #9ca3af;
   margin-top: 0.5rem;
 }
 

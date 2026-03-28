@@ -1,4 +1,5 @@
 import React from 'react'
+import { ChartSkeleton } from './ChartSkeleton'
 
 interface LoadingSkeletonProps {
   variant?: 'card' | 'table' | 'chart' | 'text' | 'stat'
@@ -61,24 +62,10 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
   }
 
   if (variant === 'chart') {
-    const chartHeight = height || '256px'
+    const chartHeight = height ? parseInt(height, 10) : 256
     return (
-      <div
-        className={`bg-white rounded-lg shadow-md p-6 ${className}`}
-        role="status"
-        aria-label="Loading chart"
-      >
-        <div className={`${baseClasses} h-6 w-1/3 mb-4`}></div>
-        <div
-          className={`${baseClasses} w-full mb-4`}
-          style={{ height: chartHeight }}
-        ></div>
-        <div className="flex gap-4">
-          <div className={`${baseClasses} h-4 w-24`}></div>
-          <div className={`${baseClasses} h-4 w-24`}></div>
-          <div className={`${baseClasses} h-4 w-24`}></div>
-        </div>
-        <span className="sr-only">Loading chart data...</span>
+      <div className={className}>
+        <ChartSkeleton height={chartHeight} />
       </div>
     )
   }
