@@ -839,3 +839,13 @@
 **Discovery**: React hooks called after early returns violate `react-hooks/rules-of-hooks`. When adding hooks to chart components, the hook must be called before any `if (isLoading) return` guard.
 **Fix**: Pass a safe default (e.g., `prop?.length ?? 0`) to the hook before early returns, then use the computed value in the render.
 **Rule**: Always call hooks before early returns, using optional chaining/nullish coalescing for safe defaults.
+
+## 🗓️ 2026-03-28 — sprint-16-accessibility-ci (#250, #251, #252)
+
+**Discovery**: Running `lighthouse` or `axe-core` CLI via Playwright/Puppeteer against a Vite `localhost` dev server in an automated terminal environment often hangs indefinitely (NO_FCP errors) because Chrome headless networking to localhost blocks until timeout.
+**Fix**: For CI/local accessibility testing of React apps without a live deployed URL, use `jest-axe` inside a `jsdom` test environment (via Vitest). This evaluates the component DOM directly without needing a network stack or headless browser instance to render.
+**Rule**: Always prefer `jest-axe` for automated component accessibility tests instead of running an `lhci` or `playwright` server-client integration, as it is significantly faster and less flaky.
+
+**Discovery**: `useResponsiveChartTicks` returned numeric values (e.g., `0`) to try to bypass label thinning, but Recharts expects the string `'preserveStartEnd'` or a positive integer interval.
+**Fix**: Using `'preserveStartEnd'` for small datasets ensures the start/end bounds are always kept.
+**Rule**: Recharts `interval` prop math must be exactly verified with `Math.max(..., 1)` for dynamic thinning, and returning `'preserveStartEnd'` is better than `0` for small datasets where no overlap occurs.

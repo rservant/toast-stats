@@ -3797,4 +3797,100 @@ describe('countVisitCompletions', () => {
       expect(secondRound).toBe(0)
     })
   })
+
+  /**
+   * Bug #268: CDN data uses "May Visit award" (capital V in Visit)
+   * but the code was looking for "May visit award" (lowercase v).
+   * This caused all second-round visit counts to show as 0.
+   *
+   * The actual CDN field name is "May Visit award" — the extraction
+   * must handle this capitalisation to match real-world data.
+   */
+  describe('CDN field name capitalisation — Bug #268', () => {
+    it('should count second-round visits using CDN field name "May Visit award" (capital V)', () => {
+      // Arrange: Club data using the actual CDN field name (capital V in Visit)
+      const snapshot = {
+        divisionPerformance: [
+          {
+            Division: 'A',
+            Area: '01',
+            'Division Club Base': '4',
+            'Area Club Base': '4',
+            Club: 'Club1',
+            'Nov Visit award': '1',
+            'May Visit award': '1', // CDN uses capital V
+          },
+          {
+            Division: 'A',
+            Area: '01',
+            'Division Club Base': '4',
+            'Area Club Base': '4',
+            Club: 'Club2',
+            'Nov Visit award': '1',
+            'May Visit award': '0', // CDN uses capital V
+          },
+          {
+            Division: 'A',
+            Area: '01',
+            'Division Club Base': '4',
+            'Area Club Base': '4',
+            Club: 'Club3',
+            'Nov Visit award': '0',
+            'May Visit award': '1', // CDN uses capital V
+          },
+          {
+            Division: 'A',
+            Area: '01',
+            'Division Club Base': '4',
+            'Area Club Base': '4',
+            Club: 'Club4',
+            'Nov Visit award': '1',
+            'May Visit award': '0', // CDN uses capital V
+          },
+        ],
+        clubPerformance: [],
+      }
+
+      // Act
+      const result = extractDivisionPerformance(snapshot)
+
+      // Assert: First round = 3 (Club1, Club2, Club4), Second round = 2 (Club1, Club3)
+      expect(result).toHaveLength(1)
+      expect(result[0].areas).toHaveLength(1)
+      const area = result[0].areas[0]
+      expect(area.firstRoundVisits.completed).toBe(3)
+      expect(area.secondRoundVisits.completed).toBe(2) // This was 0 before the fix
+    })
+
+    it('should handle countVisitCompletions with CDN field name "May Visit award"', () => {
+      // Arrange: Club data with actual CDN field names
+      const clubs = [
+        { 'Nov Visit award': '1', 'May Visit award': '1', Club: 'Club A' },
+        { 'Nov Visit award': '0', 'May Visit award': '1', Club: 'Club B' },
+        { 'Nov Visit award': '1', 'May Visit award': '0', Club: 'Club C' },
+      ]
+
+      // Act
+      const secondRound = countVisitCompletions(clubs, 'May Visit award')
+
+      // Assert: 2 clubs completed (Club A, Club B)
+      expect(secondRound).toBe(2)
+    })
+
+    it('should handle extractVisitData with CDN field name "May Visit award"', () => {
+      // Arrange: Area data with actual CDN field name
+      const areaData = {
+        'Nov Visit award': '3',
+        'May Visit award': '4', // CDN uses capital V
+      }
+      const clubBase = 4
+
+      // Act
+      const result = extractVisitData(areaData, clubBase)
+
+      // Assert
+      expect(result.firstRound.completed).toBe(3)
+      expect(result.secondRound.completed).toBe(4) // This was 0 before the fix
+    })
+  })
 })

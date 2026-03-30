@@ -256,7 +256,7 @@ function parseIntSafe(value: unknown): number {
  * Requirements: 4.2, 5.2
  *
  * @param clubs - Array of club records (unknown type for safety)
- * @param visitField - Field name ("Nov Visit award" or "May visit award")
+ * @param visitField - Field name ("Nov Visit award" or "May Visit award")
  * @returns Number of clubs with "1" in the visit field
  *
  * @example
@@ -338,8 +338,8 @@ export function extractVisitData(
       ? Number(novVisitRaw)
       : 0
 
-  // Extract second round visits from "May visit award"
-  const mayVisitRaw = data['May visit award']
+  // Extract second round visits from "May Visit award"
+  const mayVisitRaw = data['May Visit award'] ?? data['May visit award']
   const secondRoundCompleted =
     typeof mayVisitRaw === 'string' || typeof mayVisitRaw === 'number'
       ? Number(mayVisitRaw)
@@ -655,9 +655,13 @@ function extractAreasForDivision(
     const firstRound = calculateVisitStatus(firstRoundCompleted, clubBase)
 
     // Requirements 5.1, 5.2, 5.3, 5.4, 5.5: Calculate second round visits by counting clubs
-    // Iterate through all clubs in the area and count those with "1" in "May visit award"
+    // Iterate through all clubs in the area and count those with "1" in "May Visit award"
+    // Bug #268: CDN uses "May Visit award" (capital V). Fall back to lowercase variant.
     // NOT reading from a single club and treating it as the total visit count
-    const secondRoundCompleted = countVisitCompletions(clubs, 'May visit award')
+    let secondRoundCompleted = countVisitCompletions(clubs, 'May Visit award')
+    if (secondRoundCompleted === 0) {
+      secondRoundCompleted = countVisitCompletions(clubs, 'May visit award')
+    }
     const secondRound = calculateVisitStatus(secondRoundCompleted, clubBase)
 
     for (const clubRaw of clubs) {
