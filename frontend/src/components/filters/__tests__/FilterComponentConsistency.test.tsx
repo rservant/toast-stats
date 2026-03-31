@@ -122,6 +122,7 @@ describe('Filter Component Consistency', () => {
       expect(numericColumns.map(c => c.field)).toEqual([
         'membership',
         'dcpGoals',
+        'membersNeeded',
         'octoberRenewals',
         'aprilRenewals',
         'newMembers',

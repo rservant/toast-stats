@@ -891,3 +891,5 @@
 **Rule**: When a single action (adding members) has compound effects across multiple DCP criteria, compute the maximum of all path requirements, not the sum. E.g., if Goal 7 needs 4 members AND qualification needs 3 members, you need max(4,3)=4, not 7.
 **Warning**: The `newMembers` field on `ClubTrend` from the CDN analytics represents total new members for the program year. Goal 7 requires 4 and Goal 8 requires 4 more (8 total). Inferring goal achievement from this count works correctly: `newMembers >= 4` → Goal 7 achieved, `newMembers >= 8` → Goal 8 achieved.
 **rules.md**: none
+
+- **Testing Accessibility**: When multiple elements match a fuzzy name (e.g. `screen.getByRole('button', { name: /members/i })` matches both 'Members column header' and 'Members Needed column header'), `testing-library` will throw a MultipleElementsFoundError. Always use precise, bounded queries like `/Members column header/i` or precise substring matches.

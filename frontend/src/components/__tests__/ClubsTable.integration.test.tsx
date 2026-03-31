@@ -142,13 +142,23 @@ describe('ClubsTable Integration Tests', () => {
       )
 
       // All column headers should be clickable buttons
-      const clubNameHeader = screen.getByRole('button', { name: /club name/i })
-      const divisionHeader = screen.getByRole('button', { name: /division/i })
-      const areaHeader = screen.getByRole('button', { name: /area/i })
-      const membersHeader = screen.getByRole('button', { name: /members/i })
-      const dcpGoalsHeader = screen.getByRole('button', { name: /dcp goals/i })
+      const clubNameHeader = screen.getByRole('button', {
+        name: /club name column header/i,
+      })
+      const divisionHeader = screen.getByRole('button', {
+        name: /division column header/i,
+      })
+      const areaHeader = screen.getByRole('button', {
+        name: /area column header/i,
+      })
+      const membersHeader = screen.getByRole('button', {
+        name: /Members column header/i,
+      })
+      const dcpGoalsHeader = screen.getByRole('button', {
+        name: /dcp goals column header/i,
+      })
       const distinguishedHeader = screen.getByRole('button', {
-        name: /distinguished/i,
+        name: /distinguished column header/i,
       })
       // Use more specific regex to match "Status column header" but not "Club Status column header"
       const statusHeader = screen.getByRole('button', {
@@ -181,7 +191,9 @@ describe('ClubsTable Integration Tests', () => {
       )
 
       // Click on Members column to sort
-      const membersHeader = screen.getByRole('button', { name: /members/i })
+      const membersHeader = screen.getByRole('button', {
+        name: /Members column header/i,
+      })
       fireEvent.click(membersHeader)
 
       // Table should still show all clubs
@@ -305,8 +317,12 @@ describe('ClubsTable Integration Tests', () => {
       expect(screen.queryByText(/Clear All Filters/)).not.toBeInTheDocument()
 
       // Click on different column headers to test interaction
-      const clubNameHeader = screen.getByRole('button', { name: /club name/i })
-      const membersHeader = screen.getByRole('button', { name: /members/i })
+      const clubNameHeader = screen.getByRole('button', {
+        name: /club name column header/i,
+      })
+      const membersHeader = screen.getByRole('button', {
+        name: /Members column header/i,
+      })
 
       fireEvent.click(clubNameHeader)
 

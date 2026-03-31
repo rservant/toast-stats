@@ -52,8 +52,8 @@ const getClubStatusColumnValues = (): (string | null)[] => {
   // Skip header row (index 0)
   return rows.slice(1).map(row => {
     const cells = row.querySelectorAll('td')
-    // Club Status is column index 7 (0-indexed)
-    const clubStatusCell = cells[7]
+    // Club Status is column index 8 (0-indexed)
+    const clubStatusCell = cells[8]
     const text = clubStatusCell?.textContent?.trim()
     // Return null for dash placeholder, otherwise return the text
     return text === '—' ? null : (text ?? null)
@@ -436,8 +436,8 @@ describe('ClubsTable Club Status Sorting', () => {
 
       const dataRow = screen.getAllByRole('row')[1]
       const cells = dataRow.querySelectorAll('td')
-      // Club Status is column index 7
-      expect(cells[7]).toHaveTextContent('—')
+      // Club Status is column index 8
+      expect(cells[8]).toHaveTextContent('—')
     })
   })
 })
