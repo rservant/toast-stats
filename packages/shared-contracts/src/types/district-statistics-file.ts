@@ -116,6 +116,12 @@ export interface ClubStatisticsFile {
   /** Membership base for net growth calculation */
   membershipBase: number
 
+  /**
+   * Exact list of 10 boolean flags representing which DCP goals were achieved.
+   * Goals are 0-indexed (index 0 is Goal 1).
+   */
+  dcpGoalsAchieved?: boolean[]
+
   /** Club operational status (Active, Suspended, Low, Ineligible) */
   clubStatus?: string
 

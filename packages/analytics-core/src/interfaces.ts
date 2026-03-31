@@ -71,6 +71,9 @@ export interface ClubStatistics {
   // CSP (Club Success Plan) submission status
   // Present from 2025-2026 program year onward; undefined for earlier years
   cspSubmitted?: boolean
+
+  // Exact list of 10 boolean flags representing which DCP goals were achieved
+  dcpGoalsAchieved?: boolean[]
 }
 
 /**
