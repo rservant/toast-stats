@@ -10,6 +10,11 @@ import type {
   ColumnFilter,
   ProcessedClubTrend,
 } from '../components/filters/types'
+import {
+  deriveGoalContext,
+  computeMembersToDistinguished,
+} from './membersToDistinguished'
+import { calculateClubProjection } from './dcpProjections'
 
 // ========== Data Processing Functions ==========
 
@@ -44,6 +49,16 @@ export function getDistinguishedOrder(club: ClubTrend): number {
 }
 
 /**
+ * Get members needed to become distinguished (0 if none or already distinguished)
+ */
+export function getMembersNeeded(club: ClubTrend): number {
+  const projection = calculateClubProjection(club)
+  const goalContext = deriveGoalContext(club)
+  const result = computeMembersToDistinguished(projection, goalContext)
+  return result?.membersNeeded ?? 0
+}
+
+/**
  * Process clubs with computed properties for filtering
  */
 export function processClubs(clubs: ClubTrend[]): ProcessedClubTrend[] {
@@ -52,6 +67,7 @@ export function processClubs(clubs: ClubTrend[]): ProcessedClubTrend[] {
     latestMembership: getLatestMembership(club),
     latestDcpGoals: getLatestDcpGoals(club),
     distinguishedOrder: getDistinguishedOrder(club),
+    membersNeeded: getMembersNeeded(club),
   }))
 }
 

@@ -283,35 +283,75 @@ describe('computeMembersToDistinguished', () => {
 
 describe('deriveGoalContext', () => {
   it('should mark both goals unachieved when newMembers is 0', () => {
-    const ctx = deriveGoalContext(0)
+    const ctx = deriveGoalContext({ newMembers: 0 })
     expect(ctx.newMembersSoFar).toBe(0)
     expect(ctx.goal7Achieved).toBe(false)
     expect(ctx.goal8Achieved).toBe(false)
   })
 
   it('should mark both goals unachieved when newMembers is undefined', () => {
-    const ctx = deriveGoalContext(undefined)
+    const ctx = deriveGoalContext({ newMembers: undefined })
     expect(ctx.newMembersSoFar).toBe(0)
     expect(ctx.goal7Achieved).toBe(false)
     expect(ctx.goal8Achieved).toBe(false)
   })
 
   it('should mark Goal 7 achieved at exactly 4 new members', () => {
-    const ctx = deriveGoalContext(4)
+    const ctx = deriveGoalContext({ newMembers: 4 })
     expect(ctx.goal7Achieved).toBe(true)
     expect(ctx.goal8Achieved).toBe(false)
   })
 
   it('should mark both goals achieved at 8+ new members', () => {
-    const ctx = deriveGoalContext(8)
+    const ctx = deriveGoalContext({ newMembers: 8 })
     expect(ctx.goal7Achieved).toBe(true)
     expect(ctx.goal8Achieved).toBe(true)
   })
 
   it('should handle partial progress (3 new members)', () => {
-    const ctx = deriveGoalContext(3)
+    const ctx = deriveGoalContext({ newMembers: 3 })
     expect(ctx.newMembersSoFar).toBe(3)
     expect(ctx.goal7Achieved).toBe(false)
     expect(ctx.goal8Achieved).toBe(false)
+  })
+
+  it('should strictly trust exact pipeline metadata (dcpGoalsAchieved) when available', () => {
+    // Pipeline says Goal 7 not achieved, but 10 new members are present
+    const ctxMissing7 = deriveGoalContext({
+      newMembers: 10,
+      dcpGoalsAchieved: [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+      ],
+    })
+    expect(ctxMissing7.goal7Achieved).toBe(false)
+    expect(ctxMissing7.goal8Achieved).toBe(true)
+
+    // Pipeline says Goal 7 achieved, but only 2 new members are present
+    const ctxHas7 = deriveGoalContext({
+      newMembers: 2,
+      dcpGoalsAchieved: [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+      ],
+    })
+    expect(ctxHas7.goal7Achieved).toBe(true)
+    expect(ctxHas7.goal8Achieved).toBe(false)
   })
 })

@@ -195,16 +195,28 @@ function computeMembersForQualification(
 // --- Convenience Functions ---
 
 /**
- * Derive ClubGoalContext from a ClubTrend's newMembers field.
+ * Derive ClubGoalContext from a ClubTrend.
  *
  * DCP Goal 7 requires 4 new members; Goal 8 requires 4 more (8 total).
- * The `newMembers` field on ClubTrend represents total new members added
- * this program year, so we can infer goal achievement from that count.
+ * If the exact `dcpGoalsAchieved` array is available from the pipeline,
+ * we strictly trust it (indices 6 and 7). Otherwise we fallback to inferring
+ * it from the `newMembers` aggregation.
  */
 export function deriveGoalContext(
-  newMembers: number | undefined
+  club: Pick<ClubTrend, 'newMembers' | 'dcpGoalsAchieved'>
 ): ClubGoalContext {
-  const count = newMembers ?? 0
+  const count = club.newMembers ?? 0
+
+  // If we have exact granular goals from the backend, strictly trust them
+  if (club.dcpGoalsAchieved && club.dcpGoalsAchieved.length >= 8) {
+    return {
+      newMembersSoFar: count,
+      goal7Achieved: club.dcpGoalsAchieved[6] ?? false,
+      goal8Achieved: club.dcpGoalsAchieved[7] ?? false,
+    }
+  }
+
+  // Fallback to legacy inference method for older snapshots
   return {
     newMembersSoFar: count,
     goal7Achieved: count >= GOAL_7_REQUIRED,
@@ -235,7 +247,7 @@ export function findClubsNeedingMembers(
 
   for (const club of clubs) {
     const projection = calculateClubProjection(club)
-    const goalContext = deriveGoalContext(club.newMembers)
+    const goalContext = deriveGoalContext(club)
     const result = computeMembersToDistinguished(projection, goalContext)
 
     if (result) {

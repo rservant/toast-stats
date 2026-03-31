@@ -31,6 +31,7 @@ export interface ClubTrend {
   octoberRenewals?: number
   aprilRenewals?: number
   newMembers?: number
+  dcpGoalsAchieved?: boolean[]
   /**
    * Club operational status from Toastmasters dashboard
    * Values: "Active", "Suspended", "Ineligible", "Low", or undefined
