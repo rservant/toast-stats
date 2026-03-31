@@ -19,6 +19,8 @@
  */
 
 import type { ClubDCPProjection } from './dcpProjections'
+import { calculateClubProjection } from './dcpProjections'
+import type { ClubTrend } from '../hooks/useDistrictAnalytics'
 
 export interface MembersToDistinguishedResult {
   /** Number of additional members needed */
@@ -188,4 +190,69 @@ function computeMembersForQualification(
   const absoluteGap = Math.max(0, DISTINGUISHED_MEMBERS - currentMembers)
   const growthGap = Math.max(0, NET_GROWTH_THRESHOLD - netGrowth)
   return Math.min(absoluteGap, growthGap)
+}
+
+// --- Convenience Functions ---
+
+/**
+ * Derive ClubGoalContext from a ClubTrend's newMembers field.
+ *
+ * DCP Goal 7 requires 4 new members; Goal 8 requires 4 more (8 total).
+ * The `newMembers` field on ClubTrend represents total new members added
+ * this program year, so we can infer goal achievement from that count.
+ */
+export function deriveGoalContext(
+  newMembers: number | undefined
+): ClubGoalContext {
+  const count = newMembers ?? 0
+  return {
+    newMembersSoFar: count,
+    goal7Achieved: count >= GOAL_7_REQUIRED,
+    goal8Achieved: count >= GOAL_7_REQUIRED + GOAL_8_REQUIRED,
+  }
+}
+
+export interface ClubNeedingMembers {
+  clubId: string
+  clubName: string
+  division: string
+  area: string
+  currentMembers: number
+  currentGoals: number
+  membersNeeded: number
+  reason: string
+  goalsEarned: number[]
+}
+
+/**
+ * Find all clubs in a list where adding members is the only barrier to Distinguished.
+ * Returns results sorted by membersNeeded ascending (closest to Distinguished first).
+ */
+export function findClubsNeedingMembers(
+  clubs: ClubTrend[]
+): ClubNeedingMembers[] {
+  const results: ClubNeedingMembers[] = []
+
+  for (const club of clubs) {
+    const projection = calculateClubProjection(club)
+    const goalContext = deriveGoalContext(club.newMembers)
+    const result = computeMembersToDistinguished(projection, goalContext)
+
+    if (result) {
+      results.push({
+        clubId: club.clubId,
+        clubName: club.clubName,
+        division: club.divisionId,
+        area: club.areaId,
+        currentMembers: projection.currentMembers,
+        currentGoals: projection.currentGoals,
+        membersNeeded: result.membersNeeded,
+        reason: result.reason,
+        goalsEarned: result.goalsEarned,
+      })
+    }
+  }
+
+  // Sort by membersNeeded ascending (closest to Distinguished first)
+  return results.sort((a, b) => a.membersNeeded - b.membersNeeded)
 }

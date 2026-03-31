@@ -11,7 +11,10 @@
  *   Distinguished: 5 goals + (20 members OR net growth ≥ 3)
  */
 import { describe, it, expect } from 'vitest'
-import { computeMembersToDistinguished } from '../membersToDistinguished'
+import {
+  computeMembersToDistinguished,
+  deriveGoalContext,
+} from '../membersToDistinguished'
 import type { ClubDCPProjection } from '../dcpProjections'
 
 // Helper to build a minimal ClubDCPProjection for testing
@@ -275,5 +278,40 @@ describe('computeMembersToDistinguished', () => {
       // Gap is 0 for both goals and members — already qualifies
       expect(result).toBeNull()
     })
+  })
+})
+
+describe('deriveGoalContext', () => {
+  it('should mark both goals unachieved when newMembers is 0', () => {
+    const ctx = deriveGoalContext(0)
+    expect(ctx.newMembersSoFar).toBe(0)
+    expect(ctx.goal7Achieved).toBe(false)
+    expect(ctx.goal8Achieved).toBe(false)
+  })
+
+  it('should mark both goals unachieved when newMembers is undefined', () => {
+    const ctx = deriveGoalContext(undefined)
+    expect(ctx.newMembersSoFar).toBe(0)
+    expect(ctx.goal7Achieved).toBe(false)
+    expect(ctx.goal8Achieved).toBe(false)
+  })
+
+  it('should mark Goal 7 achieved at exactly 4 new members', () => {
+    const ctx = deriveGoalContext(4)
+    expect(ctx.goal7Achieved).toBe(true)
+    expect(ctx.goal8Achieved).toBe(false)
+  })
+
+  it('should mark both goals achieved at 8+ new members', () => {
+    const ctx = deriveGoalContext(8)
+    expect(ctx.goal7Achieved).toBe(true)
+    expect(ctx.goal8Achieved).toBe(true)
+  })
+
+  it('should handle partial progress (3 new members)', () => {
+    const ctx = deriveGoalContext(3)
+    expect(ctx.newMembersSoFar).toBe(3)
+    expect(ctx.goal7Achieved).toBe(false)
+    expect(ctx.goal8Achieved).toBe(false)
   })
 })
