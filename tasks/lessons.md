@@ -883,3 +883,11 @@
 **Rule**: When mocking CDN snapshots for integration tests, the mock data must include `divisionPerformance` and `clubPerformance` arrays in their CSV-record format — the same shape produced by the data pipeline.
 **Warning**: The `divisions` property on the snapshot is a summary view used by other components; `extractDivisionPerformance` ignores it entirely and only reads `divisionPerformance`.
 **rules.md**: none
+
+## 🗓️ 2026-03-31 — members-to-distinguished (#273)
+
+**Discovery**: DCP Goal 7 (4 new members) and Goal 8 (4 more) create a nuanced calculation where adding members simultaneously: (1) earns DCP points, (2) satisfies the membership qualification (20 members OR net growth ≥ 3). The `computeMembersToDistinguished` utility correctly handles all three paths being satisfied by the same physical members.
+**Proof**: 16 tests covering the exact issue scenario (club needing 2 members), partial progress, qualification-only gaps, and impossible cases (needs non-member goals).
+**Rule**: When a single action (adding members) has compound effects across multiple DCP criteria, compute the maximum of all path requirements, not the sum. E.g., if Goal 7 needs 4 members AND qualification needs 3 members, you need max(4,3)=4, not 7.
+**Warning**: The `newMembers` field on `ClubTrend` from the CDN analytics represents total new members for the program year. Goal 7 requires 4 and Goal 8 requires 4 more (8 total). Inferring goal achievement from this count works correctly: `newMembers >= 4` → Goal 7 achieved, `newMembers >= 8` → Goal 8 achieved.
+**rules.md**: none
