@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react'
-import { recordError } from '../utils/errorTelemetry'
+import { recordError, reportErrorRemote } from '../utils/errorTelemetry'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -37,10 +37,13 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
     // Persist to localStorage telemetry (#225)
     recordError(error, errorInfo.componentStack ?? undefined)
 
+    // Send to remote telemetry endpoint (#254)
+    // Fire-and-forget — void to suppress unhandled promise warning
+    void reportErrorRemote(error, errorInfo.componentStack ?? undefined)
+
     if (this.props.onError) {
       this.props.onError(error, errorInfo)
     }
-    console.error('ERROR BOUNDARY CAUGHT AN ERROR:', error, errorInfo)
   }
 
   handleReset = (): void => {

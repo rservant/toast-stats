@@ -9,6 +9,8 @@
 const STORAGE_KEY = 'toast-stats-error-telemetry'
 const MAX_ENTRIES = 50
 
+declare const __APP_VERSION__: string
+
 export interface ErrorRecord {
   timestamp: string
   message: string
@@ -78,5 +80,64 @@ export function clearErrors(): void {
     localStorage.removeItem(STORAGE_KEY)
   } catch {
     // ignore
+  }
+}
+
+// --- Remote Reporting (#254) ---
+
+/**
+ * Wire format for remote error reports.
+ * Contains ONLY technical context — no PII.
+ */
+export interface RemoteErrorReport {
+  timestamp: string
+  message: string
+  componentStack?: string
+  url: string
+  userAgent: string
+  appVersion: string
+}
+
+/**
+ * Report an error to a remote telemetry endpoint.
+ *
+ * Gated by two env vars:
+ *   - VITE_TELEMETRY_ENDPOINT: URL to POST to (required)
+ *   - VITE_ENABLE_TELEMETRY: set to "false" to disable (optional)
+ *
+ * Fire-and-forget — silently swallows all errors to never
+ * impact user experience.
+ */
+export async function reportErrorRemote(
+  error: Error,
+  componentStack?: string
+): Promise<void> {
+  try {
+    const enableFlag = import.meta.env['VITE_ENABLE_TELEMETRY']
+    if (enableFlag === 'false') return
+
+    const endpoint = import.meta.env['VITE_TELEMETRY_ENDPOINT'] as
+      | string
+      | undefined
+    if (!endpoint) return
+
+    const report: RemoteErrorReport = {
+      timestamp: new Date().toISOString(),
+      message: error.message,
+      ...(componentStack !== undefined ? { componentStack } : {}),
+      url: typeof window !== 'undefined' ? window.location.href : '',
+      userAgent:
+        typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+      appVersion:
+        typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'unknown',
+    }
+
+    await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(report),
+    })
+  } catch {
+    // Silently swallow — telemetry must never crash the app
   }
 }
