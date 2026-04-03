@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useCdnCacheMonitor, parseCacheStatus } from '../useCdnCacheMonitor'
 import { resetCdnCacheStats } from '../../services/cdnCacheTracker'
+import { logger } from '../../utils/logger'
 
 function makeHeaders(headers: Record<string, string>): Headers {
   return new Headers(headers)
@@ -123,7 +124,7 @@ describe('CDN Cache Monitor (#224)', () => {
     })
 
     it('should warn in dev when MISS ratio exceeds 50%', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {})
 
       const { result } = renderHook(() => useCdnCacheMonitor())
 

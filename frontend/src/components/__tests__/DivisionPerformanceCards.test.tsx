@@ -11,6 +11,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { DivisionPerformanceCards } from '../DivisionPerformanceCards'
+import { logger } from '../../utils/logger'
 
 // Mock the extractDivisionPerformance function
 vi.mock('../../utils/extractDivisionPerformance', () => ({
@@ -504,9 +505,7 @@ describe('DivisionPerformanceCards', () => {
     })
 
     it('should log extraction errors to console', () => {
-      const consoleErrorSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {})
+      const loggerSpy = vi.spyOn(logger, 'error').mockImplementation(() => {})
       vi.mocked(extractDivisionPerformance).mockImplementation(() => {
         throw new Error('Extraction failed')
       })
@@ -518,12 +517,12 @@ describe('DivisionPerformanceCards', () => {
         />
       )
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect(loggerSpy).toHaveBeenCalledWith(
         'Error extracting division performance:',
         expect.any(Error)
       )
 
-      consoleErrorSpy.mockRestore()
+      loggerSpy.mockRestore()
     })
   })
 

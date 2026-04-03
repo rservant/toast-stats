@@ -21,6 +21,7 @@ import { ReactNode } from 'react'
 import { render } from '@testing-library/react'
 import DateSelector from '../DateSelector'
 import { fetchCdnDates } from '../../services/cdn'
+import { logger } from '../../utils/logger'
 
 // Mock the CDN service (#173)
 vi.mock('../../services/cdn', () => ({
@@ -396,7 +397,7 @@ describe('DateSelector Error Handling', () => {
      * THEN THE Date_Selector SHALL log the error details for debugging purposes
      */
     it('should log error details when CDN fails', async () => {
-      const consoleSpy = vi.spyOn(console, 'error')
+      const loggerSpy = vi.spyOn(logger, 'error')
       const errorMessage = 'Network connection failed'
       mockedFetchCdnDates.mockRejectedValue(new Error(errorMessage))
 
@@ -411,7 +412,7 @@ describe('DateSelector Error Handling', () => {
 
       // Verify error was logged
       await waitFor(() => {
-        expect(consoleSpy).toHaveBeenCalledWith(
+        expect(loggerSpy).toHaveBeenCalledWith(
           '[DateSelector] Failed to load available dates:',
           expect.objectContaining({
             error: errorMessage,
