@@ -1,153 +1,111 @@
-# Sprint 19 Plan — Bugs, Dead Code, and Deep Links
+# Sprint 20 Plan — Deep Linking & Navigation
 
 **Planned start:** April 2026
-**Theme:** Fix active bugs, remove dead code from the backend deletion, finish deep linking
+**Theme:** Make every view shareable and bookmarkable
 
 ---
 
 ## Context
 
-The project is feature-complete for its core use case. The Express backend was deleted in Sprint 12 (#173), but significant dead code, stale docs, and broken references remain from that deletion. Two open bugs need fixing. Deep linking (#272) is partially done.
+Sprint 19 shipped bug fixes (#277, #278), removed ~85K lines of dead code from the backend deletion, and cleaned up obsolete documentation. The codebase is now lean and accurate.
 
-All 3,464 tests pass. Lighthouse CI already runs on PRs (`.github/workflows/lighthouse-ci.yml`).
+The main UX gap remaining is **deep linking** (#272). The `useUrlState` hook exists and 7 params are already synced (tab, sort, dir, page on ClubsTable; sort/dir/status/page on ClubPerformanceTable; rank metric on GlobalRankingsTab). But key state is still lost on navigation: program year, date selection, column filters, and DCP projections filters.
+
+### Open Issues
+
+| #    | Title                          | Labels               | Status                                 |
+| ---- | ------------------------------ | -------------------- | -------------------------------------- |
+| #277 | Data freshness banner bug      | bug                  | **Fixed in Sprint 19** — needs closing |
+| #278 | CSV month-end detection bug    | —                    | **Fixed in Sprint 19** — needs closing |
+| #272 | Deep links for full navigation | enhancement          | Partially done                         |
+| #259 | PWA for offline field use      | needs-product-review | Deferred                               |
+| #258 | Exportable PDF/CSV reports     | needs-product-review | Deferred                               |
+| #257 | Weekly email digest            | needs-product-review | Deferred                               |
+| #256 | Club comparison tool           | needs-product-review | Deferred                               |
+| #255 | CDN cache monitoring           | observability        | Deferred                               |
+| #253 | DORA metrics tracking          | observability        | Deferred                               |
 
 ---
 
 ## Sprint Goals
 
-### 1. Fix: CSV scrape bypasses month-end detection (#278)
+### 1. Close fixed issues (#277, #278)
 
-**Priority: High** — Active data quality bug. April metrics will be misdated without this fix.
-
-- Parse CSV footers (e.g., "Month of March, As of 04/01/2026") during `HttpCsvDownloader` fetch
-- Use parsed `isClosingPeriod` and `dataMonth` in `CollectorOrchestrator` to populate `metadata.json`
-- Pipeline sets correct snapshot date during month-end closing periods
-
-**Estimated scope:** 1-2 days
+**Priority: Housekeeping** — Both were fixed in Sprint 19 PR #279.
 
 ---
 
-### 2. Fix: Data freshness banner shows "historical" for current data (#277)
+### 2. Deep link: program year and date selection (#272)
 
-**Priority: High** — User-facing bug. The banner logic is inverted.
+**Priority: High** — Currently stored only in React context/localStorage. Lost on page refresh when navigating directly to a URL.
 
-**Estimated scope:** < 1 day
+- Sync `selectedProgramYear` to URL param `py` (e.g., `?py=2025-2026`)
+- Sync `selectedDate` to URL param `date` (e.g., `?date=2026-03-25`)
+- Remove localStorage persistence of program year (URL is the source of truth)
+- Preserve both on browser back/forward navigation
 
----
-
-### 3. Dead code removal — backend deletion cleanup
-
-**Priority: High** — 30+ stale files and references from the deleted Express backend.
-
-#### Dead frontend files (never imported anywhere):
-
-- `frontend/src/utils/performanceMonitoring.ts` (529 lines, explicitly comments "Express backend was removed")
-- `frontend/src/utils/performanceOptimizer.ts`
-- `frontend/src/utils/tokenDocumentation.ts`
-- `frontend/src/utils/brandConstants.ts`
-- `frontend/src/utils/typographyStandardizer.ts`
-- `frontend/src/utils/colorReplacementEngine.ts`
-- `frontend/src/components/DivisionHeatmap.tsx` + `.css` + test
-- `frontend/src/components/GrowthVelocityCard.tsx` + `.css` + test
-- `frontend/src/components/brand/AccessibilityChecker.tsx` + test
-- `frontend/src/components/brand/ThemeProvider.tsx`
-- `frontend/src/components/index.ts` (barrel, never imported)
-- `frontend/src/scripts/validate-brand-colors.ts`
-- `frontend/src/scripts/validate-brand-compliance-preservation.ts`
-- `frontend/src/scripts/validate-component-patterns.ts`
-- `frontend/src/scripts/validate-typography.ts`
-
-#### Stale migration docs in source tree:
-
-- `frontend/src/__tests__/migration-analysis.md`
-- `frontend/src/__tests__/phase1-completion-summary.md`
-- `frontend/src/__tests__/phase1-risk-assessment.md`
-- `frontend/src/__tests__/migration-metrics.json`
-
-#### Unused dependency:
-
-- `axios` in `frontend/package.json` — zero imports in all frontend source
-
-#### Dead root package.json scripts:
-
-- `"cleanup:backend"` — references `backend/scripts/cleanup-test-dirs.sh` (doesn't exist)
-- `"docker:build"` — references a Dockerfile that doesn't exist
-
-#### Stale env vars:
-
-- `VITE_API_BASE_URL` in `frontend/.env.production` and `frontend/.env.example` — never read by any code
-
-#### Stale `.agent/` workflows (tracked in git):
-
-- `.agent/workflows/docker-build.md` — references deleted Dockerfile/backend
-- Consider adding `.agent/` to `.gitignore` or reviewing all 6 workflow files
-
-#### Stale `AGENTS.md` content:
-
-- Lists `docker` for "Local backend container builds"
-- Lists `backend/` as a workspace for "Express API server"
-- Lists `gcloud` for "Cloud Run management" — no Cloud Run exists
-
-#### Obsolete documentation:
-
-- `DEPLOYMENT.md` (1,529 lines) — architecture shows Cloud Run + Express + API Gateway; none exists
-- `docs/openapi.yaml` (10,544 lines) — documents deleted Express API
-- `docs/API_COVERAGE_ANALYSIS.md` (200 lines) — frontend-to-backend alignment for deleted backend
-- `docs/specs/optimize-cached-dates.md` — references deleted Express endpoint
-- `docs/specs/statistics-response-optimization.md` — references deleted Express endpoint
-- `docs/archive/` (18 implementation reports) — pre-CDN era reports
-- `docs/deployment-examples/` — Kubernetes/production configs for deleted backend
-- `firestore.indexes.json` — Firestore not used by any code
-- `firebase.json` references Firestore indexes unnecessarily
-- `scripts/cleanup-all-test-dirs.sh` — references `backend/scripts/cleanup-test-dirs.sh`
-
-**Estimated scope:** 2-3 days (mostly deletion, some AGENTS.md and DEPLOYMENT.md rewriting)
+**Scope:** `ProgramYearContext.tsx`, `DistrictDetailPage.tsx`
+**Estimated:** 1 day
 
 ---
 
-### 4. Deep links for full navigation (#272)
+### 3. Deep link: ClubsTable column filters (#272)
 
-**Priority: Medium** — Partially done (ClubsTable pagination syncs with URL). Expand to all tabs, sorts, filters.
+**Priority: Medium** — Users can't share a filtered clubs view.
 
-**Estimated scope:** 2 days
+- Sync active column filters to URL (e.g., `?filter_health=vulnerable&filter_name=sunrise`)
+- Use `useUrlState` for each filter that `useColumnFilters` manages
+- Clear filters clears URL params
+
+**Scope:** `useColumnFilters.ts`, `ClubsTable.tsx`, `ColumnHeader.tsx`
+**Estimated:** 1-2 days
 
 ---
 
-### 5. Graceful district coverage (existing spec: `docs/specs/graceful-district-coverage.md`)
+### 4. Deep link: DCP projections table filters (#272)
 
-**Priority: Medium** — 6 of 128 districts have detailed data. Landing page doesn't indicate which.
+**Priority: Medium** — Tier/division/close-only filters are local state.
 
-- Add visual indicator in rankings table for districts with detailed analytics
-- Default untracked districts to Global Rankings tab
-- Detail page fallback already implemented
+- Sync `filterTier`, `filterDivision`, `showCloseOnly` to URL params
+- Sync sort state to URL params (prefixed to avoid collision with ClubsTable)
 
-**Estimated scope:** 1 day
+**Scope:** `DCPProjectionsTable.tsx`
+**Estimated:** < 1 day
+
+---
+
+### 5. Graceful district coverage — landing page indicators
+
+**Priority: Medium** — 6 of 128 districts have detailed analytics. No visual indicator on the landing page.
+
+- Add icon/badge in rankings table for districts with detailed data
+- Default untracked districts to Global Rankings tab on detail page
+- Show banner: "Limited data. Global rankings are available."
+
+**Estimated:** 1 day
 
 ---
 
 ## Deferred
 
-| Item                            | Reason                                                                                     |
-| ------------------------------- | ------------------------------------------------------------------------------------------ |
-| **CI bundle size gates**        | Lighthouse CI already runs. Bundle size enforcement is low risk — no regressions observed. |
-| **Route-based code splitting**  | Nice-to-have for performance, not urgent. Lazy chart splitting already done.               |
-| **Test consolidation**          | Low priority — tests pass, coverage is healthy.                                            |
-| **PWA (#259)**                  | Needs product review.                                                                      |
-| **PDF/CSV reports (#258)**      | Needs product review.                                                                      |
-| **Email digest (#257)**         | Needs product review.                                                                      |
-| **Club comparison (#256)**      | Needs product review.                                                                      |
-| **CDN cache monitoring (#255)** | Observability nice-to-have.                                                                |
-| **DORA metrics (#253)**         | Observability nice-to-have.                                                                |
+| Item                            | Reason                                                             |
+| ------------------------------- | ------------------------------------------------------------------ |
+| **PWA (#259)**                  | Needs product review                                               |
+| **PDF/CSV reports (#258)**      | Needs product review                                               |
+| **Email digest (#257)**         | Needs product review                                               |
+| **Club comparison (#256)**      | Needs product review                                               |
+| **CDN cache monitoring (#255)** | Observability — no user-facing impact                              |
+| **DORA metrics (#253)**         | Observability — no user-facing impact                              |
+| **Route-based code splitting**  | Charts chunk is 119KB gzip but Lighthouse CI monitors this already |
 
 ---
 
 ## Success Criteria
 
-- [ ] Month-end closing period detection works correctly in daily pipeline (#278)
-- [ ] Data freshness banner shows correct status (#277)
-- [ ] All dead backend references removed (0 references to Express/apiClient/Cloud Run in source)
-- [ ] `axios` removed from frontend dependencies
-- [ ] DEPLOYMENT.md rewritten for CDN-only architecture
-- [ ] AGENTS.md updated to reflect current project state
-- [ ] Deep linking works for all tabs, sorts, and filters (#272)
+- [ ] #277 and #278 closed on GitHub
+- [ ] Program year and date selection preserved in URL
+- [ ] ClubsTable filters preserved in URL
+- [ ] DCP projections filters preserved in URL
+- [ ] Shared URLs reproduce the exact view (tab, sort, page, filters, date)
+- [ ] Browser back/forward preserves all state
 - [ ] Rankings table indicates which districts have detailed analytics
