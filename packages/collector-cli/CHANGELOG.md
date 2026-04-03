@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.1.0...collector-cli-v1.1.1) (2026-04-03)
+
+
+### Refactors
+
+* split LazyCharts into individual files to fix fast refresh warning ([#251](https://github.com/taverns-red/toast-stats/issues/251)) ([9a8139d](https://github.com/taverns-red/toast-stats/commit/9a8139d7a4e3ef40f135cad9456cfba9ce145530))
+
 ## [1.1.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.0.0...collector-cli-v1.1.0) (2026-03-26)
 
 ### Features
