@@ -1,5 +1,49 @@
 # Changelog
 
+## [2.6.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.5.0...toast-stats-v2.6.0) (2026-04-03)
+
+
+### Features
+
+* add ClubsNeedingMembersCard to Overview tab ([#273](https://github.com/taverns-red/toast-stats/issues/273)) ([951b186](https://github.com/taverns-red/toast-stats/commit/951b186cf87184dd5346e4b8e47dd57e3713090b))
+* add computeMembersToDistinguished utility ([#273](https://github.com/taverns-red/toast-stats/issues/273)) ([942c551](https://github.com/taverns-red/toast-stats/commit/942c55132d7c7400a318ab6d615df05ddd62278a))
+* add deriveGoalContext and findClubsNeedingMembers helpers ([#273](https://github.com/taverns-red/toast-stats/issues/273)) ([44644fe](https://github.com/taverns-red/toast-stats/commit/44644febb7fa2912b1bd9593014c8ea20dcff1fa))
+* add remote error reporting to ErrorBoundary ([#254](https://github.com/taverns-red/toast-stats/issues/254)) ([39a2a0c](https://github.com/taverns-red/toast-stats/commit/39a2a0c98f405fa9d9b9188c604d74948219e442))
+* add useUrlState hook for URL-synced state ([#272](https://github.com/taverns-red/toast-stats/issues/272)) ([6a852f7](https://github.com/taverns-red/toast-stats/commit/6a852f702258b4d96f32d67ee11449c30e08786a))
+* **core:** incorporate granular DCP goals into data pipeline ([#273](https://github.com/taverns-red/toast-stats/issues/273)) ([dde0439](https://github.com/taverns-red/toast-stats/commit/dde04394bb22bf0c0d660e31110ce59ea711215c))
+* **frontend:** prioritize exact goal flags for members to distinguished logic ([#273](https://github.com/taverns-red/toast-stats/issues/273)) ([3b5f686](https://github.com/taverns-red/toast-stats/commit/3b5f6867d0e56001854a4bf4de5a8a5559bbb146))
+* sync additional tables with URL params ([#272](https://github.com/taverns-red/toast-stats/issues/272)) ([a68c640](https://github.com/taverns-red/toast-stats/commit/a68c64070a289340ace0aca69a6a225b8f636a13))
+* sync ClubsTable pagination with URL params ([#272](https://github.com/taverns-red/toast-stats/issues/272)) ([a6da02e](https://github.com/taverns-red/toast-stats/commit/a6da02e0fff08fc3c061b5dd936f65fe99e26864))
+* **ui:** add 'close to distinguished' card ([#273](https://github.com/taverns-red/toast-stats/issues/273)) ([d4e08aa](https://github.com/taverns-red/toast-stats/commit/d4e08aa166303ca7d5f8ead7275283fec81a68d9))
+* **ui:** add members needed column and retain pagination state ([#272](https://github.com/taverns-red/toast-stats/issues/272), [#273](https://github.com/taverns-red/toast-stats/issues/273)) ([7269e4d](https://github.com/taverns-red/toast-stats/commit/7269e4dde54b53d021251fcd3dd3ea0e10fa17e6))
+
+
+### Bug Fixes
+
+* compute payment YoY from time-series data ([#269](https://github.com/taverns-red/toast-stats/issues/269)) ([3e3975b](https://github.com/taverns-red/toast-stats/commit/3e3975b4b2d98c72c935f4e9fb4cade5cea68eec))
+* paginate GCS delimiter listing to retrieve all date directories ([#152](https://github.com/taverns-red/toast-stats/issues/152)) ([e5b259d](https://github.com/taverns-red/toast-stats/commit/e5b259db0544b2c82ec6b1bf18605d46ab1e2a2b))
+* **ui:** add membersNeeded to applyFilter switch statement ([#273](https://github.com/taverns-red/toast-stats/issues/273)) ([5c37ef4](https://github.com/taverns-red/toast-stats/commit/5c37ef4b0c1b949c93630e102565d42cd44c83da))
+* use correct CDN field name 'May Visit award' for second-round visits ([#268](https://github.com/taverns-red/toast-stats/issues/268)) ([c6b9113](https://github.com/taverns-red/toast-stats/commit/c6b911383d3b205aca41502482dc64ef4a7a73f8))
+
+
+### Refactors
+
+* split LazyCharts into individual files to fix fast refresh warning ([#251](https://github.com/taverns-red/toast-stats/issues/251)) ([9a8139d](https://github.com/taverns-red/toast-stats/commit/9a8139d7a4e3ef40f135cad9456cfba9ce145530))
+
+
+### Documentation
+
+* add lesson about CSV-record mock format for integration tests ([#261](https://github.com/taverns-red/toast-stats/issues/261)) ([1ed509d](https://github.com/taverns-red/toast-stats/commit/1ed509d89828a19fba05c0c35f18c343eaf8564e))
+* add lesson for members-to-distinguished computation ([#273](https://github.com/taverns-red/toast-stats/issues/273)) ([62437e4](https://github.com/taverns-red/toast-stats/commit/62437e40ef9cd41025b28fc0774d3d458130e2e5))
+* add Sprint 17 lessons for [#268](https://github.com/taverns-red/toast-stats/issues/268) and [#269](https://github.com/taverns-red/toast-stats/issues/269) ([b04a347](https://github.com/taverns-red/toast-stats/commit/b04a347c0791c9649b0187049f9cccadbacf94c0))
+* update lessons with sprint 17 discoveries ([c6e6136](https://github.com/taverns-red/toast-stats/commit/c6e61360a0c2eb823b9aa0fee88c3cf5cc774b74))
+
+
+### Tests
+
+* add integration test suite for critical user journeys ([#261](https://github.com/taverns-red/toast-stats/issues/261)) ([f5909df](https://github.com/taverns-red/toast-stats/commit/f5909dff46c7fad65680ead0836df4985a1fee47))
+* align ClubsTable integration tests with Members Needed column layout ([#273](https://github.com/taverns-red/toast-stats/issues/273)) ([f0c44b8](https://github.com/taverns-red/toast-stats/commit/f0c44b86ac7f255bead974bca53e231e29faab43))
+
 ## [2.5.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.4.0...toast-stats-v2.5.0) (2026-03-29)
 
 

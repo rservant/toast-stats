@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.2.1...analytics-core-v1.3.0) (2026-04-03)
+
+
+### Features
+
+* **core:** incorporate granular DCP goals into data pipeline ([#273](https://github.com/taverns-red/toast-stats/issues/273)) ([dde0439](https://github.com/taverns-red/toast-stats/commit/dde04394bb22bf0c0d660e31110ce59ea711215c))
+
+
+### Refactors
+
+* split LazyCharts into individual files to fix fast refresh warning ([#251](https://github.com/taverns-red/toast-stats/issues/251)) ([9a8139d](https://github.com/taverns-red/toast-stats/commit/9a8139d7a4e3ef40f135cad9456cfba9ce145530))
+
 ## [1.2.1](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.2.0...analytics-core-v1.2.1) (2026-03-29)
 
 
