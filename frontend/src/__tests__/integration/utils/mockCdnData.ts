@@ -1,4 +1,7 @@
 import { vi } from 'vitest'
+import { resetCdnManifestCache } from '../../../services/cdn'
+import { resetCdnCacheStats } from '../../../services/cdnCacheTracker'
+import { queryClient } from '../../../config/queryClient'
 
 const baseUrl = 'https://cdn.taverns.red'
 
@@ -217,6 +220,9 @@ export const cdnMocks = {
  * Setup a global fetch mock that intercepts CDN calls and returns fixtures.
  */
 export function setupCdnFetchMock() {
+  resetCdnManifestCache()
+  resetCdnCacheStats()
+  queryClient.clear()
   const originalFetch = global.fetch
 
   const mockFetch = vi

@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchCdnSnapshotIndex, fetchCdnRankings } from '../services/cdn'
 import { useDistricts } from '../hooks/useDistricts'
 import { LazyHistoricalRankChart as HistoricalRankChart } from '../components/LazyCharts'
-import { useProgramYear } from '../contexts/ProgramYearContext'
+import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
 import { ProgramYearSelector } from '../components/ProgramYearSelector'
 import { useRankHistory } from '../hooks/useRankHistory'
 import InfoTooltip from '../components/InfoTooltip'
@@ -37,13 +37,13 @@ const LandingPage: React.FC = () => {
   }, [districtsData])
   const [selectedRegions, setSelectedRegions] = useState<string[]>([])
 
-  // Use program year context
+  // Use URL-synced program year and date (#272)
   const {
     selectedProgramYear,
     setSelectedProgramYear,
     selectedDate,
     setSelectedDate,
-  } = useProgramYear()
+  } = useUrlProgramYear()
 
   // Historical rank tracking state
   const [selectedRegionsForHistory, setSelectedRegionsForHistory] = useState<

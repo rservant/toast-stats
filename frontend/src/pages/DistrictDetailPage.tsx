@@ -12,7 +12,7 @@ import {
   computePaymentYoYFromTimeSeries,
 } from '../hooks/useTimeSeriesYoY'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
-import { useProgramYear } from '../contexts/ProgramYearContext'
+import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
 import { ProgramYearSelector } from '../components/ProgramYearSelector'
 import {
   getAvailableProgramYears,
@@ -181,13 +181,13 @@ const DistrictDetailPage: React.FC = () => {
     }
   }, [])
 
-  // Use program year context
+  // Use URL-synced program year and date (#272)
   const {
     selectedProgramYear,
     setSelectedProgramYear,
     selectedDate,
     setSelectedDate,
-  } = useProgramYear()
+  } = useUrlProgramYear()
 
   // Fetch district info
   const { data: districtsData } = useDistricts()

@@ -1,0 +1,110 @@
+/**
+ * useUrlProgramYear — URL-synced program year and date (#272)
+ *
+ * Reads `?py=` and `?date=` from the URL, syncs back to ProgramYearContext.
+ * URL is the source of truth when params are present.
+ *
+ * @example
+ * ```tsx
+ * const { selectedProgramYear, setSelectedProgramYear, selectedDate, setSelectedDate } =
+ *   useUrlProgramYear()
+ * ```
+ */
+
+import { useEffect, useCallback, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { useProgramYear } from '../contexts/ProgramYearContext'
+import { getCurrentProgramYear, getProgramYear } from '../utils/programYear'
+import type { ProgramYear } from '../utils/programYear'
+
+export function useUrlProgramYear() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const {
+    selectedProgramYear: contextPY,
+    setSelectedProgramYear: setContextPY,
+    selectedDate: contextDate,
+    setSelectedDate: setContextDate,
+  } = useProgramYear()
+
+  const currentPY = getCurrentProgramYear()
+
+  // Read program year from URL; fall back to context value (not getCurrentProgramYear)
+  // This avoids extra render cycles when context already has the right year
+  const urlPyRaw = searchParams.get('py')
+  const urlPyYear = urlPyRaw !== null ? parseInt(urlPyRaw, 10) : null
+  const effectivePyYear =
+    urlPyYear !== null && !isNaN(urlPyYear) ? urlPyYear : contextPY.year
+
+  const selectedProgramYear = useMemo(
+    () => getProgramYear(effectivePyYear),
+    [effectivePyYear]
+  )
+
+  // Read date from URL
+  const urlDate = searchParams.get('date')
+  const selectedDate = urlDate || undefined
+
+  // Sync program year to context when URL differs
+  useEffect(() => {
+    if (selectedProgramYear.year !== contextPY.year) {
+      setContextPY(selectedProgramYear)
+    }
+  }, [
+    selectedProgramYear.year,
+    contextPY.year,
+    setContextPY,
+    selectedProgramYear,
+  ])
+
+  // Sync date to context when URL has a date that differs from context
+  useEffect(() => {
+    if (selectedDate !== contextDate) {
+      setContextDate(selectedDate)
+    }
+  }, [selectedDate, contextDate, setContextDate])
+
+  const setSelectedProgramYear = useCallback(
+    (py: ProgramYear) => {
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev)
+          if (py.year === currentPY.year) {
+            next.delete('py')
+          } else {
+            next.set('py', py.year.toString())
+          }
+          return next
+        },
+        { replace: true }
+      )
+      setContextPY(py)
+    },
+    [setSearchParams, setContextPY, currentPY.year]
+  )
+
+  const setSelectedDate = useCallback(
+    (date: string | undefined) => {
+      setSearchParams(
+        prev => {
+          const next = new URLSearchParams(prev)
+          if (!date) {
+            next.delete('date')
+          } else {
+            next.set('date', date)
+          }
+          return next
+        },
+        { replace: true }
+      )
+      setContextDate(date)
+    },
+    [setSearchParams, setContextDate]
+  )
+
+  return {
+    selectedProgramYear,
+    setSelectedProgramYear,
+    selectedDate,
+    setSelectedDate,
+  }
+}

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useDistrictAnalytics, ClubTrend } from '../hooks/useDistrictAnalytics'
 import { useDistricts } from '../hooks/useDistricts'
-import { useProgramYear } from '../contexts/ProgramYearContext'
+import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import {
   getAvailableProgramYears,
@@ -165,7 +165,7 @@ const ClubDetailPage: React.FC = () => {
   }>()
   const navigate = useNavigate()
 
-  const { selectedProgramYear } = useProgramYear()
+  const { selectedProgramYear } = useUrlProgramYear()
 
   // Fetch district info
   const { data: districtsData } = useDistricts()
