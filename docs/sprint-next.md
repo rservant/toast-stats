@@ -1,29 +1,17 @@
-# Sprint 20 Plan — Deep Linking & Navigation
+# Sprint 20 Plan — Deep Linking & Cleanup
 
 **Planned start:** April 2026
-**Theme:** Make every view shareable and bookmarkable
+**Theme:** Make every view shareable and bookmarkable; remove stale UX
 
 ---
 
 ## Context
 
-Sprint 19 shipped bug fixes (#277, #278), removed ~85K lines of dead code from the backend deletion, and cleaned up obsolete documentation. The codebase is now lean and accurate.
+Sprint 19 shipped bug fixes (#277, #278), removed ~85K lines of dead code, and cleaned up obsolete docs. The codebase is lean and accurate.
 
-The main UX gap remaining is **deep linking** (#272). The `useUrlState` hook exists and 7 params are already synced (tab, sort, dir, page on ClubsTable; sort/dir/status/page on ClubPerformanceTable; rank metric on GlobalRankingsTab). But key state is still lost on navigation: program year, date selection, column filters, and DCP projections filters.
+The main UX gap is **deep linking** (#272). The `useUrlState` hook exists and 7 params are already synced, but program year, date selection, column filters, and DCP projections filters are still lost on navigation.
 
-### Open Issues
-
-| #    | Title                          | Labels               | Status                                 |
-| ---- | ------------------------------ | -------------------- | -------------------------------------- |
-| #277 | Data freshness banner bug      | bug                  | **Fixed in Sprint 19** — needs closing |
-| #278 | CSV month-end detection bug    | —                    | **Fixed in Sprint 19** — needs closing |
-| #272 | Deep links for full navigation | enhancement          | Partially done                         |
-| #259 | PWA for offline field use      | needs-product-review | Deferred                               |
-| #258 | Exportable PDF/CSV reports     | needs-product-review | Deferred                               |
-| #257 | Weekly email digest            | needs-product-review | Deferred                               |
-| #256 | Club comparison tool           | needs-product-review | Deferred                               |
-| #255 | CDN cache monitoring           | observability        | Deferred                               |
-| #253 | DORA metrics tracking          | observability        | Deferred                               |
+Additionally, the landing page shows a "Detailed analytics available" badge on every single district row (since all 128 districts now have data), and the detail page has an unreachable "not yet tracked" fallback. Both are vestigial from when only 6 districts were collected.
 
 ---
 
@@ -37,12 +25,12 @@ The main UX gap remaining is **deep linking** (#272). The `useUrlState` hook exi
 
 ### 2. Deep link: program year and date selection (#272)
 
-**Priority: High** — Currently stored only in React context/localStorage. Lost on page refresh when navigating directly to a URL.
+**Priority: High** — Currently stored in React context + localStorage. Lost on page refresh.
 
 - Sync `selectedProgramYear` to URL param `py` (e.g., `?py=2025-2026`)
 - Sync `selectedDate` to URL param `date` (e.g., `?date=2026-03-25`)
-- Remove localStorage persistence of program year (URL is the source of truth)
-- Preserve both on browser back/forward navigation
+- Remove localStorage persistence (URL becomes source of truth)
+- Preserve both on browser back/forward
 
 **Scope:** `ProgramYearContext.tsx`, `DistrictDetailPage.tsx`
 **Estimated:** 1 day
@@ -67,22 +55,22 @@ The main UX gap remaining is **deep linking** (#272). The `useUrlState` hook exi
 **Priority: Medium** — Tier/division/close-only filters are local state.
 
 - Sync `filterTier`, `filterDivision`, `showCloseOnly` to URL params
-- Sync sort state to URL params (prefixed to avoid collision with ClubsTable)
+- Sync sort state to URL params (prefixed to avoid collision)
 
 **Scope:** `DCPProjectionsTable.tsx`
 **Estimated:** < 1 day
 
 ---
 
-### 5. Graceful district coverage — landing page indicators
+### 5. Remove vestigial tracked/untracked district UX
 
-**Priority: Medium** — 6 of 128 districts have detailed analytics. No visual indicator on the landing page.
+**Priority: Low** — All 128 districts now have data. Two artifacts remain:
 
-- Add icon/badge in rankings table for districts with detailed data
-- Default untracked districts to Global Rankings tab on detail page
-- Show banner: "Limited data. Global rankings are available."
+- **LandingPage.tsx** (line ~777): Badge "Detailed analytics available" shows on every row — redundant noise since every district has data now. Remove the badge and the `trackedDistrictIds` set.
+- **DistrictDetailPage.tsx** (line ~425-490): "This district has limited data available" fallback — unreachable code since all districts have per-district snapshots. Remove the entire fallback block.
+- **Comment on line 427**: "Only 6 districts have detailed per-district analytics" — factually wrong.
 
-**Estimated:** 1 day
+**Estimated:** < 1 hour
 
 ---
 
@@ -108,4 +96,5 @@ The main UX gap remaining is **deep linking** (#272). The `useUrlState` hook exi
 - [ ] DCP projections filters preserved in URL
 - [ ] Shared URLs reproduce the exact view (tab, sort, page, filters, date)
 - [ ] Browser back/forward preserves all state
-- [ ] Rankings table indicates which districts have detailed analytics
+- [ ] No "Detailed analytics available" badge noise on landing page
+- [ ] No unreachable "not yet tracked" fallback on detail page
