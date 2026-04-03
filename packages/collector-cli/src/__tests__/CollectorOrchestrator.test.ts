@@ -18,10 +18,41 @@ let failingDistricts = new Set<string>()
 
 vi.mock('../services/HttpCsvDownloader.js', () => {
   return {
-    parseClosingPeriodFromCsv: () => ({
-      isClosingPeriod: false,
-      dataMonth: undefined,
-    }),
+    parseClosingPeriodFromCsv: (content: string, fetchDate: string) => {
+      // Use real parsing logic: detect "Month of X" footer
+      const match = content.match(/Month of\s+(\w+)/i)
+      if (!match) {
+        return { isClosingPeriod: false, dataMonth: undefined }
+      }
+      const monthNames = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
+      ]
+      const monthIndex = monthNames.findIndex(
+        m => m.toLowerCase() === match[1].toLowerCase()
+      )
+      if (monthIndex === -1) {
+        return { isClosingPeriod: false, dataMonth: undefined }
+      }
+      const fetchMonth = new Date(fetchDate).getMonth() // 0-indexed
+      const isClosingPeriod = monthIndex !== fetchMonth
+      const year =
+        monthIndex === 11 && fetchMonth === 0
+          ? new Date(fetchDate).getFullYear() - 1
+          : new Date(fetchDate).getFullYear()
+      const dataMonth = `${year}-${String(monthIndex + 1).padStart(2, '0')}`
+      return { isClosingPeriod, dataMonth }
+    },
     HttpCsvDownloader: class MockHttpCsvDownloader {
       private requestCount = 0
 
