@@ -22,7 +22,9 @@ import { CircuitBreaker, CircuitState } from './utils/CircuitBreaker.js'
 import { RetryManager } from './utils/RetryManager.js'
 import {
   HttpCsvDownloader,
+  parseClosingPeriodFromCsv,
   type ReportType as HttpReportType,
+  type CsvClosingPeriodInfo,
 } from './services/HttpCsvDownloader.js'
 import type {
   CollectorOrchestratorConfig,
@@ -60,6 +62,7 @@ interface DistrictScrapeResult {
   error?: string
   timestamp: string
   duration_ms: number
+  closingPeriodInfo?: CsvClosingPeriodInfo
 }
 
 /**
@@ -300,6 +303,8 @@ export class CollectorOrchestrator {
         }
       }
 
+      let closingPeriodInfo: CsvClosingPeriodInfo | undefined
+
       const retryResult = await RetryManager.executeWithRetry(
         async () => {
           const programYear = calculateProgramYear(date)
@@ -316,6 +321,9 @@ export class CollectorOrchestrator {
           )
           cacheLocations.push(filePath)
 
+          // Parse closing period metadata from CSV footer (#278)
+          closingPeriodInfo = parseClosingPeriodFromCsv(result.content, date)
+
           return { byteSize: result.byteSize }
         },
         RetryManager.getDashboardRetryOptions(),
@@ -329,6 +337,13 @@ export class CollectorOrchestrator {
         )
       }
 
+      if (closingPeriodInfo?.isClosingPeriod) {
+        logger.info('Closing period detected from CSV footer', {
+          date,
+          dataMonth: closingPeriodInfo.dataMonth,
+        })
+      }
+
       logger.info('All-districts download completed', {
         date,
         duration_ms: Date.now() - startTime,
@@ -339,6 +354,7 @@ export class CollectorOrchestrator {
         districtId: 'all-districts',
         success: true,
         cacheLocations,
+        closingPeriodInfo,
         timestamp,
         duration_ms: Date.now() - startTime,
       }
@@ -677,11 +693,15 @@ export class CollectorOrchestrator {
         .map(r => r.districtId)
       if (succeededDistricts.length > 0) {
         const metaPath = buildMetadataPath(this.config.cacheDir, date)
-        const metadata = {
+        const closingInfo = allDistrictsResult.closingPeriodInfo
+        const metadata: Record<string, unknown> = {
           date,
           timestamp: Date.now(),
           programYear: calculateProgramYear(date),
-          isClosingPeriod: false,
+          isClosingPeriod: closingInfo?.isClosingPeriod ?? false,
+          ...(closingInfo?.dataMonth
+            ? { dataMonth: closingInfo.dataMonth }
+            : {}),
           csvFiles: {
             allDistricts: allDistrictsResult.success,
             districts: Object.fromEntries(
