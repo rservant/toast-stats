@@ -9,7 +9,7 @@
 
 The product is feature-complete for its core use case. All major features are shipped (product-spec: "Decided — Not Yet Shipped: empty", "Known Issues: none"). The backend has been fully deleted in favor of CDN-only architecture. Recent sprints (15-18) focused on UX polish, data accuracy fixes, accessibility, URL-synced state, and the "members to distinguished" feature.
 
-Five specs remain in `.kiro/specs/` — all NOT STARTED. Three open doc-specs exist in `docs/specs/` (graceful district coverage, optimize cached-dates, statistics response optimization). The cached-dates and statistics-response specs reference the deleted Express backend, making them **obsolete**. The graceful-district-coverage spec is partially done (detail page handled) but needs landing page indicators.
+Three open doc-specs exist in `docs/specs/` (graceful district coverage, optimize cached-dates, statistics response optimization). The cached-dates and statistics-response specs reference the deleted Express backend, making them **obsolete**. The graceful-district-coverage spec is partially done (detail page handled) but needs landing page indicators.
 
 All 2,801 tests pass (1,994 frontend + 680 analytics-core + 127 shared-contracts). Test coverage is healthy.
 
@@ -17,7 +17,7 @@ All 2,801 tests pass (1,994 frontend + 680 analytics-core + 127 shared-contracts
 
 ## Sprint Goals
 
-### 1. CI Performance Gates (from spec: `ci-performance-gates`)
+### 1. CI Performance Gates
 
 **Priority: High** — No performance regression detection exists today. Bundle sizes and Lighthouse scores can silently degrade.
 
@@ -31,7 +31,7 @@ All 2,801 tests pass (1,994 frontend + 680 analytics-core + 127 shared-contracts
 
 ---
 
-### 2. Route-Based Code Splitting (from spec: `frontend-code-splitting`)
+### 2. Route-Based Code Splitting
 
 **Priority: High** — Direct prerequisite for passing the bundle size gates above.
 
@@ -45,7 +45,7 @@ All 2,801 tests pass (1,994 frontend + 680 analytics-core + 127 shared-contracts
 
 ---
 
-### 3. Graceful District Coverage (from spec: `docs/specs/graceful-district-coverage.md`)
+### 3. Graceful District Coverage
 
 **Priority: Medium** — Only 6 of 128 districts have detailed analytics. Users clicking untracked districts get a confusing experience on the landing page.
 
@@ -60,7 +60,7 @@ All 2,801 tests pass (1,994 frontend + 680 analytics-core + 127 shared-contracts
 
 ---
 
-### 4. Test Consolidation (from spec: `test-consolidation`)
+### 4. Test Consolidation
 
 **Priority: Medium** — 71 property test files exist; several are over-engineered per the PBT steering guidance.
 
@@ -78,10 +78,8 @@ All 2,801 tests pass (1,994 frontend + 680 analytics-core + 127 shared-contracts
 
 **Priority: Low** — Cleanup task.
 
-- Move `docs/specs/optimize-cached-dates.md` to archive (references deleted Express backend)
-- Move `docs/specs/statistics-response-optimization.md` to archive (references deleted Express backend)
-- Update `.kiro/specs/README.md` last-updated date
-- Evaluate `bounded-lru-cache` and `real-user-monitoring` specs for relevance (both reference backend `CacheService` which no longer exists)
+- Delete `docs/specs/optimize-cached-dates.md` (references deleted Express backend)
+- Delete `docs/specs/statistics-response-optimization.md` (references deleted Express backend)
 
 **Estimated scope:** < 1 hour
 
@@ -92,7 +90,7 @@ All 2,801 tests pass (1,994 frontend + 680 analytics-core + 127 shared-contracts
 | Item                                  | Reason to Defer                                                                                                                                                                  |
 | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Real User Monitoring**              | Spec references backend analytics endpoint that no longer exists. Needs redesign for CDN-only architecture (e.g., send metrics to a serverless function or third-party service). |
-| **Bounded LRU Cache**                 | Spec references backend `CacheService` that was deleted. No longer applicable in current architecture. Candidate for archival.                                                   |
+| **Bounded LRU Cache**                 | Referenced backend `CacheService` that was deleted. No longer applicable in current architecture.                                                                                |
 | **Expand district coverage beyond 6** | Product decision: requires more pipeline compute budget. Not a code task.                                                                                                        |
 
 ---

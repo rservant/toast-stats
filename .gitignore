@@ -73,5 +73,8 @@ logs.txt
 .firebase/
 .npm-cache/
 
+# Kiro
+.kiro/
+
 # Data (local-only)
 data/
