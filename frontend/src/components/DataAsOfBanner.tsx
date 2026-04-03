@@ -1,17 +1,17 @@
 import React, { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { fetchCdnManifest } from '../services/cdn'
 import { formatDisplayDate } from '../utils/dateFormatting'
 
 export interface DataAsOfBannerProps {
   /** The date currently being viewed (YYYY-MM-DD) */
   selectedDate: string | null | undefined
+  /** The most recent date available for the current district/context */
+  latestAvailableDate: string | null | undefined
   /** CSS class for layout */
   className?: string
 }
 
 /**
- * DataAsOfBanner (#214)
+ * DataAsOfBanner (#214, #277)
  *
  * Contextual banner at the top of district detail pages.
  * - Latest data → subtle green indicator
@@ -19,23 +19,21 @@ export interface DataAsOfBannerProps {
  *
  * Dismissable per session; reappears when selectedDate changes
  * (parent should pass key={selectedDate} to force remount).
+ *
+ * Fix #277: Compare against the district's own latest date instead of the
+ * global CDN manifest, which can lag behind per-district snapshot data.
  */
 const DataAsOfBanner: React.FC<DataAsOfBannerProps> = ({
   selectedDate,
+  latestAvailableDate,
   className,
 }) => {
   const [dismissed, setDismissed] = useState(false)
 
-  const { data: manifest } = useQuery({
-    queryKey: ['cdn-manifest'],
-    queryFn: fetchCdnManifest,
-    staleTime: 5 * 60_000,
-  })
+  if (dismissed || !latestAvailableDate || !selectedDate) return null
 
-  if (dismissed || !manifest || !selectedDate) return null
-
-  const latestDate = manifest.latestSnapshotDate
-  const isLatest = selectedDate === latestDate
+  const latestDate = latestAvailableDate
+  const isLatest = selectedDate >= latestDate
 
   if (isLatest) {
     return (

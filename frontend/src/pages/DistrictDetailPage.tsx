@@ -634,6 +634,7 @@ const DistrictDetailPage: React.FC = () => {
           <DataAsOfBanner
             key={selectedDate ?? 'none'}
             selectedDate={selectedDate}
+            latestAvailableDate={cachedDatesData?.dateRange?.endDate}
             className="mb-4"
           />
 
