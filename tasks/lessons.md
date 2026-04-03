@@ -925,3 +925,11 @@
 **Rule**: When designing URL serialization for ranges, use `indexOf('-')` from index 0, and treat a leading dash with no preceding content as "open min".
 **Warning**: Similarly, a trailing dash (`5-`) means "open max". The parser must handle both edges explicitly.
 **rules.md**: none
+
+## 🗓️ 2026-04-03 — Lesson 42: Logger Migration Breaks Test Spies (#283)
+
+**Discovery**: When migrating from `console.error` to `logger.error`, tests that used `vi.spyOn(console, 'error')` silently stopped detecting calls. The logger uses `console.error.bind(console)` at module init time, creating a bound function reference that is independent of later spies on `console.error`.
+**Proof**: Three tests failed after the logger migration: DateSelector error logging, DivisionPerformanceCards error logging, and cdnCacheMonitor warning. Changing spies to `vi.spyOn(logger, 'error')` fixed all three.
+**Rule**: When introducing a logger abstraction, update all test spies to target the logger object, not the underlying console methods. The bound function breaks the spy chain.
+**Warning**: Any new test that verifies error/warn output must spy on `logger`, not `console`. The ESLint `no-console` rule (warn) will flag direct console usage but won't catch spy targets in test assertions.
+**rules.md**: none
