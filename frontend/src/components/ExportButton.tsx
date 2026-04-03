@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Button } from './ui/Button'
+import { logger } from '../utils/logger'
 
 interface ExportButtonProps {
   onExport: () => void | Promise<void>
@@ -47,7 +48,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
     try {
       await onExport()
     } catch (error) {
-      console.error('Export failed:', error)
+      logger.error('Export failed:', error)
     } finally {
       setIsExporting(false)
     }

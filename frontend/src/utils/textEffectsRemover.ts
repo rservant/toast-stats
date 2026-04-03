@@ -5,6 +5,8 @@
  * Prohibited effects: drop-shadow, outline, glow, text-shadow, text-stroke
  */
 
+import { logger } from './logger'
+
 export interface TextEffectViolation {
   element: HTMLElement
   property: string
@@ -131,7 +133,7 @@ export function removeTextEffectsFromElement(element: HTMLElement): boolean {
 
     return true
   } catch (error) {
-    console.warn('Failed to remove text effects from element:', error)
+    logger.warn('Failed to remove text effects from element:', error)
     return false
   }
 }

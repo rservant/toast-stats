@@ -6,6 +6,7 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react'
+import { logger } from '../utils/logger'
 import {
   ProgramYear,
   getCurrentProgramYear,
@@ -39,7 +40,7 @@ export const ProgramYearProvider: React.FC<ProgramYearProviderProps> = ({
           const year = parseInt(savedYear)
           return getProgramYear(year)
         } catch (error) {
-          console.error('Failed to load saved program year:', error)
+          logger.error('Failed to load saved program year:', error)
         }
       }
       return getCurrentProgramYear()

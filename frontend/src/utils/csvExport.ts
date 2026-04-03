@@ -2,6 +2,8 @@
  * Utility functions for exporting data to CSV format
  */
 
+import { logger } from './logger'
+
 /**
  * Converts a 2D array to CSV string
  */
@@ -540,7 +542,7 @@ export const exportDistrictAnalytics = async (
     const filename = generateFilename('analytics', districtId)
     downloadCSV(csvContent, filename)
   } catch (error) {
-    console.error('Failed to export district analytics:', error)
+    logger.error('Failed to export district analytics:', error)
     throw error
   }
 }

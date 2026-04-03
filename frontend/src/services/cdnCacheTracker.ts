@@ -1,3 +1,5 @@
+import { logger } from '../utils/logger'
+
 /**
  * CDN Cache Tracker — Module-level singleton (#255)
  *
@@ -62,7 +64,7 @@ export function recordCdnResponse(response: Response): void {
     if (total >= 5) {
       const missRatio = misses / total
       if (missRatio > 0.5) {
-        console.warn(
+        logger.warn(
           `[CDN Cache] High MISS ratio: ${(missRatio * 100).toFixed(0)}% (${misses}/${total})`
         )
       }

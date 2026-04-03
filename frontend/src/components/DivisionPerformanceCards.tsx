@@ -21,6 +21,7 @@ import React from 'react'
 import { extractDivisionPerformance } from '../utils/extractDivisionPerformance'
 import { DivisionPerformanceCard } from './DivisionPerformanceCard'
 import { formatDisplayDate } from '../utils/dateFormatting'
+import { logger } from '../utils/logger'
 
 /**
  * Props for the DivisionPerformanceCards component
@@ -68,7 +69,7 @@ export const DivisionPerformanceCards: React.FC<
     try {
       return extractDivisionPerformance(districtSnapshot)
     } catch (error) {
-      console.error('Error extracting division performance:', error)
+      logger.error('Error extracting division performance:', error)
       return []
     }
   }, [districtSnapshot, isLoading])

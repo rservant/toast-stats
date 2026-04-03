@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchCdnDates } from '../services/cdn'
+import { logger } from '../utils/logger'
 import type { AvailableDatesResponse } from '../types/districts'
 
 interface DateSelectorProps {
@@ -116,7 +117,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({
   // Log errors for debugging (Requirement 3.5)
   useEffect(() => {
     if (isError && error) {
-      console.error('[DateSelector] Failed to load available dates:', {
+      logger.error('[DateSelector] Failed to load available dates:', {
         error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString(),
       })

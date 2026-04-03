@@ -7,6 +7,8 @@
  * Requirements: 3.1 - Accessibility Compliance
  */
 
+import { logger } from './logger'
+
 export interface ContrastValidationResult {
   ratio: number
   passes: boolean
@@ -86,7 +88,7 @@ export function calculateContrastRatio(
   const bgRgb = hexToRgb(background)
 
   if (!fgRgb || !bgRgb) {
-    console.warn(`Invalid color format: ${foreground} or ${background}`)
+    logger.warn(`Invalid color format: ${foreground} or ${background}`)
     return 1 // Worst case if colors can't be parsed
   }
 

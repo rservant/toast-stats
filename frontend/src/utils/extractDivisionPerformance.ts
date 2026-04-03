@@ -21,6 +21,7 @@ import {
   calculateAreaStatus,
   checkAreaQualifying,
 } from './divisionStatus.js'
+import { logger } from './logger'
 
 /**
  * Determines the distinguished level for a club based on DCP criteria
@@ -472,14 +473,14 @@ export function extractDivisionPerformance(
         clubBase = parsed
       } else {
         // Requirement 1.4: Invalid/non-numeric value, fall back to counting clubs
-        console.debug(
+        logger.debug(
           `Division "${divisionId}": Invalid "Division Club Base" value "${String(divisionClubBaseRaw)}", falling back to club count`
         )
         clubBase = clubs.length
       }
     } else {
       // Requirement 1.4: Field missing, fall back to counting clubs
-      console.debug(
+      logger.debug(
         `Division "${divisionId}": "Division Club Base" field missing, falling back to club count`
       )
       clubBase = clubs.length
@@ -632,14 +633,14 @@ function extractAreasForDivision(
         clubBase = parsed
       } else {
         // Requirement 2.4: Invalid/non-numeric value, fall back to counting clubs
-        console.debug(
+        logger.debug(
           `Area "${areaId}": Invalid "Area Club Base" value "${String(areaClubBaseRaw)}", falling back to club count`
         )
         clubBase = clubs.length
       }
     } else {
       // Requirement 2.4: Field missing, fall back to counting clubs
-      console.debug(
+      logger.debug(
         `Area "${areaId}": "Area Club Base" field missing, falling back to club count`
       )
       clubBase = clubs.length
