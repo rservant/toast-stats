@@ -122,6 +122,92 @@ export function buildExportUrl(spec: BackfillDateSpec): string {
 }
 
 /**
+ * Closing period metadata parsed from a CSV footer.
+ */
+export interface CsvClosingPeriodInfo {
+  /** Whether this CSV represents a month-end closing period */
+  isClosingPeriod: boolean
+  /** The data month in YYYY-MM format (e.g., "2026-03") */
+  dataMonth: string | undefined
+}
+
+const MONTH_NAMES: Record<string, string> = {
+  january: '01',
+  february: '02',
+  march: '03',
+  april: '04',
+  may: '05',
+  june: '06',
+  july: '07',
+  august: '08',
+  september: '09',
+  october: '10',
+  november: '11',
+  december: '12',
+}
+
+/**
+ * Parse closing period metadata from a CSV footer.
+ *
+ * Toastmasters CSVs contain a footer like:
+ *   "Month of March, As of 04/01/2026"
+ *
+ * When the "Month of X" month differs from the "As of" date's month,
+ * the data is a closing period for month X. For example, "Month of March,
+ * As of 04/01/2026" means this is the March 2026 closing period collected
+ * on April 1.
+ *
+ * @param csvContent - The full CSV content including footer rows
+ * @param collectionDate - The date the data was collected (YYYY-MM-DD)
+ * @returns Closing period info with isClosingPeriod and dataMonth
+ */
+export function parseClosingPeriodFromCsv(
+  csvContent: string,
+  collectionDate: string
+): CsvClosingPeriodInfo {
+  // Search the last 10 lines for the "Month of X, As of Y" pattern
+  const lines = csvContent.trim().split('\n')
+  const tailLines = lines.slice(-10)
+
+  for (const line of tailLines) {
+    const match = line.match(
+      /Month of ([A-Za-z]+),\s*As of (\d{2})\/(\d{2})\/(\d{4})/
+    )
+    if (match) {
+      const monthName = match[1]!.toLowerCase()
+      const monthNum = MONTH_NAMES[monthName]
+      const asOfYear = match[4]!
+
+      if (monthNum) {
+        // Handle year boundary: "Month of December" collected in January of next year
+        const asOfMonth = match[2]!
+        let dataYear = parseInt(asOfYear, 10)
+        if (monthNum === '12' && asOfMonth === '01') {
+          dataYear -= 1
+        }
+        const dataMonth = `${dataYear}-${monthNum}`
+
+        // Compare data month to collection month
+        // If different, this is a closing period (e.g., data is March, collected in April)
+        const collectionMonth = collectionDate.slice(0, 7) // "YYYY-MM"
+        const isClosingPeriod = dataMonth !== collectionMonth
+
+        return {
+          isClosingPeriod,
+          dataMonth,
+        }
+      }
+    }
+  }
+
+  // No footer found — not a closing period
+  return {
+    isClosingPeriod: false,
+    dataMonth: undefined,
+  }
+}
+
+/**
  * HTTP-based CSV downloader with rate limiting and retry logic.
  */
 export class HttpCsvDownloader {

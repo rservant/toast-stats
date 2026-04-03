@@ -9,6 +9,7 @@ import {
   HttpCsvDownloader,
   buildExportUrl,
   computeMonthEndDate,
+  parseClosingPeriodFromCsv,
   type BackfillDateSpec,
 } from '../services/HttpCsvDownloader.js'
 
@@ -260,6 +261,76 @@ describe('HttpCsvDownloader URL Construction (#123)', () => {
       // "As of 03/19/2026" should NOT appear
       expect(districts).not.toContain('As of 03/19/2026')
       expect(districts).not.toContain('As of 03')
+    })
+  })
+
+  describe('parseClosingPeriodFromCsv (#278)', () => {
+    it('should detect closing period when data month differs from collection month', () => {
+      const csv = `"REGION","DISTRICT","DSP"
+"01","02","Y"
+"01","109","Y"
+"Month of March, As of 04/01/2026","",""`
+      const result = parseClosingPeriodFromCsv(csv, '2026-04-01')
+
+      expect(result.isClosingPeriod).toBe(true)
+      expect(result.dataMonth).toBe('2026-03')
+    })
+
+    it('should return non-closing when data month matches collection month', () => {
+      const csv = `"REGION","DISTRICT","DSP"
+"01","02","Y"
+"Month of March, As of 03/15/2026","",""`
+      const result = parseClosingPeriodFromCsv(csv, '2026-03-15')
+
+      expect(result.isClosingPeriod).toBe(false)
+      expect(result.dataMonth).toBe('2026-03')
+    })
+
+    it('should handle December closing period collected in January', () => {
+      const csv = `"REGION","DISTRICT","DSP"
+"01","02","Y"
+"Month of December, As of 01/08/2027","",""`
+      const result = parseClosingPeriodFromCsv(csv, '2027-01-08')
+
+      expect(result.isClosingPeriod).toBe(true)
+      expect(result.dataMonth).toBe('2026-12')
+    })
+
+    it('should handle June closing period collected in July', () => {
+      const csv = `"REGION","DISTRICT","DSP"
+"01","02","Y"
+"Month of June, As of 07/20/2026","",""`
+      const result = parseClosingPeriodFromCsv(csv, '2026-07-20')
+
+      expect(result.isClosingPeriod).toBe(true)
+      expect(result.dataMonth).toBe('2026-06')
+    })
+
+    it('should return non-closing when no footer is found', () => {
+      const csv = `"REGION","DISTRICT","DSP"
+"01","02","Y"
+"01","109","Y"`
+      const result = parseClosingPeriodFromCsv(csv, '2026-04-01')
+
+      expect(result.isClosingPeriod).toBe(false)
+      expect(result.dataMonth).toBeUndefined()
+    })
+
+    it('should return non-closing for empty CSV', () => {
+      const result = parseClosingPeriodFromCsv('', '2026-04-01')
+
+      expect(result.isClosingPeriod).toBe(false)
+      expect(result.dataMonth).toBeUndefined()
+    })
+
+    it('should handle footer with extra whitespace', () => {
+      const csv = `"REGION","DISTRICT"
+"01","02"
+"Month of January,  As of 02/05/2026",""`
+      const result = parseClosingPeriodFromCsv(csv, '2026-02-05')
+
+      expect(result.isClosingPeriod).toBe(true)
+      expect(result.dataMonth).toBe('2026-01')
     })
   })
 })

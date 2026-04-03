@@ -18,6 +18,10 @@ let failingDistricts = new Set<string>()
 
 vi.mock('../services/HttpCsvDownloader.js', () => {
   return {
+    parseClosingPeriodFromCsv: () => ({
+      isClosingPeriod: false,
+      dataMonth: undefined,
+    }),
     HttpCsvDownloader: class MockHttpCsvDownloader {
       private requestCount = 0
 

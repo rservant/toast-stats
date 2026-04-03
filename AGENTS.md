@@ -1,39 +1,28 @@
 # Project: Toast Stats
 
-Engineering principles are defined globally in `~/.gemini/GEMINI.md`.
-This file contains **project-specific** context only.
+This file contains **project-specific** context for AI coding agents.
 
 ---
 
 ## Available Tools
 
-### Always Available
-
-| Tool                   | Use Case                                                                        | Notes                     |
-| ---------------------- | ------------------------------------------------------------------------------- | ------------------------- |
-| `gh`                   | PR management, CI/CD monitoring (`gh run list`, `gh run watch`), issue tracking | Permanently authenticated |
-| `git`                  | Version control                                                                 |                           |
-| `node` / `npm` / `npx` | Runtime, package management, script execution                                   | v25.x / 11.x              |
-| `docker`               | Local backend container builds and testing (`npm run docker:build`)             | Rancher Desktop           |
-| `curl`                 | API health checks, endpoint testing                                             |                           |
-| `jq`                   | JSON processing, API response parsing                                           |                           |
-
-### Require Authentication (Ask First)
-
-| Tool     | Use Case                                    | Notes                               |
-| -------- | ------------------------------------------- | ----------------------------------- |
-| `gcloud` | Cloud Run management, deployment            | Ask user to authenticate before use |
-| `gsutil` | GCS bucket access (data pipeline artifacts) | Ask user to authenticate before use |
+| Tool                   | Use Case                                      | Notes     |
+| ---------------------- | --------------------------------------------- | --------- |
+| `git`                  | Version control                               |           |
+| `node` / `npm` / `npx` | Runtime, package management, script execution | v22.x LTS |
+| `curl`                 | CDN health checks, endpoint testing           |           |
+| `jq`                   | JSON processing, CDN response parsing         |           |
 
 ---
 
 ## Monorepo Structure
 
-| Workspace | Path         | Purpose            |
-| --------- | ------------ | ------------------ |
-| Frontend  | `frontend/`  | React SPA (Vite)   |
-| Backend   | `backend/`   | Express API server |
-| Packages  | `packages/*` | Shared libraries   |
+| Workspace        | Path                         | Purpose                               |
+| ---------------- | ---------------------------- | ------------------------------------- |
+| Frontend         | `frontend/`                  | React SPA (Vite, CDN-only)            |
+| Collector CLI    | `packages/collector-cli/`    | Data pipeline CLI (scrape, transform) |
+| Analytics Core   | `packages/analytics-core/`   | Shared analytics computation library  |
+| Shared Contracts | `packages/shared-contracts/` | Data contracts (types + Zod schemas)  |
 
 ## Tooling
 
@@ -76,3 +65,4 @@ Coverage is checked on every `git push` and in CI. PRs that reduce coverage belo
 - Full test suite with coverage thresholds
 - Security scanning
 - Build verification
+- Lighthouse CI on frontend changes
