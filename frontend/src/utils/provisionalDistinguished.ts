@@ -1,14 +1,17 @@
 /**
- * Client-side provisional Distinguished detection (#291).
+ * Client-side provisional Distinguished detection (#291, #296).
  *
  * Derives whether a Distinguished club's status is provisional
  * from existing CDN fields, avoiding pipeline dependency.
  *
  * Business rule:
  * - Pre-April data (Jul-Mar): membership count includes non-renewers.
- *   Only aprilRenewals are confirmed. If aprilRenewals alone don't
- *   qualify the club (>= 20 members OR net growth >= 3), status
- *   is provisional.
+ *   Only aprilRenewals are confirmed. Each level has different
+ *   thresholds (#296):
+ *   - Smedley: 25 members (no net growth alternative)
+ *   - President: 20 members (no net growth alternative)
+ *   - Select: 20 members OR net growth >= 5
+ *   - Distinguished: 20 members OR net growth >= 3
  * - Post-April data (Apr-Jun): membership count reflects reality.
  *   All Distinguished = confirmed.
  */
@@ -52,10 +55,28 @@ export function isProvisionallyDistinguished(
   // Post-April (Apr=4, May=5, Jun=6): membership is confirmed
   if (month >= 4 && month <= 6) return false
 
-  // Pre-April: check if aprilRenewals alone qualify
+  // Pre-April: check if aprilRenewals alone qualify for THIS level (#296)
   const renewals = club.aprilRenewals ?? 0
   const base = club.membershipBase ?? 0
   const confirmedNetGrowth = renewals - base
 
-  return renewals < 20 && confirmedNetGrowth < 3
+  let qualifiesOnConfirmed: boolean
+  switch (club.distinguishedLevel) {
+    case 'Smedley':
+      qualifiesOnConfirmed = renewals >= 25
+      break
+    case 'President':
+      qualifiesOnConfirmed = renewals >= 20
+      break
+    case 'Select':
+      qualifiesOnConfirmed = renewals >= 20 || confirmedNetGrowth >= 5
+      break
+    case 'Distinguished':
+      qualifiesOnConfirmed = renewals >= 20 || confirmedNetGrowth >= 3
+      break
+    default:
+      qualifiesOnConfirmed = false
+  }
+
+  return !qualifiesOnConfirmed
 }
