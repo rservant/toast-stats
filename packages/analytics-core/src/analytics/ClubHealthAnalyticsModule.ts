@@ -220,8 +220,8 @@ export class ClubHealthAnalyticsModule {
         newMembers: club.newMembers ?? 0,
         // Club operational status from Toastmasters dashboard (Requirements 2.2)
         clubStatus: club.clubStatus,
-        // CSP submission status (2025-2026+, undefined for prior years)
-        cspSubmitted: club.cspSubmitted,
+        // CSP submission status — use getCSPStatus() to normalize undefined → true for pre-2025
+        cspSubmitted: getCSPStatus(club),
       })
     }
 

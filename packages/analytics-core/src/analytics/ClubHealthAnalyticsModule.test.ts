@@ -632,6 +632,46 @@ describe('ClubHealthAnalyticsModule', () => {
     })
   })
 
+  describe('CSP Submission Status (#290)', () => {
+    it('should default cspSubmitted to true when undefined (pre-2025)', () => {
+      const module = new ClubHealthAnalyticsModule()
+      const club = createMockClub({ clubId: '1' })
+      // Ensure cspSubmitted is undefined (pre-2025 data)
+      delete (club as Record<string, unknown>)['cspSubmitted']
+      const snapshot = createMockSnapshot('2024-01-15', [club])
+
+      const result = module.generateClubHealthData([snapshot])
+
+      expect(result.allClubs[0]?.cspSubmitted).toBe(true)
+    })
+
+    it('should set cspSubmitted to false when club has not submitted', () => {
+      const module = new ClubHealthAnalyticsModule()
+      const club = createMockClub({
+        clubId: '1',
+        cspSubmitted: false,
+      })
+      const snapshot = createMockSnapshot('2025-10-15', [club])
+
+      const result = module.generateClubHealthData([snapshot])
+
+      expect(result.allClubs[0]?.cspSubmitted).toBe(false)
+    })
+
+    it('should set cspSubmitted to true when club has submitted', () => {
+      const module = new ClubHealthAnalyticsModule()
+      const club = createMockClub({
+        clubId: '1',
+        cspSubmitted: true,
+      })
+      const snapshot = createMockSnapshot('2025-10-15', [club])
+
+      const result = module.generateClubHealthData([snapshot])
+
+      expect(result.allClubs[0]?.cspSubmitted).toBe(true)
+    })
+  })
+
   describe('Club Status Extraction (Requirements 9.1, 9.2)', () => {
     it('should extract "Active" club status', () => {
       const module = new ClubHealthAnalyticsModule()
