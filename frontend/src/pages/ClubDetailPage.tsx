@@ -431,7 +431,7 @@ const ClubDetailPage: React.FC = () => {
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             {[
               { label: 'Base', value: baseMembership },
               { label: 'Current', value: latestMembership },
@@ -449,10 +449,32 @@ const ClubDetailPage: React.FC = () => {
               { label: 'Oct Renewals', value: club.octoberRenewals ?? '—' },
               { label: 'Apr Renewals', value: club.aprilRenewals ?? '—' },
               { label: 'New Members', value: club.newMembers ?? '—' },
+              {
+                label: 'CSP',
+                value:
+                  club.cspSubmitted === undefined
+                    ? '—'
+                    : club.cspSubmitted
+                      ? '✓'
+                      : '✗',
+                color:
+                  club.cspSubmitted === undefined
+                    ? 'text-gray-400'
+                    : club.cspSubmitted
+                      ? 'text-green-600'
+                      : 'text-red-600',
+                title:
+                  club.cspSubmitted === undefined
+                    ? 'CSP data not available for this program year'
+                    : club.cspSubmitted
+                      ? 'Club Success Plan submitted'
+                      : 'Club Success Plan not submitted — required for Distinguished',
+              },
             ].map(stat => (
               <div
                 key={stat.label}
                 className="bg-white rounded-lg shadow-sm p-3 border border-gray-200 text-center"
+                title={'title' in stat ? (stat.title as string) : undefined}
               >
                 <div className="text-xs text-gray-500 font-tm-body mb-1">
                   {stat.label}
