@@ -127,8 +127,50 @@ export function isDistinguishedProvisional(
   if (dataMonth >= 4 && dataMonth <= 6) return false
 
   // Pre-April (Jul=7 through Mar=3): check if aprilRenewals alone qualify
+  // Each level has different membership requirements (#296)
   const confirmedNetGrowth = aprilRenewals - membershipBase
-  const qualifiesOnConfirmed = aprilRenewals >= 20 || confirmedNetGrowth >= 3
+  let qualifiesOnConfirmed: boolean
+  switch (distinguishedLevel) {
+    case 'Smedley':
+      qualifiesOnConfirmed = aprilRenewals >= 25
+      break
+    case 'President':
+      qualifiesOnConfirmed = aprilRenewals >= 20
+      break
+    case 'Select':
+      qualifiesOnConfirmed = aprilRenewals >= 20 || confirmedNetGrowth >= 5
+      break
+    case 'Distinguished':
+      qualifiesOnConfirmed = aprilRenewals >= 20 || confirmedNetGrowth >= 3
+      break
+    default:
+      qualifiesOnConfirmed = false
+  }
 
   return !qualifiesOnConfirmed
+}
+
+/**
+ * Compute the highest Distinguished level a club would achieve using
+ * only confirmed April renewals as the membership count.
+ *
+ * This is the "fallback" level — what the club can confirm today vs.
+ * the aspirational level based on current (unconfirmed) membership.
+ *
+ * @param dcpGoals - Number of DCP goals achieved
+ * @param aprilRenewals - Number of members who paid April dues
+ * @param membershipBase - Membership base from start of program year
+ * @returns The highest Distinguished level achievable with confirmed renewals
+ */
+export function getConfirmedDistinguishedLevel(
+  dcpGoals: number,
+  aprilRenewals: number,
+  membershipBase: number
+): DistinguishedLevel {
+  const confirmedNetGrowth = aprilRenewals - membershipBase
+  return determineDistinguishedLevel(
+    dcpGoals,
+    aprilRenewals,
+    confirmedNetGrowth
+  )
 }
