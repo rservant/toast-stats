@@ -12,7 +12,11 @@ import {
 } from '../utils/programYear'
 import { formatDisplayDate } from '../utils/dateFormatting'
 import { getClubStatusBadge } from '../utils/clubStatusBadge'
-import { isProvisionallyDistinguished } from '../utils/provisionalDistinguished'
+import {
+  isProvisionallyDistinguished,
+  getConfirmedLevel,
+  getProvisionalTooltip,
+} from '../utils/provisionalDistinguished'
 import {
   calculateClubProjection,
   type ClubDCPProjection,
@@ -52,9 +56,13 @@ function TierBadge({ level }: { level: DistinguishedLevel }) {
 function DCPProjectionCard({
   projection,
   healthStatus,
+  isProvisional,
+  confirmedLevel,
 }: {
   projection: ClubDCPProjection
   healthStatus: string
+  isProvisional?: boolean
+  confirmedLevel?: DistinguishedLevel
 }) {
   const gaps = [
     { tier: 'Distinguished', gap: projection.gapToDistinguished },
@@ -112,6 +120,20 @@ function DCPProjectionCard({
             Current Level
           </div>
           <TierBadge level={projection.currentLevel} />
+          {isProvisional && (
+            <div className="text-xs text-amber-600 mt-1 font-medium">
+              Provisional
+              {confirmedLevel && confirmedLevel !== 'NotDistinguished' && (
+                <span className="text-gray-500 font-normal">
+                  {' '}
+                  — Confirmed:{' '}
+                  {confirmedLevel === 'President'
+                    ? "President's"
+                    : confirmedLevel}
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div className={`rounded-lg p-4 text-center border ${prediction.bg}`}>
           <div className="text-xs text-gray-500 mb-1 font-tm-body">
@@ -130,16 +152,30 @@ function DCPProjectionCard({
         </h3>
         {gaps.map(({ tier, gap }) => {
           const met = gap.goals === 0 && gap.members === 0
+          // Check if this tier is the club's current level and is provisional
+          const tierLevel = tier === "President's" ? 'President' : tier
+          const isCurrentTier = tierLevel === projection.currentLevel
+          const tierProvisional = isProvisional && isCurrentTier && met
           return (
             <div
               key={tier}
               className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm ${
-                met ? 'bg-green-50' : 'bg-gray-50'
+                met
+                  ? tierProvisional
+                    ? 'bg-amber-50'
+                    : 'bg-green-50'
+                  : 'bg-gray-50'
               }`}
             >
               <span className="font-medium text-gray-900">{tier}</span>
               {met ? (
-                <span className="text-green-600 font-medium">✓ Met</span>
+                tierProvisional ? (
+                  <span className="text-amber-600 font-medium">
+                    ⚠ Provisional
+                  </span>
+                ) : (
+                  <span className="text-green-600 font-medium">✓ Met</span>
+                )
               ) : (
                 <span className="text-gray-600 font-tm-body tabular-nums">
                   {gap.goals > 0 &&
@@ -414,17 +450,34 @@ const ClubDetailPage: React.FC = () => {
                 {/* Distinguished level */}
                 {club.distinguishedLevel &&
                   club.distinguishedLevel !== 'NotDistinguished' && (
-                    <span
-                      className="px-4 py-2 bg-tm-happy-yellow-30 text-tm-true-maroon text-sm font-medium rounded-full"
-                      title={
-                        isProvisionallyDistinguished(club)
-                          ? 'Provisional — membership not yet confirmed by April renewals'
-                          : 'Confirmed — April renewals recorded'
-                      }
-                    >
-                      {club.distinguishedLevel}
-                      {isProvisionallyDistinguished(club) ? '*' : ''}
-                    </span>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="px-4 py-2 bg-tm-happy-yellow-30 text-tm-true-maroon text-sm font-medium rounded-full">
+                        {club.distinguishedLevel === 'President'
+                          ? "President's"
+                          : club.distinguishedLevel}
+                      </span>
+                      {isProvisionallyDistinguished(club) &&
+                        (() => {
+                          const confirmed = getConfirmedLevel(club)
+                          const confirmedLabel =
+                            confirmed === 'NotDistinguished'
+                              ? 'at risk'
+                              : confirmed === 'President'
+                                ? "President's"
+                                : confirmed
+                          return (
+                            <span
+                              className="text-xs text-amber-600 font-medium"
+                              title={getProvisionalTooltip(club)}
+                            >
+                              Provisional
+                              {confirmed !== 'NotDistinguished'
+                                ? ` — Confirmed: ${confirmedLabel}`
+                                : ' — at risk of losing status'}
+                            </span>
+                          )
+                        })()}
+                    </div>
                   )}
               </div>
             </div>
@@ -661,6 +714,8 @@ const ClubDetailPage: React.FC = () => {
               <DCPProjectionCard
                 projection={projection}
                 healthStatus={club.currentStatus}
+                isProvisional={isProvisionallyDistinguished(club)}
+                confirmedLevel={getConfirmedLevel(club)}
               />
             )}
           </div>

@@ -17,6 +17,7 @@
  */
 
 import type { ClubTrend } from '../hooks/useDistrictAnalytics'
+import type { DistinguishedLevel } from '@toastmasters/analytics-core'
 
 /**
  * Determine if a Distinguished club's status is provisional.
@@ -79,4 +80,61 @@ export function isProvisionallyDistinguished(
   }
 
   return !qualifiesOnConfirmed
+}
+
+// Distinguished level thresholds for display (#297)
+const LEVEL_THRESHOLDS: Record<string, { members: number; growth?: number }> = {
+  Smedley: { members: 25 },
+  President: { members: 20 },
+  Select: { members: 20, growth: 5 },
+  Distinguished: { members: 20, growth: 3 },
+}
+
+/**
+ * Get the confirmed Distinguished level using only April renewals
+ * as the membership count. Returns the highest level achievable
+ * with confirmed renewals.
+ */
+export function getConfirmedLevel(club: ClubTrend): DistinguishedLevel {
+  const renewals = club.aprilRenewals ?? 0
+  const base = club.membershipBase ?? 0
+  const trend = club.dcpGoalsTrend
+  const lastEntry = trend.length > 0 ? trend[trend.length - 1] : undefined
+  const goals = lastEntry?.goalsAchieved ?? 0
+  const netGrowth = renewals - base
+
+  if (goals >= 10 && renewals >= 25) return 'Smedley'
+  if (goals >= 9 && renewals >= 20) return 'President'
+  if (goals >= 7 && (renewals >= 20 || netGrowth >= 5)) return 'Select'
+  if (goals >= 5 && (renewals >= 20 || netGrowth >= 3)) return 'Distinguished'
+  return 'NotDistinguished'
+}
+
+/**
+ * Get a human-readable description of what's needed to confirm
+ * the club's current Distinguished level.
+ */
+export function getProvisionalTooltip(club: ClubTrend): string {
+  const level = club.distinguishedLevel ?? 'NotDistinguished'
+  const thresholds = LEVEL_THRESHOLDS[level]
+  if (!thresholds) return ''
+
+  const renewals = club.aprilRenewals ?? 0
+  const confirmedLevel = getConfirmedLevel(club)
+  const confirmedLabel =
+    confirmedLevel === 'NotDistinguished'
+      ? 'no Distinguished status'
+      : confirmedLevel === 'President'
+        ? "President's"
+        : confirmedLevel
+
+  const parts = [`Requires ${thresholds.members} members`]
+  if (thresholds.growth) {
+    parts[0] += ` or net growth of ${thresholds.growth}+`
+  }
+  parts.push(`confirmed via April renewals.`)
+  parts.push(`Currently ${renewals} confirmed.`)
+  parts.push(`Falls back to ${confirmedLabel}.`)
+
+  return parts.join(' ')
 }
