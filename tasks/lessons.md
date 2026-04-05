@@ -941,3 +941,11 @@
 **Rule**: Pipeline cleanup steps must account for ALL directories created during a date's processing, not just the primary output. Also, directory-based discovery (`find -type d`) should verify contents exist — empty dirs are not valid snapshots. Defense in depth: both fix the leak AND harden the detector.
 **Warning**: The same pattern could recur for any step that creates temporary directories (e.g., TransformService initial snapshot dir before closing period remap). Always pair `mkdir -p` with a corresponding cleanup.
 **rules.md**: R2 (extended — runner cleanup must be exhaustive, not just primary outputs)
+
+## 🗓️ 2026-04-05 — Lesson 44: Dead Code Hides Feature Gaps (#299)
+
+**Discovery**: The ClubDetailModal (735 lines) was replaced by ClubDetailPage months ago, but was never deleted. Its two consumers (VulnerableClubsPanel, InterventionRequiredClubsPanel) were also dead — never imported by any page. The CSP status display only existed in the dead modal, making it invisible to users. The provisional Distinguished tests also targeted the dead modal, giving false confidence that the feature was tested.
+**Proof**: `grep -r "ClubDetailModal\|VulnerableClubsPanel\|InterventionRequiredClubsPanel" frontend/src/pages/` returned zero matches. The CSP stat card was literally unreachable code.
+**Rule**: When a component is replaced by a new implementation, delete the old one in the same sprint. Dead code conceals feature gaps (CSP was "implemented" but invisible) and wastes test budget (47 tests ran against unreachable components).
+**Warning**: Product spec listed "Club detail modal" as shipped — it should have been updated to "Club detail page" when the migration happened. Keep product-spec.md in sync with actual shipped features.
+**rules.md**: none

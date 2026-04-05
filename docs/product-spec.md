@@ -45,7 +45,9 @@ A data visualization platform for **Toastmasters district leaders** to track clu
 | **Divisions tab**          | Division/Area performance cards, recognition tracking              | ✅ Shipped |
 | **Analytics tab**          | DCP projections, leadership insights, educational awards           | ✅ Shipped |
 | **Trends tab**             | Membership trend chart, payments chart, YoY comparison             | ✅ Shipped |
-| Club detail modal          | Per-club membership chart, DCP timeline, base/current/change stats | ✅ Shipped |
+| Club detail page           | Per-club membership chart, DCP timeline, base/current/change stats | ✅ Shipped |
+| Provisional Distinguished  | Pre-April indicator with confirmed fallback level per tier         | ✅ Shipped |
+| CSP status on club page    | Club Success Plan submission status (✓/✗/—) on club detail page    | ✅ Shipped |
 | Club health classification | Thriving / Vulnerable / Intervention Required                      | ✅ Shipped |
 | Distinguished projections  | Project year-end Distinguished club count                          | ✅ Shipped |
 | Division/Area recognition  | DAP/DDP status tracking per rules reference                        | ✅ Shipped |
@@ -68,7 +70,7 @@ A data visualization platform for **Toastmasters district leaders** to track clu
 | CDN-served data         | All data served via Cloud CDN with immutable cache       | ✅ Shipped |
 | Time-series generation  | Monthly membership/payment data points per district      | ✅ Shipped |
 | Time-series CDN serving | Time-series files served with 1-hour cache               | ✅ Shipped |
-| Club trends index       | Per-district club trend data for modal lookup            | ✅ Shipped |
+| Club trends index       | Per-district club trend data for club detail page lookup | ✅ Shipped |
 | Rebuild mode            | Re-process all historical dates from raw CSV             | ✅ Shipped |
 | Rescrape mode           | Re-collect CSVs from dashboard for specific dates/year   | ✅ Shipped |
 | Prune mode              | Reduce to one snapshot per month per program year        | ✅ Shipped |
@@ -79,14 +81,15 @@ A data visualization platform for **Toastmasters district leaders** to track clu
 
 All Toastmasters-specific rules are documented in [toastmasters-rules-reference.md](file:///Users/rservant/code/toast-stats/docs/toastmasters-rules-reference.md). Key rules that drive product behavior:
 
-| Rule                                        | Where implemented                      | Notes                                                 |
-| ------------------------------------------- | -------------------------------------- | ----------------------------------------------------- |
-| Program year = Jul 1 – Jun 30               | `programYear.ts`, pipeline             | All data scoped by program year                       |
-| Club health = Thriving/Vulnerable/IR        | `ClubHealthAnalyticsModule.ts`         | Based on membership, DCP checkpoints, CSP             |
-| Net growth = Active Members − Mem. Base     | `ClubEligibilityUtils.ts`              | Used for Distinguished eligibility                    |
-| Payments ≠ Members                          | `toastmasters-rules-reference.md` §4.1 | Members pay twice/year; payment count ≤ 2× membership |
-| Base membership = end of prior year         | `useTimeSeries.ts`                     | Fallback: first point of current year                 |
-| CSP required for Distinguished (2025-2026+) | `ClubEligibilityUtils.ts`              | Historical data assumes CSP submitted                 |
+| Rule                                        | Where implemented                                        | Notes                                                                                                                                                |
+| ------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Program year = Jul 1 – Jun 30               | `programYear.ts`, pipeline                               | All data scoped by program year                                                                                                                      |
+| Club health = Thriving/Vulnerable/IR        | `ClubHealthAnalyticsModule.ts`                           | Based on membership, DCP checkpoints, CSP                                                                                                            |
+| Net growth = Active Members − Mem. Base     | `ClubEligibilityUtils.ts`                                | Used for Distinguished eligibility                                                                                                                   |
+| Payments ≠ Members                          | `toastmasters-rules-reference.md` §4.1                   | Members pay twice/year; payment count ≤ 2× membership                                                                                                |
+| Base membership = end of prior year         | `useTimeSeries.ts`                                       | Fallback: first point of current year                                                                                                                |
+| CSP required for Distinguished (2025-2026+) | `ClubEligibilityUtils.ts`                                | Historical data assumes CSP submitted                                                                                                                |
+| Provisional Distinguished (pre-April)       | `ClubEligibilityUtils.ts`, `provisionalDistinguished.ts` | Level-specific thresholds: Smedley=25, President=20 (no growth alt), Select=20/5, Distinguished=20/3. Shows aspirational level + confirmed fallback. |
 
 ---
 
@@ -98,7 +101,9 @@ _All items shipped. Backlog is empty._
 
 ## Known Issues
 
-_No known issues. All previously tracked issues have been resolved._
+| Issue | Description                                           | Status                  |
+| ----- | ----------------------------------------------------- | ----------------------- |
+| #294  | Pre-flight disk space check for pipeline rebuild mode | Deferred (low priority) |
 
 ---
 
