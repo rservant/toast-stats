@@ -439,7 +439,10 @@ jobs:
             fi
 
             # 8. Cleanup to free disk (keep time-series + club-trends)
-            rm -rf "./cache/raw-csv/${DATE}" "./cache/snapshots/${ACTUAL_DATE}"
+            # Also remove previous-year snapshot dir to prevent orphan dirs
+            # from polluting LATEST_DATE resolution (#295)
+            rm -rf "./cache/raw-csv/${DATE}" "./cache/snapshots/${ACTUAL_DATE}" \
+              ${PREV_YEAR_DATE:+"./cache/snapshots/${PREV_YEAR_DATE}"}
 
             # Report disk usage every 10 dates
             if [ $((INDEX % 10)) -eq 0 ]; then
@@ -807,7 +810,12 @@ jobs:
           # Determine the latest date from local snapshots (falls back to GCS
           # listing when local cache is empty, e.g. after a rebuild that deletes
           # each snapshot post-upload to conserve disk).
-          LATEST_DATE=$(find ./cache/snapshots -maxdepth 1 -type d -name '????-??-??' -exec basename {} \; | sort | tail -1)
+          # Only consider snapshot dirs that contain actual JSON files (#295).
+          # Orphan empty dirs (from previous-year YoY fetches) must not
+          # be picked up as the latest date.
+          LATEST_DATE=$(find ./cache/snapshots -maxdepth 1 -type d -name '????-??-??' \
+            -exec sh -c 'ls "$1"/*.json >/dev/null 2>&1 && basename "$1"' _ {} \; \
+            | sort | tail -1)
           if [ -z "${LATEST_DATE}" ]; then
             echo "Local snapshot cache empty — checking GCS for latest date..."
             LATEST_DATE=$(gsutil ls "gs://${GCS_BUCKET}/snapshots/" \

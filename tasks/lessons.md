@@ -933,3 +933,11 @@
 **Rule**: When introducing a logger abstraction, update all test spies to target the logger object, not the underlying console methods. The bound function breaks the spy chain.
 **Warning**: Any new test that verifies error/warn output must spy on `logger`, not `console`. The ESLint `no-console` rule (warn) will flag direct console usage but won't catch spy targets in test assertions.
 **rules.md**: none
+
+## 🗓️ 2026-04-05 — Lesson 43: Orphan Directories Break CDN Manifest Resolution (#295)
+
+**Discovery**: The rebuild stream loop fetches previous-year snapshots for YoY comparison (`mkdir -p snapshots/${PREV_YEAR_DATE}`). When the GCS fetch fails (no snapshot for that date), the empty directory remains. The per-date cleanup only removes `snapshots/${ACTUAL_DATE}`, not `snapshots/${PREV_YEAR_DATE}`. At CDN manifest time, `find | sort | tail -1` picks up the orphan directory `2025-04-04` (from `2026-04-04 - 1 year`) as the "latest" date. This cascaded: wrong `v1/latest.json` → missing `v1/rankings.json` → frontend showed "Welcome" onboarding screen with all-404s.
+**Proof**: Workflow run logs show `Latest snapshot date: 2025-04-04` and `all-districts-rankings.json not found, skipping v1/rankings.json`. GCS listing confirmed no `snapshots/2025-04-04/` directory exists.
+**Rule**: Pipeline cleanup steps must account for ALL directories created during a date's processing, not just the primary output. Also, directory-based discovery (`find -type d`) should verify contents exist — empty dirs are not valid snapshots. Defense in depth: both fix the leak AND harden the detector.
+**Warning**: The same pattern could recur for any step that creates temporary directories (e.g., TransformService initial snapshot dir before closing period remap). Always pair `mkdir -p` with a corresponding cleanup.
+**rules.md**: R2 (extended — runner cleanup must be exhaustive, not just primary outputs)
