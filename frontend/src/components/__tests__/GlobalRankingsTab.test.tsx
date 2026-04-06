@@ -793,8 +793,20 @@ describe('GlobalRankingsTab', () => {
       )
 
       // Should show the per-date rank (10), not the hook-derived rank (15)
-      const overallCard = await screen.findByText('10')
-      expect(overallCard).toBeInTheDocument()
+      // The EndOfYearRankingsPanel renders "{rank} of {total}" — look for rank 10
+      // and ensure rank 15 (from the hook) does NOT appear in the Overall Rank card
+      await screen.findByText('Overall Rank')
+      const rankTexts = screen.getAllByText('10')
+      expect(rankTexts.length).toBeGreaterThanOrEqual(1)
+      // The hook-derived rank 15 should NOT appear as an overall rank
+      const fifteens = screen.queryAllByText('15')
+      // Any "15" should not be in the Overall Rank section
+      expect(
+        fifteens.every(
+          el =>
+            !el.closest('[data-testid]')?.textContent?.includes('Overall Rank')
+        )
+      ).toBe(true)
     })
   })
 })
