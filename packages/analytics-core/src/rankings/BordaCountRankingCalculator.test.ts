@@ -488,4 +488,76 @@ describe('BordaCountRankingCalculator', () => {
       expect(d3.overallRank).toBe(3)
     })
   })
+
+  describe('confirmed Distinguished count for pre-April data (#304)', () => {
+    it('should compute confirmed Distinguished from club data when TI reports 0', async () => {
+      const calculator = new BordaCountRankingCalculator()
+
+      const district: RankingDistrictStatistics = {
+        districtId: '14',
+        asOfDate: '2026-03-31', // Pre-April
+        membership: {
+          total: 100,
+          change: 5,
+          changePercent: 5,
+          byClub: [],
+        },
+        clubs: {
+          total: 50,
+          active: 50,
+          suspended: 0,
+          ineligible: 0,
+          low: 0,
+          distinguished: 0, // TI reports 0 pre-April
+        },
+        education: { totalAwards: 0, byType: [], topClubs: [] },
+        districtPerformance: [
+          {
+            DISTRICT: '14',
+            REGION: '1',
+            '% Club Growth': '5%',
+            '% Payment Growth': '3%',
+            'Paid Clubs': 50,
+            'Paid Club Base': 48,
+            'Total YTD Payments': 4200,
+            'Payment Base': 4000,
+            'Total Distinguished Clubs': 0,
+            'Active Clubs': 50,
+            'Select Distinguished Clubs': 0,
+            'Presidents Distinguished Clubs': 0,
+            '% Distinguished Clubs': '0%',
+          },
+        ],
+        clubPerformance: [
+          {
+            // Club with 6 goals, 22 April renewals, base 15 → confirmed Distinguished
+            'Goals Met': 6,
+            'Mem. dues on time Apr': 22,
+            'Mem. Base': 15,
+            'Active Members': 25,
+          },
+          {
+            // Club with 5 goals, 3 April renewals, base 15 → NOT confirmed
+            'Goals Met': 5,
+            'Mem. dues on time Apr': 3,
+            'Mem. Base': 15,
+            'Active Members': 20,
+          },
+          {
+            // Club with 8 goals, 21 April renewals, base 18 → confirmed Select
+            'Goals Met': 8,
+            'Mem. dues on time Apr': 21,
+            'Mem. Base': 18,
+            'Active Members': 28,
+          },
+        ],
+      }
+
+      const result = await calculator.calculateRankings([district])
+      const ranked = result[0]!
+
+      // Should have 2 confirmed Distinguished clubs (club 1 + club 3)
+      expect(ranked.ranking!.distinguishedClubs).toBe(2)
+    })
+  })
 })
