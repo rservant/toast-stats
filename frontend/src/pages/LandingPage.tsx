@@ -216,9 +216,9 @@ const LandingPage: React.FC = () => {
     }
   }, [filteredRankings, sortBy])
 
-  // Assign stable ranks BEFORE search filtering
+  // Use overallRank from CDN data — supports ties (#303)
   const rankedRankings = React.useMemo(
-    () => sortedRankings.map((d, i) => ({ ...d, displayRank: i + 1 })),
+    () => sortedRankings.map(d => ({ ...d, displayRank: d.overallRank })),
     [sortedRankings]
   )
 

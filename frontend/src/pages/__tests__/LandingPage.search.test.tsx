@@ -63,6 +63,7 @@ const MOCK_RANKINGS = [
     paymentsRank: 1,
     distinguishedRank: 1,
     aggregateScore: 300,
+    overallRank: 1,
   },
   {
     districtId: '61',
@@ -83,6 +84,7 @@ const MOCK_RANKINGS = [
     paymentsRank: 2,
     distinguishedRank: 2,
     aggregateScore: 250,
+    overallRank: 2,
   },
   {
     districtId: '83',
