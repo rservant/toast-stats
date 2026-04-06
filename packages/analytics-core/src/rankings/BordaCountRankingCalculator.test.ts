@@ -417,4 +417,75 @@ describe('BordaCountRankingCalculator', () => {
       expect(d3.ranking!.aggregateScore).toBe(6)
     })
   })
+
+  describe('overallRank tie handling (#303)', () => {
+    it('should assign same overallRank to districts with equal aggregateScore', () => {
+      const snapshotId = '2024-01-15'
+
+      function makeRankedDistrict(
+        id: string,
+        score: number
+      ): RankingDistrictStatistics {
+        return {
+          districtId: id,
+          asOfDate: snapshotId,
+          membership: {
+            total: 100,
+            change: 5,
+            changePercent: 5,
+            byClub: [],
+          },
+          clubs: {
+            total: 50,
+            active: 50,
+            suspended: 0,
+            ineligible: 0,
+            low: 0,
+            distinguished: 10,
+          },
+          education: { totalAwards: 0, byType: [], topClubs: [] },
+          ranking: {
+            clubsRank: 1,
+            paymentsRank: 1,
+            distinguishedRank: 1,
+            aggregateScore: score,
+            clubGrowthPercent: 5,
+            paymentGrowthPercent: 5,
+            distinguishedPercent: 20,
+            paidClubBase: 48,
+            paymentBase: 4000,
+            paidClubs: 50,
+            totalPayments: 4200,
+            distinguishedClubs: 10,
+            activeClubs: 50,
+            selectDistinguished: 5,
+            presidentsDistinguished: 3,
+            region: '1',
+            districtName: `District ${id}`,
+            rankingVersion: '2.0',
+            calculatedAt: '2024-01-15T00:00:00Z',
+          },
+        }
+      }
+
+      // D1 and D2 tied at 250, D3 at 249
+      const districts = [
+        makeRankedDistrict('D1', 250),
+        makeRankedDistrict('D2', 250),
+        makeRankedDistrict('D3', 249),
+      ]
+
+      const result = calculator.buildRankingsData(districts, snapshotId)
+
+      const d1 = result.rankings.find(r => r.districtId === 'D1')!
+      const d2 = result.rankings.find(r => r.districtId === 'D2')!
+      const d3 = result.rankings.find(r => r.districtId === 'D3')!
+
+      // D1 and D2 should share rank 1 (standard competition ranking)
+      expect(d1.overallRank).toBe(1)
+      expect(d2.overallRank).toBe(1)
+      // D3 should be rank 3 (not 2 — skip rank 2)
+      expect(d3.overallRank).toBe(3)
+    })
+  })
 })
