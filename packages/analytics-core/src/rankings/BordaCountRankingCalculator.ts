@@ -17,6 +17,8 @@ import type {
   DistrictRanking,
 } from '@toastmasters/shared-contracts'
 
+import { getConfirmedDistinguishedLevel } from '../analytics/ClubEligibilityUtils.js'
+
 /**
  * Logger interface for ranking calculator.
  * Allows injection of custom logging implementation.
@@ -518,6 +520,33 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
           ),
         }
 
+        // When TI reports 0 Distinguished (pre-April), compute confirmed
+        // count from club-level data using April renewals (#304)
+        if (
+          metric.distinguishedClubs === 0 &&
+          district.clubPerformance &&
+          district.clubPerformance.length > 0
+        ) {
+          const confirmedCount = this.countConfirmedDistinguished(
+            district.clubPerformance
+          )
+          if (confirmedCount > 0) {
+            metric.distinguishedClubs = confirmedCount
+            metric.distinguishedPercent =
+              metric.activeClubs > 0
+                ? (confirmedCount / metric.activeClubs) * 100
+                : 0
+            this.logger.debug(
+              'Using confirmed Distinguished count (pre-April)',
+              {
+                districtId: district.districtId,
+                confirmedCount,
+                operation: 'extractRankingMetrics',
+              }
+            )
+          }
+        }
+
         metrics.push(metric)
       } catch (error) {
         this.logger.warn('Failed to extract metrics for district', {
@@ -529,6 +558,29 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
     }
 
     return metrics
+  }
+
+  /**
+   * Count clubs whose confirmed Distinguished level (using April renewals)
+   * is not NotDistinguished. Used pre-April when TI reports 0. (#304)
+   */
+  private countConfirmedDistinguished(
+    clubPerformance: Array<Record<string, string | number | null>>
+  ): number {
+    let count = 0
+    for (const club of clubPerformance) {
+      const goals = this.parseNumber(club['Goals Met'])
+      const aprilRenewals = this.parseNumber(club['Mem. dues on time Apr'])
+      const membershipBase = this.parseNumber(club['Mem. Base'])
+
+      const level = getConfirmedDistinguishedLevel(
+        goals,
+        aprilRenewals,
+        membershipBase
+      )
+      if (level !== 'NotDistinguished') count++
+    }
+    return count
   }
 
   /**
