@@ -920,7 +920,8 @@ jobs:
               for (const file of files) {
                 try {
                   const data = JSON.parse(fs.readFileSync(path.join(srcDir, file), 'utf-8'));
-                  const date = data.metadata?.sourceCsvDate;
+                  // Use the snapshot date (filename) not sourceCsvDate (raw-csv date) (#302)
+                  const date = path.basename(file, '.json');
                   if (!date || !data.rankings) continue;
                   for (const r of data.rankings) {
                     if (!index.has(r.districtId)) {
