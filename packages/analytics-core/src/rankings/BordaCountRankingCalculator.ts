@@ -401,11 +401,33 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
         return scoreB - scoreA
       })
 
-    // Build rankings array with pre-computed overallRank
-    // overallRank is the position when sorted by aggregateScore (1 = best)
+    // Build rankings array with standard competition ranking for overallRank (#303)
+    // Tied districts share the same rank; the next rank skips accordingly
+    // e.g., scores [250, 250, 249] → ranks [1, 1, 3]
     const rankings: DistrictRanking[] = districtsWithRankings.map(
       (district, index) => {
         const ranking = district.ranking!
+
+        // Standard competition ranking: if this score equals the previous,
+        // use the same rank; otherwise rank = position (1-indexed)
+        let overallRank = index + 1
+        if (index > 0) {
+          const prevScore =
+            districtsWithRankings[index - 1]?.ranking?.aggregateScore ?? 0
+          if (ranking.aggregateScore === prevScore) {
+            // Find the first district with this score to get its rank
+            for (let j = index - 1; j >= 0; j--) {
+              const jScore =
+                districtsWithRankings[j]?.ranking?.aggregateScore ?? 0
+              if (jScore !== ranking.aggregateScore) {
+                overallRank = j + 2
+                break
+              }
+              if (j === 0) overallRank = 1
+            }
+          }
+        }
+
         return {
           districtId: district.districtId,
           districtName: ranking.districtName,
@@ -425,7 +447,7 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
           paymentsRank: ranking.paymentsRank,
           distinguishedRank: ranking.distinguishedRank,
           aggregateScore: ranking.aggregateScore,
-          overallRank: index + 1, // 1-indexed position based on aggregateScore
+          overallRank,
         }
       }
     )
