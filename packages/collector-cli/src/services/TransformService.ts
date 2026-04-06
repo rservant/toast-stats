@@ -240,8 +240,10 @@ export class TransformService {
               : undefined,
         }
 
-        // If isClosingPeriod is explicitly set, trust the metadata
-        if (metadataFromFile.isClosingPeriod !== undefined) {
+        // If isClosingPeriod is true, trust it (confirmed closing period)
+        // If false, always verify via CSV footer — the daily scrape may
+        // have written false incorrectly (#309)
+        if (metadataFromFile.isClosingPeriod === true) {
           return metadataFromFile
         }
       }
