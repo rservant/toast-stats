@@ -244,6 +244,14 @@ export function setupCdnFetchMock() {
             data = cdnMocks.districtSnapshotIndex
           } else if (path === '/v1/rankings.json') {
             data = cdnMocks.rankings
+          } else if (path.includes('all-districts-rankings.json')) {
+            data = {
+              metadata: {
+                sourceCsvDate: '2024-12-31',
+                calculatedAt: '2025-01-01T00:00:00Z',
+              },
+              rankings: cdnMocks.rankings.rankings,
+            }
           } else if (path.includes('/district_61.json')) {
             data = cdnMocks.districtSnapshot
           } else if (path.includes('/district_61_clubhealth.json')) {

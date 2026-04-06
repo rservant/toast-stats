@@ -1,7 +1,11 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { fetchCdnSnapshotIndex, fetchCdnRankings } from '../services/cdn'
+import {
+  fetchCdnSnapshotIndex,
+  fetchCdnRankings,
+  fetchCdnRankingsForDate,
+} from '../services/cdn'
 import { useDistricts } from '../hooks/useDistricts'
 import { LazyHistoricalRankChart as HistoricalRankChart } from '../components/LazyCharts'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
@@ -117,14 +121,27 @@ const LandingPage: React.FC = () => {
     setSelectedDate,
   ])
 
-  // Fetch rankings from CDN (#173)
+  // Effective date for rankings — most recent date in selected PY (#301)
+  const effectiveRankingsDate = React.useMemo(() => {
+    if (selectedDate) return selectedDate
+    if (cachedDates.length > 0) {
+      return [...cachedDates].sort((a, b) => b.localeCompare(a))[0]
+    }
+    return undefined
+  }, [selectedDate, cachedDates])
+
+  // Fetch rankings from CDN — date-aware (#301)
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ['district-rankings'],
+    queryKey: ['district-rankings', effectiveRankingsDate ?? 'latest'],
     queryFn: async () => {
+      if (effectiveRankingsDate) {
+        return fetchCdnRankingsForDate(effectiveRankingsDate)
+      }
       const cdnData = await fetchCdnRankings()
       return { rankings: cdnData.rankings, date: cdnData.date }
     },
     staleTime: 15 * 60 * 1000, // 15 minutes
+    placeholderData: prev => prev,
   })
 
   const rankings: DistrictRanking[] = React.useMemo(

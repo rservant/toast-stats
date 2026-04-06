@@ -121,6 +121,30 @@ export async function fetchCdnRankings(): Promise<CdnRankingsData> {
 }
 
 /**
+ * Fetch district rankings for a specific snapshot date.
+ * Falls back to v1/rankings.json if the per-date file doesn't exist.
+ */
+export async function fetchCdnRankingsForDate(
+  date: string
+): Promise<CdnRankingsData> {
+  const url = `${CDN_BASE_URL}/snapshots/${date}/all-districts-rankings.json`
+  const res = await fetch(url)
+  if (!res.ok) {
+    return fetchCdnRankings()
+  }
+  recordCdnResponse(res)
+  const raw = (await res.json()) as {
+    metadata?: { sourceCsvDate?: string; calculatedAt?: string }
+    rankings: CdnRankingsData['rankings']
+  }
+  return {
+    rankings: raw.rankings,
+    date: raw.metadata?.sourceCsvDate || date,
+    generatedAt: raw.metadata?.calculatedAt || new Date().toISOString(),
+  }
+}
+
+/**
  * Construct a CDN URL for a pre-computed analytics file.
  *
  * @param date - Snapshot date (YYYY-MM-DD)
