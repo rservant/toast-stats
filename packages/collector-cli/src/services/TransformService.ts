@@ -20,6 +20,7 @@ import { parseClosingPeriodFromCsv } from '../utils/csvFooterParser.js'
 import {
   DataTransformer,
   ANALYTICS_SCHEMA_VERSION,
+  getConfirmedDistinguishedLevel,
   type Logger,
   type RawCSVData,
 } from '@toastmasters/analytics-core'
@@ -844,6 +845,46 @@ export class TransformService {
       return null
     }
 
+    // When all districts report 0 Distinguished (pre-April), compute
+    // confirmed counts from per-district club performance CSVs (#304)
+    const allZeroDistinguished = metrics.every(m => m.distinguishedClubs === 0)
+    if (allZeroDistinguished) {
+      for (const metric of metrics) {
+        try {
+          const csvPath = path.join(
+            this.cacheDir,
+            'raw-csv',
+            date,
+            `district-${metric.districtId}`,
+            'club-performance.csv'
+          )
+          const content = await fs.readFile(csvPath, 'utf-8').catch(() => null)
+          if (!content) continue
+          const clubs = this.parseCSVToRecords(content)
+          let confirmed = 0
+          for (const club of clubs) {
+            const goals = this.parseNumber(club['Goals Met'])
+            const renewals = this.parseNumber(club['Mem. dues on time Apr'])
+            const base = this.parseNumber(club['Mem. Base'])
+            if (
+              getConfirmedDistinguishedLevel(goals, renewals, base) !==
+              'NotDistinguished'
+            )
+              confirmed++
+          }
+          if (confirmed > 0) {
+            metric.distinguishedClubs = confirmed
+            metric.distinguishedPercent =
+              metric.activeClubs > 0
+                ? (confirmed / metric.activeClubs) * 100
+                : 0
+          }
+        } catch {
+          // Skip districts with missing club data
+        }
+      }
+    }
+
     this.logger.debug('Extracted ranking metrics', {
       date,
       metricsCount: metrics.length,
@@ -908,9 +949,16 @@ export class TransformService {
     // Sort by aggregate score (highest first) and assign overall ranks
     rankings.sort((a, b) => b.aggregateScore - a.aggregateScore)
 
-    // Assign overall ranks after sorting (1-based)
+    // Assign overall ranks with standard competition ranking (#303)
     rankings.forEach((ranking, index) => {
-      ranking.overallRank = index + 1
+      if (
+        index > 0 &&
+        ranking.aggregateScore === rankings[index - 1]!.aggregateScore
+      ) {
+        ranking.overallRank = rankings[index - 1]!.overallRank
+      } else {
+        ranking.overallRank = index + 1
+      }
     })
 
     const calculatedAt = new Date().toISOString()
