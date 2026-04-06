@@ -15,8 +15,16 @@ vi.mock('../../hooks/useGlobalRankings', () => ({
   useGlobalRankings: vi.fn(),
 }))
 
+// Mock CDN service for per-date rankings (#302)
+vi.mock('../../services/cdn', () => ({
+  fetchCdnRankingsForDate: vi.fn(),
+}))
+
 // Import the mocked hook for type-safe mocking
 import { useGlobalRankings } from '../../hooks/useGlobalRankings'
+import { fetchCdnRankingsForDate } from '../../services/cdn'
+
+const mockFetchCdnRankingsForDate = vi.mocked(fetchCdnRankingsForDate)
 
 const mockUseGlobalRankings = vi.mocked(useGlobalRankings)
 
@@ -716,6 +724,77 @@ describe('GlobalRankingsTab', () => {
 
       // Should still render without crashing
       expect(screen.getByText('End-of-Year Rankings')).toBeInTheDocument()
+    })
+  })
+
+  describe('Per-date rankings override (#302)', () => {
+    it('uses per-date rankings when selectedDate is provided', async () => {
+      // Hook returns rank 15 (from rank-history)
+      mockUseGlobalRankings.mockReturnValue(
+        createMockHookResult({
+          endOfYearRankings: {
+            overall: {
+              rank: 15,
+              totalDistricts: 126,
+              percentile: 88.1,
+            },
+            paidClubs: {
+              rank: 10,
+              totalDistricts: 126,
+              percentile: 92.1,
+            },
+            membershipPayments: {
+              rank: 15,
+              totalDistricts: 126,
+              percentile: 88.1,
+            },
+            distinguishedClubs: {
+              rank: 5,
+              totalDistricts: 126,
+              percentile: 96.0,
+            },
+            asOfDate: '2025-06-06',
+            isPartialYear: false,
+          },
+        })
+      )
+
+      // Per-date rankings return rank 10 (more accurate)
+      mockFetchCdnRankingsForDate.mockResolvedValueOnce({
+        rankings: [
+          {
+            districtId: '57',
+            districtName: 'District 57',
+            region: '1',
+            paidClubs: 100,
+            paidClubBase: 90,
+            clubGrowthPercent: 11.1,
+            totalPayments: 5000,
+            paymentBase: 4500,
+            paymentGrowthPercent: 11.1,
+            activeClubs: 100,
+            distinguishedClubs: 50,
+            selectDistinguished: 20,
+            presidentsDistinguished: 10,
+            distinguishedPercent: 50,
+            clubsRank: 8,
+            paymentsRank: 12,
+            distinguishedRank: 3,
+            aggregateScore: 280,
+            overallRank: 10,
+          },
+        ],
+        date: '2025-06-30',
+        generatedAt: '2025-07-01T00:00:00Z',
+      })
+
+      renderWithProviders(
+        <GlobalRankingsTab {...baseProps} selectedDate="2025-06-30" />
+      )
+
+      // Should show the per-date rank (10), not the hook-derived rank (15)
+      const overallCard = await screen.findByText('10')
+      expect(overallCard).toBeInTheDocument()
     })
   })
 })
