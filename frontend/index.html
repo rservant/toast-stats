@@ -29,6 +29,26 @@
         });
       }
     </script>
+
+    <!-- Google Analytics 4 (#314) — production only, no PII collected -->
+    <script>
+      // Only load GA on production hostname (not localhost / preview)
+      if (window.location.hostname === 'ts.taverns.red') {
+        var gaScript = document.createElement('script');
+        gaScript.async = true;
+        gaScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-CDWQYHC2Z3';
+        document.head.appendChild(gaScript);
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { window.dataLayer.push(arguments); }
+        window.gtag = gtag;
+        gtag('js', new Date());
+        gtag('config', 'G-CDWQYHC2Z3', {
+          anonymize_ip: true,
+          allow_google_signals: false,
+          allow_ad_personalization_signals: false
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

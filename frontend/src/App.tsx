@@ -6,6 +6,7 @@ import { ProgramYearProvider } from './contexts/ProgramYearContext'
 import { DarkModeProvider } from './contexts/DarkModeContext'
 import LandingPage from './pages/LandingPage'
 import SiteFooter from './components/SiteFooter'
+import { useGoogleAnalytics } from './hooks/useGoogleAnalytics'
 
 // Code-split: DistrictDetailPage (816 lines + recharts) loads on navigation (#169)
 const DistrictDetailPage = React.lazy(
@@ -29,6 +30,7 @@ function PageLoadingFallback(): React.JSX.Element {
 }
 
 function Layout(): React.JSX.Element {
+  useGoogleAnalytics() // Track SPA route changes (#314)
   return (
     <>
       <a href="#main-content" className="tm-skip-link">

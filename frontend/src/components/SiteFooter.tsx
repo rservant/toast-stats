@@ -88,12 +88,21 @@ const SiteFooter: React.FC = () => {
             <ThemeToggle />
           </div>
 
-          {/* Version */}
+          {/* Version + release notes (#312) */}
           <span
             className="text-white/40 text-xs font-mono hidden md:inline"
             data-testid="app-version"
           >
             {version}
+            {' · '}
+            <a
+              href={`https://github.com/taverns-red/toast-stats/releases`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/60 hover:text-white underline underline-offset-2 transition-colors"
+            >
+              release notes
+            </a>
           </span>
 
           {/* Disclaimer */}
