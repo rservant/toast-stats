@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.9.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.8.0...toast-stats-v2.9.0) (2026-04-07)
+
+
+### Features
+
+* Google Analytics 4 + release notes link in footer ([#314](https://github.com/taverns-red/toast-stats/issues/314), [#312](https://github.com/taverns-red/toast-stats/issues/312)) ([fa5a2be](https://github.com/taverns-red/toast-stats/commit/fa5a2be45e8fc2bd5aa5bcc596d7bd6d6fba63f8))
+
+
+### Bug Fixes
+
+* AreaDivisionRecognition requires CSP for distinguished count ([#311](https://github.com/taverns-red/toast-stats/issues/311)) ([f14f95c](https://github.com/taverns-red/toast-stats/commit/f14f95c55ab23e956747e9d564fa7f9a3bceabd9))
+* daily pipeline upload uses snapshot date for closing periods ([#309](https://github.com/taverns-red/toast-stats/issues/309)) ([4872467](https://github.com/taverns-red/toast-stats/commit/48724676b28d1872df243ac9266f23a779c260a4))
+* resolve all 4 Dependabot vulnerabilities ([f3d3b0c](https://github.com/taverns-red/toast-stats/commit/f3d3b0cdc9f3d8c9615c457b49c590f2db84be5a))
+
+
+### Tests
+
+* red phase — AreaDivisionRecognition should require CSP for distinguished ([#311](https://github.com/taverns-red/toast-stats/issues/311)) ([af02a40](https://github.com/taverns-red/toast-stats/commit/af02a40c684d2bfde7664d9387c423d530016339))
+
 ## [2.8.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.7.0...toast-stats-v2.8.0) (2026-04-06)
 
 

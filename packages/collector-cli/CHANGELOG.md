@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.2.0...collector-cli-v1.2.1) (2026-04-07)
+
+
+### Bug Fixes
+
+* daily pipeline upload uses snapshot date for closing periods ([#309](https://github.com/taverns-red/toast-stats/issues/309)) ([4872467](https://github.com/taverns-red/toast-stats/commit/48724676b28d1872df243ac9266f23a779c260a4))
+
 ## [1.2.0](https://github.com/taverns-red/toast-stats/compare/collector-cli-v1.1.2...collector-cli-v1.2.0) (2026-04-06)
 
 

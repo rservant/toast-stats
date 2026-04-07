@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.0](https://github.com/taverns-red/toast-stats/compare/frontend-v2.8.0...frontend-v2.9.0) (2026-04-07)
+
+
+### Features
+
+* Google Analytics 4 + release notes link in footer ([#314](https://github.com/taverns-red/toast-stats/issues/314), [#312](https://github.com/taverns-red/toast-stats/issues/312)) ([fa5a2be](https://github.com/taverns-red/toast-stats/commit/fa5a2be45e8fc2bd5aa5bcc596d7bd6d6fba63f8))
+
 ## [2.8.0](https://github.com/taverns-red/toast-stats/compare/frontend-v2.7.0...frontend-v2.8.0) (2026-04-06)
 
 

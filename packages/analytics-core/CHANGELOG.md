@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.1](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.4.0...analytics-core-v1.4.1) (2026-04-07)
+
+
+### Bug Fixes
+
+* AreaDivisionRecognition requires CSP for distinguished count ([#311](https://github.com/taverns-red/toast-stats/issues/311)) ([f14f95c](https://github.com/taverns-red/toast-stats/commit/f14f95c55ab23e956747e9d564fa7f9a3bceabd9))
+
+
+### Tests
+
+* red phase — AreaDivisionRecognition should require CSP for distinguished ([#311](https://github.com/taverns-red/toast-stats/issues/311)) ([af02a40](https://github.com/taverns-red/toast-stats/commit/af02a40c684d2bfde7664d9387c423d530016339))
+
 ## [1.4.0](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.3.0...analytics-core-v1.4.0) (2026-04-06)
 
 
