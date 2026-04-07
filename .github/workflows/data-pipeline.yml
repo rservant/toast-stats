@@ -208,7 +208,13 @@ jobs:
           npx collector-cli scrape $ARGS | tee /tmp/scrape-output.json
 
           DATE=$(jq -r '.date' /tmp/scrape-output.json)
+          # Snapshot date may differ from raw date after closing-period remap (#309)
+          SNAPSHOT_DATE=$(jq -r '.snapshotDate // .date' /tmp/scrape-output.json)
           echo "date=${DATE}" >> "$GITHUB_OUTPUT"
+          echo "snapshot_date=${SNAPSHOT_DATE}" >> "$GITHUB_OUTPUT"
+          if [ "${DATE}" != "${SNAPSHOT_DATE}" ]; then
+            echo "Closing period detected: raw date ${DATE} → snapshot ${SNAPSHOT_DATE}"
+          fi
 
           echo "## 📥 Scrape Results" >> "$GITHUB_STEP_SUMMARY"
           SUCCEEDED=$(jq '.districts.succeeded' /tmp/scrape-output.json)
@@ -272,9 +278,15 @@ jobs:
         if: steps.mode.outputs.mode == 'daily'
         run: |
           DATE="${{ steps.daily-scrape.outputs.date }}"
-          echo "Uploading daily data for ${DATE}..."
+          # Use the actual snapshot date (post closing-period remap) for snapshot upload (#309)
+          SNAPSHOT_DATE="${{ steps.daily-scrape.outputs.snapshot_date }}"
+          if [ -z "${SNAPSHOT_DATE}" ]; then
+            SNAPSHOT_DATE="${DATE}"
+          fi
+          echo "Uploading daily data — raw=${DATE}, snapshot=${SNAPSHOT_DATE}"
 
           # Internal state: rsync (no CDN metadata needed)
+          # raw-csv keyed by collection date (DATE), not snapshot date
           gsutil -m rsync -r "./cache/raw-csv/${DATE}/" "gs://${GCS_BUCKET}/raw-csv/${DATE}/"
           gsutil -m rsync -r "./cache/time-series/" "gs://${GCS_BUCKET}/time-series/"
           gsutil -m rsync -r "./cache/club-trends/" "gs://${GCS_BUCKET}/club-trends/"
@@ -287,27 +299,28 @@ jobs:
             cp -rZ ./cache/time-series/* "gs://${GCS_BUCKET}/time-series/"
 
           # CDN-served: snapshots + analytics (immutable, gzipped)
-          # Note: cp -r dir/ dest/ creates double-nested paths. Use globs instead.
+          # Use SNAPSHOT_DATE for the actual snapshot directory (#309)
           gsutil -m \
             -h "Content-Type:application/json" \
             -h "Cache-Control:public, max-age=3600, must-revalidate" \
             cp -Z \
-            "./cache/snapshots/${DATE}"/*.json \
-            "gs://${GCS_BUCKET}/snapshots/${DATE}/"
+            "./cache/snapshots/${SNAPSHOT_DATE}"/*.json \
+            "gs://${GCS_BUCKET}/snapshots/${SNAPSHOT_DATE}/"
 
           # Analytics subdirectory
-          if [ -d "./cache/snapshots/${DATE}/analytics" ]; then
+          if [ -d "./cache/snapshots/${SNAPSHOT_DATE}/analytics" ]; then
             gsutil -m \
               -h "Content-Type:application/json" \
               -h "Cache-Control:public, max-age=3600, must-revalidate" \
               cp -Z \
-              "./cache/snapshots/${DATE}/analytics"/*.json \
-              "gs://${GCS_BUCKET}/snapshots/${DATE}/analytics/"
+              "./cache/snapshots/${SNAPSHOT_DATE}/analytics"/*.json \
+              "gs://${GCS_BUCKET}/snapshots/${SNAPSHOT_DATE}/analytics/"
           fi
 
           echo "## ☁️ GCS Upload" >> "$GITHUB_STEP_SUMMARY"
-          SNAPSHOT_COUNT=$(find "./cache/snapshots/${DATE}" -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
-          echo "- **Date**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
+          SNAPSHOT_COUNT=$(find "./cache/snapshots/${SNAPSHOT_DATE}" -name '*.json' 2>/dev/null | wc -l | tr -d ' ')
+          echo "- **Raw date**: ${DATE}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Snapshot date**: ${SNAPSHOT_DATE}" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Snapshot/analytics files**: ${SNAPSHOT_COUNT}" >> "$GITHUB_STEP_SUMMARY"
 
       # ════════════════════════════════════════════════════════

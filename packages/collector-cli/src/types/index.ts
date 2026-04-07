@@ -263,6 +263,11 @@ export interface TransformSummary {
  * Requirement 2.5: THE `scrape` command SHALL optionally run transformation automatically with a `--transform` flag
  */
 export interface ScrapeWithTransformSummary extends ScrapeSummary {
+  /**
+   * Actual snapshot date after closing-period remap (#309)
+   * May differ from the requested date when CSV footer indicates a closing period.
+   */
+  snapshotDate?: string
   /** Transform results when --transform flag is used */
   transform?: {
     /** Overall status of transformation */

@@ -259,7 +259,11 @@ export function createCLI(): Command {
           }
 
           // Add transform results to summary
-          const snapshotDir = `${cacheDir}/snapshots/${targetDate}`
+          // Use actual snapshot date (post closing-period remap) (#309)
+          const actualSnapshotDate = transformResult.date ?? targetDate
+          const snapshotDir = `${cacheDir}/snapshots/${actualSnapshotDate}`
+          // Surface the actual snapshot date at top level for pipeline upload
+          summary.snapshotDate = actualSnapshotDate
           summary.transform = {
             status: transformStatus,
             districts: {
