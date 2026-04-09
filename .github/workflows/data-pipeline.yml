@@ -1005,8 +1005,9 @@ jobs:
               console.log('Generated snapshot index: ' + Object.keys(index).length + ' districts, ' + dates.length + ' dates');
             "
           else
-            # Daily: merge today's date into existing index
-            DATE="${{ steps.daily-scrape.outputs.date || steps.daily-config.outputs.date }}"
+            # Daily: merge today's snapshot date into existing index
+            # Use snapshot_date (post closing-period remap) not raw date (#309)
+            DATE="${{ steps.daily-scrape.outputs.snapshot_date || steps.daily-scrape.outputs.date || steps.daily-config.outputs.date }}"
             DISTRICT_LIST="${{ steps.daily-config.outputs.districts }}"
 
             gsutil cp "${INDEX_PATH}" /tmp/district-snapshot-index.json 2>/dev/null || \
