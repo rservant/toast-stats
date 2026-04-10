@@ -392,6 +392,7 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
                   })
                   setSortField('membersNeeded')
                   setSortDirection('asc')
+                  onSortChange?.('membersNeeded', 'asc')
                 }
               }}
               className={`px-3 py-1 text-xs font-medium border rounded-sm transition-colors font-tm-body ${
