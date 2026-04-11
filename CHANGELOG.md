@@ -1,5 +1,28 @@
 # Changelog
 
+## [2.10.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.9.0...toast-stats-v2.10.0) (2026-04-11)
+
+
+### Features
+
+* show average members per club on district overview ([#318](https://github.com/taverns-red/toast-stats/issues/318)) ([186a257](https://github.com/taverns-red/toast-stats/commit/186a2575cd244f1a58a8dd35e7f4d0fe28bce5cc))
+* staging environment — Phase 1+2 infrastructure + pipeline ([#316](https://github.com/taverns-red/toast-stats/issues/316)) ([0be241b](https://github.com/taverns-red/toast-stats/commit/0be241b9041470037070affb96c3737173535fb0))
+
+
+### Bug Fixes
+
+* 'Close to Distinguished' button syncs sort state to URL ([5133273](https://github.com/taverns-red/toast-stats/commit/513327339ab13993ca12b3964d248bab5a53b137))
+* district-snapshot-index uses snapshot date for daily updates ([#309](https://github.com/taverns-red/toast-stats/issues/309)) ([5767907](https://github.com/taverns-red/toast-stats/commit/57679070b883b35932dcc30dc7b00b8911592167))
+* stabilize club detail smoke test selector ([#316](https://github.com/taverns-red/toast-stats/issues/316)) ([6534f48](https://github.com/taverns-red/toast-stats/commit/6534f48df657e591067d1af52c4781d401c77092))
+* staging CDN URL detection survives Vite build optimization ([#316](https://github.com/taverns-red/toast-stats/issues/316)) ([4c628f7](https://github.com/taverns-red/toast-stats/commit/4c628f74969456c7559544fb2c81dc2f009a582a))
+* use build-time VITE_CDN_BASE_URL for staging CDN ([#316](https://github.com/taverns-red/toast-stats/issues/316)) ([ae8fea2](https://github.com/taverns-red/toast-stats/commit/ae8fea25b9c392bf80f885a4b3165d07377ebe94))
+
+
+### Documentation
+
+* ADR-002 staging environment and deployment flow ([#316](https://github.com/taverns-red/toast-stats/issues/316)) ([5bf5145](https://github.com/taverns-red/toast-stats/commit/5bf5145d076cfff963bae19b5f303a8bcc99f801))
+* ADR-002 updated — separate staging GCS bucket + diff-based validation ([#316](https://github.com/taverns-red/toast-stats/issues/316)) ([9d873e2](https://github.com/taverns-red/toast-stats/commit/9d873e2ed56a8c5c71527d5bea4dcb220a281c7a))
+
 ## [2.9.0](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.8.0...toast-stats-v2.9.0) (2026-04-07)
 
 
