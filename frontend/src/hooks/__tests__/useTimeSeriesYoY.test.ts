@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   computeYearOverYear,
   computePaymentYoYFromTimeSeries,
+  getLatestPayments,
 } from '../useTimeSeriesYoY'
 import type { TimeSeriesData } from '../useTimeSeries'
 import type { ProgramYearIndexFile } from '@toastmasters/shared-contracts'
@@ -362,5 +363,41 @@ describe('computePaymentYoYFromTimeSeries', () => {
     }
 
     expect(computePaymentYoYFromTimeSeries(ts)).toBeNull()
+  })
+})
+
+describe('getLatestPayments (#319)', () => {
+  it('returns latest payments from current program year', () => {
+    const ts: TimeSeriesData = {
+      currentProgramYear: '2025-2026',
+      years: {
+        '2025-2026': makeProgramYear('2025-2026', [
+          {
+            date: '2025-07-31',
+            membership: 2794,
+            payments: 983,
+            distinguishedTotal: 0,
+            clubCounts: { total: 167, thriving: 60 },
+          },
+          {
+            date: '2026-04-10',
+            membership: 2440,
+            payments: 5400,
+            distinguishedTotal: 44,
+            clubCounts: { total: 167, thriving: 52 },
+          },
+        ]),
+      },
+      availableYears: ['2025-2026'],
+      baseMembership: 2794,
+      currentMembership: 2440,
+      memberChange: -354,
+    }
+
+    expect(getLatestPayments(ts)).toBe(5400)
+  })
+
+  it('returns null when no time-series data', () => {
+    expect(getLatestPayments(null)).toBeNull()
   })
 })
