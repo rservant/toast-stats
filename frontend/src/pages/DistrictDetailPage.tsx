@@ -10,6 +10,7 @@ import { useTimeSeries } from '../hooks/useTimeSeries'
 import {
   computeYearOverYear,
   computePaymentYoYFromTimeSeries,
+  getLatestPayments,
 } from '../hooks/useTimeSeriesYoY'
 import { useDistrictCachedDates } from '../hooks/useDistrictData'
 import { useUrlProgramYear } from '../hooks/useUrlProgramYear'
@@ -889,8 +890,15 @@ const DistrictDetailPage: React.FC = () => {
                             timeSeries ?? null
                           )
                           if (tsYoY) {
+                            // Use time-series payments for consistency (#319)
+                            const tsPayments = getLatestPayments(
+                              timeSeries ?? null
+                            )
                             return {
                               ...paymentsTrendData.statistics,
+                              ...(tsPayments !== null && {
+                                currentPayments: tsPayments,
+                              }),
                               yearOverYearChange: tsYoY.yearOverYearChange,
                               trendDirection: tsYoY.trendDirection,
                             }
@@ -915,7 +923,10 @@ const DistrictDetailPage: React.FC = () => {
                         yearOverYear: computeYearOverYear(timeSeries ?? null)!,
                       })}
                       currentYear={{
+                        // Use time-series membership when available (#319)
+                        // to match the membership chart above
                         totalMembership:
+                          timeSeries?.currentMembership ??
                           aggregatedAnalytics.summary.totalMembership,
                         distinguishedClubs:
                           aggregatedAnalytics.summary.distinguishedClubs.total,

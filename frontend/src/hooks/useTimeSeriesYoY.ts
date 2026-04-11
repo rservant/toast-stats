@@ -200,3 +200,22 @@ export function computePaymentYoYFromTimeSeries(
     trendDirection: direction,
   }
 }
+
+/**
+ * Extract the latest payments value from time-series data (#319).
+ *
+ * Used to ensure the Trends tab stat card reads from the same source
+ * as the chart, avoiding discrepancies with performanceTargets CDN.
+ */
+export function getLatestPayments(
+  timeSeries: TimeSeriesData | null
+): number | null {
+  if (!timeSeries) return null
+
+  const currentYearData = timeSeries.years[timeSeries.currentProgramYear]
+  if (!currentYearData || currentYearData.dataPoints.length === 0) return null
+
+  const latest =
+    currentYearData.dataPoints[currentYearData.dataPoints.length - 1]
+  return latest?.payments ?? null
+}
