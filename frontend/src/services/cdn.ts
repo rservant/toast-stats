@@ -19,10 +19,11 @@ import { recordCdnResponse } from './cdnCacheTracker'
 // CDN URL resolved at runtime based on hostname (#316)
 // Staging (staging-toast-stats.web.app) reads from staging GCS bucket
 // Production (ts.taverns.red) reads from production CDN
-const CDN_BASE_URL = (() => {
+// NOTE: Must NOT be an IIFE — Vite evaluates IIFEs at build time
+function getCdnBaseUrl(): string {
   // Explicit override via build-time env var
   const envUrl = import.meta.env['VITE_CDN_BASE_URL']
-  if (envUrl) return envUrl
+  if (envUrl) return envUrl as string
   // Runtime: staging hostname → staging bucket
   if (
     typeof window !== 'undefined' &&
@@ -31,7 +32,14 @@ const CDN_BASE_URL = (() => {
     return 'https://storage.googleapis.com/toast-stats-data-staging'
   }
   return 'https://cdn.taverns.red'
-})()
+}
+
+// Lazy-init: computed on first access, cached after
+let _cdnBaseUrl: string | undefined
+function cdnBaseUrl(): string {
+  if (!_cdnBaseUrl) _cdnBaseUrl = getCdnBaseUrl()
+  return _cdnBaseUrl
+}
 
 /**
  * CDN manifest — returned by v1/latest.json
@@ -64,7 +72,7 @@ export async function fetchCdnManifest(): Promise<CdnManifest> {
   if (cachedManifest) return cachedManifest
   if (manifestPromise) return manifestPromise
 
-  manifestPromise = fetch(`${CDN_BASE_URL}/v1/latest.json`)
+  manifestPromise = fetch(`${cdnBaseUrl()}/v1/latest.json`)
     .then(res => {
       if (!res.ok) throw new Error(`CDN manifest fetch failed: ${res.status}`)
       recordCdnResponse(res)
@@ -86,7 +94,7 @@ export async function fetchCdnManifest(): Promise<CdnManifest> {
  * Fetch all available snapshot dates from CDN.
  */
 export async function fetchCdnDates(): Promise<CdnDatesIndex> {
-  const res = await fetch(`${CDN_BASE_URL}/v1/dates.json`)
+  const res = await fetch(`${cdnBaseUrl()}/v1/dates.json`)
   if (!res.ok) throw new Error(`CDN dates fetch failed: ${res.status}`)
   recordCdnResponse(res)
   return res.json() as Promise<CdnDatesIndex>
@@ -128,7 +136,7 @@ export interface CdnRankingsData {
  * The pipeline writes v1/rankings.json from all-districts-rankings.json.
  */
 export async function fetchCdnRankings(): Promise<CdnRankingsData> {
-  const res = await fetch(`${CDN_BASE_URL}/v1/rankings.json`)
+  const res = await fetch(`${cdnBaseUrl()}/v1/rankings.json`)
   if (!res.ok) throw new Error(`CDN rankings fetch failed: ${res.status}`)
   recordCdnResponse(res)
   return res.json() as Promise<CdnRankingsData>
@@ -141,7 +149,7 @@ export async function fetchCdnRankings(): Promise<CdnRankingsData> {
 export async function fetchCdnRankingsForDate(
   date: string
 ): Promise<CdnRankingsData> {
-  const url = `${CDN_BASE_URL}/snapshots/${date}/all-districts-rankings.json`
+  const url = `${cdnBaseUrl()}/snapshots/${date}/all-districts-rankings.json`
   const res = await fetch(url)
   if (!res.ok) {
     return fetchCdnRankings()
@@ -171,21 +179,21 @@ export function cdnAnalyticsUrl(
   districtId: string,
   type: string
 ): string {
-  return `${CDN_BASE_URL}/snapshots/${date}/analytics/district_${districtId}_${type}.json`
+  return `${cdnBaseUrl()}/snapshots/${date}/analytics/district_${districtId}_${type}.json`
 }
 
 /**
  * Construct a CDN URL for a district snapshot file.
  */
 export function cdnSnapshotUrl(date: string, districtId: string): string {
-  return `${CDN_BASE_URL}/snapshots/${date}/district_${districtId}.json`
+  return `${cdnBaseUrl()}/snapshots/${date}/district_${districtId}.json`
 }
 
 /**
  * Construct a CDN URL for the district snapshot index.
  */
 export function cdnSnapshotIndexUrl(): string {
-  return `${CDN_BASE_URL}/config/district-snapshot-index.json`
+  return `${cdnBaseUrl()}/config/district-snapshot-index.json`
 }
 
 /**
@@ -281,6 +289,6 @@ export interface CdnRankHistoryData {
 export async function fetchCdnRankHistory(
   districtId: string
 ): Promise<CdnRankHistoryData> {
-  const url = `${CDN_BASE_URL}/v1/rank-history/${districtId}.json`
+  const url = `${cdnBaseUrl()}/v1/rank-history/${districtId}.json`
   return fetchFromCdn<CdnRankHistoryData>(url)
 }

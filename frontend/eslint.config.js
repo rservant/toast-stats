@@ -8,6 +8,9 @@ import globals from 'globals'
 export default [
   js.configs.recommended,
   {
+    ignores: ['e2e/**', 'playwright.config.ts'],
+  },
+  {
     files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {
       parser: tsparser,
