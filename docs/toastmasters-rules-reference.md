@@ -217,11 +217,7 @@ As a general rule, Area Directors are required to make **at least two club visit
 
 ### 7.1 Eligibility Gate
 
-A Division is eligible for recognition **only if**:
-
-- Areas in the Division have met the Area Director club visit requirements (≥ 75% of club base visited per round — see §6.1)
-
-**Data source:** Derived from per-area eligibility. A Division is eligible when all its Areas are eligible (both visit rounds meet the 75% threshold).
+A Division's eligibility for the DDP is based on paid areas and distinguished areas — **area club visits are NOT a qualifying requirement for division recognition**. Club visits gate Area Distinguished status (§6.1), which in turn affects whether areas count as "Distinguished" for the DDP percentage calculation, but visit completion is not an independent DDP gate.
 
 ### 7.2 Paid Areas Requirement
 

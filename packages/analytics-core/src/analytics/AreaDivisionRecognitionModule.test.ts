@@ -435,16 +435,15 @@ describe('AreaDivisionRecognitionModule', () => {
       expect(areas[0]?.eligibilityReason).toContain('not available')
     })
 
-    it('should set division eligibility to unknown when areas have no visit data', () => {
+    it('division eligibility is always eligible — visits are NOT a DDP gate (#325)', () => {
       const module = new AreaDivisionRecognitionModule()
       const clubs = [createMockClub('1', 'A', 'A1', 20, 5)]
       const snapshot = createMockSnapshot(clubs)
-      // No divisionPerformance → areas have 'unknown' eligibility → division inherits 'unknown'
+      // Even without visit data, division is eligible (visits only gate DAP, not DDP)
 
       const divisions = module.calculateDivisionRecognition(snapshot)
 
-      expect(divisions[0]?.eligibility).toBe('unknown')
-      expect(divisions[0]?.eligibilityReason).toContain('missing visit data')
+      expect(divisions[0]?.eligibility).toBe('eligible')
     })
   })
 

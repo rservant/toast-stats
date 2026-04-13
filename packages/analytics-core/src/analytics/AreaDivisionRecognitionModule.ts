@@ -307,20 +307,13 @@ export class AreaDivisionRecognitionModule {
     // Check thresholds
     const meetsPaidThreshold = paidAreasPercent >= DDP_PAID_AREAS_THRESHOLD
 
-    // Determine eligibility from area visit data (#325)
-    // Division is eligible when all areas are eligible
-    const allAreasEligible = areas.every(a => a.eligibility === 'eligible')
-    const anyAreaUnknown = areas.some(a => a.eligibility === 'unknown')
-    const eligibility: RecognitionEligibility = allAreasEligible
-      ? 'eligible'
-      : anyAreaUnknown
-        ? 'unknown'
-        : 'ineligible'
-    const eligibilityReason = allAreasEligible
-      ? 'All areas meet visit requirements'
-      : anyAreaUnknown
-        ? 'Some areas missing visit data'
-        : `${areas.filter(a => a.eligibility === 'ineligible').length} area(s) have incomplete visits`
+    // Division eligibility: visits are NOT a DDP gate (#325)
+    // Area visits gate DAP (area Distinguished status), which affects
+    // whether areas count as "Distinguished" for the DDP percentage.
+    // But visit completion itself is not an independent DDP requirement.
+    const eligibility: RecognitionEligibility = 'eligible'
+    const eligibilityReason =
+      'DDP eligibility based on paid and distinguished area percentages'
 
     // Determine recognition level based on thresholds
     const recognitionLevel = this.determineDivisionRecognitionLevel(
