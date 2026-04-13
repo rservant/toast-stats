@@ -457,15 +457,31 @@ export const DivisionAreaProgressSummary: React.FC<
                     distinguishedClubs: area.distinguishedClubs,
                   })
 
-                  const badgeClass = getRecognitionBadgeClass(
-                    progressText.currentLevel,
-                    gapAnalysis.meetsNoNetLossRequirement
-                  )
+                  // Check if visits gate the recognition (#325)
+                  const visitsComplete =
+                    area.firstRoundVisits.completed >=
+                      area.firstRoundVisits.required &&
+                    area.secondRoundVisits.completed >=
+                      area.secondRoundVisits.required
+                  const isDistinguishedLevel =
+                    progressText.currentLevel !== 'none'
+                  const isProvisionalArea =
+                    isDistinguishedLevel && !visitsComplete
 
-                  const badgeLabel = getRecognitionLabel(
+                  const badgeClass = isProvisionalArea
+                    ? 'bg-amber-100 text-amber-800 border-amber-300'
+                    : getRecognitionBadgeClass(
+                        progressText.currentLevel,
+                        gapAnalysis.meetsNoNetLossRequirement
+                      )
+
+                  const baseLabel = getRecognitionLabel(
                     progressText.currentLevel,
                     gapAnalysis.meetsNoNetLossRequirement
                   )
+                  const badgeLabel = isProvisionalArea
+                    ? `${baseLabel} (Provisional)`
+                    : baseLabel
 
                   return (
                     <article

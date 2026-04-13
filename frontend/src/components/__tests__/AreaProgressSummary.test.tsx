@@ -554,6 +554,20 @@ describe('AreaProgressSummary', () => {
      * Tests badge styling for President's Distinguished
      */
     it("should display President's Distinguished badge with correct styling", () => {
+      const completeVisits = {
+        firstRoundVisits: {
+          completed: 4,
+          required: 3,
+          percentage: 100,
+          meetsThreshold: true,
+        },
+        secondRoundVisits: {
+          completed: 4,
+          required: 3,
+          percentage: 100,
+          meetsThreshold: true,
+        },
+      }
       const divisions = buildDivisions([
         // President's Distinguished: clubBase+1 paid AND 50%+1 distinguished
         {
@@ -562,6 +576,7 @@ describe('AreaProgressSummary', () => {
             clubBase: 4,
             paidClubs: 5,
             distinguishedClubs: 3,
+            ...completeVisits,
           }),
           divisionId: 'A',
         },
@@ -576,6 +591,20 @@ describe('AreaProgressSummary', () => {
      * Tests badge styling for Select Distinguished
      */
     it('should display Select Distinguished badge', () => {
+      const completeVisits = {
+        firstRoundVisits: {
+          completed: 4,
+          required: 3,
+          percentage: 100,
+          meetsThreshold: true,
+        },
+        secondRoundVisits: {
+          completed: 4,
+          required: 3,
+          percentage: 100,
+          meetsThreshold: true,
+        },
+      }
       const divisions = buildDivisions([
         // Select Distinguished: clubBase paid AND 50%+1 distinguished
         {
@@ -584,6 +613,7 @@ describe('AreaProgressSummary', () => {
             clubBase: 4,
             paidClubs: 4,
             distinguishedClubs: 3,
+            ...completeVisits,
           }),
           divisionId: 'A',
         },
@@ -776,6 +806,20 @@ describe('AreaProgressSummary', () => {
      * Tests multiple areas with different recognition levels
      */
     it('should display multiple areas with different recognition levels', () => {
+      const completeVisits = {
+        firstRoundVisits: {
+          completed: 4,
+          required: 3,
+          percentage: 100,
+          meetsThreshold: true,
+        },
+        secondRoundVisits: {
+          completed: 4,
+          required: 3,
+          percentage: 100,
+          meetsThreshold: true,
+        },
+      }
       const divisions = buildDivisions([
         // President's Distinguished
         {
@@ -784,6 +828,7 @@ describe('AreaProgressSummary', () => {
             clubBase: 4,
             paidClubs: 5,
             distinguishedClubs: 3,
+            ...completeVisits,
           }),
           divisionId: 'A',
         },
@@ -794,6 +839,7 @@ describe('AreaProgressSummary', () => {
             clubBase: 4,
             paidClubs: 4,
             distinguishedClubs: 3,
+            ...completeVisits,
           }),
           divisionId: 'A',
         },
@@ -804,6 +850,7 @@ describe('AreaProgressSummary', () => {
             clubBase: 4,
             paidClubs: 4,
             distinguishedClubs: 2,
+            ...completeVisits,
           }),
           divisionId: 'B',
         },
