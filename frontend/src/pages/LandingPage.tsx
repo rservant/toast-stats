@@ -554,86 +554,53 @@ const LandingPage: React.FC = () => {
             </button>
           </div>
 
-          {/* Region Filter — collapsed by default (#83) */}
-          <details>
-            <summary className="cursor-pointer select-none text-sm font-semibold text-gray-900 py-1 hover:text-tm-loyal-blue transition-colors">
-              Filter Regions
-              {selectedRegions.length > 0 &&
-                selectedRegions.length < regions.length && (
-                  <span className="ml-2 text-xs font-normal text-tm-loyal-blue">
-                    ({selectedRegions.length}/{regions.length} selected)
-                  </span>
-                )}
-            </summary>
-            <div className="pt-2">
-              {/* Quick Select Buttons */}
-              <div className="flex flex-wrap gap-2 mb-2 pb-2 border-b border-gray-200">
+          {/* Region Filter — pill toggle bar (#326) */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-sm font-semibold text-gray-700 mr-1 font-tm-body">
+              Regions:
+            </span>
+            <button
+              onClick={() => setSelectedRegions([])}
+              className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
+                selectedRegions.length === 0
+                  ? 'bg-tm-loyal-blue text-white border-tm-loyal-blue'
+                  : 'bg-white text-gray-600 border-gray-300 hover:border-tm-loyal-blue hover:text-tm-loyal-blue'
+              }`}
+            >
+              All
+            </button>
+            {regions.map(region => {
+              const isActive = selectedRegions.includes(region)
+              return (
                 <button
-                  onClick={() => setSelectedRegions(regions)}
-                  className="px-3 py-1 text-xs font-medium bg-tm-loyal-blue-20 text-tm-loyal-blue rounded-sm hover:bg-tm-loyal-blue-30 transition-colors font-tm-body"
-                >
-                  All Regions
-                </button>
-                <button
+                  key={region}
                   onClick={() => {
-                    const regions1to7 = regions.filter(r => {
-                      const num = parseInt(r, 10)
-                      return !isNaN(num) && num >= 1 && num <= 7
-                    })
-                    setSelectedRegions(regions1to7)
+                    if (isActive) {
+                      const next = selectedRegions.filter(r => r !== region)
+                      setSelectedRegions(next)
+                    } else {
+                      setSelectedRegions([...selectedRegions, region])
+                    }
                   }}
-                  className="px-3 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-sm hover:bg-green-200 transition-colors"
+                  className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
+                    isActive
+                      ? 'bg-tm-loyal-blue text-white border-tm-loyal-blue'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-tm-loyal-blue hover:text-tm-loyal-blue'
+                  }`}
+                  aria-pressed={isActive}
+                  aria-label={`Region ${region}`}
                 >
-                  Regions 1-7
+                  {region}
                 </button>
-                <button
-                  onClick={() => setSelectedRegions([])}
-                  className="px-3 py-1 text-xs font-medium bg-gray-200 text-gray-700 rounded-sm hover:bg-gray-300 transition-colors"
-                >
-                  Clear All
-                </button>
-              </div>
-
-              {/* Individual Region Checkboxes */}
-              <div className="flex flex-wrap gap-3">
-                {regions.map(region => {
-                  const count = rankings.filter(r => r.region === region).length
-                  return (
-                    <label
-                      key={region}
-                      className="inline-flex items-center cursor-pointer hover:bg-gray-100 px-3 py-1 rounded-sm transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedRegions.includes(region)}
-                        onChange={e => {
-                          if (e.target.checked) {
-                            setSelectedRegions([...selectedRegions, region])
-                          } else {
-                            setSelectedRegions(
-                              selectedRegions.filter(r => r !== region)
-                            )
-                          }
-                        }}
-                        className="w-4 h-4 text-tm-loyal-blue border-gray-300 rounded-sm focus:ring-tm-loyal-blue"
-                      />
-                      <span className="ml-2 text-sm text-gray-700">
-                        Region {region} ({count.toString().trim()})
-                      </span>
-                    </label>
-                  )
-                })}
-              </div>
-              {selectedRegions.length > 0 &&
-                selectedRegions.length < regions.length && (
-                  <div className="mt-2 text-sm text-tm-loyal-blue font-medium font-tm-body">
-                    Showing {filteredRankings.length} districts from{' '}
-                    {selectedRegions.length} region
-                    {selectedRegions.length !== 1 ? 's' : ''}
-                  </div>
-                )}
-            </div>
-          </details>
+              )
+            })}
+            {selectedRegions.length > 0 &&
+              selectedRegions.length < regions.length && (
+                <span className="text-xs text-gray-500 ml-1 font-tm-body">
+                  {filteredRankings.length} districts
+                </span>
+              )}
+          </div>
         </div>
 
         {/* Search Bar */}

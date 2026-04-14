@@ -516,21 +516,21 @@ describe('LandingPage - Layout Order (#83)', () => {
     expect(heading).toHaveClass('text-2xl')
   })
 
-  it('should render region filter checkboxes inside a collapsed disclosure', async () => {
+  it('should render region filter as always-visible pill toggle bar (#326)', async () => {
     setupWithData()
 
-    const { container } = renderWithProviders(<LandingPage />)
+    renderWithProviders(<LandingPage />)
 
     await screen.findByText('District 1')
 
-    // Region filter checkboxes should be inside a <details> element
-    const allDetails = container.querySelectorAll('details')
+    // "All" pill should be visible and active by default
+    const allPill = screen.getByRole('button', { name: 'All' })
+    expect(allPill).toBeInTheDocument()
 
-    // Find the one that contains "Filter Regions"
-    const regionDetails = Array.from(allDetails).find(d =>
-      d.querySelector('summary')?.textContent?.match(/Filter Regions/i)
-    )
-    expect(regionDetails).toBeDefined()
-    expect(regionDetails).not.toHaveAttribute('open')
+    // Region pills should be visible (not hidden behind disclosure)
+    const regionPills = screen.getAllByRole('button', {
+      name: /^Region /i,
+    })
+    expect(regionPills.length).toBeGreaterThan(0)
   })
 })

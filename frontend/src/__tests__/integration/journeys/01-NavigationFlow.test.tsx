@@ -41,13 +41,9 @@ describe('Journey 01: The Navigation Flow', () => {
     const districtNameCell = await screen.findByText('District 61')
     expect(districtNameCell).toBeInTheDocument()
 
-    // Step 2: Open the region filter
-    const regionFilterSummary = screen.getByText(/Filter Regions/i)
-    await user.click(regionFilterSummary)
-
-    // Filter region 6
-    const region6Checkbox = await screen.findByLabelText(/Region Region 6/i)
-    await user.click(region6Checkbox)
+    // Step 2: Filter by region using pill toggle bar (#326)
+    const region6Pill = screen.getByRole('button', { name: /Region Region 6/i })
+    await user.click(region6Pill)
 
     // Step 3: Search for specific district (optional, since filter does it)
     const searchInput = screen.getByRole('textbox', {
