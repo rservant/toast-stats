@@ -168,11 +168,24 @@ export const AreaPerformanceRow: React.FC<AreaPerformanceRowProps> = ({
     area.distinguishedClubs
   )
 
+  // Check if visits gate the recognition (#325)
+  const visitsComplete =
+    area.firstRoundVisits.completed >= area.firstRoundVisits.required &&
+    area.secondRoundVisits.completed >= area.secondRoundVisits.required
+  const isDistinguishedLevel = gapAnalysis.currentLevel !== 'none'
+  const isProvisional = isDistinguishedLevel && !visitsComplete
+
   // Get recognition badge
-  const badge = getRecognitionBadge(
+  const baseBadge = getRecognitionBadge(
     gapAnalysis.currentLevel,
     gapAnalysis.meetsNoNetLossRequirement
   )
+  const badge = isProvisional
+    ? {
+        className: 'bg-amber-100 text-amber-800 border-amber-300',
+        label: `${baseBadge.label} (Provisional)`,
+      }
+    : baseBadge
 
   return (
     <tr className="hover:bg-gray-50 transition-colors">
