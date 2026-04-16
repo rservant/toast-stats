@@ -417,6 +417,44 @@ U,Undistricted,50,45,11.11%,500,450,11.11%,50,5,2,1`
       expect(district61.smedleyDistinguished).toBe(5)
     })
 
+    it('should aggregate clubs with 20+ paid members per district (#330)', async () => {
+      const date = '2024-01-15'
+      const rawCsvDir = path.join(tempDir, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+
+      const csvContent = `DISTRICT,REGION,Paid Clubs,Paid Club Base,% Club Growth,Total YTD Payments,Payment Base,% Payment Growth,Active Clubs,Total Distinguished Clubs,Select Distinguished Clubs,Presidents Distinguished Clubs
+61,Region 5,3,3,0%,100,100,0%,3,1,0,0`
+
+      await fs.writeFile(path.join(rawCsvDir, 'all-districts.csv'), csvContent)
+
+      // 3 clubs: 25 members, 20 members, 19 members → 2 clubs with 20+
+      const districtDir = path.join(rawCsvDir, 'district-61')
+      await fs.mkdir(districtDir, { recursive: true })
+      await fs.writeFile(
+        path.join(districtDir, 'club-performance.csv'),
+        `Club Number,Club Name,Division,Area,Active Members,Goals Met
+1001,Alpha Club,A,1,25,5
+1002,Beta Club,A,1,20,5
+1003,Gamma Club,A,1,19,5`
+      )
+
+      await transformService.transform({ date, force: true })
+
+      const rankingsPath = path.join(
+        tempDir,
+        'snapshots',
+        date,
+        'all-districts-rankings.json'
+      )
+      const rankings = JSON.parse(await fs.readFile(rankingsPath, 'utf-8'))
+      const d61 = rankings.rankings.find(
+        (r: { districtId: string }) => r.districtId === '61'
+      )
+
+      // 2 of 3 clubs have ≥20 paid members
+      expect(d61.clubsWith20PlusMembers).toBe(2)
+    })
+
     it('should default missing prerequisite columns to false (legacy CSVs)', async () => {
       const date = '2024-01-15'
       const rawCsvDir = path.join(tempDir, 'raw-csv', date)
