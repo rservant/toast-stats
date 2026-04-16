@@ -342,4 +342,113 @@ U,Undistricted,50,45,11.11%,500,450,11.11%,50,5,2,1`
       expect(result.snapshotLocations).toContain(rankingsPath)
     })
   })
+
+  describe('District Recognition Prerequisites & Smedley (#329)', () => {
+    it('should parse prerequisite Y/N columns as booleans', async () => {
+      const date = '2024-01-15'
+      const rawCsvDir = path.join(tempDir, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+
+      // CSV with prerequisite columns (DSP, Training, Market Analysis, etc.)
+      const csvContent = `REGION,DISTRICT,DSP,Training,Market Analysis,Communication Plan,Region Advisor Visit,Paid Clubs,Paid Club Base,% Club Growth,Total YTD Payments,Payment Base,% Payment Growth,Active Clubs,Total Distinguished Clubs,Select Distinguished Clubs,Presidents Distinguished Clubs,Smedley Distinguished Clubs
+05,61,Y,Y,Y,Y,Y,144,156,-7.69%,5487,5764,-4.81%,159,37,14,7,5
+01,57,Y,Y,Y,Y,N,100,100,0%,1000,1000,0%,100,20,10,5,2`
+
+      await fs.writeFile(path.join(rawCsvDir, 'all-districts.csv'), csvContent)
+      await createDistrictDir(rawCsvDir, '61')
+      await createDistrictDir(rawCsvDir, '57')
+
+      await transformService.transform({ date, force: true })
+
+      const rankingsPath = path.join(
+        tempDir,
+        'snapshots',
+        date,
+        'all-districts-rankings.json'
+      )
+      const rankings = JSON.parse(await fs.readFile(rankingsPath, 'utf-8'))
+
+      const district61 = rankings.rankings.find(
+        (r: { districtId: string }) => r.districtId === '61'
+      )
+      const district57 = rankings.rankings.find(
+        (r: { districtId: string }) => r.districtId === '57'
+      )
+
+      // District 61: all prerequisites met
+      expect(district61.dspSubmitted).toBe(true)
+      expect(district61.trainingMet).toBe(true)
+      expect(district61.marketAnalysisSubmitted).toBe(true)
+      expect(district61.communicationPlanSubmitted).toBe(true)
+      expect(district61.regionAdvisorVisitMet).toBe(true)
+
+      // District 57: missing Region Advisor Visit
+      expect(district57.dspSubmitted).toBe(true)
+      expect(district57.trainingMet).toBe(true)
+      expect(district57.marketAnalysisSubmitted).toBe(true)
+      expect(district57.communicationPlanSubmitted).toBe(true)
+      expect(district57.regionAdvisorVisitMet).toBe(false)
+    })
+
+    it('should parse Smedley Distinguished Clubs count', async () => {
+      const date = '2024-01-15'
+      const rawCsvDir = path.join(tempDir, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+
+      const csvContent = `REGION,DISTRICT,DSP,Training,Market Analysis,Communication Plan,Region Advisor Visit,Paid Clubs,Paid Club Base,% Club Growth,Total YTD Payments,Payment Base,% Payment Growth,Active Clubs,Total Distinguished Clubs,Select Distinguished Clubs,Presidents Distinguished Clubs,Smedley Distinguished Clubs
+05,61,Y,Y,Y,Y,Y,144,156,-7.69%,5487,5764,-4.81%,159,37,14,7,5`
+
+      await fs.writeFile(path.join(rawCsvDir, 'all-districts.csv'), csvContent)
+      await createDistrictDir(rawCsvDir, '61')
+
+      await transformService.transform({ date, force: true })
+
+      const rankingsPath = path.join(
+        tempDir,
+        'snapshots',
+        date,
+        'all-districts-rankings.json'
+      )
+      const rankings = JSON.parse(await fs.readFile(rankingsPath, 'utf-8'))
+      const district61 = rankings.rankings.find(
+        (r: { districtId: string }) => r.districtId === '61'
+      )
+
+      expect(district61.smedleyDistinguished).toBe(5)
+    })
+
+    it('should default missing prerequisite columns to false (legacy CSVs)', async () => {
+      const date = '2024-01-15'
+      const rawCsvDir = path.join(tempDir, 'raw-csv', date)
+      await fs.mkdir(rawCsvDir, { recursive: true })
+
+      // Legacy CSV without prerequisite columns
+      const csvContent = `DISTRICT,REGION,Paid Clubs,Paid Club Base,% Club Growth,Total YTD Payments,Payment Base,% Payment Growth,Active Clubs,Total Distinguished Clubs,Select Distinguished Clubs,Presidents Distinguished Clubs
+42,Region 2,200,190,5.26%,2000,1900,5.26%,200,20,10,5`
+
+      await fs.writeFile(path.join(rawCsvDir, 'all-districts.csv'), csvContent)
+      await createDistrictDir(rawCsvDir, '42')
+
+      await transformService.transform({ date, force: true })
+
+      const rankingsPath = path.join(
+        tempDir,
+        'snapshots',
+        date,
+        'all-districts-rankings.json'
+      )
+      const rankings = JSON.parse(await fs.readFile(rankingsPath, 'utf-8'))
+      const d42 = rankings.rankings.find(
+        (r: { districtId: string }) => r.districtId === '42'
+      )
+
+      // Legacy CSVs should default to false (unknown = not met)
+      expect(d42.dspSubmitted).toBe(false)
+      expect(d42.trainingMet).toBe(false)
+      expect(d42.marketAnalysisSubmitted).toBe(false)
+      expect(d42.communicationPlanSubmitted).toBe(false)
+      expect(d42.regionAdvisorVisitMet).toBe(false)
+      expect(d42.smedleyDistinguished).toBe(0)
+    })
+  })
 })
