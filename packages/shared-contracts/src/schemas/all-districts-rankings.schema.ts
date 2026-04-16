@@ -76,6 +76,24 @@ export const DistrictRankingSchema = z.object({
 
   /** Overall rank position based on aggregate score (1 = best, pre-computed) */
   overallRank: z.number(),
+
+  /** Number of Smedley Distinguished clubs — new tier for 2025-2026 (#329) */
+  smedleyDistinguished: z.number().optional(),
+
+  /** District Success Plan submitted (Y/N from CSV) (#329) */
+  dspSubmitted: z.boolean().optional(),
+
+  /** 85% Director training completed (Y/N from CSV) (#329) */
+  trainingMet: z.boolean().optional(),
+
+  /** Market Analysis Plan submitted (Y/N from CSV) (#329) */
+  marketAnalysisSubmitted: z.boolean().optional(),
+
+  /** Communication Plan submitted (Y/N from CSV) (#329) */
+  communicationPlanSubmitted: z.boolean().optional(),
+
+  /** 2+ Region Advisor meetings completed (Y/N from CSV) (#329) */
+  regionAdvisorVisitMet: z.boolean().optional(),
 })
 
 /**

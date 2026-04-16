@@ -84,6 +84,14 @@ export interface AllDistrictsCSVRecord {
   'Total Distinguished Clubs': string
   'Select Distinguished Clubs': string
   'Presidents Distinguished Clubs'?: string
+  /** District Recognition Program prerequisites (Y/N) — added 2025-2026 (#329) */
+  DSP?: string
+  Training?: string
+  'Market Analysis'?: string
+  'Communication Plan'?: string
+  'Region Advisor Visit'?: string
+  /** Smedley Distinguished Clubs count — new tier for 2025-2026 (#329) */
+  'Smedley Distinguished Clubs'?: string
   [key: string]: string | undefined
 }
 

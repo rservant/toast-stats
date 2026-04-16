@@ -120,6 +120,17 @@ export interface DistrictRankingData {
   selectDistinguished: number
   presidentsDistinguished: number
 
+  // Smedley Distinguished Clubs count — new tier for 2025-2026 (#329)
+  smedleyDistinguished: number
+
+  // District Recognition Program prerequisites (#329)
+  // All five must be true for a district to qualify for any Distinguished tier
+  dspSubmitted: boolean
+  trainingMet: boolean
+  marketAnalysisSubmitted: boolean
+  communicationPlanSubmitted: boolean
+  regionAdvisorVisitMet: boolean
+
   // Regional information
   region: string
   districtName: string
@@ -145,6 +156,14 @@ export interface AllDistrictsCSVRecord {
   'Total Distinguished Clubs': string
   'Select Distinguished Clubs': string
   'Presidents Distinguished Clubs'?: string
+  /** District Recognition Program prerequisites (Y/N) — added 2025-2026 (#329) */
+  DSP?: string
+  Training?: string
+  'Market Analysis'?: string
+  'Communication Plan'?: string
+  'Region Advisor Visit'?: string
+  /** Smedley Distinguished Clubs count — new tier for 2025-2026 (#329) */
+  'Smedley Distinguished Clubs'?: string
   [key: string]: string | undefined
 }
 
@@ -194,6 +213,14 @@ interface RankingMetrics {
   activeClubs: number
   selectDistinguished: number
   presidentsDistinguished: number
+  // Smedley Distinguished Clubs count — new tier for 2025-2026 (#329)
+  smedleyDistinguished: number
+  // District Recognition Program prerequisites (#329)
+  dspSubmitted: boolean
+  trainingMet: boolean
+  marketAnalysisSubmitted: boolean
+  communicationPlanSubmitted: boolean
+  regionAdvisorVisitMet: boolean
 }
 
 /**
@@ -450,6 +477,14 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
           distinguishedRank: ranking.distinguishedRank,
           aggregateScore: ranking.aggregateScore,
           overallRank,
+          // Smedley Distinguished tier (#329)
+          smedleyDistinguished: ranking.smedleyDistinguished,
+          // District Recognition Program prerequisites (#329)
+          dspSubmitted: ranking.dspSubmitted,
+          trainingMet: ranking.trainingMet,
+          marketAnalysisSubmitted: ranking.marketAnalysisSubmitted,
+          communicationPlanSubmitted: ranking.communicationPlanSubmitted,
+          regionAdvisorVisitMet: ranking.regionAdvisorVisitMet,
         }
       }
     )
@@ -517,6 +552,22 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
           ),
           presidentsDistinguished: this.parseNumber(
             districtPerformance['Presidents Distinguished Clubs']
+          ),
+          // Smedley Distinguished Clubs — new tier for 2025-2026 (#329)
+          smedleyDistinguished: this.parseNumber(
+            districtPerformance['Smedley Distinguished Clubs']
+          ),
+          // District Recognition Program prerequisites (#329)
+          dspSubmitted: this.parseYesNo(districtPerformance['DSP']),
+          trainingMet: this.parseYesNo(districtPerformance['Training']),
+          marketAnalysisSubmitted: this.parseYesNo(
+            districtPerformance['Market Analysis']
+          ),
+          communicationPlanSubmitted: this.parseYesNo(
+            districtPerformance['Communication Plan']
+          ),
+          regionAdvisorVisitMet: this.parseYesNo(
+            districtPerformance['Region Advisor Visit']
           ),
         }
 
@@ -777,6 +828,14 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
         activeClubs: metric.activeClubs,
         selectDistinguished: metric.selectDistinguished,
         presidentsDistinguished: metric.presidentsDistinguished,
+        // Smedley Distinguished tier (#329)
+        smedleyDistinguished: metric.smedleyDistinguished,
+        // District Recognition Program prerequisites (#329)
+        dspSubmitted: metric.dspSubmitted,
+        trainingMet: metric.trainingMet,
+        marketAnalysisSubmitted: metric.marketAnalysisSubmitted,
+        communicationPlanSubmitted: metric.communicationPlanSubmitted,
+        regionAdvisorVisitMet: metric.regionAdvisorVisitMet,
         region: metric.region,
         districtName: metric.districtName,
         rankingVersion: this.RANKING_VERSION,
@@ -824,5 +883,19 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
     }
 
     return 0
+  }
+
+  /**
+   * Parse Y/N string into boolean (#329)
+   *
+   * Used for District Recognition Program prerequisite columns:
+   * DSP, Training, Market Analysis, Communication Plan, Region Advisor Visit.
+   *
+   * Defaults to false when the column is missing (legacy CSVs) or contains
+   * any value other than "Y" (case-insensitive).
+   */
+  private parseYesNo(value: string | number | null | undefined): boolean {
+    if (typeof value !== 'string') return false
+    return value.trim().toUpperCase() === 'Y'
   }
 }

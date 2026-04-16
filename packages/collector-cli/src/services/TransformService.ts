@@ -67,6 +67,14 @@ interface RankingMetrics {
   activeClubs: number
   selectDistinguished: number
   presidentsDistinguished: number
+  // Smedley Distinguished tier (#329)
+  smedleyDistinguished: number
+  // District Recognition Program prerequisites (#329)
+  dspSubmitted: boolean
+  trainingMet: boolean
+  marketAnalysisSubmitted: boolean
+  communicationPlanSubmitted: boolean
+  regionAdvisorVisitMet: boolean
 }
 
 /**
@@ -580,6 +588,20 @@ export class TransformService {
           presidentsDistinguished: this.parseNumber(
             record['Presidents Distinguished Clubs']
           ),
+          // Smedley Distinguished tier (#329)
+          smedleyDistinguished: this.parseNumber(
+            record['Smedley Distinguished Clubs']
+          ),
+          // District Recognition Program prerequisites (#329)
+          dspSubmitted: this.parseYesNo(record['DSP']),
+          trainingMet: this.parseYesNo(record['Training']),
+          marketAnalysisSubmitted: this.parseYesNo(record['Market Analysis']),
+          communicationPlanSubmitted: this.parseYesNo(
+            record['Communication Plan']
+          ),
+          regionAdvisorVisitMet: this.parseYesNo(
+            record['Region Advisor Visit']
+          ),
         }
 
         metrics.push(metric)
@@ -699,6 +721,20 @@ export class TransformService {
     const cleaned = value.replace(/,/g, '').trim()
     const parsed = parseInt(cleaned, 10)
     return isNaN(parsed) ? 0 : parsed
+  }
+
+  /**
+   * Parse Y/N string into boolean (#329)
+   *
+   * Used for District Recognition Program prerequisite columns:
+   * DSP, Training, Market Analysis, Communication Plan, Region Advisor Visit.
+   *
+   * Defaults to false when the column is missing (legacy CSVs) or contains
+   * any value other than "Y" (case-insensitive).
+   */
+  private parseYesNo(value: string | undefined): boolean {
+    if (!value) return false
+    return value.trim().toUpperCase() === 'Y'
   }
 
   /**
@@ -945,6 +981,14 @@ export class TransformService {
         distinguishedRank: aggregate.distinguishedRank,
         aggregateScore: aggregate.aggregateScore,
         overallRank: 0, // Will be set after sorting
+        // Smedley Distinguished tier (#329)
+        smedleyDistinguished: metric.smedleyDistinguished,
+        // District Recognition Program prerequisites (#329)
+        dspSubmitted: metric.dspSubmitted,
+        trainingMet: metric.trainingMet,
+        marketAnalysisSubmitted: metric.marketAnalysisSubmitted,
+        communicationPlanSubmitted: metric.communicationPlanSubmitted,
+        regionAdvisorVisitMet: metric.regionAdvisorVisitMet,
       })
     }
 

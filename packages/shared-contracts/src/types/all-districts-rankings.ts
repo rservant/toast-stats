@@ -74,6 +74,18 @@ export interface DistrictRanking {
   aggregateScore: number
   /** Overall rank position based on aggregate score (1 = best, pre-computed) */
   overallRank: number
+  /** Number of Smedley Distinguished clubs — new tier for 2025-2026 (#329) */
+  smedleyDistinguished?: number
+  /** District Success Plan submitted (Y/N from CSV) (#329) */
+  dspSubmitted?: boolean
+  /** 85% Director training completed (Y/N from CSV) (#329) */
+  trainingMet?: boolean
+  /** Market Analysis Plan submitted (Y/N from CSV) (#329) */
+  marketAnalysisSubmitted?: boolean
+  /** Communication Plan submitted (Y/N from CSV) (#329) */
+  communicationPlanSubmitted?: boolean
+  /** 2+ Region Advisor meetings completed (Y/N from CSV) (#329) */
+  regionAdvisorVisitMet?: boolean
 }
 
 /**
