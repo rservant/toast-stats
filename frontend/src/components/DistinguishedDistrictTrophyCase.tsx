@@ -36,6 +36,15 @@ export interface DistinguishedDistrictStatus {
 
 interface DistinguishedDistrictTrophyCaseProps {
   status: DistinguishedDistrictStatus | null
+  /** Club Strength Award qualification (#333) */
+  clubStrengthQualifies?: boolean | undefined
+  clubStrengthGrowth?: number | null | undefined
+  /** Leadership Excellence Award (#333) */
+  leadershipExcellenceQualifies?: boolean | undefined
+  leadershipExcellenceYears?: number | undefined
+  /** Officer Awards (#333) */
+  educationTrainingQualifies?: boolean | undefined
+  clubGrowthQualifies?: boolean | undefined
 }
 
 const TIER_LABELS: Record<DistinguishedDistrictTier, string> = {
@@ -84,7 +93,15 @@ const PREREQUISITE_LABELS: Record<
  */
 export const DistinguishedDistrictTrophyCase: React.FC<
   DistinguishedDistrictTrophyCaseProps
-> = ({ status }) => {
+> = ({
+  status,
+  clubStrengthQualifies,
+  clubStrengthGrowth,
+  leadershipExcellenceQualifies,
+  leadershipExcellenceYears,
+  educationTrainingQualifies,
+  clubGrowthQualifies,
+}) => {
   if (!status) return null
 
   const { currentTier, allPrerequisitesMet, prerequisites, nextTierGap } =
@@ -187,6 +204,58 @@ export const DistinguishedDistrictTrophyCase: React.FC<
               suffix=" clubs"
             />
           </ul>
+        </div>
+      )}
+
+      {/* Additional Awards (#333) */}
+      {(clubStrengthQualifies ||
+        leadershipExcellenceQualifies ||
+        educationTrainingQualifies ||
+        clubGrowthQualifies) && (
+        <div className="border-t border-gray-200 pt-4">
+          <h3 className="text-sm font-semibold text-gray-700 mb-2 font-tm-body">
+            Additional Awards Earned
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {clubStrengthQualifies && (
+              <span
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border bg-green-50 text-green-800 border-green-200"
+                title={`Club Strength Award — ${clubStrengthGrowth?.toFixed(1)}% avg club size growth`}
+              >
+                <span aria-hidden="true">💪</span>
+                Club Strength
+                {clubStrengthGrowth != null &&
+                  ` (+${clubStrengthGrowth.toFixed(1)}%)`}
+              </span>
+            )}
+            {leadershipExcellenceQualifies && (
+              <span
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border bg-purple-50 text-purple-800 border-purple-200"
+                title={`Leadership Excellence — ${leadershipExcellenceYears} consecutive Distinguished years`}
+              >
+                <span aria-hidden="true">⭐</span>
+                Leadership Excellence ({leadershipExcellenceYears}yr)
+              </span>
+            )}
+            {educationTrainingQualifies && (
+              <span
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border bg-blue-50 text-blue-800 border-blue-200"
+                title="Excellence in Education & Training (PQD)"
+              >
+                <span aria-hidden="true">🎓</span>
+                Education & Training (PQD)
+              </span>
+            )}
+            {clubGrowthQualifies && (
+              <span
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full border bg-teal-50 text-teal-800 border-teal-200"
+                title="Excellence in Club Growth (CGD)"
+              >
+                <span aria-hidden="true">📈</span>
+                Club Growth (CGD)
+              </span>
+            )}
+          </div>
         </div>
       )}
     </div>

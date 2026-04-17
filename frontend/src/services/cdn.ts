@@ -228,6 +228,53 @@ export interface CompetitiveAwardStandings {
   byDistrict: Record<string, CompetitiveAwardsByDistrict>
   /** Per-district Distinguished District tier status (#332) */
   distinguishedDistrict?: Record<string, DistinguishedDistrictStatus>
+  /** District Club Strength Award — 10%+ avg club size growth YoY (#333) */
+  clubStrengthAward?: {
+    qualifyingDistricts: Array<{
+      districtId: string
+      districtName: string
+      region: string
+      currentAvgClubSize: number
+      priorYearAvgClubSize: number | null
+      growthPercent: number | null
+      qualifies: boolean
+    }>
+    allDistricts: Array<{
+      districtId: string
+      growthPercent: number | null
+      qualifies: boolean
+    }>
+  }
+  /** District Leadership Excellence Award — 3+ consecutive Distinguished years (#333) */
+  leadershipExcellenceAward?: {
+    qualifyingDistricts: Array<{
+      districtId: string
+      districtName: string
+      region: string
+      consecutiveYears: number
+      qualifies: boolean
+    }>
+    allDistricts: Array<{
+      districtId: string
+      consecutiveYears: number
+      qualifies: boolean
+    }>
+  }
+  /** Officer Awards — PQD and CGD (#333) */
+  officerAwards?: {
+    educationTraining: Array<{
+      districtId: string
+      districtName: string
+      region: string
+      qualifies: boolean
+    }>
+    clubGrowth: Array<{
+      districtId: string
+      districtName: string
+      region: string
+      qualifies: boolean
+    }>
+  }
 }
 
 /**

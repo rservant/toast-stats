@@ -429,6 +429,40 @@ const DistrictDetailPage: React.FC = () => {
     return competitiveAwards.distinguishedDistrict[districtId] ?? null
   }, [districtId, competitiveAwards])
 
+  // Extract threshold + officer award results for this district (#333)
+  const clubStrengthResult = React.useMemo(() => {
+    if (!districtId || !competitiveAwards?.clubStrengthAward) return null
+    return (
+      competitiveAwards.clubStrengthAward.allDistricts.find(
+        d => d.districtId === districtId
+      ) ?? null
+    )
+  }, [districtId, competitiveAwards])
+
+  const leadershipExcellenceResult = React.useMemo(() => {
+    if (!districtId || !competitiveAwards?.leadershipExcellenceAward)
+      return null
+    return (
+      competitiveAwards.leadershipExcellenceAward.allDistricts.find(
+        d => d.districtId === districtId
+      ) ?? null
+    )
+  }, [districtId, competitiveAwards])
+
+  const officerAwardsResult = React.useMemo(() => {
+    if (!districtId || !competitiveAwards?.officerAwards) return null
+    return {
+      educationTraining:
+        competitiveAwards.officerAwards.educationTraining.find(
+          d => d.districtId === districtId
+        ) ?? null,
+      clubGrowth:
+        competitiveAwards.officerAwards.clubGrowth.find(
+          d => d.districtId === districtId
+        ) ?? null,
+    }
+  }, [districtId, competitiveAwards])
+
   // Determine if we have data for the overview tab
   // Use aggregated data if available, otherwise fall back to full analytics
   const hasOverviewData = overviewData !== null || analytics !== null
@@ -739,6 +773,20 @@ const DistrictDetailPage: React.FC = () => {
                 {/* Distinguished District Trophy Case (#332) */}
                 <DistinguishedDistrictTrophyCase
                   status={distinguishedDistrictStatus}
+                  clubStrengthQualifies={clubStrengthResult?.qualifies}
+                  clubStrengthGrowth={clubStrengthResult?.growthPercent}
+                  leadershipExcellenceQualifies={
+                    leadershipExcellenceResult?.qualifies
+                  }
+                  leadershipExcellenceYears={
+                    leadershipExcellenceResult?.consecutiveYears
+                  }
+                  educationTrainingQualifies={
+                    officerAwardsResult?.educationTraining?.qualifies
+                  }
+                  clubGrowthQualifies={
+                    officerAwardsResult?.clubGrowth?.qualifies
+                  }
                 />
 
                 {/* Distinguished Progress Chart - uses aggregated data for faster load */}
