@@ -513,6 +513,9 @@ const LandingPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Awards Race — competitive district awards (#331) */}
+        <AwardsRaceSection standings={competitiveAwards ?? null} />
+
         {/* Sort Controls + Region Filter Toolbar — compact (#83) */}
         <div className="bg-white rounded-lg shadow-md p-3 mb-3">
           <div className="flex items-center gap-2 mb-2 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 sm:pb-0 scrollbar-hide">
@@ -899,9 +902,6 @@ const LandingPage: React.FC = () => {
             </table>
           </div>
         </div>
-
-        {/* Awards Race — competitive district awards (#331) */}
-        <AwardsRaceSection standings={competitiveAwards ?? null} />
 
         {/* Historical Rank Progression — collapsed by default (#83) */}
         <details className="bg-white rounded-lg shadow-md mt-4">
