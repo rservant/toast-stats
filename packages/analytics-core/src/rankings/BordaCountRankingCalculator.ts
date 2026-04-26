@@ -56,8 +56,10 @@ function getProgramYearStartDate(snapshotDate: string): Date | null {
 }
 
 /**
- * Parse a date string in either ISO (YYYY-MM-DD) or US (M/D/YYYY or MM/DD/YYYY)
- * format and return a UTC-normalized Date. Returns null on failure.
+ * Parse a date string in ISO (YYYY-MM-DD), US 4-digit (M/D/YYYY), or US
+ * 2-digit (M/D/YY) format and return a UTC-normalized Date. Two-digit years
+ * are interpreted as 20YY — Toastmasters' district-performance CSVs use this
+ * for charter/suspend dates. Returns null on failure.
  */
 function parseDateFlexible(value: string): Date | null {
   const trimmed = value.trim()
@@ -74,18 +76,36 @@ function parseDateFlexible(value: string): Date | null {
     }
   }
 
-  // US format: M/D/YYYY or MM/DD/YYYY
-  const usMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  // US format: M/D/YY or M/D/YYYY (2-digit year → 20YY)
+  const usMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/)
   if (usMatch) {
     const m = Number(usMatch[1])
     const d = Number(usMatch[2])
-    const y = Number(usMatch[3])
+    const yRaw = Number(usMatch[3])
+    const y = usMatch[3]!.length === 2 ? 2000 + yRaw : yRaw
     if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
       return new Date(Date.UTC(y, m - 1, d))
     }
   }
 
   return null
+}
+
+/**
+ * Extract a charter date from a `Charter Date/Suspend Date` field value (#336).
+ *
+ * Toastmasters district-performance.csv encodes club status changes as a
+ * single string with a prefix and date: `Charter MM/DD/YY` for newly
+ * chartered clubs, `Susp MM/DD/YY` for suspensions. Returns null if the
+ * field is empty, prefixed `Susp`, or unparseable.
+ */
+function parseCharterDateFromStatusField(value: unknown): Date | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (trimmed === '') return null
+  const match = trimmed.match(/^Charter\s+(.+)$/i)
+  if (!match) return null
+  return parseDateFlexible(match[1]!)
 }
 
 /**
@@ -771,25 +791,26 @@ export class BordaCountRankingCalculator implements IRankingCalculator {
   /**
    * Count clubs chartered during the current program year (#336).
    *
-   * The Toastmasters program year runs July 1 → June 30. A club counts as a
-   * "new charter this year" if its Charter Date falls on or after the most
-   * recent July 1 preceding the snapshot.
+   * The Toastmasters program year runs July 1 → June 30. The signal lives in
+   * district-performance.csv under the `Charter Date/Suspend Date` column —
+   * values like `Charter 04/15/26` (new charter) or `Susp 09/30/25`
+   * (suspension). Only Charter entries with date ≥ PY start are counted.
    *
    * Used to exclude new charters from the District Club Retention Award
    * numerator so retention measures base-club survival rather than extension.
    */
   private countNewCharteredClubs(
-    clubPerformance: Array<Record<string, string | number | null>>,
+    rows: Array<Record<string, string | number | null>>,
     snapshotDate: string
   ): number {
     const programYearStart = getProgramYearStartDate(snapshotDate)
     if (!programYearStart) return 0
 
     let count = 0
-    for (const club of clubPerformance) {
-      const raw = club['Charter Date'] ?? club['Chartered']
-      if (typeof raw !== 'string' || raw.trim() === '') continue
-      const chartered = parseDateFlexible(raw)
+    for (const row of rows) {
+      const chartered = parseCharterDateFromStatusField(
+        row['Charter Date/Suspend Date']
+      )
       if (chartered && chartered >= programYearStart) count++
     }
     return count

@@ -60,8 +60,10 @@ import {
 import { DistrictAwardsHistoryStore } from './DistrictAwardsHistoryStore.js'
 
 /**
- * Parse a date string in either ISO (YYYY-MM-DD) or US (M/D/YYYY) format
- * and return a UTC-normalized Date. Returns null on failure. (#336)
+ * Parse a date string in ISO (YYYY-MM-DD), US 4-digit (M/D/YYYY), or US
+ * 2-digit (M/D/YY) format and return a UTC-normalized Date. Returns null on
+ * failure. Two-digit years are interpreted as 20YY — Toastmasters' district
+ * performance CSVs use this for charter/suspend dates (#336).
  */
 function parseDateFlexible(value: string): Date | null {
   const trimmed = value.trim()
@@ -77,17 +79,35 @@ function parseDateFlexible(value: string): Date | null {
     }
   }
 
-  const usMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  const usMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/)
   if (usMatch) {
     const m = Number(usMatch[1])
     const d = Number(usMatch[2])
-    const y = Number(usMatch[3])
+    const yRaw = Number(usMatch[3])
+    const y = usMatch[3]!.length === 2 ? 2000 + yRaw : yRaw
     if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
       return new Date(Date.UTC(y, m - 1, d))
     }
   }
 
   return null
+}
+
+/**
+ * Extract a charter date from a `Charter Date/Suspend Date` field value (#336).
+ *
+ * Toastmasters district-performance.csv encodes club status changes as a
+ * single string with a prefix and date: `Charter MM/DD/YY` for newly
+ * chartered clubs, `Susp MM/DD/YY` for suspensions. Returns null if the
+ * field is empty, prefixed `Susp`, or unparseable.
+ */
+function parseCharterDateFromStatusField(value: unknown): Date | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (trimmed === '') return null
+  const match = trimmed.match(/^Charter\s+(.+)$/i)
+  if (!match) return null
+  return parseDateFlexible(match[1]!)
 }
 
 /**
@@ -959,44 +979,59 @@ export class TransformService {
       return null
     }
 
-    // Aggregate per-district club data from club-performance CSVs:
-    // - clubsWith20PlusMembers (#330) — always computed for 20-Plus Award
-    // - newCharteredClubs (#336) — for District Club Retention Award
+    // Aggregate per-district club data from per-district CSVs:
+    // - clubsWith20PlusMembers (#330) — from club-performance.csv
+    // - newCharteredClubs (#336) — from district-performance.csv (status column)
     // - confirmed Distinguished count (#304) — only when all districts report 0
     const allZeroDistinguished = metrics.every(m => m.distinguishedClubs === 0)
     const programYearStart = getProgramYearStartDate(date)
     for (const metric of metrics) {
       try {
-        const csvPath = path.join(
+        const districtDir = path.join(
           this.cacheDir,
           'raw-csv',
           date,
-          `district-${metric.districtId}`,
-          'club-performance.csv'
+          `district-${metric.districtId}`
         )
+        const csvPath = path.join(districtDir, 'club-performance.csv')
         const content = await fs.readFile(csvPath, 'utf-8').catch(() => null)
         if (!content) continue
         const clubs = this.parseCSVToRecords(content)
 
         // Always count clubs with 20+ paid members for President's 20-Plus Award (#330)
         let twentyPlus = 0
-        let newCharters = 0
         for (const club of clubs) {
           const members = this.parseNumber(
             club['Active Members'] ?? club['Membership'] ?? club['Paid Members']
           )
           if (members >= 20) twentyPlus++
-
-          if (programYearStart) {
-            const raw = club['Charter Date'] ?? club['Chartered']
-            if (typeof raw === 'string' && raw.trim() !== '') {
-              const chartered = parseDateFlexible(raw)
-              if (chartered && chartered >= programYearStart) newCharters++
-            }
-          }
         }
         metric.clubsWith20PlusMembers = twentyPlus
-        metric.newCharteredClubs = newCharters
+
+        // Count newly chartered clubs from district-performance.csv (#336).
+        // The 'Charter Date/Suspend Date' column carries values like
+        // 'Charter 04/15/26' (new charter) or 'Susp 09/30/25' (suspension);
+        // we count only Charter entries whose date falls in the current PY.
+        if (programYearStart) {
+          const districtPerfPath = path.join(
+            districtDir,
+            'district-performance.csv'
+          )
+          const districtContent = await fs
+            .readFile(districtPerfPath, 'utf-8')
+            .catch(() => null)
+          if (districtContent) {
+            const rows = this.parseCSVToRecords(districtContent)
+            let newCharters = 0
+            for (const row of rows) {
+              const chartered = parseCharterDateFromStatusField(
+                row['Charter Date/Suspend Date']
+              )
+              if (chartered && chartered >= programYearStart) newCharters++
+            }
+            metric.newCharteredClubs = newCharters
+          }
+        }
 
         // Compute confirmed Distinguished only when all districts report 0 (#304)
         if (allZeroDistinguished) {
