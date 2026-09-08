@@ -90,20 +90,35 @@ export function parseCensusNumber(value: unknown): number | undefined {
 }
 
 /**
- * A branch-encoded cell — `Susp 03/31/22` — split into its leading token and
- * the rest, or `undefined` when the cell is not of that shape.
+ * Every branch a cell carries. `Susp 03/31/22` → `['Susp']`;
+ * `Charter 09/30/25 Susp 03/31/26` → `['Charter', 'Susp']`; anything that is
+ * not wholly made of `<Word> <value-with-a-digit>` pairs → `[]`.
  *
- * Deliberately narrow: EXACTLY two whitespace-separated tokens, the first a
- * short alphabetic word. `Limestone City Club` (three tokens) and `Active`
- * (one) both fail, which is what keeps free-text and status columns from
- * being read as branch encodings.
+ * The two-branch form is live data, not a hypothetical: a club that charters
+ * and is suspended inside one program year gets both stamps in one cell (19
+ * such rows at 2026-06-30, 5 at 2022-06-30). The census's first archive run
+ * missed the whole #1514 `Susp` signature because an earlier, stricter
+ * "exactly two tokens" reading classified those cells as non-branch, which
+ * switched branch detection off for the column.
+ *
+ * The digit requirement on the value half is what keeps free text out:
+ * `Toastmasters Club` and `Division A` decompose into word pairs but carry no
+ * digit, while every real branch here stamps a date.
  */
-export function parseBranchToken(
-  value: unknown
-): { branch: string; rest: string } | undefined {
-  if (value === null || value === undefined) return undefined
-  const match = /^([A-Za-z][A-Za-z.]{0,15})\s+(\S+)$/.exec(String(value).trim())
-  return match ? { branch: match[1]!, rest: match[2]! } : undefined
+export function parseBranchTokens(value: unknown): string[] {
+  if (value === null || value === undefined) return []
+  const tokens = String(value).trim().split(/\s+/)
+  if (tokens.length < 2 || tokens.length % 2 !== 0) return []
+
+  const branches: string[] = []
+  for (let i = 0; i < tokens.length; i += 2) {
+    const word = tokens[i]!
+    const datum = tokens[i + 1]!
+    if (!/^[A-Za-z][A-Za-z.]{0,15}$/.test(word)) return []
+    if (!/\d/.test(datum)) return []
+    branches.push(word)
+  }
+  return branches
 }
 
 /** Per-column tallies for one population at one date. */
@@ -114,9 +129,12 @@ export interface ColumnCounters {
   numeric: number
   /** Rows where that number is non-zero — the count being guarded. */
   nonZeroNumeric: number
-  /** Non-numeric two-token values, tallied by leading token. */
+  /**
+   * Non-numeric branch-encoded values, tallied by leading token. A cell
+   * carrying two branches increments both (`parseBranchTokens`).
+   */
   branchTokens: Record<string, number>
-  /** Non-empty, non-numeric values that are NOT two-token — free text. */
+  /** Non-empty, non-numeric values that carry no branch at all — free text. */
   nonBranchNonEmpty: number
 }
 
@@ -169,10 +187,12 @@ export function measureRows(
         continue
       }
 
-      const branch = parseBranchToken(raw)
-      if (branch) {
-        counters.branchTokens[branch.branch] =
-          (counters.branchTokens[branch.branch] ?? 0) + 1
+      const branches = parseBranchTokens(raw)
+      if (branches.length > 0) {
+        for (const branch of branches) {
+          counters.branchTokens[branch] =
+            (counters.branchTokens[branch] ?? 0) + 1
+        }
       } else {
         counters.nonBranchNonEmpty += 1
       }
@@ -183,6 +203,19 @@ export function measureRows(
 
 /** Maximum distinct leading tokens a column may have and still be a branch. */
 const MAX_BRANCH_TOKENS = 8
+
+/**
+ * Share of a column's non-numeric, non-empty values that must decompose into
+ * branches for the column to count as branch-encoded.
+ *
+ * Deliberately NOT 1.0. Requiring purity is what let a handful of unparsed
+ * cells switch branch detection off for the whole `Charter Date/Suspend Date`
+ * column and drop the #1514 signature out of the census without a word — the
+ * silent-narrowing failure this issue exists to find. Measured against the
+ * archive after the two-branch fix the real rate is 100% on all 181 dates, so
+ * the 5% slack costs nothing and buys tolerance for one malformed row.
+ */
+const BRANCH_DOMINANCE = 0.95
 
 /**
  * Turn a whole archive's measurements into the classifier's input.
@@ -217,12 +250,14 @@ export function buildFieldPopulationStats(
         const traits = columns.get(column) ?? {
           numericAnywhere: 0,
           nonBranchNonEmpty: 0,
+          branchTokenCount: 0,
           branches: new Set<string>(),
         }
         traits.numericAnywhere += counters.numeric
         traits.nonBranchNonEmpty += counters.nonBranchNonEmpty
-        for (const token of Object.keys(counters.branchTokens)) {
+        for (const [token, count] of Object.entries(counters.branchTokens)) {
           traits.branches.add(token)
+          traits.branchTokenCount += count
         }
         columns.set(column, traits)
       }
@@ -275,21 +310,26 @@ export function buildFieldPopulationStats(
 interface ColumnTraits {
   numericAnywhere: number
   nonBranchNonEmpty: number
+  /**
+   * Branch tallies summed over every token. A cell carrying two branches
+   * counts twice, so this is an upper bound on the number of branch CELLS —
+   * which only ever makes the dominance ratio more generous, never stricter.
+   */
+  branchTokenCount: number
   branches: Set<string>
 }
 
 /**
- * A column is branch-encoded when every non-empty, non-numeric value it has
- * ever held is a two-token `<Word> <rest>` and there are only a handful of
- * distinct leading words. Free text fails on `nonBranchNonEmpty`; a column of
- * arbitrary two-word names fails on the token cap.
+ * A column is branch-encoded when nearly every non-empty, non-numeric value
+ * it has ever held decomposes into `<Word> <value>` branches, and there are
+ * only a handful of distinct leading words. Free text fails the dominance
+ * ratio; a column of arbitrary two-word names fails the token cap.
  */
 function isBranchEncoded(traits: ColumnTraits): boolean {
-  return (
-    traits.branches.size > 0 &&
-    traits.branches.size <= MAX_BRANCH_TOKENS &&
-    traits.nonBranchNonEmpty === 0
-  )
+  if (traits.branches.size === 0) return false
+  if (traits.branches.size > MAX_BRANCH_TOKENS) return false
+  const nonNumericValues = traits.branchTokenCount + traits.nonBranchNonEmpty
+  return traits.branchTokenCount / nonNumericValues >= BRANCH_DOMINANCE
 }
 
 /** What one (date, field) population measurement says about its zeros. */
