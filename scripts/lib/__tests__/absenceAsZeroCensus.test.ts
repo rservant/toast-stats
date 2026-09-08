@@ -31,6 +31,7 @@ import {
   formatCoverageTable,
   formatFindings,
   measureRows,
+  parseBranchTokens,
   parseCensusNumber,
   sourceFieldName,
   suspectedAbsences,
@@ -630,5 +631,109 @@ describe('buildFieldPopulationStats', () => {
       'districtPerformance.Charter Date/Suspend Date[Susp]@2023-06-30',
       'districtPerformance.Oct. Ren.@2023-06-30',
     ])
+  })
+})
+
+// ───────────────────────────────────────────────────────────────────────────
+// Ground truth, and the bug it found (#1534).
+//
+// The census's first run against the real archive did NOT rediscover the
+// #1514 `Susp` signature. The reason was in the tokenizer, not the rule: the
+// live `Charter Date/Suspend Date` column carries cells that hold BOTH
+// branches at once — `Charter 09/30/25 Susp 03/31/26`, a club chartered and
+// suspended inside one program year. 19 such cells at 2026-06-30 and 5 at
+// 2022-06-30 were counted as "not a branch encoding", which switched branch
+// detection off for the whole column and dropped it from the census silently.
+//
+// That is the exact failure this issue exists to prevent, reproduced in the
+// detector itself: a shape the code did not anticipate becomes invisible
+// rather than loud. These tests pin the fix.
+// ───────────────────────────────────────────────────────────────────────────
+
+describe('branch tokenizing (the #1534 ground-truth bug)', () => {
+  it('reads BOTH branches out of a cell that carries both', () => {
+    expect(parseBranchTokens('Charter 09/30/25 Susp 03/31/26')).toEqual([
+      'Charter',
+      'Susp',
+    ])
+  })
+
+  it('still reads a single-branch cell', () => {
+    expect(parseBranchTokens('Susp 03/31/22')).toEqual(['Susp'])
+    expect(parseBranchTokens('Area 01')).toEqual(['Area'])
+  })
+
+  it('requires each branch value to carry a digit, so free text is not a branch', () => {
+    expect(parseBranchTokens('Limestone City Club')).toEqual([])
+    expect(parseBranchTokens('Toastmasters Club')).toEqual([])
+    expect(parseBranchTokens('Division A')).toEqual([])
+    expect(parseBranchTokens('Active')).toEqual([])
+    expect(parseBranchTokens('')).toEqual([])
+  })
+
+  it('counts a two-branch cell under both branches', () => {
+    const measurement = measureRows([
+      { 'Charter Date/Suspend Date': 'Charter 09/30/25 Susp 03/31/26' },
+      { 'Charter Date/Suspend Date': 'Susp 03/31/26' },
+    ])
+
+    expect(measurement.columns['Charter Date/Suspend Date']).toMatchObject({
+      branchTokens: { Charter: 1, Susp: 2 },
+      nonBranchNonEmpty: 0,
+    })
+  })
+
+  it('keeps branch detection on when a handful of cells do not parse — one stray value must never silently switch the census off', () => {
+    const measurements: DateMeasurement[] = [
+      {
+        date: '2026-06-30',
+        districtsRead: 1,
+        populations: {
+          districtPerformance: {
+            rows: 1000,
+            columns: {
+              'Charter Date/Suspend Date': {
+                present: 200,
+                numeric: 0,
+                nonZeroNumeric: 0,
+                branchTokens: { Charter: 120, Susp: 78 },
+                // 1% junk: below the dominance threshold, so the column is
+                // still branch-encoded.
+                nonBranchNonEmpty: 2,
+              },
+            },
+          },
+        },
+      },
+    ]
+
+    expect(buildFieldPopulationStats(measurements).map(s => s.field)).toContain(
+      'districtPerformance.Charter Date/Suspend Date[Susp]'
+    )
+  })
+
+  it('turns branch detection off when most values are not branches', () => {
+    const measurements: DateMeasurement[] = [
+      {
+        date: '2026-06-30',
+        districtsRead: 1,
+        populations: {
+          clubPerformance: {
+            rows: 1000,
+            columns: {
+              'Club Name': {
+                present: 1000,
+                numeric: 0,
+                nonZeroNumeric: 0,
+                branchTokens: { Club: 3 },
+                nonBranchNonEmpty: 997,
+              },
+            },
+          },
+        },
+      },
+    ]
+
+    expect(buildFieldPopulationStats(measurements)).toEqual([])
   })
 })
