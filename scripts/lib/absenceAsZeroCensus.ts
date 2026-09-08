@@ -65,6 +65,233 @@
  * `scripts/absence-as-zero-census.ts`.
  */
 
+// ───────────────────────────────────────────────────────────────────────────
+// The measurement layer: raw snapshot rows → population counts.
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * The number `extractNumber` would have read from this cell, or `undefined`
+ * when the cell carries no number at all.
+ *
+ * Deliberately the SAME `parseInt` semantics as
+ * `DataTransformer.extractNumber` — the census must measure what the pipeline
+ * sees, not what a stricter parser would. The one difference is the return
+ * shape: `undefined` where the transformer would fall through to its `0`.
+ * That difference is the entire point of the census.
+ */
+export function parseCensusNumber(value: unknown): number | undefined {
+  if (value === null || value === undefined) return undefined
+  if (typeof value === 'number')
+    return Number.isFinite(value) ? value : undefined
+  const text = String(value).trim()
+  if (text === '') return undefined
+  const parsed = Number.parseInt(text, 10)
+  return Number.isNaN(parsed) ? undefined : parsed
+}
+
+/**
+ * A branch-encoded cell — `Susp 03/31/22` — split into its leading token and
+ * the rest, or `undefined` when the cell is not of that shape.
+ *
+ * Deliberately narrow: EXACTLY two whitespace-separated tokens, the first a
+ * short alphabetic word. `Limestone City Club` (three tokens) and `Active`
+ * (one) both fail, which is what keeps free-text and status columns from
+ * being read as branch encodings.
+ */
+export function parseBranchToken(
+  value: unknown
+): { branch: string; rest: string } | undefined {
+  if (value === null || value === undefined) return undefined
+  const match = /^([A-Za-z][A-Za-z.]{0,15})\s+(\S+)$/.exec(String(value).trim())
+  return match ? { branch: match[1]!, rest: match[2]! } : undefined
+}
+
+/** Per-column tallies for one population at one date. */
+export interface ColumnCounters {
+  /** Rows where the key exists with a non-empty value. */
+  present: number
+  /** Rows where the value parses as a number — the numeric presence signal. */
+  numeric: number
+  /** Rows where that number is non-zero — the count being guarded. */
+  nonZeroNumeric: number
+  /** Non-numeric two-token values, tallied by leading token. */
+  branchTokens: Record<string, number>
+  /** Non-empty, non-numeric values that are NOT two-token — free text. */
+  nonBranchNonEmpty: number
+}
+
+/** One population (a raw array or the typed `clubs[]`) at one date. */
+export interface PopulationMeasurement {
+  rows: number
+  columns: Record<string, ColumnCounters>
+}
+
+/** Everything measured at one snapshot date, across every population. */
+export interface DateMeasurement {
+  readonly date: string
+  /** How many district snapshots contributed — reported, never a verdict. */
+  readonly districtsRead: number
+  readonly populations: Record<string, PopulationMeasurement>
+}
+
+function emptyCounters(): ColumnCounters {
+  return {
+    present: 0,
+    numeric: 0,
+    nonZeroNumeric: 0,
+    branchTokens: {},
+    nonBranchNonEmpty: 0,
+  }
+}
+
+/**
+ * Tally one population's rows. Every key seen on ANY row becomes a column;
+ * rows that lack it simply do not increment it, which is exactly how an
+ * absent column ends up with `numeric: 0` against a full `rows` count.
+ */
+export function measureRows(
+  rows: readonly Record<string, unknown>[],
+  into: PopulationMeasurement = { rows: 0, columns: {} }
+): PopulationMeasurement {
+  for (const row of rows) {
+    into.rows += 1
+    for (const [key, raw] of Object.entries(row)) {
+      const counters = (into.columns[key] ??= emptyCounters())
+      if (raw === null || raw === undefined) continue
+      const text = typeof raw === 'number' ? String(raw) : String(raw).trim()
+      if (text === '') continue
+      counters.present += 1
+
+      const numeric = parseCensusNumber(raw)
+      if (numeric !== undefined) {
+        counters.numeric += 1
+        if (numeric !== 0) counters.nonZeroNumeric += 1
+        continue
+      }
+
+      const branch = parseBranchToken(raw)
+      if (branch) {
+        counters.branchTokens[branch.branch] =
+          (counters.branchTokens[branch.branch] ?? 0) + 1
+      } else {
+        counters.nonBranchNonEmpty += 1
+      }
+    }
+  }
+  return into
+}
+
+/** Maximum distinct leading tokens a column may have and still be a branch. */
+const MAX_BRANCH_TOKENS = 8
+
+/**
+ * Turn a whole archive's measurements into the classifier's input.
+ *
+ * Three rules, each of which the census would be blind without:
+ *
+ * 1. **Every column is emitted at EVERY date the population exists**, even
+ *    dates where the key never appeared. A vanished column that is simply
+ *    skipped produces no row and therefore no finding — the silent narrowing
+ *    this whole issue is about.
+ * 2. **A column that is never numeric anywhere is not emitted** as a numeric
+ *    field. `Club Name` is not a metric and would only add `no-signal` noise.
+ * 3. **A branch-encoded column is emitted per branch**, and the whole column
+ *    is not emitted as a number. `Charter Date/Suspend Date` is present on
+ *    all ten program years — the #1514 gap only exists at branch
+ *    granularity, so that is the granularity the census measures.
+ */
+export function buildFieldPopulationStats(
+  measurements: readonly DateMeasurement[]
+): FieldPopulationStats[] {
+  // Which (population, column) pairs exist anywhere, and how they behave
+  // ARCHIVE-WIDE. Branch-encoding is a property of the column, not of one
+  // date: a date where the branch is missing must still be measured.
+  const columnsByPopulation = new Map<string, Map<string, ColumnTraits>>()
+
+  for (const measurement of measurements) {
+    for (const [population, pop] of Object.entries(measurement.populations)) {
+      const columns =
+        columnsByPopulation.get(population) ?? new Map<string, ColumnTraits>()
+      columnsByPopulation.set(population, columns)
+      for (const [column, counters] of Object.entries(pop.columns)) {
+        const traits = columns.get(column) ?? {
+          numericAnywhere: 0,
+          nonBranchNonEmpty: 0,
+          branches: new Set<string>(),
+        }
+        traits.numericAnywhere += counters.numeric
+        traits.nonBranchNonEmpty += counters.nonBranchNonEmpty
+        for (const token of Object.keys(counters.branchTokens)) {
+          traits.branches.add(token)
+        }
+        columns.set(column, traits)
+      }
+    }
+  }
+
+  const stats: FieldPopulationStats[] = []
+
+  for (const measurement of measurements) {
+    for (const [population, columns] of columnsByPopulation) {
+      const pop = measurement.populations[population]
+      if (!pop) continue // the population itself is absent at this date
+
+      for (const [column, traits] of columns) {
+        const counters = pop.columns[column]
+        const field = `${population}.${column}`
+
+        if (isBranchEncoded(traits)) {
+          for (const branch of traits.branches) {
+            const carried = counters?.branchTokens[branch] ?? 0
+            stats.push({
+              date: measurement.date,
+              field: `${field}[${branch}]`,
+              rowsTotal: pop.rows,
+              rowsCarryingField: carried,
+              rowsNonZero: carried,
+            })
+          }
+          continue
+        }
+
+        if (traits.numericAnywhere === 0) continue
+
+        stats.push({
+          date: measurement.date,
+          field,
+          rowsTotal: pop.rows,
+          rowsCarryingField: counters?.numeric ?? 0,
+          rowsNonZero: counters?.nonZeroNumeric ?? 0,
+        })
+      }
+    }
+  }
+
+  return stats.sort(
+    (a, b) => a.field.localeCompare(b.field) || a.date.localeCompare(b.date)
+  )
+}
+
+interface ColumnTraits {
+  numericAnywhere: number
+  nonBranchNonEmpty: number
+  branches: Set<string>
+}
+
+/**
+ * A column is branch-encoded when every non-empty, non-numeric value it has
+ * ever held is a two-token `<Word> <rest>` and there are only a handful of
+ * distinct leading words. Free text fails on `nonBranchNonEmpty`; a column of
+ * arbitrary two-word names fails on the token cap.
+ */
+function isBranchEncoded(traits: ColumnTraits): boolean {
+  return (
+    traits.branches.size > 0 &&
+    traits.branches.size <= MAX_BRANCH_TOKENS &&
+    traits.nonBranchNonEmpty === 0
+  )
+}
+
 /** What one (date, field) population measurement says about its zeros. */
 export type AbsenceVerdict =
   /** At least one row carries a non-zero value. Never a finding. */
