@@ -23,15 +23,19 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import {
+  buildFieldPopulationStats,
   CENSUS_ROW_FLOOR,
   classifyAbsenceAsZero,
   correlateTypedFieldAbsence,
   EXTRACT_NUMBER_SOURCE_KEYS,
   formatCoverageTable,
   formatFindings,
+  measureRows,
+  parseCensusNumber,
   sourceFieldName,
   suspectedAbsences,
   typedFieldName,
+  type DateMeasurement,
   type FieldPopulationStats,
 } from '../absenceAsZeroCensus.js'
 
@@ -423,5 +427,208 @@ describe('reporting', () => {
     expect(findings).toContain('districtPerformance.Susp')
     expect(findings).toContain('2023-06-30')
     expect(findings).toContain('17250')
+  })
+})
+
+// ───────────────────────────────────────────────────────────────────────────
+// The measurement layer: how raw snapshot rows become population counts.
+//
+// The classifier is only as good as its inputs, so the counting rules are
+// pinned here too. Two of them are load-bearing:
+//
+//   - "carried" must mean the SOURCE COLUMN IS THERE, not "the value is
+//     truthy". A column of literal zeros is carried; a missing column is not.
+//   - a branch-encoded column (`Charter Date/Suspend Date`) must be counted
+//     PER BRANCH, because that is the granularity the #1514 gap has. Counting
+//     the column as a whole hides it: the column is present on all ten years.
+// ───────────────────────────────────────────────────────────────────────────
+
+describe('parseCensusNumber', () => {
+  it('parses the same values extractNumber would', () => {
+    expect(parseCensusNumber('12')).toBe(12)
+    expect(parseCensusNumber(9)).toBe(9)
+    expect(parseCensusNumber('0')).toBe(0)
+  })
+
+  it('treats an empty or absent cell as not carrying the field', () => {
+    expect(parseCensusNumber('')).toBeUndefined()
+    expect(parseCensusNumber('   ')).toBeUndefined()
+    expect(parseCensusNumber(null)).toBeUndefined()
+    expect(parseCensusNumber(undefined)).toBeUndefined()
+  })
+
+  it('treats a non-numeric cell as not carrying the field', () => {
+    expect(parseCensusNumber('Susp 03/31/22')).toBeUndefined()
+    expect(parseCensusNumber('Limestone City Club')).toBeUndefined()
+  })
+})
+
+describe('measureRows', () => {
+  it('counts a literal zero as carried — the distinction the whole census rests on', () => {
+    const measurement = measureRows([
+      { 'Apr. Ren.': '0' },
+      { 'Apr. Ren.': '0' },
+    ])
+
+    expect(measurement.rows).toBe(2)
+    expect(measurement.columns['Apr. Ren.']).toMatchObject({
+      numeric: 2,
+      nonZeroNumeric: 0,
+    })
+  })
+
+  it('counts a missing column as carried by nobody', () => {
+    const measurement = measureRows([{ 'Active Members': '9' }, {}])
+
+    expect(measurement.columns['Active Members']).toMatchObject({
+      numeric: 1,
+      nonZeroNumeric: 1,
+    })
+  })
+
+  it('splits a branch-encoded column by its leading token', () => {
+    const measurement = measureRows([
+      { 'Charter Date/Suspend Date': 'Susp 03/31/22' },
+      { 'Charter Date/Suspend Date': 'Charter 06/30/22' },
+      { 'Charter Date/Suspend Date': 'Susp 10/01/21' },
+      { 'Charter Date/Suspend Date': '' },
+    ])
+
+    expect(measurement.columns['Charter Date/Suspend Date']).toMatchObject({
+      branchTokens: { Susp: 2, Charter: 1 },
+      nonBranchNonEmpty: 0,
+    })
+  })
+
+  it('does not mistake free text for a branch encoding', () => {
+    const measurement = measureRows([
+      { 'Club Name': 'Limestone City Club' },
+      { 'Club Name': 'Toastmasters Club' },
+    ])
+
+    expect(measurement.columns['Club Name']!.nonBranchNonEmpty).toBeGreaterThan(
+      0
+    )
+  })
+})
+
+describe('buildFieldPopulationStats', () => {
+  /** Two dates: the second has lost the `Susp` branch entirely. */
+  const measurements: DateMeasurement[] = [
+    {
+      date: '2022-06-30',
+      districtsRead: 125,
+      populations: {
+        districtPerformance: {
+          rows: 3,
+          columns: {
+            'Charter Date/Suspend Date': {
+              present: 2,
+              numeric: 0,
+              nonZeroNumeric: 0,
+              branchTokens: { Susp: 1, Charter: 1 },
+              nonBranchNonEmpty: 0,
+            },
+            'Oct. Ren.': {
+              present: 3,
+              numeric: 3,
+              nonZeroNumeric: 3,
+              branchTokens: {},
+              nonBranchNonEmpty: 0,
+            },
+          },
+        },
+      },
+    },
+    {
+      date: '2023-06-30',
+      districtsRead: 126,
+      populations: {
+        districtPerformance: {
+          rows: 3,
+          columns: {
+            'Charter Date/Suspend Date': {
+              present: 1,
+              numeric: 0,
+              nonZeroNumeric: 0,
+              branchTokens: { Charter: 1 },
+              nonBranchNonEmpty: 0,
+            },
+          },
+        },
+      },
+    },
+  ]
+
+  it('emits a per-branch field for a branch-encoded column, at every date', () => {
+    const stats = buildFieldPopulationStats(measurements)
+    const susp = stats.filter(
+      s => s.field === 'districtPerformance.Charter Date/Suspend Date[Susp]'
+    )
+
+    expect(susp).toEqual([
+      {
+        date: '2022-06-30',
+        field: 'districtPerformance.Charter Date/Suspend Date[Susp]',
+        rowsTotal: 3,
+        rowsCarryingField: 1,
+        rowsNonZero: 1,
+      },
+      {
+        date: '2023-06-30',
+        field: 'districtPerformance.Charter Date/Suspend Date[Susp]',
+        rowsTotal: 3,
+        rowsCarryingField: 0,
+        rowsNonZero: 0,
+      },
+    ])
+  })
+
+  it('emits a zero-carry measurement for a numeric column that has vanished from a date — an absent column must be measured, not skipped', () => {
+    const stats = buildFieldPopulationStats(measurements)
+    const octRen = stats.filter(
+      s => s.field === 'districtPerformance.Oct. Ren.'
+    )
+
+    expect(octRen).toEqual([
+      {
+        date: '2022-06-30',
+        field: 'districtPerformance.Oct. Ren.',
+        rowsTotal: 3,
+        rowsCarryingField: 3,
+        rowsNonZero: 3,
+      },
+      {
+        date: '2023-06-30',
+        field: 'districtPerformance.Oct. Ren.',
+        rowsTotal: 3,
+        rowsCarryingField: 0,
+        rowsNonZero: 0,
+      },
+    ])
+  })
+
+  it('does not emit a numeric field for a column that is never numeric anywhere', () => {
+    const stats = buildFieldPopulationStats(measurements)
+
+    expect(
+      stats.some(
+        s => s.field === 'districtPerformance.Charter Date/Suspend Date'
+      )
+    ).toBe(false)
+  })
+
+  it('produces the #1514 verdict end to end — measurements in, suspected-absence out', () => {
+    const verdicts = classifyAbsenceAsZero(
+      buildFieldPopulationStats(measurements),
+      { rowFloor: 1 }
+    )
+
+    expect(
+      suspectedAbsences(verdicts).map(v => `${v.field}@${v.date}`)
+    ).toEqual([
+      'districtPerformance.Charter Date/Suspend Date[Susp]@2023-06-30',
+      'districtPerformance.Oct. Ren.@2023-06-30',
+    ])
   })
 })
