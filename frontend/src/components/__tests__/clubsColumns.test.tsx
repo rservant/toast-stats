@@ -16,14 +16,13 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import {
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
-  type SortingState,
-} from '@tanstack/react-table'
+import { useTable, type SortingState } from '@tanstack/react-table'
 import { renderHook } from '@testing-library/react'
 import { clubsColumns, clubColumnPriority } from '../clubsColumns'
+import {
+  clubsTableFeatures,
+  type ClubsTableFeatures,
+} from '../clubsTableFeatures'
 import { processClubs } from '../../utils/columnFilterUtils'
 import type { ProcessedClubTrend } from '../filters/types'
 import type { ClubTrend } from '../../hooks/useDistrictAnalytics'
@@ -66,12 +65,13 @@ function sortedIds(clubs: ClubTrend[], sorting: SortingState): string[] {
     a.clubName.toLowerCase().localeCompare(b.clubName.toLowerCase())
   )
   const { result } = renderHook(() =>
-    useReactTable<ProcessedClubTrend>({
+    // v9 (#1530): `useReactTable` -> `useTable`, and the row models moved into
+    // the shared feature set. Same table, same sort — see clubsTableFeatures.ts.
+    useTable<ClubsTableFeatures, ProcessedClubTrend>({
+      features: clubsTableFeatures,
       data,
       columns: clubsColumns,
       state: { sorting },
-      getCoreRowModel: getCoreRowModel(),
-      getSortedRowModel: getSortedRowModel(),
       onSortingChange: () => {},
     })
   )

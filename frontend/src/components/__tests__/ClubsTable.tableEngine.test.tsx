@@ -37,14 +37,18 @@ import userEvent from '@testing-library/user-event'
 import type { ReactElement } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
-  flexRender,
+  columnPinningFeature,
+  columnVisibilityFeature,
   createColumnHelper,
-  type SortingState,
+  createSortedRowModel,
+  flexRender,
+  rowSortingFeature,
+  sortFn_basic,
+  tableFeatures,
+  useTable,
   type ColumnPinningState,
-  type VisibilityState,
+  type ColumnVisibilityState,
+  type SortingState,
 } from '@tanstack/react-table'
 import { ClubsTable } from '../ClubsTable'
 import { ClubTrend } from '../../hooks/useDistrictAnalytics'
@@ -192,32 +196,43 @@ const HARNESS_DATA: Row[] = [
   { name: 'Gamma', division: 'C', members: 19 },
 ]
 
-const h = createColumnHelper<Row>()
-const HARNESS_COLUMNS = [
+// The same feature registration ClubsTable uses (clubsTableFeatures.ts): the
+// sorting, pinning and visibility slices only exist because these are here.
+const harnessFeatures = tableFeatures({
+  rowSortingFeature,
+  columnPinningFeature,
+  columnVisibilityFeature,
+  sortedRowModel: createSortedRowModel(),
+  sortFns: { basic: sortFn_basic },
+})
+type HarnessFeatures = typeof harnessFeatures
+
+const h = createColumnHelper<HarnessFeatures, Row>()
+const HARNESS_COLUMNS = h.columns([
   h.accessor(r => r.division, {
     id: 'division',
     header: 'Div',
-    sortingFn: 'basic',
+    sortFn: 'basic',
     cell: i => i.row.original.division,
   }),
   h.accessor(r => r.name, {
     id: 'name',
     header: 'Club',
-    sortingFn: 'basic',
+    sortFn: 'basic',
     cell: i => i.row.original.name,
   }),
   h.accessor(r => r.members, {
     id: 'members',
     header: 'Members',
-    sortingFn: 'basic',
+    sortFn: 'basic',
     cell: i => String(i.row.original.members),
   }),
-]
+])
 
 interface HarnessProps {
   sorting: SortingState
   columnPinning: ColumnPinningState
-  columnVisibility: VisibilityState
+  columnVisibility: ColumnVisibilityState
   /** Receives the accessor answers the component itself relies on. */
   onModel: (m: {
     pinnedSideOfName: string | false
@@ -227,20 +242,19 @@ interface HarnessProps {
   }) => void
 }
 
-/** Mirrors ClubsTable's `useReactTable` call shape exactly: controlled state,
- *  core + sorted row models, `enableSortingRemoval: false`, no change handlers. */
+/** Mirrors ClubsTable's `useTable` call shape exactly: a registered feature
+ *  set, controlled state, `enableSortingRemoval: false`, no change handlers. */
 const Harness: React.FC<HarnessProps> = ({
   sorting,
   columnPinning,
   columnVisibility,
   onModel,
 }) => {
-  const table = useReactTable<Row>({
+  const table = useTable<HarnessFeatures, Row>({
+    features: harnessFeatures,
     data: HARNESS_DATA,
     columns: HARNESS_COLUMNS,
     state: { sorting, columnPinning, columnVisibility },
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     enableSortingRemoval: false,
   })
 
@@ -283,9 +297,9 @@ const Harness: React.FC<HarnessProps> = ({
   )
 }
 
-const NO_PINNING: ColumnPinningState = { left: [], right: [] }
+const NO_PINNING: ColumnPinningState = { start: [], end: [] }
 
-describe('useReactTable option-shape contract (#1530)', () => {
+describe('useTable option-shape contract (#1530)', () => {
   afterEach(cleanup)
 
   it('applies controlled `sorting` state to the sorted row model', () => {
@@ -318,16 +332,19 @@ describe('useReactTable option-shape contract (#1530)', () => {
     const { container } = render(
       <Harness
         sorting={[{ id: 'name', desc: false }]}
-        columnPinning={{ left: ['name'], right: [] }}
+        columnPinning={{ start: ['name'], end: [] }}
         columnVisibility={{}}
         onModel={m => (model = m)}
       />
     )
 
-    // 'name' is declared SECOND in the column list. Left-pinning must hoist it
+    // 'name' is declared SECOND in the column list. Start-pinning must hoist it
     // to the front of the visible cells; if pinning were ignored the order
     // would still read division, name, members.
-    expect(model.pinnedSideOfName).toBe('left')
+    //
+    // 'start' (not v8's 'left') is v9's logical region name — the rename is the
+    // spec change this migration is applying, not a weakened assertion.
+    expect(model.pinnedSideOfName).toBe('start')
     expect(model.visibleCellIdsFirstRow).toEqual([
       'name',
       'division',
