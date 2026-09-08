@@ -110,7 +110,13 @@ sanity check.
 
 ## Findings
 
+Two filed as their own issues, one recorded and not filed. This issue fixes
+none of them — a sweep that finds five things is worth more than one fix that
+muddies what the sweep proved.
+
 ### 1. DCP goals 5 and 6 have no matching header for PY 2020-21 … 2024-25 — `dcpGoalsAchieved` is absent from nine of ten program years
+
+**Filed as [#1539](https://github.com/taverns-red/toast-stats/issues/1539).**
 
 **The strongest finding, and squarely the #1399 class.** TI renamed the
 education-award columns twice; `DCP_GOAL_DEFINITIONS`
@@ -143,6 +149,8 @@ the tripwire forbids, and five program years of per-goal data that is sitting
 in the archive is unreachable for want of two alias strings.
 
 ### 2. A cell carrying both branches loses **both** — 19 charters and 17 suspensions invisible at 2026-06-30
+
+**Filed as [#1540](https://github.com/taverns-red/toast-stats/issues/1540).**
 
 `parseCharterDateFromStatusField` and `parseSuspendDateFromStatusField`
 (`packages/analytics-core/src/rankings/programYearDates.ts`) both anchor at
