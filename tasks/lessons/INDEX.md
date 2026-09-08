@@ -4,6 +4,8 @@
 ## lessons (manifest-pinned + session-judged)
 - `a-detector-that-cannot-rediscover-the-known-bug-is-not-evidence-about-unknown-ones.md` — Make rediscovering an already-solved instance an acceptance test of a new detector, not a closing sanity check — the census that swept 181 snapshot dates found nothing on its first run, and only the ground-truth criterion revealed the detector had silently narrowed itself  (2026-09-08)
 - `a-plugin-declared-without-its-host-runner-invites-a-version-split.md` — A package that declares a plugin but not its host runner invites a silent major split — and the split reports itself as a missing config option, not as a version mismatch  (2026-09-08)
+- `a-warning-that-vanishes-on-rename-may-be-unmatched-not-fixed.md` — A tool warning that disappears after an API rename may be unmatched, not fixed — check the tool's own rule source  (2026-09-08)
+- `ab-benchmarks-must-interleave-not-block.md` — A/B benchmarks must interleave the two versions, not run them in blocks — sequential blocks measure machine drift  (2026-09-08)
 - `a-scale-cannot-buy-room-for-labels-only-flow-layout-can.md` — A scale can't buy room for labels — only flow layout can  (2026-09-02)
 - `a-merge-gate-must-derive-its-expectation-from-the-diff.md` — A gate that only inspects the checks that are present cannot tell "all passed" from "none ran" — derive the expected set from the diff  (2026-09-01)
 - `an-aggregate-published-from-a-shared-step-must-degrade-per-row-not-per-step.md` — An aggregate assembled in a step shared with other artifacts must omit the row it cannot build, not fail the step — otherwise one un-backfilled input takes unrelated manifests down with it  (2026-09-01)

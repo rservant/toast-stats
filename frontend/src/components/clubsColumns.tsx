@@ -12,8 +12,8 @@
  * migration must not change output):
  *   • Each `accessorFn` returns the exact value the old switch compared on
  *     (lowercased strings; the precomputed `distinguishedOrder`; a status-rank
- *     map). `sortingFn: 'basic'` (`a < b ? -1 : a > b ? 1 : 0`) reproduces the
- *     old `<`/`>` comparison.
+ *     map). `sortFn: 'basic'` (v9's `sortFn_basic`, `a === b ? 0 : a > b ? 1
+ *     : -1`; `sortingFn` in v8) reproduces the old `<`/`>` comparison.
  *   • `sortUndefined: 'last'` reproduces "undefined sorts to the end regardless
  *     of direction" (TanStack applies it outside the desc negation).
  *   • The old "secondary sort by club name, always ascending" is reproduced by
@@ -24,8 +24,8 @@
 
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { createColumnHelper, type RowData } from '@tanstack/react-table'
-import type { ProcessedClubTrend } from './filters/types'
+import { clubsColumnHelper as colHelper } from './clubsTableFeatures'
+import type { ClubsTableMeta } from './clubsTableFeatures'
 import type { ClubTrend, ClubHealthStatus } from '../hooks/useDistrictAnalytics'
 import { isProvisionallyDistinguished } from '../utils/provisionalDistinguished'
 import { ClubStatusCell } from './ClubStatusCell'
@@ -67,27 +67,13 @@ const STATUS_RANK: Record<ClubHealthStatus, number> = {
  *  768–1279 tablet tier); `core` = always shown when the table renders. */
 export type ClubColumnPriority = 'sticky' | 'desktop' | 'core'
 
-/** Table-level context the column model reads via `table.options.meta`.
- *  CC-7 (#872): lets the sticky `name` cell render a real <Link> to the club
- *  detail route without turning the static `clubsColumns` array into a factory.
- *  When `clubLinkTo` is absent the cell falls back to plain text. */
-export interface ClubsTableMeta {
-  /** Build the club-detail href for a row (e.g. `/district/61/club/123`). */
-  clubLinkTo?: (club: ProcessedClubTrend) => string
-  /** Router location state to carry to the destination (e.g. fromClubsSearch). */
-  clubLinkState?: unknown
-}
-
-// Augment TanStack's table meta so `useReactTable({ meta })` typechecks and the
-// `name` cell reads `table.options.meta` with full types (the documented
-// react-table pattern for typed meta).
-declare module '@tanstack/react-table' {
-  // The empty body is intentional — this is purely a module augmentation that
-  // merges ClubsTableMeta into TableMeta. TData is required by the original
-  // signature but unused here.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-object-type
-  interface TableMeta<TData extends RowData> extends ClubsTableMeta {}
-}
+// `ClubsTableMeta` moved to ./clubsTableFeatures in the v9 migration (#1530):
+// v9 types `table.options.meta` from the `tableMeta` slot on the feature set,
+// so the interface has to live beside `tableFeatures(...)`. Re-exported here so
+// importers of `./clubsColumns` are unaffected. This replaces the v8 global
+// `declare module '@tanstack/react-table'` augmentation, which typed `meta` for
+// EVERY table in the app rather than just this one.
+export type { ClubsTableMeta }
 
 const STICKY_FIELD = 'name'
 const DESKTOP_ONLY_FIELDS: ReadonlySet<string> = new Set([
@@ -153,8 +139,6 @@ const TD_BASE_CLASS: Record<string, string> = {
 export const clubColumnTdClass = (id: string): string =>
   `${TD_BASE_CLASS[id] ?? 'px-2 py-3 whitespace-nowrap'} ${clubColumnPriorityClass(id)}`.trim()
 
-const colHelper = createColumnHelper<ProcessedClubTrend>()
-
 /** A muted em-dash placeholder, shared by the optional numeric/text columns. */
 const Dash: React.FC = () => <span className="clubs-cell-muted">—</span>
 
@@ -169,11 +153,11 @@ const OptionalCount: React.FC<{ value: number | undefined }> = ({ value }) =>
     <Dash />
   )
 
-export const clubsColumns = [
+export const clubsColumns = colHelper.columns([
   colHelper.accessor(c => c.clubName.toLowerCase(), {
     id: 'name',
     header: 'Club',
-    sortingFn: 'basic',
+    sortFn: 'basic',
     cell: info => {
       const club = info.row.original
       const meta = info.table.options.meta as ClubsTableMeta | undefined
@@ -199,19 +183,19 @@ export const clubsColumns = [
   colHelper.accessor(c => c.divisionName.toLowerCase(), {
     id: 'division',
     header: 'Div',
-    sortingFn: 'basic',
+    sortFn: 'basic',
     cell: info => info.row.original.divisionName,
   }),
   colHelper.accessor(c => c.areaName.toLowerCase(), {
     id: 'area',
     header: 'Area',
-    sortingFn: 'basic',
+    sortFn: 'basic',
     cell: info => info.row.original.areaName,
   }),
   colHelper.accessor(c => STATUS_RANK[c.currentStatus], {
     id: 'status',
     header: 'Status',
-    sortingFn: 'basic',
+    sortFn: 'basic',
     cell: info => {
       const status = info.row.original.currentStatus
       return (
@@ -226,7 +210,7 @@ export const clubsColumns = [
   colHelper.accessor(c => c.latestMembership, {
     id: 'membership',
     header: 'Members',
-    sortingFn: 'basic',
+    sortFn: 'basic',
     cell: info => {
       const club = info.row.original
       return (
@@ -245,7 +229,7 @@ export const clubsColumns = [
   colHelper.accessor(c => c.membersNeeded, {
     id: 'membersNeeded',
     header: 'Needed',
-    sortingFn: 'basic',
+    sortFn: 'basic',
     cell: info =>
       info.row.original.membersNeeded > 0 ? (
         <span className="text-tm-true-maroon">
@@ -258,28 +242,28 @@ export const clubsColumns = [
   colHelper.accessor(c => c.newMembers, {
     id: 'newMembers',
     header: 'New',
-    sortingFn: 'basic',
+    sortFn: 'basic',
     sortUndefined: 'last',
     cell: info => <OptionalCount value={info.row.original.newMembers} />,
   }),
   colHelper.accessor(c => c.octoberRenewals, {
     id: 'octoberRenewals',
     header: 'Oct Renew',
-    sortingFn: 'basic',
+    sortFn: 'basic',
     sortUndefined: 'last',
     cell: info => <OptionalCount value={info.row.original.octoberRenewals} />,
   }),
   colHelper.accessor(c => c.aprilRenewals, {
     id: 'aprilRenewals',
     header: 'Apr Renew',
-    sortingFn: 'basic',
+    sortFn: 'basic',
     sortUndefined: 'last',
     cell: info => <OptionalCount value={info.row.original.aprilRenewals} />,
   }),
   colHelper.accessor(c => c.latestDcpGoals, {
     id: 'dcpGoals',
     header: 'DCP',
-    sortingFn: 'basic',
+    sortFn: 'basic',
     cell: info => {
       const goals = Math.max(0, Math.min(10, info.row.original.latestDcpGoals))
       const pct = (goals / 10) * 100
@@ -303,7 +287,7 @@ export const clubsColumns = [
   colHelper.accessor(c => c.distinguishedOrder, {
     id: 'distinguished',
     header: 'Tier',
-    sortingFn: 'basic',
+    sortFn: 'basic',
     cell: info => {
       const club = info.row.original
       if (club.distinguishedLevel === 'NotDistinguished') {
@@ -331,7 +315,7 @@ export const clubsColumns = [
   colHelper.accessor(c => c.clubStatus?.toLowerCase(), {
     id: 'clubStatus',
     header: 'Club Status',
-    sortingFn: 'basic',
+    sortFn: 'basic',
     sortUndefined: 'last',
     cell: info => (
       <ClubStatusCell
@@ -343,7 +327,7 @@ export const clubsColumns = [
   colHelper.accessor(c => c.yearsChartered ?? undefined, {
     id: 'yearsChartered',
     header: 'Years',
-    sortingFn: 'basic',
+    sortFn: 'basic',
     sortUndefined: 'last',
     cell: info =>
       info.row.original.yearsChartered !== null ? (
@@ -352,4 +336,4 @@ export const clubsColumns = [
         <Dash />
       ),
   }),
-]
+])

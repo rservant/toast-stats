@@ -13,7 +13,12 @@
 import React from 'react'
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, cleanup, screen } from '@testing-library/react'
-import { flexRender, type CellContext } from '@tanstack/react-table'
+import {
+  flexRender,
+  type CellContext,
+  type ColumnDef,
+} from '@tanstack/react-table'
+import type { ClubsTableFeatures } from '../clubsTableFeatures'
 import { buildClubsDeltaColumns } from '../clubsDeltaColumns'
 import type { ProcessedClubTrend } from '../filters/types'
 import type { ClubDiff } from '@taverns-red/shared-contracts'
@@ -60,12 +65,18 @@ const diff = (over: Partial<ClubDiff> = {}): ClubDiff => ({
 /** Render a column's cell against a row by invoking its `cell` renderer
  *  with a minimal CellContext stub. */
 function renderCell(
-  col: ReturnType<typeof buildClubsDeltaColumns>[number],
+  // v9 (#1530): `buildClubsDeltaColumns` now returns `colHelper.columns([...])`,
+  // an array intersected with its own tuple type so each column keeps its
+  // TValue. Indexing that with [number] yields an intersection no single column
+  // satisfies, so name the element type directly.
+  col: ColumnDef<ClubsTableFeatures, ProcessedClubTrend, unknown>,
   row: ProcessedClubTrend
 ) {
   const cell = (
     col as {
-      cell?: (ctx: CellContext<ProcessedClubTrend, unknown>) => React.ReactNode
+      cell?: (
+        ctx: CellContext<ClubsTableFeatures, ProcessedClubTrend, unknown>
+      ) => React.ReactNode
     }
   ).cell
   if (!cell) throw new Error('column has no cell renderer')
@@ -73,7 +84,7 @@ function renderCell(
     row: { original: row },
     getValue: () => undefined,
     column: { id: (col as { id?: string }).id ?? '' },
-  } as unknown as CellContext<ProcessedClubTrend, unknown>
+  } as unknown as CellContext<ClubsTableFeatures, ProcessedClubTrend, unknown>
   return render(<>{flexRender(cell, ctx)}</>)
 }
 

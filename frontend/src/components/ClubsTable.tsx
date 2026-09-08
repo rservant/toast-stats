@@ -1,12 +1,10 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import {
-  useReactTable,
-  getCoreRowModel,
-  getSortedRowModel,
+  useTable,
   flexRender,
   type SortingState,
   type ColumnPinningState,
-  type VisibilityState,
+  type ColumnVisibilityState,
 } from '@tanstack/react-table'
 import type { SnapshotDiff } from '@taverns-red/shared-contracts'
 import { ClubTrend } from '../hooks/useDistrictAnalytics'
@@ -37,6 +35,10 @@ import {
   clubColumnPriorityClass,
   clubColumnTdClass,
 } from './clubsColumns'
+import {
+  clubsTableFeatures,
+  type ClubsTableFeatures,
+} from './clubsTableFeatures'
 import {
   buildClubsDeltaColumns,
   CLUBS_DELTA_COLUMN_IDS,
@@ -396,11 +398,17 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     [sortField, sortDirection]
   )
 
-  // The sticky key column ('name') is the left-pinned column (ADR-006 §3,
+  // The sticky key column ('name') is the start-pinned column (ADR-006 §3,
   // Lesson 105); the existing CSS (.clubs-table__sticky-col) renders the
   // stickiness, the pinning state is the model of record.
+  //
+  // v9 renamed the physical `left`/`right` regions to the logical `start`/`end`
+  // (#1530) with no deprecated aliases — a `{ left: [...] }` object typechecks
+  // as neither, and silently unpins the column if it slipped through. The CSS
+  // is unaffected: this app is LTR-only and .clubs-table__sticky-col does the
+  // sticky positioning itself.
   const columnPinning: ColumnPinningState = useMemo(
-    () => ({ left: [STICKY_COLUMN_FIELD], right: [] }),
+    () => ({ start: [STICKY_COLUMN_FIELD], end: [] }),
     []
   )
 
@@ -491,8 +499,8 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     [snapshotDiff, clubDiffsById]
   )
 
-  const columnVisibility = useMemo<VisibilityState>(() => {
-    const vis: VisibilityState = {}
+  const columnVisibility = useMemo<ColumnVisibilityState>(() => {
+    const vis: ColumnVisibilityState = {}
     for (const c of COLUMN_CONFIGS) {
       // The sticky key column is the row's label — never hidden by a group.
       if (c.field === STICKY_COLUMN_FIELD) continue
@@ -515,16 +523,23 @@ export const ClubsTable: React.FC<ClubsTableProps> = ({
     [districtId]
   )
 
-  const table = useReactTable<ProcessedClubTrend>({
+  // v9 (#1530): `useReactTable` → `useTable`, and the row models moved from
+  // table options into the `features` object (clubsTableFeatures.ts). The core
+  // row model is automatic now, so `getCoreRowModel()` is gone entirely; the
+  // sorted row model, the pinning slice and the visibility slice only exist
+  // because their features are registered there.
+  const table = useTable<ClubsTableFeatures, ProcessedClubTrend>({
+    features: clubsTableFeatures,
     data: nameSortedClubs,
     columns: tableColumns,
     state: { sorting, columnPinning, columnVisibility },
     meta: { clubLinkTo, clubLinkState },
-    // columnVisibility is fully controlled by hiddenGroups above — TanStack
-    // never writes it directly, so onColumnVisibilityChange is intentionally
-    // omitted (R11 — drive the existing state, don't add a parallel one).
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
+    // Every slice above is fully controlled by this component's own state —
+    // TanStack never writes them back, so the on*Change callbacks are
+    // intentionally omitted (R11 — drive the existing state, don't add a
+    // parallel one). v9 syncs an external `state` value into the internal base
+    // atom on each render, so a controlled slice with no callback is frozen
+    // from the table's side and driven entirely from ours, exactly as in v8.
     enableSortingRemoval: false,
   })
 

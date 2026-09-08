@@ -17,13 +17,10 @@
  */
 
 import React from 'react'
-import { createColumnHelper } from '@tanstack/react-table'
 import type { ClubDiff } from '@taverns-red/shared-contracts'
-import type { ProcessedClubTrend } from './filters/types'
+import { clubsColumnHelper as colHelper } from './clubsTableFeatures'
 import { ChangeIndicator } from './ChangeIndicator'
 import { distinguishedTierName } from '../utils/distinguishedTier'
-
-const colHelper = createColumnHelper<ProcessedClubTrend>()
 
 const MutedDash: React.FC = () => <span className="clubs-cell-muted">—</span>
 
@@ -48,78 +45,77 @@ export type ClubsDeltaColumnId = (typeof CLUBS_DELTA_COLUMN_IDS)[number]
  * `meta` (which would broaden the column type for every cell). Empty map ⇒
  * every cell renders the muted em-dash (e.g. while the diff is loading).
  */
-export const buildClubsDeltaColumns = (
-  clubDiffsById: Map<string, ClubDiff>
-) => [
-  colHelper.display({
-    id: 'deltaMembership',
-    header: 'Δ Members',
-    cell: info => {
-      const d = clubDiffsById.get(info.row.original.clubId)
-      if (!d) return <MutedDash />
-      return <ChangeIndicator value={d.membership.delta} />
-    },
-  }),
-  colHelper.display({
-    id: 'deltaPayments',
-    header: 'Δ Payments',
-    cell: info => {
-      const d = clubDiffsById.get(info.row.original.clubId)
-      if (!d) return <MutedDash />
-      return <ChangeIndicator value={d.payments.delta} />
-    },
-  }),
-  colHelper.display({
-    id: 'deltaDcpGoals',
-    header: 'Δ DCP',
-    cell: info => {
-      const d = clubDiffsById.get(info.row.original.clubId)
-      if (!d) return <MutedDash />
-      return <ChangeIndicator value={d.dcpGoals.delta} />
-    },
-  }),
-  colHelper.display({
-    id: 'tierTransition',
-    header: 'Tier change',
-    cell: info => {
-      const d = clubDiffsById.get(info.row.original.clubId)
-      if (!d) return <MutedDash />
-      if (!d.distinguishedChanged) return <MutedDash />
-      const from = distinguishedTierName(d.distinguishedFrom)
-      const to = distinguishedTierName(d.distinguishedTo)
-      return (
-        <span className="clubs-tier-transition">
-          <span>{from}</span>
-          <span aria-hidden="true" className="clubs-tier-transition__arrow">
-            {' → '}
-          </span>
-          <span>{to}</span>
-        </span>
-      )
-    },
-  }),
-  colHelper.display({
-    id: 'distinguishedFlip',
-    header: 'Distinguished?',
-    cell: info => {
-      const d = clubDiffsById.get(info.row.original.clubId)
-      if (!d || !d.distinguishedChanged) return <MutedDash />
-      if (isBecame(d.distinguishedFrom, d.distinguishedTo)) {
+export const buildClubsDeltaColumns = (clubDiffsById: Map<string, ClubDiff>) =>
+  colHelper.columns([
+    colHelper.display({
+      id: 'deltaMembership',
+      header: 'Δ Members',
+      cell: info => {
+        const d = clubDiffsById.get(info.row.original.clubId)
+        if (!d) return <MutedDash />
+        return <ChangeIndicator value={d.membership.delta} />
+      },
+    }),
+    colHelper.display({
+      id: 'deltaPayments',
+      header: 'Δ Payments',
+      cell: info => {
+        const d = clubDiffsById.get(info.row.original.clubId)
+        if (!d) return <MutedDash />
+        return <ChangeIndicator value={d.payments.delta} />
+      },
+    }),
+    colHelper.display({
+      id: 'deltaDcpGoals',
+      header: 'Δ DCP',
+      cell: info => {
+        const d = clubDiffsById.get(info.row.original.clubId)
+        if (!d) return <MutedDash />
+        return <ChangeIndicator value={d.dcpGoals.delta} />
+      },
+    }),
+    colHelper.display({
+      id: 'tierTransition',
+      header: 'Tier change',
+      cell: info => {
+        const d = clubDiffsById.get(info.row.original.clubId)
+        if (!d) return <MutedDash />
+        if (!d.distinguishedChanged) return <MutedDash />
+        const from = distinguishedTierName(d.distinguishedFrom)
+        const to = distinguishedTierName(d.distinguishedTo)
         return (
-          <span className="clubs-distinguished-flip clubs-distinguished-flip--became text-green-700">
-            Became Distinguished
+          <span className="clubs-tier-transition">
+            <span>{from}</span>
+            <span aria-hidden="true" className="clubs-tier-transition__arrow">
+              {' → '}
+            </span>
+            <span>{to}</span>
           </span>
         )
-      }
-      if (isLost(d.distinguishedFrom, d.distinguishedTo)) {
-        return (
-          <span className="clubs-distinguished-flip clubs-distinguished-flip--lost text-red-700">
-            Lost Distinguished
-          </span>
-        )
-      }
-      // Tier-to-tier change (e.g. D → P) is recorded but neither became nor lost.
-      return <MutedDash />
-    },
-  }),
-]
+      },
+    }),
+    colHelper.display({
+      id: 'distinguishedFlip',
+      header: 'Distinguished?',
+      cell: info => {
+        const d = clubDiffsById.get(info.row.original.clubId)
+        if (!d || !d.distinguishedChanged) return <MutedDash />
+        if (isBecame(d.distinguishedFrom, d.distinguishedTo)) {
+          return (
+            <span className="clubs-distinguished-flip clubs-distinguished-flip--became text-green-700">
+              Became Distinguished
+            </span>
+          )
+        }
+        if (isLost(d.distinguishedFrom, d.distinguishedTo)) {
+          return (
+            <span className="clubs-distinguished-flip clubs-distinguished-flip--lost text-red-700">
+              Lost Distinguished
+            </span>
+          )
+        }
+        // Tier-to-tier change (e.g. D → P) is recorded but neither became nor lost.
+        return <MutedDash />
+      },
+    }),
+  ])
