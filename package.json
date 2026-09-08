@@ -65,7 +65,7 @@
     "jsdom": "^30.0.1",
     "lint-staged": "^17.4.1",
     "prettier": "^3.9.6",
-    "tsx": "^4.23.12"
+    "tsx": "^4.23.13"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,json,md}": "prettier --write"
