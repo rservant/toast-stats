@@ -19,6 +19,8 @@
  * sweep lives in `scripts/absence-as-zero-census.ts`.
  */
 
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, it, expect } from 'vitest'
 import {
   CENSUS_ROW_FLOOR,
@@ -267,6 +269,31 @@ describe('EXTRACT_NUMBER_SOURCE_KEYS', () => {
       'Membership',
       'Members',
     ])
+  })
+
+  /**
+   * Drift guard. The map is a transcription of DataTransformer's argument
+   * lists; if TI renames a column and the transformer follows, the census
+   * must not keep sweeping a key that no longer exists — that would narrow
+   * the audit silently, which is the exact failure mode this issue is about.
+   *
+   * Proven load-bearing by mutation: changing 'Active Members' to
+   * 'Active Member' turns this test red.
+   */
+  it('every candidate key is still a literal in DataTransformer.ts', () => {
+    const transformer = readFileSync(
+      join(
+        __dirname,
+        '../../../packages/analytics-core/src/transformation/DataTransformer.ts'
+      ),
+      'utf-8'
+    )
+
+    const missing = Object.values(EXTRACT_NUMBER_SOURCE_KEYS)
+      .flatMap(source => source.keys)
+      .filter(key => !transformer.includes(`'${key}'`))
+
+    expect(missing).toEqual([])
   })
 })
 
