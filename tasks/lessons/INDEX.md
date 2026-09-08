@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-plugin-declared-without-its-host-runner-invites-a-version-split.md` — A package that declares a plugin but not its host runner invites a silent major split — and the split reports itself as a missing config option, not as a version mismatch  (2026-09-08)
 - `a-scale-cannot-buy-room-for-labels-only-flow-layout-can.md` — A scale can't buy room for labels — only flow layout can  (2026-09-02)
 - `a-merge-gate-must-derive-its-expectation-from-the-diff.md` — A gate that only inspects the checks that are present cannot tell "all passed" from "none ran" — derive the expected set from the diff  (2026-09-01)
 - `an-aggregate-published-from-a-shared-step-must-degrade-per-row-not-per-step.md` — An aggregate assembled in a step shared with other artifacts must omit the row it cannot build, not fail the step — otherwise one un-backfilled input takes unrelated manifests down with it  (2026-09-01)
