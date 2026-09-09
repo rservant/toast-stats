@@ -20,6 +20,8 @@
    primary level award. We include them in the totals so the rollup
    reflects total awards, not unique clubs. */
 
+import { DCP_GOAL_DEFINITIONS } from '@taverns-red/analytics-core'
+
 export interface EducationLevelsTotals {
   level1: number
   level2: number
@@ -36,39 +38,30 @@ export interface EducationLevelsTotals {
 }
 
 /* Each bucket has a primary column and an optional additional-awards
-   column. The CSV pipeline renames the schema across years (e.g.
-   'Level 4s, Path Completions, or DTM Awards' is sometimes shortened
-   to 'Level 4s'), so we treat the listed names as fallback aliases:
-   first match wins for each (primary, additional) pair. Summing all
-   aliases as if they were distinct columns would double-count clubs
-   whose snapshot carries both old and new names (#486 M1).
+   column. TI renames these headers between program years, so the listed
+   names are fallback aliases: first match wins for each (primary,
+   additional) pair. Summing all aliases as if they were distinct columns
+   would double-count clubs whose snapshot carries both old and new names
+   (#486 M1).
 
-   Mirrors the first-match-wins extraction in
-   analytics-core/src/transformation/DataTransformer.ts (extractNumber). */
-const LEVEL_DEFS = {
-  level1: {
-    primary: ['Level 1s'],
-    additional: [],
-  },
-  /* PY 2026-27 renamed both level-2 columns when TI made Online Meeting
-     Mastery ("EOM") completions an alternative route to DCP goals 2 and 3
-     (#1399). Same first-match-wins treatment as every other rename: the
-     new name leads, historical snapshots fall through to the old one. */
-  level2: {
-    primary: ['Level 2s or EOM', 'Level 2s'],
-    additional: ['Add. Level 2s or EOM', 'Add. Level 2s', 'Add Level 2s'],
-  },
-  level3: {
-    primary: ['Level 3s'],
-    additional: [],
-  },
-  level4PathDtm: {
-    primary: ['Level 4s, Path Completions, or DTM Awards', 'Level 4s'],
-    additional: [
-      'Add. Level 4s, Path Completions, or DTM award',
-      'Add. Level 4s',
-    ],
-  },
+   DERIVED from the shared DCP goal definitions, not restated (#1539).
+   This module used to keep its own copy of the alias table, and the copy
+   drifted: it never learned the 2020-07 -> 2025-06 education headers
+   ('Level 4s, Level 5s, or DTM award' and its 'Add.' twin), so the rollup
+   reported 0 Level 4/Path/DTM awards for five program years of archived
+   snapshots. Unlike dcpGoalsAchieved there is no all-or-nothing guard
+   here, so that absence rendered as a confident zero. The four buckets
+   are exactly DCP goals 1, 2/3, 4 and 5/6, so they now read their columns
+   from analytics-core and the next rename can only be missed once. */
+const goalAliases = (goal: number): readonly string[] =>
+  DCP_GOAL_DEFINITIONS.find(definition => definition.goal === goal)
+    ?.requirements[0]?.anyOf[0]?.aliases ?? []
+
+export const EDUCATION_LEVEL_COLUMNS = {
+  level1: { primary: goalAliases(1), additional: [] },
+  level2: { primary: goalAliases(2), additional: goalAliases(3) },
+  level3: { primary: goalAliases(4), additional: [] },
+  level4PathDtm: { primary: goalAliases(5), additional: goalAliases(6) },
 } as const
 
 const toNumber = (raw: unknown): number => {
@@ -129,10 +122,10 @@ export function extractEducationLevels(
     if (typeof clubRaw !== 'object' || clubRaw === null) continue
     const club = clubRaw as Record<string, unknown>
 
-    const l1 = bucketTotal(club, LEVEL_DEFS.level1)
-    const l2 = bucketTotal(club, LEVEL_DEFS.level2)
-    const l3 = bucketTotal(club, LEVEL_DEFS.level3)
-    const l4 = bucketTotal(club, LEVEL_DEFS.level4PathDtm)
+    const l1 = bucketTotal(club, EDUCATION_LEVEL_COLUMNS.level1)
+    const l2 = bucketTotal(club, EDUCATION_LEVEL_COLUMNS.level2)
+    const l3 = bucketTotal(club, EDUCATION_LEVEL_COLUMNS.level3)
+    const l4 = bucketTotal(club, EDUCATION_LEVEL_COLUMNS.level4PathDtm)
 
     totals.level1 += l1
     totals.level2 += l2
