@@ -72,14 +72,23 @@ date. Live-verified values, all reproduced by
 | select / president's / Smedley  | 1,037 / 1,289 / 1,912 |
 | derived base tier               | 2,349                 |
 | distinguished districts         | 42                    |
-| new clubs still active          | 913                   |
-| suspended clubs                 | 716                   |
+| new clubs still active          | 932 (was 913, #1540)  |
+| suspended clubs                 | 733 (was 716, #1540)  |
 | countries / unknown country     | 94 / 6,786            |
 
 548,483 and the four-way tier split are TI CEO Report figures — an external
-oracle, not our own output. TI's 932 new clubs, 733 suspensions and 265,512
-Mar-31 membership are a DIFFERENT basis and are deliberately not asserted:
-the ruling is publish ours, state our basis, never calibrate (#1426).
+oracle, not our own output. TI's 265,512 Mar-31 membership is a DIFFERENT
+basis and is deliberately not asserted: the ruling is publish ours, state our
+basis, never calibrate (#1426).
+
+**The movement pair moved without the capture moving (#1540).** 913 and 716
+were this fixture read through two `^`-anchored parsers that dropped the 19
+rows carrying BOTH branches in one cell. Reading the same frozen bytes
+correctly gives 932 and 733. TI publishes 932 and 733 for the same year —
+noted here as corroboration found afterwards, never as a target. The #1426
+ruling stands: had the two disagreed, ours would still be what we publish.
+The prior reading of that gap ("our basis runs low, the expected shape") was
+wrong; all of it was a parse defect.
 
 **Shape.** A country dictionary plus the rankings rows verbatim, so the
 distinguished-district calculator can be exercised on real inputs:
@@ -118,23 +127,46 @@ on 2026-09-01.
 eight of its ten years while `newClubsStillActive` stayed healthy in all ten
 (#1514). This census settled which defect that was:
 
-| year-end   | club rows | `Susp` rows | `Charter` rows | published `suspendedClubs` |
-| ---------- | --------- | ----------- | -------------- | -------------------------- |
-| 2026-06-30 | 15,016    | **716**     | 932            | 716                        |
-| 2025-06-30 | 15,261    | **0**       | 951            | 0 ← absence                |
-| 2024-06-30 | 15,679    | **0**       | 958            | 0 ← absence                |
-| 2023-06-30 | 16,203    | **0**       | 817            | 0 ← absence                |
-| 2022-06-30 | 17,033    | **1,018**   | 697            | 1,014                      |
-| 2021-06-30 | 18,798    | **0**       | 1,224          | 0 ← absence                |
-| 2020-06-30 | 18,337    | **0**       | 1,236          | 0 ← absence                |
-| 2019-06-30 | 18,402    | **0**       | 1,496          | 0 ← absence                |
-| 2018-06-30 | 18,125    | **0**       | 1,481          | 0 ← absence                |
-| 2017-06-30 | 17,690    | **0**       | 1,539          | 0 ← absence                |
+`Susp` rows counts every row carrying a parseable suspension date, in window
+or not; the parenthesised figure is what the `^`-anchored parse saw before
+#1540.
 
-Every row on every date is exactly one of empty, `Charter …` or `Susp …` —
-there is no third encoding anywhere, so the parse (#1497) was never the
-problem. The eight zero years simply carry no suspension datum, while the
-charter branch of the same column is populated on all ten. Absence, not zero.
+| year-end   | club rows | `Susp` rows           | `Charter` rows | published `suspendedClubs` |
+| ---------- | --------- | --------------------- | -------------- | -------------------------- |
+| 2026-06-30 | 15,016    | **735** (was 716)     | 932            | 716 ← undercount (#1540)   |
+| 2025-06-30 | 15,261    | **0**                 | 951            | 0 ← absence                |
+| 2024-06-30 | 15,679    | **0**                 | 958            | 0 ← absence                |
+| 2023-06-30 | 16,203    | **0**                 | 817            | 0 ← absence                |
+| 2022-06-30 | 17,033    | **1,023** (was 1,018) | 697            | 1,014 ← undercount (#1540) |
+| 2021-06-30 | 18,798    | **0**                 | 1,224          | 0 ← absence                |
+| 2020-06-30 | 18,337    | **0**                 | 1,236          | 0 ← absence                |
+| 2019-06-30 | 18,402    | **0**                 | 1,496          | 0 ← absence                |
+| 2018-06-30 | 18,125    | **0**                 | 1,481          | 0 ← absence                |
+| 2017-06-30 | 17,690    | **0**                 | 1,539          | 0 ← absence                |
+
+The eight zero years carry no suspension datum, while the charter branch of
+the same column is populated on all ten. Absence, not zero — that half stands.
+
+**Corrected 2026-09-09 (#1540).** This section used to claim "every row on
+every date is exactly one of empty, `Charter …` or `Susp …` — there is no
+third encoding anywhere, so the parse (#1497) was never the problem." A third
+encoding does exist in this very capture: **19 rows at 2026-06-30 and 5 at
+2022-06-30 carry BOTH branches in one cell** (`Charter 09/30/25 Susp
+03/31/26`) — a club chartered and then suspended inside one program year,
+which #1514 had ruled could not happen. Both `^`-anchored parsers dropped
+those cells entirely, so on the two POPULATED dates the parse WAS the
+problem, and both movement counts under-reported:
+
+| year-end   | `newClubsStillActive` | `suspendedClubs`  |
+| ---------- | --------------------- | ----------------- |
+| 2026-06-30 | 913 → **932**         | 716 → **733**     |
+| 2022-06-30 | 692 → **697**         | 1,014 → **1,019** |
+
+The charter deltas (+19, +5) and the suspension deltas (+17, +5) differ at
+2026-06-30 because two of those 19 suspensions are stamped `Susp 07/01/26` —
+the NEXT program year. Both branches must be parsed AND each date
+window-tested on its own; a combined cell is not a promise that its two dates
+share a window.
 
 The two populated dates also show why the presence signal must be
 window-independent: 2022-06-30's 1,018 `Susp` rows include four stamped **July
