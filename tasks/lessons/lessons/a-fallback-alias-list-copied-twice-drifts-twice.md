@@ -54,6 +54,22 @@ existing name (`Level 2s` → `Level 2s or EOM`, `Level 4s` → `Level 4s,
 Level 5s, or DTM award` → `…, Path Completions, …`), so an anchored
 prefix pattern catches the shape that actually occurs.
 
+## The blind spot recurs at every OR
+
+Writing the detector, I keyed it on the *goal*: scan a goal's columns only
+when the goal resolved nothing. Review caught that this rebuilds the #1399
+defect one level down. DCP goal 10 passes on October dues **alone**, so
+renaming just the October column leaves the goal resolved, the missing-goals
+list empty, and the detector exiting before it tests a single pattern — while
+the renamed column reads 0 and the UI renders that 0 as a sub-item for every
+club in every district.
+
+The original #1399 bug was a sentinel keyed on the one column that did not
+change. This was the same bug, keyed one level out. **Wherever alternatives
+are OR'd, a satisfied parent hides an unsatisfied child** — so a detector must
+run at the granularity of the thing that can change (the column), never at the
+granularity of the thing that has a fallback (the goal).
+
 ## The corollary that cost more
 
 The alias table existed **twice**. `frontend/src/utils/extractEducationLevels.ts`
