@@ -246,8 +246,9 @@ describe('extractEducationLevels (#426)', () => {
  */
 describe('education columns follow the shared DCP definitions (#1539)', () => {
   const goalAliases = (goal: number): readonly string[] =>
-    DCP_GOAL_DEFINITIONS.find(d => d.goal === goal)!.requirements[0]!.anyOf[0]!
-      .aliases
+    DCP_GOAL_DEFINITIONS.find(d => d.goal === goal)!.requirements.flatMap(
+      requirement => requirement.anyOf.flatMap(column => column.aliases)
+    )
 
   it('reads the 2020-07 → 2025-06 education columns', () => {
     const snapshot = {
@@ -281,6 +282,12 @@ describe('education columns follow the shared DCP definitions (#1539)', () => {
     expect(EDUCATION_LEVEL_COLUMNS.level4PathDtm.additional).toEqual(
       goalAliases(6)
     )
+  })
+
+  it('never derives an empty alias list (an empty one reads as 0 awards)', () => {
+    for (const [bucket, columns] of Object.entries(EDUCATION_LEVEL_COLUMNS)) {
+      expect(columns.primary.length, `${bucket}.primary`).toBeGreaterThan(0)
+    }
   })
 
   it('still reads one column per bucket, never the sum of two aliases', () => {

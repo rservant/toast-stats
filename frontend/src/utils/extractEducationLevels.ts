@@ -54,8 +54,17 @@ export interface EducationLevelsTotals {
    are exactly DCP goals 1, 2/3, 4 and 5/6, so they now read their columns
    from analytics-core and the next rename can only be missed once. */
 const goalAliases = (goal: number): readonly string[] =>
-  DCP_GOAL_DEFINITIONS.find(definition => definition.goal === goal)
-    ?.requirements[0]?.anyOf[0]?.aliases ?? []
+  /* Flattened across EVERY requirement and column, not just [0][0]: an
+     alternative route is exactly what `anyOf` is for (goal 10 already uses
+     it), and reading only the first column would silently drop a future one
+     — an empty alias list means 0 awards for every club, the same
+     absence-as-zero this derivation exists to stop. The pinning test asserts
+     each bucket is non-empty for that reason. */
+  DCP_GOAL_DEFINITIONS.find(
+    definition => definition.goal === goal
+  )?.requirements.flatMap(requirement =>
+    requirement.anyOf.flatMap(column => column.aliases)
+  ) ?? []
 
 export const EDUCATION_LEVEL_COLUMNS = {
   level1: { primary: goalAliases(1), additional: [] },

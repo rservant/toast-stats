@@ -281,16 +281,20 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
   },
 ]
 
+/** Whether the record carries any of one column's own aliases. */
+const columnIsPresent = (
+  record: ScrapedRecord,
+  column: DcpGoalColumn
+): boolean =>
+  column.aliases.some(key => {
+    const value = record[key]
+    return value !== null && value !== undefined && value !== ''
+  })
+
 const requirementIsPresent = (
   record: ScrapedRecord,
   requirement: { anyOf: readonly DcpGoalColumn[] }
-): boolean =>
-  requirement.anyOf.some(column =>
-    column.aliases.some(key => {
-      const value = record[key]
-      return value !== null && value !== undefined && value !== ''
-    })
-  )
+): boolean => requirement.anyOf.some(column => columnIsPresent(record, column))
 
 /**
  * Goal numbers for which the record carries no recognised header — i.e. at
@@ -338,10 +342,19 @@ const KNOWN_GOAL_HEADERS: ReadonlySet<string> = new Set(
  * first hid inside the second for five program years — which is the actual
  * #1539 bug, not the two missing alias strings.
  *
- * So: for each unresolved goal, look for a header the export DOES carry that
- * matches that goal's `renamedFrom` shape and that no alias already claims.
- * Found, it is a rename and the caller can name the new column; not found,
- * the era genuinely lacks the column and the documented fallback is correct.
+ * So: for each column that resolves none of its own aliases, look for a header
+ * the export DOES carry that matches that column's `renamedFrom` shape and
+ * that no alias already claims. Found, it is a rename and the caller can name
+ * the new column; not found, the era genuinely lacks it and the documented
+ * fallback is correct.
+ *
+ * Per COLUMN, not per goal, deliberately — that is the whole #1399 lesson
+ * repeated one level down. Goal 10 passes on Oct dues alone (§10.2), so a
+ * rename of the Oct column leaves the GOAL resolved and
+ * `missingDcpGoalHeaders` empty, while `readDcpGoalColumn` quietly returns 0
+ * for it and ClubDCPGoalsPanel renders that 0 as a sub-item for every club in
+ * every district. A detector keyed on the goal cannot see the one column that
+ * changed, exactly as the old goal-1 sentinel could not.
  *
  * Known limit: it catches the rename shape TI has actually used every time —
  * extending the existing name. A column renamed to something unrecognisable
@@ -350,23 +363,21 @@ const KNOWN_GOAL_HEADERS: ReadonlySet<string> = new Set(
 export function suspectedDcpGoalHeaderRenames(
   record: ScrapedRecord
 ): SuspectedDcpGoalHeaderRename[] {
-  const unresolved = new Set(missingDcpGoalHeaders(record))
-  if (unresolved.size === 0) return []
-
   const unclaimed = Object.keys(record).filter(
     header => !KNOWN_GOAL_HEADERS.has(header)
   )
+  if (unclaimed.length === 0) return []
+
   const suspects: SuspectedDcpGoalHeaderRename[] = []
   const seen = new Set<string>()
 
   for (const definition of DCP_GOAL_DEFINITIONS) {
-    if (!unresolved.has(definition.goal)) continue
     for (const requirement of definition.requirements) {
-      // A requirement satisfied by one of its OR'd alternatives is not the
-      // one that failed — goal 10 on Oct dues alone must not accuse Apr.
-      if (requirementIsPresent(record, requirement)) continue
       for (const column of requirement.anyOf) {
-        if (!column.renamedFrom) continue
+        // Only a column that reads NOTHING can have been renamed. An OR
+        // alternative the export genuinely never carried reads nothing
+        // either, which is why the PATTERN — not the absence — is the signal.
+        if (!column.renamedFrom || columnIsPresent(record, column)) continue
         for (const header of unclaimed) {
           const key = `${definition.goal} ${header}`
           if (seen.has(key) || !column.renamedFrom.test(header)) continue

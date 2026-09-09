@@ -79,9 +79,13 @@ const goalsAchievedCount = (record: ScrapedRecord): number =>
  * Every club-performance header era in the published archive, newest first.
  *
  * Swept 2026-09-09 over all 182 snapshot dates on cdn.taverns.red
- * (`snapshots/<date>/district_61.json` → `data.clubPerformance`); the header
- * set changes at exactly three dates and is identical across districts at
- * each of them (spot-checked on districts 21, 42, 116 and Undistricted).
+ * (`snapshots/<date>/district_61.json` → `data.clubPerformance`); the GOAL
+ * COLUMNS change at exactly three dates and are identical across districts at
+ * each of them (checked on districts 21, 42, 116 and Undistricted). The full
+ * header set is not uniform — Find-a-Club enrichment columns vary by district
+ * from 2026-06-10 — and Undistricted before 2020-07 carries a single `''`
+ * header on 42 dates, a scraped error page. That degrades correctly: all ten
+ * goals unresolved, no suspected rename, so it warns rather than errors.
  *
  * `missingGoals` is what `missingDcpGoalHeaders` must return for that era —
  * `[]` for every era whose export actually carries the ten-goal Pathways DCP,
@@ -136,7 +140,12 @@ describe('DCP goal header eras — archive census (#1539)', () => {
       .filter(entry => entry.isDirectory())
       .map(entry => entry.name)
       .sort()
-    expect([...HEADER_ERAS.map(era => era.capture)].sort()).toEqual(captured)
+    expect(
+      [...HEADER_ERAS.map(era => era.capture)].sort(),
+      'A capture in the fixture directory is not classified in HEADER_ERAS. ' +
+        'Add it there with the goals its headers cannot resolve — or, if it ' +
+        'was captured for an unrelated test, move it out of this directory.'
+    ).toEqual(captured)
   })
 
   for (const era of HEADER_ERAS) {

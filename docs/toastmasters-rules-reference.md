@@ -352,8 +352,9 @@ snapshots keep the old names.
 ### 10.3 Education-column header eras (#1539)
 
 Goals 5-6 have been spelled three ways. Swept 2026-09-09 over all 182 snapshot
-dates published on `cdn.taverns.red`, the header set changes at exactly three
-dates, and is identical across districts at each of them:
+dates published on `cdn.taverns.red`, the goal columns change at exactly three
+dates and are identical across districts at each of them (the full header set
+is not — Find-a-Club enrichment columns vary by district from 2026-06-10):
 
 | Snapshot dates          | Goal 5 header                               | Goal 6 header                                   |
 | ----------------------- | ------------------------------------------- | ----------------------------------------------- |

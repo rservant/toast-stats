@@ -367,9 +367,41 @@ describe('DCP_GOAL_DEFINITIONS', () => {
       expect(suspectedDcpGoalHeaderRenames(transitionEra)).toEqual([])
     })
 
-    it('ignores an unmapped column whose goal already resolved', () => {
+    it('ignores an unmapped column whose own aliases already resolved', () => {
       const extra = currentEra({ 'Level 4s in some other export': '1' })
       expect(suspectedDcpGoalHeaderRenames(extra)).toEqual([])
+    })
+
+    /**
+     * The #1399 blind spot, one level down. Goal 10 passes on Oct dues
+     * ALONE (§10.2), so renaming the Oct column leaves the goal resolved
+     * and `missingDcpGoalHeaders` empty — the same "sentinel keyed on the
+     * one column that did not change" shape that made the PY 2026-27
+     * rename silent. Meanwhile `readDcpGoalColumn` returns 0 for the
+     * renamed column and ClubDCPGoalsPanel renders it as a sub-item, so
+     * every club in every district would show a confident "Oct: 0 / 1".
+     *
+     * A rename must therefore be detected per COLUMN, not per goal.
+     */
+    it('catches a rename behind an OR that a sibling column still satisfies', () => {
+      const octRenamed = currentEra()
+      delete octRenamed['Mem. dues on time Oct']
+      octRenamed['Mem. dues on time Oct (or equivalent)'] = '1'
+
+      // The goal itself is still satisfied by Apr — nothing is "missing".
+      expect(missingDcpGoalHeaders(octRenamed)).toEqual([])
+      expect(suspectedDcpGoalHeaderRenames(octRenamed)).toEqual([
+        { goal: 10, header: 'Mem. dues on time Oct (or equivalent)' },
+      ])
+    })
+
+    it('stays silent when an OR alternative is simply absent, not renamed', () => {
+      // The documented Oct-only export: Apr resolves nothing and nothing
+      // in the record looks like it, so there is no rename to report.
+      const octOnly = currentEra()
+      delete octOnly['Mem. dues on time Apr']
+      expect(missingDcpGoalHeaders(octOnly)).toEqual([])
+      expect(suspectedDcpGoalHeaderRenames(octOnly)).toEqual([])
     })
   })
 
