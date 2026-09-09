@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.21.2](https://github.com/taverns-red/toast-stats/compare/frontend-v3.21.1...frontend-v3.21.2) (2026-09-09)
+
+
+### Bug Fixes
+
+* **analytics:** DCP goals 5-6 unreadable for five program years — restore the 2020-07 → 2025-06 header aliases ([#1539](https://github.com/taverns-red/toast-stats/issues/1539)) ([#1546](https://github.com/taverns-red/toast-stats/issues/1546)) ([f6b0efa](https://github.com/taverns-red/toast-stats/commit/f6b0efadf7c769c11777446cd22ec945eb91ae35))
+
 ## [3.21.1](https://github.com/taverns-red/toast-stats/compare/frontend-v3.21.0...frontend-v3.21.1) (2026-09-02)
 
 
