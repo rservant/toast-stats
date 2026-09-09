@@ -3,6 +3,7 @@
 
 ## lessons (manifest-pinned + session-judged)
 - `a-plausible-story-about-a-residual-gap-postpones-finding-its-mechanism.md` — A plausible story about a residual gap postpones finding its mechanism — "our basis runs low" explained away a 36-row parse defect for nine days  (2026-09-09)
+- `an-engine-only-major-is-invisible-to-a-mocked-suite.md` — An engine-only major is invisible to a mocked suite — guard the runtime floor, prove I/O equivalence against a real bucket  (2026-09-09)
 - `a-detector-that-cannot-rediscover-the-known-bug-is-not-evidence-about-unknown-ones.md` — Make rediscovering an already-solved instance an acceptance test of a new detector, not a closing sanity check — the census that swept 181 snapshot dates found nothing on its first run, and only the ground-truth criterion revealed the detector had silently narrowed itself  (2026-09-08)
 - `a-plugin-declared-without-its-host-runner-invites-a-version-split.md` — A package that declares a plugin but not its host runner invites a silent major split — and the split reports itself as a missing config option, not as a version mismatch  (2026-09-08)
 - `a-warning-that-vanishes-on-rename-may-be-unmatched-not-fixed.md` — A tool warning that disappears after an API rename may be unmatched, not fixed — check the tool's own rule source  (2026-09-08)
