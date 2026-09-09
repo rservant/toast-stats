@@ -27,6 +27,7 @@ import {
   computeDcpGoalsAchieved,
   hasDcpGoalColumns,
   missingDcpGoalHeaders,
+  suspectedDcpGoalHeaderRenames,
 } from '../analytics/dcpGoalDefinitions.js'
 import { classifyDistinguishedTier } from '../analytics/ClubEligibilityUtils.js'
 import { ANALYTICS_SCHEMA_VERSION } from '../version.js'
@@ -226,9 +227,16 @@ export class DataTransformer implements IDataTransformer {
   }
 
   /**
-   * Warn when a club-performance export carries goal headers we do not
-   * recognise (#1399). dcpGoalsAchieved is omitted for those records, which
-   * is the correct degradation — but it must not also be a quiet one.
+   * Say it out loud when a club-performance export carries goal headers we
+   * do not recognise (#1399). dcpGoalsAchieved is omitted for those records,
+   * which is the correct degradation — but it must not also be a quiet one.
+   *
+   * Two levels, deliberately (#1539). The #1399 warning was already correct
+   * and still went unheeded for five program years, because it could not
+   * distinguish a RENAME — actionable, one alias away, and costing every
+   * club in every district its per-goal data — from a column the era
+   * genuinely never had, which no code change can recover. A rename errors
+   * and names the suspect header; an absence stays a warning.
    *
    * @param sample - First record of the export; headers are uniform
    */
@@ -236,6 +244,20 @@ export class DataTransformer implements IDataTransformer {
     if (!sample) return
     const missing = missingDcpGoalHeaders(sample)
     if (missing.length === 0) return
+
+    const suspectedRenames = suspectedDcpGoalHeaderRenames(sample)
+    if (suspectedRenames.length > 0) {
+      this.logger.error(
+        'Club performance export carries no recognised header for some DCP goals — a column looks RENAMED; add the header below as an alias in dcpGoalDefinitions or every club loses dcpGoalsAchieved',
+        {
+          missingGoals: missing,
+          suspectedRenames,
+          headers: Object.keys(sample),
+        }
+      )
+      return
+    }
+
     this.logger.warn(
       'Club performance export carries no recognised header for some DCP goals — dcpGoalsAchieved omitted',
       { missingGoals: missing, headers: Object.keys(sample) }

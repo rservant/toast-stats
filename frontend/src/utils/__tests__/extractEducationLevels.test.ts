@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { extractEducationLevels } from '../extractEducationLevels'
+import { DCP_GOAL_DEFINITIONS } from '@taverns-red/analytics-core'
+import {
+  extractEducationLevels,
+  EDUCATION_LEVEL_COLUMNS,
+} from '../extractEducationLevels'
 
 describe('extractEducationLevels (#426)', () => {
   it('returns zeros for an unrecognised input', () => {
@@ -225,5 +229,80 @@ describe('extractEducationLevels (#426)', () => {
     }
     const result = extractEducationLevels(snapshot)
     expect(result.total).toBe(0)
+  })
+})
+
+/**
+ * #1539: this module kept its OWN copy of the header alias table, and the
+ * copy had the same gap as the shared one — no name for the 2020-07 →
+ * 2025-06 education columns. Here there was no all-or-nothing guard to
+ * catch it, so the rollup silently reported 0 Level 4/Path/DTM awards for
+ * five program years of archived snapshots: absence rendered as zero, the
+ * exact failure the #1534 census went looking for.
+ *
+ * The columns are now derived from the shared DCP goal definitions rather
+ * than restated, so the next rename cannot land in one copy and not the
+ * other. These tests pin that the derivation is real.
+ */
+describe('education columns follow the shared DCP definitions (#1539)', () => {
+  const goalAliases = (goal: number): readonly string[] =>
+    DCP_GOAL_DEFINITIONS.find(d => d.goal === goal)!.requirements.flatMap(
+      requirement => requirement.anyOf.flatMap(column => column.aliases)
+    )
+
+  it('reads the 2020-07 → 2025-06 education columns', () => {
+    const snapshot = {
+      data: {
+        clubPerformance: [
+          {
+            'Club Name': 'Middle Era',
+            'Level 1s': '4',
+            'Level 2s': '2',
+            'Level 3s': '2',
+            'Level 4s, Level 5s, or DTM award': '1',
+            'Add. Level 4s, Level 5s, or DTM award': '3',
+          },
+        ],
+      },
+    }
+    const result = extractEducationLevels(snapshot)
+    expect(result.level4PathDtm).toBe(4)
+    expect(result.total).toBe(12)
+    expect(result.contributingClubs).toBe(1)
+  })
+
+  it('takes every bucket from the shared definitions, in the same order', () => {
+    expect(EDUCATION_LEVEL_COLUMNS.level1.primary).toEqual(goalAliases(1))
+    expect(EDUCATION_LEVEL_COLUMNS.level2.primary).toEqual(goalAliases(2))
+    expect(EDUCATION_LEVEL_COLUMNS.level2.additional).toEqual(goalAliases(3))
+    expect(EDUCATION_LEVEL_COLUMNS.level3.primary).toEqual(goalAliases(4))
+    expect(EDUCATION_LEVEL_COLUMNS.level4PathDtm.primary).toEqual(
+      goalAliases(5)
+    )
+    expect(EDUCATION_LEVEL_COLUMNS.level4PathDtm.additional).toEqual(
+      goalAliases(6)
+    )
+  })
+
+  it('never derives an empty alias list (an empty one reads as 0 awards)', () => {
+    for (const [bucket, columns] of Object.entries(EDUCATION_LEVEL_COLUMNS)) {
+      expect(columns.primary.length, `${bucket}.primary`).toBeGreaterThan(0)
+    }
+  })
+
+  it('still reads one column per bucket, never the sum of two aliases', () => {
+    // #486 M1: a snapshot carrying both spellings must be read once.
+    const snapshot = {
+      data: {
+        clubPerformance: [
+          {
+            'Level 4s, Path Completions, or DTM Awards': '2',
+            'Level 4s, Level 5s, or DTM award': '7',
+            'Level 4s': '9',
+          },
+        ],
+      },
+    }
+    expect(extractEducationLevels(snapshot).level4PathDtm).toBe(2)
   })
 })

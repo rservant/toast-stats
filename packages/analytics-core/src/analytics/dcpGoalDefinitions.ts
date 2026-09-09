@@ -23,6 +23,23 @@ export interface DcpGoalColumn {
   label: string
   /** Official threshold the column value must reach for this column to count */
   required: number
+  /**
+   * The shape a rename of this column keeps (#1539).
+   *
+   * Every rename TI has made has EXTENDED the existing name rather than
+   * replaced it — `Level 2s` → `Level 2s or EOM`, `Level 4s` →
+   * `Level 4s, Level 5s, or DTM award` → `Level 4s, Path Completions, or DTM
+   * Awards`. So a header that starts the same way and matches no alias is
+   * almost certainly this column under a new name, and
+   * `suspectedDcpGoalHeaderRenames` says so by name instead of leaving the
+   * reader with "some goals are missing".
+   *
+   * Deliberately anchored and narrow: it must not match a column that
+   * belongs to a different goal (goal 5's pattern must not claim
+   * `Add. Level 4s…`, and neither may claim the pre-2020 `Level 5s`, which
+   * is a real column of its own and not a rename of anything).
+   */
+  renamedFrom?: RegExp
 }
 
 export interface DcpGoalDefinition {
@@ -45,7 +62,12 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
     requirements: [
       {
         anyOf: [
-          { aliases: ['Level 1s'], label: 'Level 1 awards', required: 4 },
+          {
+            aliases: ['Level 1s'],
+            label: 'Level 1 awards',
+            required: 4,
+            renamedFrom: /^level 1s?\b/i,
+          },
         ],
       },
     ],
@@ -65,6 +87,7 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
             aliases: ['Level 2s or EOM', 'Level 2s'],
             label: 'Level 2 or Online Meeting Mastery awards',
             required: 2,
+            renamedFrom: /^level 2s?\b/i,
           },
         ],
       },
@@ -82,6 +105,7 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
             aliases: ['Add. Level 2s or EOM', 'Add. Level 2s', 'Add Level 2s'],
             label: 'More Level 2 or Online Meeting Mastery awards',
             required: 2,
+            renamedFrom: /^add\.? level 2s?\b/i,
           },
         ],
       },
@@ -94,7 +118,12 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
     requirements: [
       {
         anyOf: [
-          { aliases: ['Level 3s'], label: 'Level 3 awards', required: 2 },
+          {
+            aliases: ['Level 3s'],
+            label: 'Level 3 awards',
+            required: 2,
+            renamedFrom: /^level 3s?\b/i,
+          },
         ],
       },
     ],
@@ -107,13 +136,22 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
       {
         anyOf: [
           {
+            // TI has spelled this column three ways. First match wins, so a
+            // record is read once, newest name first:
+            //   2025-07 onward         'Level 4s, Path Completions, or DTM Awards'
+            //   2020-07 → 2025-06      '…, Level 5s, …' — five program years
+            //     that read as "no goal columns at all" for want of this one
+            //     alias, and published no dcpGoalsAchieved at all (#1539)
+            //   archive start → 2020-06  'Level 4s'
             aliases: [
               'Level 4s, Path Completions, or DTM Awards',
+              'Level 4s, Level 5s, or DTM award',
               'Level 4s',
               'Level 4',
             ],
             label: 'Level 4/Path Completion/DTM',
             required: 1,
+            renamedFrom: /^level 4s?\b/i,
           },
         ],
       },
@@ -127,13 +165,21 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
       {
         anyOf: [
           {
+            // See goal 5 — the same three spellings behind an 'Add.' prefix.
+            // Exports before 2020-07 carry NO additional-Level-4 column at
+            // all (that era's DCP ran the traditional and Pathways education
+            // tracks side by side, scored either-route), so this goal stays
+            // unresolvable there and hasDcpGoalColumns keeps answering false
+            // for those records — deliberately, not for want of an alias.
             aliases: [
               'Add. Level 4s, Path Completions, or DTM award',
+              'Add. Level 4s, Level 5s, or DTM award',
               'Add. Level 4s',
               'Add Level 4',
             ],
             label: 'Additional Level 4/Path Completion/DTM',
             required: 1,
+            renamedFrom: /^add\.? level 4s?\b/i,
           },
         ],
       },
@@ -146,7 +192,12 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
     requirements: [
       {
         anyOf: [
-          { aliases: ['New Members'], label: 'New members', required: 4 },
+          {
+            aliases: ['New Members'],
+            label: 'New members',
+            required: 4,
+            renamedFrom: /^new members?\b/i,
+          },
         ],
       },
     ],
@@ -162,6 +213,7 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
             aliases: ['Add. New Members', 'Add New Members'],
             label: 'More new members',
             required: 4,
+            renamedFrom: /^add\.? new members?\b/i,
           },
         ],
       },
@@ -178,6 +230,7 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
             aliases: ['Off. Trained Round 1'],
             label: 'Officers trained Jun–Aug',
             required: 4,
+            renamedFrom: /^off\.? trained round 1\b/i,
           },
         ],
       },
@@ -187,6 +240,7 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
             aliases: ['Off. Trained Round 2'],
             label: 'Officers trained Nov–Feb',
             required: 4,
+            renamedFrom: /^off\.? trained round 2\b/i,
           },
         ],
       },
@@ -203,11 +257,13 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
             aliases: ['Mem. dues on time Oct'],
             label: 'Membership dues on time (Oct)',
             required: 1,
+            renamedFrom: /^mem\.? dues on time oct\b/i,
           },
           {
             aliases: ['Mem. dues on time Apr'],
             label: 'Membership dues on time (Apr)',
             required: 1,
+            renamedFrom: /^mem\.? dues on time apr\b/i,
           },
         ],
       },
@@ -217,6 +273,7 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
             aliases: ['Off. List On Time'],
             label: 'Officer list on time',
             required: 1,
+            renamedFrom: /^off\.? list on time\b/i,
           },
         ],
       },
@@ -224,16 +281,20 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
   },
 ]
 
+/** Whether the record carries any of one column's own aliases. */
+const columnIsPresent = (
+  record: ScrapedRecord,
+  column: DcpGoalColumn
+): boolean =>
+  column.aliases.some(key => {
+    const value = record[key]
+    return value !== null && value !== undefined && value !== ''
+  })
+
 const requirementIsPresent = (
   record: ScrapedRecord,
   requirement: { anyOf: readonly DcpGoalColumn[] }
-): boolean =>
-  requirement.anyOf.some(column =>
-    column.aliases.some(key => {
-      const value = record[key]
-      return value !== null && value !== undefined && value !== ''
-    })
-  )
+): boolean => requirement.anyOf.some(column => columnIsPresent(record, column))
 
 /**
  * Goal numbers for which the record carries no recognised header — i.e. at
@@ -250,6 +311,84 @@ export function missingDcpGoalHeaders(record: ScrapedRecord): number[] {
         requirementIsPresent(record, requirement)
       )
   ).map(definition => definition.goal)
+}
+
+/** One unresolved goal, and the export header that most likely replaced it. */
+export interface SuspectedDcpGoalHeaderRename {
+  /** Goal number, 1-10, that resolved none of its aliases. */
+  goal: number
+  /** The export's own header that matches this goal's `renamedFrom` shape. */
+  header: string
+}
+
+/** Every alias any goal knows about — the "we already claim this" set. */
+const KNOWN_GOAL_HEADERS: ReadonlySet<string> = new Set(
+  DCP_GOAL_DEFINITIONS.flatMap(definition =>
+    definition.requirements.flatMap(requirement =>
+      requirement.anyOf.flatMap(column => column.aliases)
+    )
+  )
+)
+
+/**
+ * Unresolved goals whose column looks RENAMED rather than absent (#1539).
+ *
+ * `missingDcpGoalHeaders` answers "which goals can we not read", which reads
+ * the same for two very different situations: TI renamed the column last
+ * month, or the export predates the column existing at all. The first is a
+ * defect that costs every club in every district its per-goal data until
+ * someone adds four words; the second is a fact about history that no code
+ * change can fix. Told apart only by a human squinting at a header list, the
+ * first hid inside the second for five program years — which is the actual
+ * #1539 bug, not the two missing alias strings.
+ *
+ * So: for each column that resolves none of its own aliases, look for a header
+ * the export DOES carry that matches that column's `renamedFrom` shape and
+ * that no alias already claims. Found, it is a rename and the caller can name
+ * the new column; not found, the era genuinely lacks it and the documented
+ * fallback is correct.
+ *
+ * Per COLUMN, not per goal, deliberately — that is the whole #1399 lesson
+ * repeated one level down. Goal 10 passes on Oct dues alone (§10.2), so a
+ * rename of the Oct column leaves the GOAL resolved and
+ * `missingDcpGoalHeaders` empty, while `readDcpGoalColumn` quietly returns 0
+ * for it and ClubDCPGoalsPanel renders that 0 as a sub-item for every club in
+ * every district. A detector keyed on the goal cannot see the one column that
+ * changed, exactly as the old goal-1 sentinel could not.
+ *
+ * Known limit: it catches the rename shape TI has actually used every time —
+ * extending the existing name. A column renamed to something unrecognisable
+ * still degrades safely via `hasDcpGoalColumns`; it just arrives undiagnosed.
+ */
+export function suspectedDcpGoalHeaderRenames(
+  record: ScrapedRecord
+): SuspectedDcpGoalHeaderRename[] {
+  const unclaimed = Object.keys(record).filter(
+    header => !KNOWN_GOAL_HEADERS.has(header)
+  )
+  if (unclaimed.length === 0) return []
+
+  const suspects: SuspectedDcpGoalHeaderRename[] = []
+  const seen = new Set<string>()
+
+  for (const definition of DCP_GOAL_DEFINITIONS) {
+    for (const requirement of definition.requirements) {
+      for (const column of requirement.anyOf) {
+        // Only a column that reads NOTHING can have been renamed. An OR
+        // alternative the export genuinely never carried reads nothing
+        // either, which is why the PATTERN — not the absence — is the signal.
+        if (!column.renamedFrom || columnIsPresent(record, column)) continue
+        for (const header of unclaimed) {
+          const key = `${definition.goal} ${header}`
+          if (seen.has(key) || !column.renamedFrom.test(header)) continue
+          seen.add(key)
+          suspects.push({ goal: definition.goal, header })
+        }
+      }
+    }
+  }
+
+  return suspects
 }
 
 /**

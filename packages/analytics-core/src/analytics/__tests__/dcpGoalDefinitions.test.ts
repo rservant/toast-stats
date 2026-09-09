@@ -15,6 +15,7 @@ import {
   readDcpGoalColumn,
   isDcpGoalAchieved,
   computeDcpGoalsAchieved,
+  suspectedDcpGoalHeaderRenames,
 } from '../dcpGoalDefinitions.js'
 
 function goal(n: number) {
@@ -293,6 +294,114 @@ describe('DCP_GOAL_DEFINITIONS', () => {
       delete renamed['Off. Trained Round 2']
       expect(missingDcpGoalHeaders(renamed)).toEqual([2, 9])
       expect(missingDcpGoalHeaders(complete())).toEqual([])
+    })
+  })
+
+  /**
+   * #1539: the #1399 guard stops a rename from publishing confident zeros,
+   * but it cannot say WHY a goal went unresolved — "some goals are missing"
+   * reads identically whether TI renamed a column yesterday or the era
+   * genuinely never had one. That ambiguity is how the 2020-07 rename sat
+   * unnoticed for five program years. This detector separates the two and
+   * names the suspect header, so the next rename arrives already diagnosed.
+   */
+  describe('suspectedDcpGoalHeaderRenames (#1539)', () => {
+    const currentEra = (overrides: ScrapedRecord = {}): ScrapedRecord => ({
+      'Level 1s': '0',
+      'Level 2s or EOM': '0',
+      'Add. Level 2s or EOM': '0',
+      'Level 3s': '0',
+      'Level 4s, Path Completions, or DTM Awards': '0',
+      'Add. Level 4s, Path Completions, or DTM award': '0',
+      'New Members': '0',
+      'Add. New Members': '0',
+      'Off. Trained Round 1': '0',
+      'Off. Trained Round 2': '0',
+      'Mem. dues on time Oct': '0',
+      'Mem. dues on time Apr': '0',
+      'Off. List On Time': '0',
+      ...overrides,
+    })
+
+    it('is empty when every goal resolves', () => {
+      expect(suspectedDcpGoalHeaderRenames(currentEra())).toEqual([])
+    })
+
+    it('names the header a rename most likely produced', () => {
+      const renamed = currentEra()
+      delete renamed['Level 4s, Path Completions, or DTM Awards']
+      renamed['Level 4s, Path Completions, DTM, or Whatever Is Next'] = '1'
+      expect(suspectedDcpGoalHeaderRenames(renamed)).toEqual([
+        {
+          goal: 5,
+          header: 'Level 4s, Path Completions, DTM, or Whatever Is Next',
+        },
+      ])
+    })
+
+    it('reports every renamed goal, not just the first', () => {
+      const renamed = currentEra()
+      delete renamed['Level 2s or EOM']
+      delete renamed['Add. Level 4s, Path Completions, or DTM award']
+      renamed['Level 2s or EOM or Something'] = '0'
+      renamed['Add. Level 4s and Friends'] = '0'
+      expect(suspectedDcpGoalHeaderRenames(renamed)).toEqual([
+        { goal: 2, header: 'Level 2s or EOM or Something' },
+        { goal: 6, header: 'Add. Level 4s and Friends' },
+      ])
+    })
+
+    /**
+     * The false-positive guard, and the reason this is not just "any header
+     * we do not consume". A genuinely absent column is not a rename: the
+     * pre-2020-07 exports have no additional-Level-4 column at all, only an
+     * unrelated `Level 5s`, and must be reported as an era gap.
+     */
+    it('stays silent when the era simply has no such column', () => {
+      const transitionEra = currentEra()
+      delete transitionEra['Level 4s, Path Completions, or DTM Awards']
+      delete transitionEra['Add. Level 4s, Path Completions, or DTM award']
+      transitionEra['Level 4s'] = '0'
+      transitionEra['Level 5s'] = '0'
+      expect(missingDcpGoalHeaders(transitionEra)).toEqual([6])
+      expect(suspectedDcpGoalHeaderRenames(transitionEra)).toEqual([])
+    })
+
+    it('ignores an unmapped column whose own aliases already resolved', () => {
+      const extra = currentEra({ 'Level 4s in some other export': '1' })
+      expect(suspectedDcpGoalHeaderRenames(extra)).toEqual([])
+    })
+
+    /**
+     * The #1399 blind spot, one level down. Goal 10 passes on Oct dues
+     * ALONE (§10.2), so renaming the Oct column leaves the goal resolved
+     * and `missingDcpGoalHeaders` empty — the same "sentinel keyed on the
+     * one column that did not change" shape that made the PY 2026-27
+     * rename silent. Meanwhile `readDcpGoalColumn` returns 0 for the
+     * renamed column and ClubDCPGoalsPanel renders it as a sub-item, so
+     * every club in every district would show a confident "Oct: 0 / 1".
+     *
+     * A rename must therefore be detected per COLUMN, not per goal.
+     */
+    it('catches a rename behind an OR that a sibling column still satisfies', () => {
+      const octRenamed = currentEra()
+      delete octRenamed['Mem. dues on time Oct']
+      octRenamed['Mem. dues on time Oct (or equivalent)'] = '1'
+
+      // The goal itself is still satisfied by Apr — nothing is "missing".
+      expect(missingDcpGoalHeaders(octRenamed)).toEqual([])
+      expect(suspectedDcpGoalHeaderRenames(octRenamed)).toEqual([
+        { goal: 10, header: 'Mem. dues on time Oct (or equivalent)' },
+      ])
+    })
+
+    it('stays silent when an OR alternative is simply absent, not renamed', () => {
+      // The documented Oct-only export: Apr resolves nothing and nothing
+      // in the record looks like it, so there is no rename to report.
+      const octOnly = currentEra()
+      delete octOnly['Mem. dues on time Apr']
+      expect(missingDcpGoalHeaders(octOnly)).toEqual([])
+      expect(suspectedDcpGoalHeaderRenames(octOnly)).toEqual([])
     })
   })
 
