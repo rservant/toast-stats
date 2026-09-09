@@ -25,6 +25,7 @@ import {
   hasDcpGoalColumns,
   missingDcpGoalHeaders,
   readDcpGoalColumn,
+  suspectedDcpGoalHeaderRenames,
   type DcpGoalColumn,
 } from '../dcpGoalDefinitions.js'
 
@@ -167,6 +168,13 @@ describe('DCP goal header eras — archive census (#1539)', () => {
         expect(hasDcpGoalColumns(records[0]!)).toBe(
           era.missingGoals.length === 0
         )
+      })
+
+      it('reports no suspected rename — every era in the archive is known', () => {
+        // The complement of the census: not one of these exports carries a
+        // goal-shaped header we have failed to claim. When TI renames again
+        // and someone captures the new export, this is what fails.
+        expect(suspectedDcpGoalHeaderRenames(records[0]!)).toEqual([])
       })
     })
   }

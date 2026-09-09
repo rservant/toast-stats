@@ -28,10 +28,12 @@ export {
   readDcpGoalColumn,
   isDcpGoalAchieved,
   computeDcpGoalsAchieved,
+  suspectedDcpGoalHeaderRenames,
 } from './analytics/dcpGoalDefinitions.js'
 export type {
   DcpGoalColumn,
   DcpGoalDefinition,
+  SuspectedDcpGoalHeaderRename,
 } from './analytics/dcpGoalDefinitions.js'
 
 // Analytics computation

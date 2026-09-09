@@ -1919,16 +1919,51 @@ describe('DataTransformer', () => {
         expect(logger.warn).not.toHaveBeenCalled()
       })
 
-      it('omits dcpGoalsAchieved and warns when a header is unrecognised', async () => {
+      /**
+       * #1539 raised this from warn to error and made it name the column.
+       *
+       * The #1399 warning was correct and still went unheeded for five
+       * program years, because "some DCP goals have no recognised header"
+       * reads the same for a rename that costs every club its per-goal data
+       * and for an old export that never carried the column. A rename is an
+       * actionable defect with a known fix, so it now logs at error level
+       * and says which header to add an alias for.
+       */
+      it('errors and names the column when a header looks renamed (#1539)', async () => {
         const drifted = PY_2026_27_HEADER.map(column =>
           column === 'Level 2s or EOM' ? 'Level 2s or Whatever TI Adds' : column
         )
         const { club, logger } = await transformWith(drifted)
 
         expect(club?.dcpGoalsAchieved).toBeUndefined()
+        expect(logger.error).toHaveBeenCalledWith(
+          expect.stringContaining('no recognised header for some DCP goals'),
+          expect.objectContaining({
+            missingGoals: [2],
+            suspectedRenames: [
+              { goal: 2, header: 'Level 2s or Whatever TI Adds' },
+            ],
+          })
+        )
+        expect(logger.warn).not.toHaveBeenCalled()
+      })
+
+      /**
+       * The other half. An era that genuinely never carried the column is
+       * not a defect anyone can fix, so it stays a warning — an error nobody
+       * can act on is just the next warning nobody reads.
+       */
+      it('only warns when the column is absent rather than renamed (#1539)', async () => {
+        const preLevel4Era = PY_2026_27_HEADER.filter(
+          column => column !== 'Add. Level 4s, Path Completions, or DTM award'
+        )
+        const { club, logger } = await transformWith(preLevel4Era)
+
+        expect(club?.dcpGoalsAchieved).toBeUndefined()
+        expect(logger.error).not.toHaveBeenCalled()
         expect(logger.warn).toHaveBeenCalledWith(
           expect.stringContaining('no recognised header for some DCP goals'),
-          expect.objectContaining({ missingGoals: [2] })
+          expect.objectContaining({ missingGoals: [6] })
         )
       })
     })
