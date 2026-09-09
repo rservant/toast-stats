@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.11.2](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.11.1...analytics-core-v1.11.2) (2026-09-09)
+
+
+### Bug Fixes
+
+* **analytics:** a Charter/Susp cell carrying both branches loses both — 19 charters and 17 suspensions recovered ([#1540](https://github.com/taverns-red/toast-stats/issues/1540)) ([#1543](https://github.com/taverns-red/toast-stats/issues/1543)) ([d25b00f](https://github.com/taverns-red/toast-stats/commit/d25b00fe06ae88a6dfb73e0fc837af067d703386))
+* **analytics:** DCP goals 5-6 unreadable for five program years — restore the 2020-07 → 2025-06 header aliases ([#1539](https://github.com/taverns-red/toast-stats/issues/1539)) ([#1546](https://github.com/taverns-red/toast-stats/issues/1546)) ([f6b0efa](https://github.com/taverns-red/toast-stats/commit/f6b0efadf7c769c11777446cd22ec945eb91ae35))
+
 ## [1.11.1](https://github.com/taverns-red/toast-stats/compare/analytics-core-v1.11.0...analytics-core-v1.11.1) (2026-09-02)
 
 
