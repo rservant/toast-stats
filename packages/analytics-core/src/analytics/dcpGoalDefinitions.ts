@@ -107,8 +107,16 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
       {
         anyOf: [
           {
+            // TI has spelled this column three ways. First match wins, so a
+            // record is read once, newest name first:
+            //   2025-07 onward         'Level 4s, Path Completions, or DTM Awards'
+            //   2020-07 → 2025-06      '…, Level 5s, …' — five program years
+            //     that read as "no goal columns at all" for want of this one
+            //     alias, and published no dcpGoalsAchieved at all (#1539)
+            //   archive start → 2020-06  'Level 4s'
             aliases: [
               'Level 4s, Path Completions, or DTM Awards',
+              'Level 4s, Level 5s, or DTM award',
               'Level 4s',
               'Level 4',
             ],
@@ -127,8 +135,15 @@ export const DCP_GOAL_DEFINITIONS: readonly DcpGoalDefinition[] = [
       {
         anyOf: [
           {
+            // See goal 5 — the same three spellings behind an 'Add.' prefix.
+            // Exports before 2020-07 carry NO additional-Level-4 column at
+            // all (that era's DCP ran the traditional and Pathways education
+            // tracks side by side, scored either-route), so this goal stays
+            // unresolvable there and hasDcpGoalColumns keeps answering false
+            // for those records — deliberately, not for want of an alias.
             aliases: [
               'Add. Level 4s, Path Completions, or DTM award',
+              'Add. Level 4s, Level 5s, or DTM award',
               'Add. Level 4s',
               'Add Level 4',
             ],
