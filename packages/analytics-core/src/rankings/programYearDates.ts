@@ -59,18 +59,38 @@ export function getProgramYearStartDate(snapshotDate: string): Date | null {
 }
 
 /**
+ * The two branch literals, each matched as a WHOLE WORD anywhere in the cell
+ * and capturing exactly ONE following token (#1540).
+ *
+ * Two properties, both load-bearing:
+ *
+ * - `(?:^|\s)` rather than `^` — a cell can carry both branches, and an
+ *   anchored match sees only the first. Keeping the boundary is what stops
+ *   the search over-firing on a token that merely CONTAINS the literal
+ *   (`Recharter 05/22/26` is not a charter).
+ * - `(\S+)` rather than `(.+)` — the captured date must be one token, so a
+ *   trailing sibling branch cannot poison `parseDateFlexible`. `(.+)` is
+ *   precisely how a combined cell lost its charter date as well as its
+ *   suspension date.
+ */
+const CHARTER_BRANCH = /(?:^|\s)Charter\s+(\S+)/i
+const SUSPEND_BRANCH = /(?:^|\s)Susp\s+(\S+)/i
+
+/**
  * Extract a charter date from a `Charter Date/Suspend Date` field value (#336).
  *
- * Toastmasters district-performance.csv encodes club status changes as a
- * single string with a prefix and date: `Charter MM/DD/YY` for newly chartered
- * clubs, `Susp MM/DD/YY` for suspensions. Returns null if the field is empty,
- * prefixed `Susp`, or unparseable.
+ * Toastmasters district-performance.csv encodes club status changes in one
+ * string: `Charter MM/DD/YY` for newly chartered clubs, `Susp MM/DD/YY` for
+ * suspensions — and, for a club that charters and is then suspended inside
+ * the same program year, BOTH in the one cell
+ * (`'Charter 09/30/25 Susp 03/31/26'`, 19 rows at 2026-06-30 and 5 at
+ * 2022-06-30, #1540). The `Susp` branch is ignored here; its sibling parser
+ * reads it. Returns null if the field carries no `Charter` branch or the
+ * captured token is unparseable.
  */
 export function parseCharterDateFromStatusField(value: unknown): Date | null {
   if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  if (trimmed === '') return null
-  const match = trimmed.match(/^Charter\s+(.+)$/i)
+  const match = value.match(CHARTER_BRANCH)
   if (!match) return null
   return parseDateFlexible(match[1]!)
 }
@@ -80,17 +100,21 @@ export function parseCharterDateFromStatusField(value: unknown): Date | null {
  * (#1497) — the sibling branch `parseCharterDateFromStatusField` deliberately
  * drops.
  *
- * The column carries one value per club row: `Charter MM/DD/YY` for a new
- * charter or `Susp MM/DD/YY` for a suspension. Live stored rows put a **leading
- * space** on the suspension form (`' Susp 03/31/26'`, verified 2026-08-31 in
- * `snapshots/2026-06-30/district_61.json`), which the trim absorbs. Returns
- * null if the field is empty, prefixed `Charter`, or unparseable.
+ * The column carries `Charter MM/DD/YY` for a new charter, `Susp MM/DD/YY` for
+ * a suspension, or BOTH for a club that chartered and was then suspended
+ * (#1540 — the reason this searches rather than anchors). Live stored rows put
+ * a **leading space** on the suspension form (`' Susp 03/31/26'`, verified
+ * 2026-08-31 in `snapshots/2026-06-30/district_61.json`), which the
+ * whitespace-or-start boundary absorbs. Returns null if the field carries no
+ * `Susp` branch or the captured token is unparseable.
+ *
+ * The #1497 guarantee survives verbatim: a `Charter`-only cell yields null
+ * here, because the branch is keyed on its own whole-word literal — not on
+ * position.
  */
 export function parseSuspendDateFromStatusField(value: unknown): Date | null {
   if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  if (trimmed === '') return null
-  const match = trimmed.match(/^Susp\s+(.+)$/i)
+  const match = value.match(SUSPEND_BRANCH)
   if (!match) return null
   return parseDateFlexible(match[1]!)
 }

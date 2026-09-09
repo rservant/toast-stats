@@ -172,6 +172,30 @@ program year. 2022-06-30 carries 5 such cells.
 This is the same class one layer over: not a missing column, a present fact
 made unreadable by a parse that assumed one branch per cell.
 
+**Status (2026-09-09): fixed by #1540.** Each branch is now matched as a whole
+word anywhere in the cell, capturing exactly one token
+(`/(?:^|\s)Susp\s+(\S+)/i` and its `Charter` twin). Corrected counts on the
+frozen captures: 2026-06-30 **913 → 932** new-still-active and **716 → 733**
+suspended; 2022-06-30 **692 → 697** and **1,014 → 1,019**. The two deltas
+differ at 2026-06-30 because two of the 19 recovered suspensions are stamped
+`Susp 07/01/26` — the next program year — so each date is window-tested on its
+own. The corrected 2026-06-30 pair lands exactly on TI's published 932/733,
+noted as corroboration and not as a target (#1426 ruling 2 is unchanged).
+
+**Republish decision (operator, pending):** the fix changes only the READING
+of stored rows — no snapshot is rewritten and nothing was dispatched with the
+code change. Two published artifacts carry the old numbers and need a rebuild
+before the corrected counts are visible:
+
+| artifact                                                   | affected                                               |
+| ---------------------------------------------------------- | ------------------------------------------------------ |
+| `v1/global-history.json`                                   | PY 2025-26 and PY 2021-22 rows (both movement fields)  |
+| `v1/global-totals.json`                                    | the live program year's `clubMovement` block           |
+| per-district rankings `newCharteredClubs`/`suspendedClubs` | any district holding one of the 24 combined-cell clubs |
+
+The eight absent years are untouched: they carry no combined cell, so their
+`null` is unchanged.
+
 ### 3. Single-date anomaly — `totals.smedleyDistinguishedClubs` missing at 2026-04-10
 
 The key is absent from the `totals` block of all 128 districts at 2026-04-10

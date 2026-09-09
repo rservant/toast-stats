@@ -112,6 +112,78 @@ describe('rollUpGlobal — club movement (#1498)', () => {
   })
 })
 
+describe('rollUpGlobal — a cell carrying BOTH branches (#1540)', () => {
+  // Verbatim rows from the frozen 2026-06-30 capture
+  // (`fixtures/global-rollup/suspension-column-census.json`). A club that
+  // charters and is then suspended inside one program year carries both
+  // stamps in the single `Charter Date/Suspend Date` cell — 19 rows do at
+  // 2026-06-30. Both facts used to be lost, so BOTH counts under-reported.
+  const roll = (
+    rows: ReadonlyArray<[clubId: string, clubStatusField: string]>,
+    snapshotDate = '2026-06-30'
+  ) =>
+    rollUpGlobal({
+      snapshotDate,
+      rankingsDistrictIds: ['04', '116', '121'],
+      districts: [
+        district(
+          '04',
+          rows.map(([clubId, clubStatusField]) =>
+            club(clubId, { clubStatusField })
+          )
+        ),
+      ],
+    })
+
+  it('counts a combined cell under BOTH movement counts when both dates are in window', () => {
+    const rollup = roll([
+      ['28678849', 'Charter 09/10/25 Susp 03/31/26'],
+      ['28679251', 'Charter 09/30/25 Susp 03/31/26'],
+      ['28678480', 'Charter 07/15/25 Susp 03/31/26'],
+    ])
+
+    expect(rollup.newClubsStillActive).toBe(3)
+    expect(rollup.suspendedClubs).toBe(3)
+  })
+
+  it('window-tests each date on its own — a charter in window, a suspension out of it', () => {
+    // D04 club 28679626, verbatim: chartered 2026-01-29 (inside PY 2025-26)
+    // and stamped `Susp 07/01/26`, the first day of the NEXT program year.
+    // Parsing both branches is necessary but not sufficient; the two dates
+    // do not share a window and must never be assumed to.
+    const rollup = roll([['28679626', 'Charter 01/29/26 Susp 07/01/26']])
+
+    expect(rollup.newClubsStillActive).toBe(1)
+    expect(rollup.suspendedClubs).toBe(0)
+    // The out-of-window date is still a fact: the branch WAS collected
+    // (#1514), which is what keeps that measured 0 from reading as absence.
+    expect(rollup.clubsWithSuspensionDate).toBe(1)
+  })
+
+  it('counts combined cells in clubsWithSuspensionDate, keeping the signal wider than the count (#1514)', () => {
+    const rollup = roll([
+      ['28678849', 'Charter 09/10/25 Susp 03/31/26'],
+      ['28679626', 'Charter 01/29/26 Susp 07/01/26'],
+      ['00000977', ' Susp 03/31/26'],
+      ['00000978', 'Charter 03/26/26'],
+      ['00000979', ''],
+    ])
+
+    expect(rollup.clubsWithSuspensionDate).toBe(3)
+    expect(rollup.suspendedClubs).toBe(2)
+    expect(rollup.newClubsStillActive).toBe(3)
+  })
+
+  it('rescues suspensions on a date whose anchored Susp rows are all absent', () => {
+    // The combined cell alone is enough evidence the branch was collected —
+    // a date carrying only combined cells must not publish `null`.
+    const rollup = roll([['28678849', 'Charter 09/10/25 Susp 03/31/26']])
+
+    expect(rollup.clubsWithSuspensionDate).toBe(1)
+    expect(rollup.suspendedClubs).toBe(1)
+  })
+})
+
 describe('rollUpGlobal — clubs by country (#1498)', () => {
   it('publishes an explicit unknown bucket rather than dropping the clubs', () => {
     const rollup = rollUpGlobal({

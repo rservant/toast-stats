@@ -7,8 +7,16 @@
  * the eight zero years carry **no `Susp` value on any districtPerformance row
  * of any in-scope district** — 0 of 15,261 rows at 2025-06-30, 0 of 16,203 at
  * 2023-06-30, and so on — while the CHARTER branch of the very same
- * `Charter Date/Suspend Date` column is populated on all ten dates. The parse
- * was right; the datum is absent, and absence is not zero.
+ * `Charter Date/Suspend Date` column is populated on all ten dates. For those
+ * eight years the datum is absent, and absence is not zero.
+ *
+ * **Overturned in part by #1540.** "The parse was right" held only for the
+ * eight empty years. On the two POPULATED dates the parse was wrong: 19 rows
+ * at 2026-06-30 and 5 at 2022-06-30 carry BOTH branches in one cell
+ * (`Charter 09/30/25 Susp 03/31/26`), and both `^`-anchored parsers dropped
+ * them, so each of those dates under-reported BOTH movement counts. The
+ * expected values below are the corrected measurement, taken from the same
+ * frozen capture — the fixture never moved, the reading of it did.
  *
  * These assertions run against a frozen capture, never the network. See the
  * fixture README for its shape and why it must not be regenerated.
@@ -81,10 +89,14 @@ const YEARS_WITH_NO_SUSPENSION_DATA = [
   '2017-06-30',
 ] as const
 
-/** The two years whose Susp branch was collected, with their published counts. */
+/**
+ * The two years whose Susp branch was collected, with their CORRECTED counts
+ * (#1540) — the anchored parse published 716 and 1014 respectively, losing
+ * every suspension that sat behind a leading `Charter` in the same cell.
+ */
 const YEARS_WITH_SUSPENSION_DATA = [
-  ['2026-06-30', 716],
-  ['2022-06-30', 1014],
+  ['2026-06-30', 733],
+  ['2022-06-30', 1019],
 ] as const
 
 describe('the published year-ends’ suspension column (#1514)', () => {
@@ -126,7 +138,52 @@ describe('the published year-ends’ suspension column (#1514)', () => {
     // signal is window-independent and the count is not.
     const result = rollup('2022-06-30')
 
-    expect(result.clubsWithSuspensionDate).toBe(1018)
-    expect(result.suspendedClubs).toBe(1014)
+    expect(result.clubsWithSuspensionDate).toBe(1023)
+    expect(result.suspendedClubs).toBe(1019)
+  })
+
+  describe('cells carrying both branches (#1540)', () => {
+    // Counted straight off the frozen capture: the rows whose single
+    // `Charter Date/Suspend Date` cell holds a Charter stamp AND a Susp
+    // stamp. Both `^`-anchored parsers dropped every one of them, so each
+    // was invisible to BOTH counts.
+    const bothBranchRows = (date: string) =>
+      (byDate.get(date)?.districts ?? []).flatMap(d =>
+        d.clubs.filter(
+          ([, value]) =>
+            /(?:^|\s)Charter\s/i.test(value) && /\sSusp\s/i.test(value)
+        )
+      )
+
+    it('the capture really carries them — 19 at 2026-06-30, 5 at 2022-06-30', () => {
+      expect(bothBranchRows('2026-06-30')).toHaveLength(19)
+      expect(bothBranchRows('2022-06-30')).toHaveLength(5)
+    })
+
+    it('recovers 19 charters and 17 suspensions at 2026-06-30', () => {
+      const result = rollup('2026-06-30')
+
+      // 913 → 932 and 716 → 733. Every one of the 19 charter dates is in
+      // window; two of the 19 suspension dates are not (`Susp 07/01/26` is
+      // the next program year), which is why the two deltas differ — each
+      // date is window-tested on its own.
+      expect(result.newClubsStillActive).toBe(932)
+      expect(result.suspendedClubs).toBe(733)
+      // Window-independent, so it takes all 19 (#1514).
+      expect(result.clubsWithSuspensionDate).toBe(735)
+    })
+
+    it('recovers 5 charters and 5 suspensions at 2022-06-30', () => {
+      const result = rollup('2022-06-30')
+
+      expect(result.newClubsStillActive).toBe(697)
+      expect(result.suspendedClubs).toBe(1019)
+    })
+
+    it('leaves the eight absent years untouched — they carry no such cell', () => {
+      for (const date of YEARS_WITH_NO_SUSPENSION_DATA) {
+        expect(bothBranchRows(date)).toHaveLength(0)
+      }
+    })
   })
 })
