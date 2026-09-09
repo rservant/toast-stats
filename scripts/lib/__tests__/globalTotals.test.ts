@@ -142,8 +142,15 @@ describe('buildGlobalTotals — 2026-06-30 (#1498)', () => {
   it('counts charters and suspensions inside the snapshot date’s program year', () => {
     // Ruling #5 (#1426, 2026-08-19): never labelled plain "new clubs" — this
     // counts only charters still paid at the snapshot date.
-    expect(totals().clubMovement.newClubsStillActive).toBe(913)
-    expect(totals().clubMovement.suspendedClubs).toBe(716)
+    //
+    // 932/733, not 913/716 (#1540). The frozen capture is unchanged; the
+    // earlier pair lost the 19 rows whose single cell carries BOTH branches
+    // (`Charter 09/30/25 Susp 03/31/26`) to two `^`-anchored parsers. That
+    // these land exactly on TI's published 932 and 733 is corroboration read
+    // after the fact, never the target — ruling #1426 stands: publish ours,
+    // state our basis, never calibrate.
+    expect(totals().clubMovement.newClubsStillActive).toBe(932)
+    expect(totals().clubMovement.suspendedClubs).toBe(733)
   })
 
   it('publishes the unknown-country bucket rather than dropping it', () => {
