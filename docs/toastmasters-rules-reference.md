@@ -349,6 +349,46 @@ and new header names resolve as first-match-wins aliases in
 `packages/analytics-core/src/analytics/dcpGoalDefinitions.ts`, since historical
 snapshots keep the old names.
 
+### 10.3 Education-column header eras (#1539)
+
+Goals 5-6 have been spelled three ways. Swept 2026-09-09 over all 182 snapshot
+dates published on `cdn.taverns.red`, the header set changes at exactly three
+dates, and is identical across districts at each of them:
+
+| Snapshot dates          | Goal 5 header                               | Goal 6 header                                   |
+| ----------------------- | ------------------------------------------- | ----------------------------------------------- |
+| 2017-01-31 → 2020-06-30 | `Level 4s`                                  | none — see below                                |
+| 2020-07-31 → 2025-06-30 | `Level 4s, Level 5s, or DTM award`          | `Add. Level 4s, Level 5s, or DTM award`         |
+| 2025-07-31 → 2026-06-30 | `Level 4s, Path Completions, or DTM Awards` | `Add. Level 4s, Path Completions, or DTM award` |
+| 2026-07-26 → now        | unchanged from the row above                | unchanged from the row above                    |
+
+The middle era carried no alias until #1539. Because `hasDcpGoalColumns` spans
+all ten goals (§10.2, #1399), that suppressed `dcpGoalsAchieved` for **every
+club in every district across PY 2020-21 … 2024-25** — roughly 1.0M club-date
+records over 60 archived snapshot dates. Nothing false was published: the guard
+degraded to `undefined` rather than to a phantom zero, so the data was
+unreachable, not wrong.
+
+**The pre-2020-07 era is deliberately left unresolvable.** Those exports run the
+Pathways _transition_ DCP: they carry the traditional-education columns (`CCs`,
+`Add. CCs`, `ACs`, `Add. ACs`, `CL/AL/DTMs`, `Add. CL/AL/DTMs`) alongside
+`Level 1s`–`Level 5s`, and TI scored each goal as either-route. There is no
+additional-Level-4 column, and no ten-goal reading of that era agrees with TI's
+own `Goals Met` (measured on D61 2020-06-30: 123 of 202 clubs diverge under the
+closest mapping, against 4 of 170 for the middle era — and those four are a
+goal-9 officer-training divergence unrelated to the education columns).
+`missingDcpGoalHeaders` must keep returning `[6]` there.
+
+**Backfill.** The aliases change how a snapshot is _transformed_, not what is
+stored, so the already-published archive does not gain `dcpGoalsAchieved` until
+the affected snapshot dates are re-transformed and republished. New collections
+carry the field from the first run after this ships; the 2020-07-31 → 2025-06-30
+dates carry it only after a republish of those dates.
+
+**The next rename** is caught by `suspectedDcpGoalHeaderRenames`, which names
+the offending header at error level from `DataTransformer` instead of leaving a
+reader to notice that "some goals have no recognised header" changed meaning.
+
 ---
 
 ## 11. Calculation Precedence
