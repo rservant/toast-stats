@@ -223,6 +223,27 @@ and **913 new-still-active** against TI's published **733** and **932**. Our
 basis — clubs still listed at year-end — runs low, and that is the expected
 shape, not a defect to tune away (see §5 and §7 ruling 2).
 
+**Correction (2026-09-09, #1540): the gap was not a basis difference — it was
+a parse defect, and all of it.** 19 rows at 2026-06-30 carry BOTH branches in
+one cell (`Charter 09/30/25 Susp 03/31/26`): a club chartered and then
+suspended inside the same program year. Both parsers anchored at `^`, so the
+`Susp` parser never matched and the `Charter` parser matched but handed
+`parseDateFlexible` the poisoned tail — the cell was lost by both. Searching
+for each branch as a whole word and capturing a single token recovers 19
+charters and 17 suspensions from the same stored rows: **733 suspended and
+932 new-still-active**, which is exactly TI's published pair.
+
+Read that coincidence carefully. §7 ruling 2 is **not** revised: we publish
+ours and state our basis, we do not calibrate. The pair matching TI is
+corroboration noticed after the fix, not its target — the fix was derived
+from the defect, and had the corrected numbers still differed from TI's, they
+would still be what we publish. What IS revised is the sentence above: "runs
+low, the expected shape" was an explanation offered for a difference that had
+a mechanical cause nobody had looked for. A plausible story about a residual
+is not evidence, and it is exactly the kind of story that keeps a defect
+alive. See also `docs/investigations/1534-absence-as-zero-census-2026-09-08.md`
+§ finding 2, which is where the 19 rows were actually found.
+
 ### ⚠️ Education awards by level + DTM — pipeline gap
 
 The Education Achievements daily report (`c757d313…`) is _precisely_ this data

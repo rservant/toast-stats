@@ -125,3 +125,98 @@ describe('parseSuspendDateFromStatusField (#1497)', () => {
     expect(parseSuspendDateFromStatusField(42)).toBeNull()
   })
 })
+
+describe('a cell carrying BOTH branches (#1540)', () => {
+  // Verbatim `Charter Date/Suspend Date` values from the frozen
+  // 2026-06-30 / 2022-06-30 captures in
+  // `scripts/lib/__tests__/fixtures/global-rollup/suspension-column-census.json`.
+  // A club that charters and is then suspended inside the same program year
+  // gets BOTH stamps in the one column. 19 rows carry this shape at
+  // 2026-06-30 and 5 at 2022-06-30 — and because both parsers anchored at
+  // `^`, every one of them was lost by BOTH: the Susp parser never matched,
+  // and the Charter parser matched but handed `parseDateFlexible` the whole
+  // tail `"09/30/25 Susp 03/31/26"`, which does not parse.
+  const COMBINED: ReadonlyArray<
+    readonly [cell: string, charterIso: string, suspIso: string, where: string]
+  > = [
+    [
+      'Charter 09/10/25 Susp 03/31/26',
+      '2025-09-10T00:00:00.000Z',
+      '2026-03-31T00:00:00.000Z',
+      'D04 club 28678849 @ 2026-06-30',
+    ],
+    [
+      'Charter 09/30/25 Susp 03/31/26',
+      '2025-09-30T00:00:00.000Z',
+      '2026-03-31T00:00:00.000Z',
+      'D121 club 28679251 @ 2026-06-30',
+    ],
+    [
+      'Charter 07/15/25 Susp 03/31/26',
+      '2025-07-15T00:00:00.000Z',
+      '2026-03-31T00:00:00.000Z',
+      'D116 club 28678480 @ 2026-06-30',
+    ],
+    [
+      'Charter 01/29/26 Susp 07/01/26',
+      '2026-01-29T00:00:00.000Z',
+      '2026-07-01T00:00:00.000Z',
+      'D04 club 28679626 @ 2026-06-30 — the two dates land in DIFFERENT ' +
+        'program years, which is why each must be window-tested on its own',
+    ],
+    [
+      'Charter 09/22/21 Susp 04/13/22',
+      '2021-09-22T00:00:00.000Z',
+      '2022-04-13T00:00:00.000Z',
+      'D112 club 07935701 @ 2022-06-30',
+    ],
+  ]
+
+  it.each(COMBINED)(
+    '%s yields BOTH dates (%s / %s) — %s',
+    (cell, charterIso, suspIso) => {
+      expect(parseCharterDateFromStatusField(cell)?.toISOString()).toBe(
+        charterIso
+      )
+      expect(parseSuspendDateFromStatusField(cell)?.toISOString()).toBe(suspIso)
+    }
+  )
+
+  it('reads the branch behind a leading space, as live rows carry it', () => {
+    expect(
+      parseCharterDateFromStatusField(
+        ' Charter 09/30/25 Susp 03/31/26'
+      )?.toISOString()
+    ).toBe('2025-09-30T00:00:00.000Z')
+    expect(
+      parseSuspendDateFromStatusField(
+        ' Charter 09/30/25 Susp 03/31/26'
+      )?.toISOString()
+    ).toBe('2026-03-31T00:00:00.000Z')
+  })
+
+  it('keeps each branch keyed on its own whole-word literal', () => {
+    // Synthetic adversarial cells, not observed in the archive: the guard
+    // that stops the unanchored search from over-firing on a token that
+    // merely CONTAINS the literal. Drop the `(?:^|\s)` boundary and these
+    // start matching — which is the other half of the #1540 mutation proof.
+    expect(parseCharterDateFromStatusField('Recharter 05/22/26')).toBeNull()
+    expect(parseSuspendDateFromStatusField('Unsusp 03/31/26')).toBeNull()
+    expect(parseCharterDateFromStatusField('Susp 03/31/26')).toBeNull()
+    expect(parseSuspendDateFromStatusField('Charter 09/30/25')).toBeNull()
+  })
+
+  it('does not let the sibling branch poison the captured date', () => {
+    // The `(.+)` capture is what made the Charter parser return null here:
+    // it swallowed ` Susp 03/31/26` into the date string. Capturing a single
+    // token is the fix, so a trailing branch is inert to the leading one.
+    expect(
+      parseCharterDateFromStatusField('Charter 09/30/25 Susp 03/31/26')
+    ).not.toBeNull()
+    expect(
+      parseSuspendDateFromStatusField(
+        'Susp 03/31/26 Charter 09/30/25'
+      )?.toISOString()
+    ).toBe('2026-03-31T00:00:00.000Z')
+  })
+})
