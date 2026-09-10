@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.38.3](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.38.2...toast-stats-v2.38.3) (2026-09-10)
+
+
+### Bug Fixes
+
+* **pipeline:** backticks in a node -e comment break rebuild/prune mode ([#1549](https://github.com/taverns-red/toast-stats/issues/1549)) ([#1550](https://github.com/taverns-red/toast-stats/issues/1550)) ([f5e5d16](https://github.com/taverns-red/toast-stats/commit/f5e5d16d0f399d1afeef79d9d9e6f3b6686d02c9))
+
 ## [2.38.2](https://github.com/taverns-red/toast-stats/compare/toast-stats-v2.38.1...toast-stats-v2.38.2) (2026-09-09)
 
 
