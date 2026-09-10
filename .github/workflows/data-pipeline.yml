@@ -1651,10 +1651,16 @@ jobs:
               const index = {};
               // Parse GCS paths: gs://bucket/snapshots/YYYY-MM-DD/district_XX.json
               for (const line of lines) {
-                // The /^[A-Z0-9]+$/i guard is load-bearing, not decorative: `\w`
-                // includes `_`, so without it the daily-reports sidecar
-                // `district_61_reports.json` enters the index as a phantom
-                // district `61_reports` (#1428). Equivalent to
+                // NB: this whole script is a double-quoted bash string, so
+                // keep every comment free of backticks -- bash runs backticked
+                // text as command substitution before node ever parses it
+                // (#1549). Use plain identifiers below, not code spans.
+                //
+                // The /^[A-Z0-9]+$/i guard is load-bearing, not decorative.
+                // The \w in the capture group also matches an underscore, so
+                // without the guard the daily-reports sidecar file
+                // district_61_reports.json enters the index as a phantom
+                // district called 61_reports (#1428). Equivalent to
                 // DISTRICT_SNAPSHOT_OBJECT_PATTERN in
                 // @taverns-red/shared-contracts src/naming/snapshotFileNames.ts,
                 // which inline JS in YAML cannot import. Do not drop it.

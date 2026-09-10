@@ -2,6 +2,7 @@
 # Lessons index
 
 ## lessons (manifest-pinned + session-judged)
+- `a-code-span-in-a-double-quoted-inline-script-is-executable-code.md` — Backticks in a comment inside a double-quoted inline script are live command substitutions  (2026-09-10)
 - `a-fallback-alias-list-copied-twice-drifts-twice.md` — A guard that says "we cannot read this" must also say whether that is a rename or a fact of history  (2026-09-09)
 - `a-plausible-story-about-a-residual-gap-postpones-finding-its-mechanism.md` — A plausible story about a residual gap postpones finding its mechanism — "our basis runs low" explained away a 36-row parse defect for nine days  (2026-09-09)
 - `an-engine-only-major-is-invisible-to-a-mocked-suite.md` — An engine-only major is invisible to a mocked suite — guard the runtime floor, prove I/O equivalence against a real bucket  (2026-09-09)
